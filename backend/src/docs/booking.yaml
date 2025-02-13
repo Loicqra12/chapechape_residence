@@ -1,0 +1,203 @@
+paths:
+  /api/bookings:
+    post:
+      tags:
+        - Réservations
+      summary: Créer une réservation
+      description: Crée une nouvelle réservation pour une résidence
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - residenceId
+                - checkIn
+                - checkOut
+                - guests
+              properties:
+                residenceId:
+                  type: string
+                  format: objectId
+                checkIn:
+                  type: string
+                  format: date
+                checkOut:
+                  type: string
+                  format: date
+                guests:
+                  type: integer
+                  minimum: 1
+                specialRequests:
+                  type: string
+      responses:
+        201:
+          description: Réservation créée avec succès
+        400:
+          description: Données invalides
+        404:
+          description: Résidence non trouvée
+        409:
+          description: Résidence non disponible pour ces dates
+
+    get:
+      tags:
+        - Réservations
+      summary: Liste des réservations de l'utilisateur
+      description: Retourne toutes les réservations de l'utilisateur connecté
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        200:
+          description: Liste des réservations récupérée avec succès
+        401:
+          description: Non authentifié
+
+  /api/bookings/{bookingId}:
+    get:
+      tags:
+        - Réservations
+      summary: Détails d'une réservation
+      description: Retourne les détails d'une réservation spécifique
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: objectId
+      responses:
+        200:
+          description: Détails de la réservation récupérés avec succès
+        404:
+          description: Réservation non trouvée
+        403:
+          description: Non autorisé à voir cette réservation
+
+    put:
+      tags:
+        - Réservations
+      summary: Modifier une réservation
+      description: Modifie les détails d'une réservation existante
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: objectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                checkIn:
+                  type: string
+                  format: date
+                checkOut:
+                  type: string
+                  format: date
+                guests:
+                  type: integer
+                  minimum: 1
+                specialRequests:
+                  type: string
+                status:
+                  type: string
+                  enum: [pending, confirmed, cancelled, completed]
+      responses:
+        200:
+          description: Réservation modifiée avec succès
+        400:
+          description: Données invalides
+        404:
+          description: Réservation non trouvée
+        403:
+          description: Non autorisé à modifier cette réservation
+
+    delete:
+      tags:
+        - Réservations
+      summary: Annuler une réservation
+      description: Annule une réservation existante
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: objectId
+      responses:
+        200:
+          description: Réservation annulée avec succès
+        404:
+          description: Réservation non trouvée
+        403:
+          description: Non autorisé à annuler cette réservation
+        400:
+          description: Impossible d'annuler (délai dépassé)
+
+  /api/bookings/all:
+    get:
+      tags:
+        - Réservations
+      summary: Toutes les réservations (Admin)
+      description: Retourne toutes les réservations (accès administrateur uniquement)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        200:
+          description: Liste des réservations récupérée avec succès
+        403:
+          description: Non autorisé (accès admin requis)

@@ -1,0 +1,189 @@
+config:
+  target: "http://localhost:5000/api"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 100
+      name: "Peak load"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  plugins:
+    metrics-by-endpoint: {}
+    expect: {}
+
+scenarios:
+  - name: "User flow - Browse and Book"
+    flow:
+      # Login
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ $processEnvironment.TEST_USER_EMAIL }}"
+            password: "{{ $processEnvironment.TEST_USER_PASSWORD }}"
+          capture:
+            - json: "$.token"
+              as: "userToken"
+          expect:
+            - statusCode: 200
+            - hasProperty: "token"
+
+      # Get available residences
+      - get:
+          url: "/residences"
+          headers:
+            Authorization: "Bearer {{ userToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+          capture:
+            - json: "$.data[0]._id"
+              as: "residenceId"
+
+      # Get residence details
+      - get:
+          url: "/residences/{{ residenceId }}"
+          headers:
+            Authorization: "Bearer {{ userToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+      # Create booking
+      - post:
+          url: "/bookings"
+          headers:
+            Authorization: "Bearer {{ userToken }}"
+          json:
+            residenceId: "{{ residenceId }}"
+            checkIn: "2025-03-01"
+            checkOut: "2025-03-05"
+            guests: 2
+          capture:
+            - json: "$.data._id"
+              as: "bookingId"
+          expect:
+            - statusCode: 201
+            - hasProperty: "data"
+
+      # Get booking details
+      - get:
+          url: "/bookings/{{ bookingId }}"
+          headers:
+            Authorization: "Bearer {{ userToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+  - name: "User flow - Search and Filter"
+    flow:
+      # Search residences
+      - get:
+          url: "/residences/search?query=luxury&city=Paris"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+      # Filter residences
+      - get:
+          url: "/residences?minPrice=100&maxPrice=500&guests=2"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+      # Get residence reviews
+      - get:
+          url: "/residences/{{ $randomString() }}/reviews"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+  - name: "Admin flow"
+    weight: 2
+    flow:
+      # Admin login
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ $processEnvironment.TEST_ADMIN_EMAIL }}"
+            password: "{{ $processEnvironment.TEST_ADMIN_PASSWORD }}"
+          capture:
+            - json: "$.token"
+              as: "adminToken"
+          expect:
+            - statusCode: 200
+            - hasProperty: "token"
+
+      # Get all bookings
+      - get:
+          url: "/admin/bookings"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+      # Get system metrics
+      - get:
+          url: "/admin/metrics"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+  - name: "Error handling"
+    weight: 1
+    flow:
+      # Invalid login
+      - post:
+          url: "/auth/login"
+          json:
+            email: "invalid@email.com"
+            password: "wrongpassword"
+          expect:
+            - statusCode: 401
+
+      # Invalid booking dates
+      - post:
+          url: "/bookings"
+          headers:
+            Authorization: "Bearer invalid_token"
+          json:
+            residenceId: "invalid_id"
+            checkIn: "2025-03-05"
+            checkOut: "2025-03-01"
+            guests: 0
+          expect:
+            - statusCode: 400
+
+      # Non-existent resource
+      - get:
+          url: "/residences/nonexistent_id"
+          expect:
+            - statusCode: 404
+
+before:
+  flow:
+    - log: "Starting load test"
+    - function: "setJWT"
+
+after:
+  flow:
+    - log: "Load test completed"
+    - function: "generateReport"
+
+functions:
+  - setJWT:
+      - log: "Setting up JWT token"
+  - generateReport:
+      - log: "Generating performance report"

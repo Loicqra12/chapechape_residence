@@ -1,0 +1,135 @@
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Authentification
+      summary: Inscription d'un nouvel utilisateur
+      description: Crée un nouveau compte utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - firstName
+                - lastName
+                - phoneNumber
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phoneNumber:
+                  type: string
+                role:
+                  type: string
+                  enum: [user, partner]
+      responses:
+        201:
+          description: Utilisateur créé avec succès
+        400:
+          description: Données invalides
+        409:
+          description: Email déjà utilisé
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentification
+      summary: Connexion utilisateur
+      description: Authentifie un utilisateur et retourne un token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        200:
+          description: Connexion réussie
+        401:
+          description: Identifiants invalides
+
+  /api/auth/me:
+    get:
+      tags:
+        - Authentification
+      summary: Profil utilisateur
+      description: Retourne les informations de l'utilisateur connecté
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Profil récupéré avec succès
+        401:
+          description: Non authentifié
+
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - Authentification
+      summary: Mot de passe oublié
+      description: Envoie un email de réinitialisation du mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        200:
+          description: Email envoyé avec succès
+        404:
+          description: Email non trouvé
+
+  /api/auth/reset-password:
+    post:
+      tags:
+        - Authentification
+      summary: Réinitialisation du mot de passe
+      description: Réinitialise le mot de passe avec le token reçu par email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        200:
+          description: Mot de passe réinitialisé avec succès
+        400:
+          description: Token invalide ou expiré

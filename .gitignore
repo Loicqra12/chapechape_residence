@@ -1,0 +1,80 @@
+# Miscellaneous
+*.class
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+backend/.env
+backend/.env.local
+backend/.env.development
+backend/.env.production
+*.env.json
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS
+/ios/Flutter/.last_build_id
+/ios/Flutter/ephemeral
+/ios/.symlinks/
+/ios/Pods/
+
+# Web
+/web/favicon.png
+/web/icons/
+/web/manifest.json
+
+# VS Code
+.vscode/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Uploads
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System Files
+.DS_Store
+Thumbs.db

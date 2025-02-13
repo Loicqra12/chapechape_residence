@@ -1,0 +1,69 @@
+name: chapechape_client
+description: Application de réservation de résidences
+
+# Version de l'application
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.19.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+    
+  # Navigation
+  go_router: ^13.0.0
+  
+  # Gestion d'état
+  flutter_bloc: ^8.1.3
+  equatable: ^2.0.5
+  
+  # UI et Animations
+  google_fonts: ^6.1.0
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  carousel_slider: ^4.2.1
+  
+  # Stockage local
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # Réseau et API
+  dio: ^5.4.0
+  connectivity_plus: ^5.0.2
+  
+  # UI et Animations
+  cupertino_icons: ^1.0.2
+  lottie: ^2.3.0
+  
+  # Internationalisation
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/images/logo.png
+    - assets/images/onboarding/
+    - assets/images/onboarding/search.png
+    - assets/images/onboarding/book.png
+    - assets/images/onboarding/enjoy.png
+    - assets/images/categories/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700 

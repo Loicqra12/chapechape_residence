@@ -1,0 +1,17 @@
+// Exports de tous les écrans de l'application
+export 'splash_screen.dart';
+export 'onboarding_screen.dart';
+export 'home_screen.dart';
+export 'residence_details_screen.dart';
+export 'search_screen.dart';
+export 'booking_screen.dart';
+export 'payment_screen.dart';
+export 'favorites_screen.dart';
+export 'profile_screen.dart';
+export 'settings_screen.dart';
+export 'chat_screen.dart';
+export 'notification_screen.dart';
+export 'booking_history_screen.dart';
+export 'reviews_screen.dart';
+export 'help_support_screen.dart';
+export 'faq_screen.dart';

@@ -1,0 +1,231 @@
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        _id:
+          type: string
+          format: objectId
+          description: ID unique de l'utilisateur
+        email:
+          type: string
+          format: email
+          description: Email de l'utilisateur
+        firstName:
+          type: string
+          description: Prénom de l'utilisateur
+        lastName:
+          type: string
+          description: Nom de famille de l'utilisateur
+        phoneNumber:
+          type: string
+          description: Numéro de téléphone
+        role:
+          type: string
+          enum: [user, partner, admin]
+          description: Rôle de l'utilisateur
+        isVerified:
+          type: boolean
+          description: Email vérifié ou non
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création du compte
+        updatedAt:
+          type: string
+          format: date-time
+          description: Date de dernière modification
+
+    Residence:
+      type: object
+      required:
+        - name
+        - description
+        - address
+        - price
+        - owner
+      properties:
+        _id:
+          type: string
+          format: objectId
+          description: ID unique de la résidence
+        name:
+          type: string
+          description: Nom de la résidence
+        description:
+          type: string
+          description: Description détaillée
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zipCode:
+              type: string
+            country:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+        price:
+          type: number
+          description: Prix par nuit
+        capacity:
+          type: number
+          description: Nombre maximum de personnes
+        amenities:
+          type: array
+          items:
+            type: string
+          description: Liste des équipements
+        images:
+          type: array
+          items:
+            type: string
+          description: URLs des images
+        owner:
+          type: string
+          format: objectId
+          description: ID du propriétaire
+        status:
+          type: string
+          enum: [available, unavailable, maintenance]
+          description: Statut de disponibilité
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+          description: Note moyenne
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Booking:
+      type: object
+      required:
+        - residence
+        - user
+        - checkIn
+        - checkOut
+        - guests
+      properties:
+        _id:
+          type: string
+          format: objectId
+          description: ID unique de la réservation
+        residence:
+          type: string
+          format: objectId
+          description: ID de la résidence
+        user:
+          type: string
+          format: objectId
+          description: ID de l'utilisateur
+        checkIn:
+          type: string
+          format: date
+          description: Date d'arrivée
+        checkOut:
+          type: string
+          format: date
+          description: Date de départ
+        guests:
+          type: integer
+          minimum: 1
+          description: Nombre de personnes
+        totalPrice:
+          type: number
+          description: Prix total de la réservation
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+          description: Statut de la réservation
+        paymentStatus:
+          type: string
+          enum: [pending, paid, refunded]
+          description: Statut du paiement
+        specialRequests:
+          type: string
+          description: Demandes spéciales
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      required:
+        - residence
+        - user
+        - rating
+        - comment
+      properties:
+        _id:
+          type: string
+          format: objectId
+        residence:
+          type: string
+          format: objectId
+        user:
+          type: string
+          format: objectId
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+  responses:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        error:
+          type: string
+        stack:
+          type: string
+          description: Uniquement en développement
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
