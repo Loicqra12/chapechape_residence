@@ -2,26 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/models/residence_model.dart';
+import 'residence_amenities.dart';
 
 class ResidenceCard extends StatelessWidget {
-  final String imageUrl;
-  final String title;
-  final String location;
-  final String price;
-  final double rating;
+  final ResidenceModel residence;
   final VoidCallback? onTap;
-  final bool isFavorite;
   final VoidCallback? onFavoritePressed;
 
   const ResidenceCard({
     super.key,
-    required this.imageUrl,
-    required this.title,
-    required this.location,
-    required this.price,
-    this.rating = 0.0,
+    required this.residence,
     this.onTap,
-    this.isFavorite = false,
     this.onFavoritePressed,
   });
 
@@ -54,22 +46,29 @@ class ResidenceCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: theme.disabledColor.withOpacity(0.1),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: theme.disabledColor.withOpacity(0.1),
-                      child: const Icon(Icons.error),
-                    ),
-                  ),
+                  child: residence.imageUrl.startsWith('assets/')
+                      ? Image.asset(
+                          residence.imageUrl,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: residence.imageUrl,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: theme.disabledColor.withOpacity(0.1),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: theme.disabledColor.withOpacity(0.1),
+                            child: const Icon(Icons.error),
+                          ),
+                        ),
                 ),
                 if (onFavoritePressed != null)
                   Positioned(
@@ -93,9 +92,9 @@ class ResidenceCard extends StatelessWidget {
                             ],
                           ),
                           child: Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            residence.isFavorite ? Icons.favorite : Icons.favorite_border,
                             size: 20,
-                            color: isFavorite ? Colors.red : Colors.grey,
+                            color: residence.isFavorite ? Colors.red : Colors.grey,
                           ),
                         ),
                       ),
@@ -109,7 +108,7 @@ class ResidenceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    residence.title,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -121,15 +120,15 @@ class ResidenceCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.location_on,
-                        size: 14,
-                        color: AppColors.textSecondaryColor,
+                        size: 16,
+                        color: theme.hintColor,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          location,
+                          residence.location.displayAddress,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryColor,
+                            color: theme.hintColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -142,31 +141,33 @@ class ResidenceCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        price,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.primaryColor,
+                        '${residence.price.toStringAsFixed(0)} FCFA',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: AppColors.primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (rating > 0)
+                      if (residence.rating > 0)
                         Row(
                           children: [
                             Icon(
                               Icons.star,
-                              color: AppColors.goldColor,
                               size: 16,
+                              color: Colors.amber,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              rating.toStringAsFixed(1),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              residence.rating.toStringAsFixed(1),
+                              style: theme.textTheme.bodySmall,
                             ),
                           ],
                         ),
                     ],
                   ),
+                  if (residence.amenities.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ResidenceAmenities(amenities: residence.amenities),
+                  ],
                 ],
               ),
             ),

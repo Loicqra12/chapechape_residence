@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/services/shared_preferences_service.dart';
 import 'residence_card.dart';
 
-class PersonalizedSuggestionsWidget extends StatelessWidget {
-  const PersonalizedSuggestionsWidget({Key? key}) : super(key: key);
+class VacationResidencesWidget extends StatelessWidget {
+  const VacationResidencesWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,10 +16,12 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
         }
 
         if (state is ResidencesLoaded) {
-          // TODO: Implémenter la logique de suggestions personnalisées
-          final suggestedResidences = state.residences.take(5).toList();
+          final vacationResidences = state.residences
+              .where((r) => r.isVacationResidence)
+              .take(5)
+              .toList();
 
-          if (suggestedResidences.isEmpty) {
+          if (vacationResidences.isEmpty) {
             return const SizedBox.shrink();
           }
 
@@ -33,12 +34,12 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Suggestions pour vous',
+                      'Résidences de vacances',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     TextButton(
                       onPressed: () {
-                        // TODO: Naviguer vers la liste complète
+                        context.goNamed('vacation_residences');
                       },
                       child: const Text('Voir tout'),
                     ),
@@ -50,15 +51,16 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   scrollDirection: Axis.horizontal,
-                  itemCount: suggestedResidences.length,
+                  itemCount: vacationResidences.length,
                   itemBuilder: (context, index) {
-                    final residence = suggestedResidences[index];
+                    final residence = vacationResidences[index];
                     return SizedBox(
                       width: 280,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 16.0),
                         child: ResidenceCard(
                           residence: residence,
+                          showBeachBadge: true,
                           onTap: () {
                             context.read<ResidenceBloc>().add(
                                   LoadDetails(residence.id),

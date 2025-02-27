@@ -77,11 +77,11 @@ class FooterWidget extends StatelessWidget {
           ),
           const SizedBox(height: 40),
 
-          // Modes de paiement
+          // Contactez-nous
           Column(
             children: [
               const Text(
-                'Modes de paiement acceptés',
+                'Contactez-nous',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -91,64 +91,26 @@ class FooterWidget extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildPaymentLogo('assets/images/payment/orange_money.png'),
-                  _buildPaymentLogo('assets/images/payment/mtn_money.png'),
-                  _buildPaymentLogo('assets/images/payment/moov_money.png'),
-                  _buildPaymentLogo('assets/images/payment/wave_money.png'),
+                  _buildContactButton(
+                    icon: FontAwesomeIcons.whatsapp,
+                    text: 'WhatsApp',
+                    onTap: _launchWhatsApp,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildContactButton(
+                    icon: Icons.email,
+                    text: 'Email',
+                    onTap: _launchEmail,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildContactButton(
+                    icon: Icons.chat,
+                    text: 'Chat',
+                    onTap: _openChat,
+                  ),
                 ],
               ),
             ],
-          ),
-          const SizedBox(height: 40),
-
-          // Service client
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  'Service Client 24/7',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildContactButton(
-                      icon: FontAwesomeIcons.whatsapp,
-                      text: 'WhatsApp',
-                      onTap: () => _launchWhatsApp(),
-                    ),
-                    const SizedBox(width: 20),
-                    _buildContactButton(
-                      icon: Icons.email,
-                      text: 'Email',
-                      onTap: () => _launchEmail(),
-                    ),
-                    const SizedBox(width: 20),
-                    _buildContactButton(
-                      icon: Icons.chat_bubble,
-                      text: 'Chat',
-                      onTap: () => _openChat(),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 40),
 
@@ -206,17 +168,6 @@ class FooterWidget extends StatelessWidget {
             color: Colors.grey,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentLogo(String assetPath) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Image.asset(
-        assetPath,
-        height: 40,
-        fit: BoxFit.contain,
       ),
     );
   }

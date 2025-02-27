@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/services/shared_preferences_service.dart';
+import '../../core/models/residence_model.dart';
 import 'residence_card.dart';
 
-class PersonalizedSuggestionsWidget extends StatelessWidget {
-  const PersonalizedSuggestionsWidget({Key? key}) : super(key: key);
+class NewListingsWidget extends StatelessWidget {
+  const NewListingsWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,10 +17,11 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
         }
 
         if (state is ResidencesLoaded) {
-          // TODO: Implémenter la logique de suggestions personnalisées
-          final suggestedResidences = state.residences.take(5).toList();
+          final newResidences = state.residences
+              .where((r) => _isNewListing(r))
+              .toList();
 
-          if (suggestedResidences.isEmpty) {
+          if (newResidences.isEmpty) {
             return const SizedBox.shrink();
           }
 
@@ -33,7 +34,7 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Suggestions pour vous',
+                      'Nouvelles résidences',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     TextButton(
@@ -50,9 +51,9 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   scrollDirection: Axis.horizontal,
-                  itemCount: suggestedResidences.length,
+                  itemCount: newResidences.length,
                   itemBuilder: (context, index) {
-                    final residence = suggestedResidences[index];
+                    final residence = newResidences[index];
                     return SizedBox(
                       width: 280,
                       child: Padding(
@@ -78,5 +79,12 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
         return const SizedBox.shrink();
       },
     );
+  }
+
+  bool _isNewListing(ResidenceModel residence) {
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    // TODO: Ajouter un champ createdAt dans le modèle ResidenceModel
+    return true; // Temporairement retourne true
   }
 }
