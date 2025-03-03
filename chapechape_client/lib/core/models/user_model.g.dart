@@ -13,6 +13,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
       lastName: json['lastName'] as String,
       phoneNumber: json['phoneNumber'] as String,
       profilePicture: json['profilePicture'] as String?,
+      role: json['role'] as String? ?? 'user',
       isVerified: json['isVerified'] as bool? ?? false,
       favoriteResidences: (json['favoriteResidences'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -33,9 +34,12 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'firstName': instance.firstName,
       'lastName': instance.lastName,
       'phoneNumber': instance.phoneNumber,
-      'profilePicture': instance.profilePicture,
+      if (instance.profilePicture case final value?) 'profilePicture': value,
+      'role': instance.role,
       'isVerified': instance.isVerified,
       'favoriteResidences': instance.favoriteResidences,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
+      if (instance.createdAt?.toIso8601String() case final value?)
+        'createdAt': value,
+      if (instance.updatedAt?.toIso8601String() case final value?)
+        'updatedAt': value,
     };

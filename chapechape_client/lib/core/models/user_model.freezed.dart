@@ -26,6 +26,7 @@ mixin _$User {
   String get lastName => throw _privateConstructorUsedError;
   String get phoneNumber => throw _privateConstructorUsedError;
   String? get profilePicture => throw _privateConstructorUsedError;
+  String get role => throw _privateConstructorUsedError;
   bool get isVerified => throw _privateConstructorUsedError;
   List<String> get favoriteResidences => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
@@ -52,6 +53,7 @@ abstract class $UserCopyWith<$Res> {
       String lastName,
       String phoneNumber,
       String? profilePicture,
+      String role,
       bool isVerified,
       List<String> favoriteResidences,
       DateTime? createdAt,
@@ -79,6 +81,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? lastName = null,
     Object? phoneNumber = null,
     Object? profilePicture = freezed,
+    Object? role = null,
     Object? isVerified = null,
     Object? favoriteResidences = null,
     Object? createdAt = freezed,
@@ -109,6 +112,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.profilePicture
           : profilePicture // ignore: cast_nullable_to_non_nullable
               as String?,
+      role: null == role
+          ? _value.role
+          : role // ignore: cast_nullable_to_non_nullable
+              as String,
       isVerified: null == isVerified
           ? _value.isVerified
           : isVerified // ignore: cast_nullable_to_non_nullable
@@ -143,6 +150,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
       String lastName,
       String phoneNumber,
       String? profilePicture,
+      String role,
       bool isVerified,
       List<String> favoriteResidences,
       DateTime? createdAt,
@@ -167,6 +175,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? lastName = null,
     Object? phoneNumber = null,
     Object? profilePicture = freezed,
+    Object? role = null,
     Object? isVerified = null,
     Object? favoriteResidences = null,
     Object? createdAt = freezed,
@@ -197,6 +206,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.profilePicture
           : profilePicture // ignore: cast_nullable_to_non_nullable
               as String?,
+      role: null == role
+          ? _value.role
+          : role // ignore: cast_nullable_to_non_nullable
+              as String,
       isVerified: null == isVerified
           ? _value.isVerified
           : isVerified // ignore: cast_nullable_to_non_nullable
@@ -227,6 +240,7 @@ class _$UserImpl implements _User {
       required this.lastName,
       required this.phoneNumber,
       this.profilePicture,
+      this.role = 'user',
       this.isVerified = false,
       final List<String> favoriteResidences = const [],
       this.createdAt,
@@ -250,6 +264,9 @@ class _$UserImpl implements _User {
   final String? profilePicture;
   @override
   @JsonKey()
+  final String role;
+  @override
+  @JsonKey()
   final bool isVerified;
   final List<String> _favoriteResidences;
   @override
@@ -268,7 +285,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(id: $id, email: $email, firstName: $firstName, lastName: $lastName, phoneNumber: $phoneNumber, profilePicture: $profilePicture, isVerified: $isVerified, favoriteResidences: $favoriteResidences, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'User(id: $id, email: $email, firstName: $firstName, lastName: $lastName, phoneNumber: $phoneNumber, profilePicture: $profilePicture, role: $role, isVerified: $isVerified, favoriteResidences: $favoriteResidences, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -286,6 +303,7 @@ class _$UserImpl implements _User {
                 other.phoneNumber == phoneNumber) &&
             (identical(other.profilePicture, profilePicture) ||
                 other.profilePicture == profilePicture) &&
+            (identical(other.role, role) || other.role == role) &&
             (identical(other.isVerified, isVerified) ||
                 other.isVerified == isVerified) &&
             const DeepCollectionEquality()
@@ -306,6 +324,7 @@ class _$UserImpl implements _User {
       lastName,
       phoneNumber,
       profilePicture,
+      role,
       isVerified,
       const DeepCollectionEquality().hash(_favoriteResidences),
       createdAt,
@@ -335,6 +354,7 @@ abstract class _User implements User {
       required final String lastName,
       required final String phoneNumber,
       final String? profilePicture,
+      final String role,
       final bool isVerified,
       final List<String> favoriteResidences,
       final DateTime? createdAt,
@@ -354,6 +374,8 @@ abstract class _User implements User {
   String get phoneNumber;
   @override
   String? get profilePicture;
+  @override
+  String get role;
   @override
   bool get isVerified;
   @override

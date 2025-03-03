@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
+import '../../core/blocs/residence/residence_state.dart';
+import '../../core/blocs/residence/residence_event.dart';
 import '../../core/services/shared_preferences_service.dart';
 import 'residence_card.dart';
 
@@ -61,9 +63,9 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
                           residence: residence,
                           onTap: () {
                             context.read<ResidenceBloc>().add(
-                                  LoadDetails(residence.id),
+                                  LoadResidenceDetails(residenceId: residence.id),
                                 );
-                            context.goNamed('residence_details', pathParameters: {'id': residence.id});
+                            context.go('/residence-details/${residence.id}');
                           },
                         ),
                       ),

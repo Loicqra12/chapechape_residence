@@ -1,122 +1,168 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_carousel_widget/flutter_carousel_widget.dart';
-import '../../core/data/testimonials_data.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/responsive_utils.dart';
 import '../../core/models/testimonial_model.dart';
+import '../../core/data/testimonials_data.dart';
 
 class TestimonialsWidget extends StatelessWidget {
   const TestimonialsWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final List<TestimonialModel> testimonials = TestimonialsData.getTestimonials();
+    final List<TestimonialModel> testimonials = TestimonialsData.testimonials;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: context.responsiveMargin,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          // Titre et description
+          Text(
             'Ce que disent nos clients',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: context.responsiveFontSize(24),
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Découvrez les expériences de nos clients satisfaits',
+            style: TextStyle(
+              fontSize: context.responsiveFontSize(16),
+              color: Colors.grey[600],
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            height: 220,
-            child: FlutterCarousel(
-              items: testimonials.map((testimonial) => Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          
+          // Carousel de témoignages
+          FlutterCarousel(
+            items: testimonials.map((testimonial) => 
+              _buildTestimonialCard(context, testimonial)
+            ).toList(),
+            options: CarouselOptions(
+              height: context.responsiveHeight(300),
+              viewportFraction: _getViewportFraction(context),
+              autoPlay: true,
+              autoPlayInterval: const Duration(seconds: 5),
+              enlargeCenterPage: true,
+              enableInfiniteScroll: testimonials.length > 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _getViewportFraction(BuildContext context) {
+    if (context.screenWidth < 500) {
+      return 0.9; // Mobile petit écran
+    } else if (context.screenWidth < 800) {
+      return 0.8; // Mobile grand écran / tablette
+    } else if (context.screenWidth < 1200) {
+      return 0.6; // Tablette / petit desktop
+    } else {
+      return 0.4; // Grand desktop
+    }
+  }
+
+  Widget _buildTestimonialCard(BuildContext context, TestimonialModel testimonial) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  backgroundImage: testimonial.userAvatar != null && testimonial.userAvatar!.isNotEmpty
+                      ? AssetImage(testimonial.userAvatar!)
+                      : null,
+                  onBackgroundImageError: testimonial.userAvatar != null && testimonial.userAvatar!.isNotEmpty
+                      ? (exception, stackTrace) {
+                          debugPrint('Erreur de chargement de l\'image: $exception');
+                        }
+                      : null,
+                  child: testimonial.userAvatar == null || testimonial.userAvatar!.isEmpty
+                      ? Text(
+                          testimonial.userName != null && testimonial.userName!.isNotEmpty
+                              ? testimonial.userName![0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        )
+                      : null,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+                const SizedBox(width: 16),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFD700).withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.format_quote_rounded,
-                              color: Color(0xFFFFD700),
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                testimonial.userName,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                testimonial.residenceName ?? '',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: List.generate(
-                              testimonial.rating.toInt(),
-                              (index) => const Icon(
-                                Icons.star,
-                                color: Color(0xFFFFD700),
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        testimonial.userName ?? 'Client anonyme',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: Text(
-                          testimonial.content,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
+                      const SizedBox(height: 4),
+                      Row(
+                        children: List.generate(
+                          5,
+                          (index) => Icon(
+                            index < (testimonial.rating ?? 0).floor()
+                                ? Icons.star
+                                : index < (testimonial.rating ?? 0)
+                                    ? Icons.star_half
+                                    : Icons.star_border,
+                            color: Colors.amber,
+                            size: 18,
                           ),
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
-              )).toList(),
-              options: CarouselOptions(
-                height: 200,
-                viewportFraction: 0.85,
-                initialPage: 0,
-                enableInfiniteScroll: true,
-                reverse: false,
-                autoPlay: true,
-                autoPlayInterval: const Duration(seconds: 5),
-                autoPlayAnimationDuration: const Duration(milliseconds: 800),
-                autoPlayCurve: Curves.fastOutSlowIn,
-                enlargeCenterPage: true,
-                scrollDirection: Axis.horizontal,
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Text(
+                testimonial.content ?? 'Aucun commentaire',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  height: 1.5,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 5,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                'il y a 2 jours',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

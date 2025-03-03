@@ -12,6 +12,7 @@ class User with _$User {
     required String lastName,
     required String phoneNumber,
     String? profilePicture,
+    @Default('user') String role,
     @Default(false) bool isVerified,
     @Default([]) List<String> favoriteResidences,
     DateTime? createdAt,

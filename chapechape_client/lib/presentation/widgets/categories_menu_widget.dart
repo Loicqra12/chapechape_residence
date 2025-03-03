@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_theme.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/models/residence_type_enum.dart';
+import '../../core/models/residence_type.dart';
+import '../../core/utils/responsive_utils.dart';
 
 class CategoriesMenuWidget extends StatelessWidget {
   const CategoriesMenuWidget({super.key});
@@ -10,50 +12,70 @@ class CategoriesMenuWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
+        Padding(
+          padding: context.responsivePadding,
           child: Text(
             'Catégories',
-            style: AppTheme.headingLarge,
+            style: TextStyle(
+              fontSize: context.responsiveFontSize(24),
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 400,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: _getCategoryItems(context),
-          ),
+          height: context.responsiveHeight(400),
+          child: context.screenWidth > 600
+              ? GridView.count(
+                  crossAxisCount: context.screenWidth > 900 ? 3 : 2,
+                  childAspectRatio: 1.5,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: _getCategoryItems(context),
+                )
+              : ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: _getCategoryItems(context),
+                ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 24),
       ],
     );
   }
 
   List<Widget> _getCategoryItems(BuildContext context) {
     final categories = [
-      (type: ResidenceType.apartment, title: 'Appartements'),
-      (type: ResidenceType.studio, title: 'Studios'),
-      (type: ResidenceType.villa, title: 'Villas'),
-      (type: ResidenceType.penthouse, title: 'Penthouses'),
-      (type: ResidenceType.bungalow, title: 'Bungalows'),
-      (type: ResidenceType.hotel, title: 'Hôtels'),
-      (type: ResidenceType.coworking, title: 'Espaces Coworking'),
-      (type: ResidenceType.student, title: 'Logements Étudiants'),
+      {'type': ResidenceType.apartment, 'title': 'Appartements'},
+      {'type': ResidenceType.studio, 'title': 'Studios'},
+      {'type': ResidenceType.villa, 'title': 'Villas'},
+      {'type': ResidenceType.penthouse, 'title': 'Penthouses'},
+      {'type': ResidenceType.bungalow, 'title': 'Bungalows'},
+      {'type': ResidenceType.hotel, 'title': 'Hôtels'},
+      {'type': ResidenceType.room, 'title': 'Chambres'},
+      {'type': ResidenceType.luxury, 'title': 'Luxe'},
     ];
 
-    return categories.map((category) => _buildCategoryItem(
-      context,
-      category.type,
-      category.title,
-    )).toList();
+    return categories.map((category) {
+      final type = category['type'] as ResidenceType;
+      final title = category['title'] as String;
+      return _buildCategoryItem(
+        context,
+        type,
+        title,
+      );
+    }).toList();
   }
 
   Widget _buildCategoryItem(BuildContext context, ResidenceType type, String title) {
+    final isHorizontalList = context.screenWidth <= 600;
+    
     return Container(
-      width: 300,
-      margin: const EdgeInsets.symmetric(horizontal: 10),
+      width: isHorizontalList ? context.responsiveWidth(300) : null,
+      margin: EdgeInsets.symmetric(
+        horizontal: isHorizontalList ? 10 : 8, 
+        vertical: isHorizontalList ? 0 : 8
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
@@ -69,19 +91,22 @@ class CategoriesMenuWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(15),
+            padding: EdgeInsets.all(context.isMobileSmall ? 10 : 15),
             child: Row(
               children: [
                 Icon(
                   _getCategoryIcon(type),
-                  size: 30,
+                  size: context.responsiveFontSize(30),
                   color: Theme.of(context).primaryColor,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     title,
-                    style: AppTheme.headingMedium,
+                    style: TextStyle(
+                      fontSize: context.responsiveFontSize(18),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -89,18 +114,52 @@ class CategoriesMenuWidget extends StatelessWidget {
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.isMobileSmall ? 10 : 15
+              ),
               children: _getCategoryFeatures(type).map((feature) => 
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.check_circle_outline, size: 20),
+                  leading: Icon(
+                    Icons.check_circle_outline,
+                    color: AppTheme.secondaryColor,
+                    size: context.responsiveFontSize(18),
+                  ),
                   title: Text(
                     feature,
-                    style: AppTheme.bodyMedium,
+                    style: TextStyle(
+                      fontSize: context.responsiveFontSize(14),
+                    ),
                   ),
-                ),
+                )
               ).toList(),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(context.isMobileSmall ? 10 : 15),
+            child: ElevatedButton(
+              onPressed: () {
+                // TODO: Naviguer vers la liste filtrée par type
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.secondaryColor,
+                foregroundColor: Colors.black,
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.isMobileSmall ? 12 : 16, 
+                  vertical: context.isMobileSmall ? 8 : 12
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: Text(
+                'Explorer',
+                style: TextStyle(
+                  fontSize: context.responsiveFontSize(14),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -126,6 +185,10 @@ class CategoriesMenuWidget extends StatelessWidget {
         return Icons.business_center;
       case ResidenceType.student:
         return Icons.school;
+      case ResidenceType.room:
+        return Icons.bedroom_child;
+      case ResidenceType.luxury:
+        return Icons.star;
     }
   }
 

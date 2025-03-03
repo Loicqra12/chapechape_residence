@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/models/residence_model_alias.dart';
 import '../../core/models/residence_model.dart';
 import 'package:intl/intl.dart';
 

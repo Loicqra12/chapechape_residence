@@ -25,7 +25,7 @@ class LoadResidences extends ResidenceEvent {
 class LoadResidenceDetails extends ResidenceEvent {
   final String residenceId;
 
-  const LoadResidenceDetails(this.residenceId);
+  const LoadResidenceDetails({required this.residenceId});
 
   @override
   List<Object?> get props => [residenceId];

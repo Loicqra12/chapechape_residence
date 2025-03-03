@@ -2,7 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_assets.dart' hide Amenity;
+import '../../core/models/residence_model_alias.dart';
 import '../../core/models/residence_model.dart';
+import '../../core/models/amenity.dart' as amenity;
 import 'residence_amenities.dart';
 
 class ResidenceCard extends StatelessWidget {
@@ -147,7 +150,7 @@ class ResidenceCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (residence.rating > 0)
+                      if (residence.rating != null && residence.rating! > 0)
                         Row(
                           children: [
                             Icon(
@@ -157,7 +160,7 @@ class ResidenceCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              residence.rating.toStringAsFixed(1),
+                              residence.rating!.toStringAsFixed(1),
                               style: theme.textTheme.bodySmall,
                             ),
                           ],
@@ -166,7 +169,15 @@ class ResidenceCard extends StatelessWidget {
                   ),
                   if (residence.amenities.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    ResidenceAmenities(amenities: residence.amenities),
+                    ResidenceAmenities(
+                      amenities: residence.amenities
+                          .map((amenityName) => amenity.Amenity.getAllAmenities()
+                              .firstWhere(
+                                (a) => a.name.toLowerCase() == amenityName.toLowerCase(),
+                                orElse: () => amenity.Amenity.getAllAmenities().first,
+                              ))
+                          .toList(),
+                    ),
                   ],
                 ],
               ),

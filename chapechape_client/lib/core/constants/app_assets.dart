@@ -79,19 +79,28 @@ class ResidenceImages {
   // Luxury
   static const List<String> luxury = [
     'assets/images/residences/luxury/Quai-dOrsay-large-studio-9920039024960.jpg',
-    'assets/images/residences/luxury/images (3).jpg',
-  ];
-
-  // Studios
-  static const List<String> studios = [
-    'assets/images/residences/studios/304661255.jpg',
-    'assets/images/residences/studios/450667738.jpg',
+    'assets/images/residences/luxury/Quai-dOrsay-large-studio-9920039024960.jpg',
   ];
 
   // Villas
   static const List<String> villas = [
-    'assets/images/residences/villas/Villa-Santorini-Abidjan-1.jpg',
+    'assets/images/residences/apartments/304661255.jpg',
+    'assets/images/residences/apartments/450667738.jpg',
   ];
+
+  // Studios
+  static const List<String> studios = [
+    'assets/images/residences/apartments/IMG_0668.jpg',
+    'assets/images/residences/luxury/images (3).jpg',
+  ];
+}
+
+// Classe pour les assets de blog
+class ResidenceAssets {
+  static const String villa1 = 'assets/images/residences/apartments/304661255.jpg';
+  static const String apartment4 = 'assets/images/residences/apartments/seen-hotel-abidjan-plateau.jpg';
+  static const String studio2 = 'assets/images/residences/luxury/images (3).jpg';
+  static const String luxury1 = 'assets/images/residences/luxury/Quai-dOrsay-large-studio-9920039024960.jpg';
 }
 
 // Énumération pour les types de résidences
@@ -103,7 +112,9 @@ enum ResidenceType {
   bungalow,
   penthouse,
   hotel,
-  luxury
+  luxury,
+  coworking,
+  student
 }
 
 // Énumération pour les équipements
@@ -136,6 +147,10 @@ extension ResidenceTypeExtension on ResidenceType {
         return AppAssets.iconPenthouse;
       case ResidenceType.luxury:
         return AppAssets.iconFiveStars;
+      case ResidenceType.coworking:
+        return AppAssets.iconCoworking;
+      case ResidenceType.student:
+        return AppAssets.iconStudent;
       default:
         return AppAssets.iconApartment;
     }
@@ -168,4 +183,37 @@ extension AmenityExtension on Amenity {
         return AppAssets.iconFurnished;
     }
   }
+}
+
+// Classe pour les logos des partenaires
+class PartnerAssets {
+  static const List<String> logos = [
+    'assets/logos/partners/partner1_logo.png',
+    'assets/logos/partners/partner2_logo.png',
+    'assets/logos/partners/partner3_logo.png',
+    'assets/logos/partners/partner4_logo.png',
+    'assets/logos/partners/partner5_logo.png',
+  ];
+}
+
+// Classe pour les vidéos des résidences
+class ResidenceVideos {
+  // Chemins des vidéos
+  static const List<String> videoTours = [
+    'assets/videos/residence_tour1.mp4',
+    'assets/videos/residence_tour2.mp4',
+    'assets/videos/residence_tour3.mp4',
+  ];
+  
+  // Chemins des thumbnails
+  static const List<String> videoThumbnails = [
+    'assets/images/video_thumbnails/thumbnail1.jpg',
+    'assets/images/video_thumbnails/thumbnail2.jpg',
+    'assets/images/video_thumbnails/thumbnail3.jpg',
+  ];
+  
+  // Thumbnails individuels pour accès direct
+  static const String villa1 = 'assets/images/video_thumbnails/thumbnail1.jpg';
+  static const String apartment4 = 'assets/images/video_thumbnails/thumbnail2.jpg';
+  static const String luxury1 = 'assets/images/video_thumbnails/thumbnail3.jpg';
 }

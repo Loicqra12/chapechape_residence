@@ -4,7 +4,11 @@ import 'favorites_screen.dart';
 import 'notifications_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
+import 'home_screen.dart';
+import '../widgets/notification_button.dart';
 import '../widgets/language_selector.dart';
+import '../widgets/location_selector_widget.dart';
+import '../widgets/auth_button_widget.dart';
 import '../../core/theme/app_theme.dart';
 
 class MainScreen extends StatefulWidget {
@@ -16,7 +20,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
   static const Color blackColor = Color(0xFF1A1A1A);
   static const Color whiteColor = Color(0xFFFFFFFF);
 
@@ -56,9 +59,9 @@ class _MainScreenState extends State<MainScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leadingWidth: 200,
+        leadingWidth: 120,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
+          padding: const EdgeInsets.only(left: 8.0),
           child: Image.asset(
             'assets/logos/app_logo.png',
             fit: BoxFit.contain,
@@ -70,13 +73,19 @@ class _MainScreenState extends State<MainScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const LanguageSelector(),
+                const SizedBox(width: 8),
+                const LocationSelectorWidget(),
+                const SizedBox(width: 8),
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.notifications_outlined),
+                        icon: const Icon(Icons.notifications_outlined, size: 20),
                         onPressed: () => context.go('/notifications'),
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
                       ),
                       Positioned(
                         right: 0,
@@ -84,7 +93,7 @@ class _MainScreenState extends State<MainScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryGold,
+                            color: AppTheme.secondaryColor, // Or doré
                             borderRadius: BorderRadius.circular(10),
                           ),
                           constraints: const BoxConstraints(
@@ -104,19 +113,9 @@ class _MainScreenState extends State<MainScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: goldColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.search, color: blackColor),
-                    onPressed: () {
-                      // TODO: Implémenter la recherche avancée
-                    },
-                  ),
-                ),
+                const SizedBox(width: 8),
+                const AuthButtonWidget(),
+                const SizedBox(width: 16),
               ],
             ),
           ),
@@ -130,27 +129,27 @@ class _MainScreenState extends State<MainScreen> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: goldColor),
+            selectedIcon: Icon(Icons.home, color: AppTheme.secondaryColor),
             label: 'Accueil',
           ),
           NavigationDestination(
             icon: Icon(Icons.favorite_outline),
-            selectedIcon: Icon(Icons.favorite, color: goldColor),
+            selectedIcon: Icon(Icons.favorite, color: AppTheme.secondaryColor),
             label: 'Favoris',
           ),
           NavigationDestination(
             icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications, color: goldColor),
+            selectedIcon: Icon(Icons.notifications, color: AppTheme.secondaryColor),
             label: 'Notifications',
           ),
           NavigationDestination(
             icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat, color: goldColor),
+            selectedIcon: Icon(Icons.chat, color: AppTheme.secondaryColor),
             label: 'Messages',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: goldColor),
+            selectedIcon: Icon(Icons.person, color: AppTheme.secondaryColor),
             label: 'Profil',
           ),
         ],

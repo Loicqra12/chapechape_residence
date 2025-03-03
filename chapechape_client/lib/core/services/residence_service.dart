@@ -3,7 +3,16 @@ import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
 
 class ResidenceService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
+
+  ResidenceService._({
+    required ApiService apiService,
+  }) : _apiService = apiService;
+
+  static Future<ResidenceService> initialize() async {
+    final apiService = await ApiService.initialize();
+    return ResidenceService._(apiService: apiService);
+  }
 
   // Récupérer toutes les résidences
   Future<List<Residence>> getAllResidences({
@@ -119,7 +128,8 @@ class ResidenceService {
           'checkOut': checkOut.toIso8601String(),
         },
       );
-      return response.data['available'] as bool;
+
+      return response.data['available'] == true;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
+import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:go_router/go_router.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -23,6 +25,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -44,12 +50,30 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _animationController.forward();
 
-    // Navigation après l'animation
-    Future.delayed(const Duration(seconds: 3), () {
+    // Vérifier l'état d'authentification
+    try {
+      // Attendre que l'animation soit terminée
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (!mounted) return;
+
+      // Vérifier l'authentification
+      final authBloc = context.read<AuthBloc>();
+      authBloc.add(const AuthCheckRequested());
+
+      // Attendre un peu plus pour l'animation
+      await Future.delayed(const Duration(seconds: 1));
+      
+      if (!mounted) return;
+      
+      // Naviguer vers la page appropriée
+      context.go('/onboarding');
+    } catch (e) {
+      debugPrint('Erreur lors de l\'initialisation: $e');
       if (mounted) {
         context.go('/onboarding');
       }
-    });
+    }
   }
 
   @override
@@ -94,7 +118,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      dotenv.env['FLUTTER_APP_NAME'] ?? 'ChapeChape Résidences',
+                      'ChapeChape Résidences',
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,

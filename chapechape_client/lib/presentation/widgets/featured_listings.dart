@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
+import '../../core/blocs/residence/residence_state.dart';
+import '../../core/blocs/residence/residence_event.dart';
 import 'residence_card.dart';
 
 class FeaturedListings extends StatelessWidget {
@@ -61,10 +63,7 @@ class FeaturedListings extends StatelessWidget {
                         child: ResidenceCard(
                           residence: residence,
                           onTap: () {
-                            context.read<ResidenceBloc>().add(
-                                  LoadDetails(residence.id),
-                                );
-                            context.goNamed('residence_details', pathParameters: {'id': residence.id});
+                            loadDetails(context, residence.id);
                           },
                         ),
                       ),
@@ -79,5 +78,10 @@ class FeaturedListings extends StatelessWidget {
         return const SizedBox.shrink();
       },
     );
+  }
+
+  void loadDetails(BuildContext context, String residenceId) {
+    context.read<ResidenceBloc>().add(LoadResidenceDetails(residenceId: residenceId));
+    context.go('/residence-details/$residenceId');
   }
 }

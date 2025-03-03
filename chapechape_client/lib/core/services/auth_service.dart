@@ -4,8 +4,24 @@ import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
 
 class AuthService {
-  final ApiService _apiService = ApiService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final ApiService _apiService;
+  final FlutterSecureStorage _storage;
+
+  AuthService._({
+    required ApiService apiService,
+    required FlutterSecureStorage storage,
+  })  : _apiService = apiService,
+        _storage = storage;
+
+  static Future<AuthService> initialize() async {
+    final apiService = await ApiService.initialize();
+    const storage = FlutterSecureStorage();
+    
+    return AuthService._(
+      apiService: apiService,
+      storage: storage,
+    );
+  }
 
   // Inscription
   Future<User> register({
@@ -13,15 +29,17 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
-    required String phoneNumber,
+    required String phone,
   }) async {
     try {
+      // Format exact comme dans Postman, avec rôle "client"
       final response = await _apiService.post('/auth/register', data: {
         'email': email,
         'password': password,
         'firstName': firstName,
         'lastName': lastName,
-        'phoneNumber': phoneNumber,
+        'phoneNumber': phone,
+        'role': 'client'  // Utiliser 'client' comme demandé
       });
 
       final user = User.fromJson(response.data['user']);
@@ -36,15 +54,35 @@ class AuthService {
   Future<User> login({
     required String email,
     required String password,
+    bool rememberMe = false,
   }) async {
     try {
-      final response = await _apiService.post('/auth/login', data: {
+      // Ajouter des logs pour déboguer
+      print('Tentative de connexion avec: $email');
+      
+      // Format exact comme dans Postman
+      final Map<String, dynamic> loginData = {
         'email': email,
         'password': password,
-      });
+      };
+      
+      // Ajouter rememberMe si nécessaire
+      if (rememberMe) {
+        loginData['rememberMe'] = true;
+      }
+      
+      // Utiliser le chemin complet avec /api
+      final response = await _apiService.post('/auth/login', data: loginData);
 
+      print('Réponse du serveur: ${response.data}');
+      
       final user = User.fromJson(response.data['user']);
       await _storage.write(key: 'token', value: response.data['token']);
+      
+      if (rememberMe) {
+        await _storage.write(key: 'refresh_token', value: response.data['refreshToken']);
+      }
+      
       return user;
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -54,37 +92,39 @@ class AuthService {
   // Déconnexion
   Future<void> logout() async {
     try {
+      await _apiService.post('/auth/logout');
       await _storage.delete(key: 'token');
     } catch (e) {
-      throw Exception('Erreur lors de la déconnexion');
+      // Même en cas d'erreur, on supprime le token local
+      await _storage.delete(key: 'token');
     }
   }
 
-  // Récupérer l'utilisateur actuel
-  Future<User> getCurrentUser() async {
+  // Récupérer l'utilisateur courant
+  Future<User?> getCurrentUser() async {
     try {
       final response = await _apiService.get('/auth/me');
       return User.fromJson(response.data);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        // Token expiré ou invalide
+        await _storage.delete(key: 'token');
+        return null;
+      }
       throw _handleDioError(e);
     }
   }
 
-  // Mettre à jour le profil
-  Future<User> updateProfile({
-    String? firstName,
-    String? lastName,
-    String? phoneNumber,
-    String? profilePicture,
-  }) async {
-    try {
-      final response = await _apiService.put('/auth/profile', data: {
-        if (firstName != null) 'firstName': firstName,
-        if (lastName != null) 'lastName': lastName,
-        if (phoneNumber != null) 'phoneNumber': phoneNumber,
-        if (profilePicture != null) 'profilePicture': profilePicture,
-      });
+  // Vérifier si l'utilisateur est authentifié
+  Future<bool> isAuthenticated() async {
+    final token = await _storage.read(key: 'token');
+    return token != null;
+  }
 
+  // Mettre à jour le profil
+  Future<User> updateProfile(Map<String, dynamic> userData) async {
+    try {
+      final response = await _apiService.put('/auth/profile', data: userData);
       return User.fromJson(response.data);
     } on DioException catch (e) {
       throw _handleDioError(e);

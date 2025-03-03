@@ -1,13 +1,19 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
+import 'package:chapechape_client/core/services/favorite_service.dart';
 import 'residence_event.dart';
 import 'residence_state.dart';
 
 class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
-  final ResidenceService _residenceService = ResidenceService();
+  final ResidenceService _residenceService;
+  final FavoriteService _favoriteService;
 
-  ResidenceBloc() : super(const ResidenceInitial()) {
+  ResidenceBloc({
+    required ResidenceService residenceService,
+    required FavoriteService favoriteService,
+  })  : _residenceService = residenceService,
+        _favoriteService = favoriteService,
+        super(const ResidenceInitial()) {
     on<LoadResidences>(_onLoadResidences);
     on<LoadResidenceDetails>(_onLoadResidenceDetails);
     on<SearchResidences>(_onSearchResidences);
@@ -75,9 +81,9 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
   ) async {
     try {
       if (event.isFavorite) {
-        await _residenceService.removeFromFavorites(event.residenceId);
+        await _favoriteService.removeFromFavorites(event.residenceId);
       } else {
-        await _residenceService.addToFavorites(event.residenceId);
+        await _favoriteService.addToFavorites(event.residenceId);
       }
       
       if (state is ResidenceDetailsLoaded) {
@@ -95,7 +101,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
   ) async {
     try {
       emit(const ResidenceLoading());
-      final residences = await _residenceService.getFavoriteResidences();
+      final residences = await _favoriteService.getFavorites();
       emit(ResidencesLoaded(residences));
     } catch (e) {
       emit(ResidenceError(e.toString()));

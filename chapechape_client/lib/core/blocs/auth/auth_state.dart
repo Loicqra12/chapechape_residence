@@ -29,6 +29,14 @@ class Unauthenticated extends AuthState {
   const Unauthenticated();
 }
 
+class RegisterSuccess extends AuthState {
+  const RegisterSuccess();
+}
+
+class ForgotPasswordSuccess extends AuthState {
+  const ForgotPasswordSuccess();
+}
+
 class AuthError extends AuthState {
   final String message;
 
@@ -36,4 +44,13 @@ class AuthError extends AuthState {
 
   @override
   List<Object?> get props => [message];
+}
+
+class ProfileUpdateSuccess extends AuthState {
+  final User user;
+
+  const ProfileUpdateSuccess(this.user);
+
+  @override
+  List<Object?> get props => [user];
 }

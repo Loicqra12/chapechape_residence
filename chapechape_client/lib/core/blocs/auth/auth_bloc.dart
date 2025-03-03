@@ -5,14 +5,17 @@ import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthService _authService = AuthService();
+  final AuthService _authService;
 
-  AuthBloc() : super(const AuthInitial()) {
+  AuthBloc({required AuthService authService})
+      : _authService = authService,
+        super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
-    on<AuthLoginRequested>(_onAuthLoginRequested);
-    on<AuthRegisterRequested>(_onAuthRegisterRequested);
-    on<AuthLogoutRequested>(_onAuthLogoutRequested);
-    on<AuthUpdateProfileRequested>(_onAuthUpdateProfileRequested);
+    on<LoginRequested>(_onLoginRequested);
+    on<RegisterRequested>(_onRegisterRequested);
+    on<LogoutRequested>(_onLogoutRequested);
+    on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<UpdateProfileRequested>(_onUpdateProfileRequested);
   }
 
   Future<void> _onAuthCheckRequested(
@@ -21,50 +24,66 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       emit(const AuthLoading());
+      
+      final isAuthenticated = await _authService.isAuthenticated();
+      if (!isAuthenticated) {
+        emit(const Unauthenticated());
+        return;
+      }
+      
       final user = await _authService.getCurrentUser();
-      emit(Authenticated(user));
+      if (user != null) {
+        emit(Authenticated(user));
+      } else {
+        emit(const Unauthenticated());
+      }
     } catch (e) {
       emit(const Unauthenticated());
     }
   }
 
-  Future<void> _onAuthLoginRequested(
-    AuthLoginRequested event,
+  Future<void> _onLoginRequested(
+    LoginRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
       emit(const AuthLoading());
+      
       final user = await _authService.login(
         email: event.email,
         password: event.password,
+        rememberMe: event.rememberMe,
       );
+      
       emit(Authenticated(user));
     } catch (e) {
       emit(AuthError(e.toString()));
     }
   }
 
-  Future<void> _onAuthRegisterRequested(
-    AuthRegisterRequested event,
+  Future<void> _onRegisterRequested(
+    RegisterRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
       emit(const AuthLoading());
-      final user = await _authService.register(
+      
+      await _authService.register(
         email: event.email,
         password: event.password,
         firstName: event.firstName,
         lastName: event.lastName,
-        phoneNumber: event.phoneNumber,
+        phone: event.phone,
       );
-      emit(Authenticated(user));
+      
+      emit(const RegisterSuccess());
     } catch (e) {
       emit(AuthError(e.toString()));
     }
   }
 
-  Future<void> _onAuthLogoutRequested(
-    AuthLogoutRequested event,
+  Future<void> _onLogoutRequested(
+    LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
@@ -76,21 +95,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onAuthUpdateProfileRequested(
-    AuthUpdateProfileRequested event,
+  Future<void> _onForgotPasswordRequested(
+    ForgotPasswordRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
-      if (state is Authenticated) {
-        emit(const AuthLoading());
-        final user = await _authService.updateProfile(
-          firstName: event.firstName,
-          lastName: event.lastName,
-          phoneNumber: event.phoneNumber,
-          profilePicture: event.profilePicture,
-        );
-        emit(Authenticated(user));
-      }
+      emit(const AuthLoading());
+      await _authService.resetPassword(email: event.email);
+      emit(const ForgotPasswordSuccess());
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateProfileRequested(
+    UpdateProfileRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      final user = await _authService.updateProfile(event.userData);
+      emit(ProfileUpdateSuccess(user));
     } catch (e) {
       emit(AuthError(e.toString()));
     }

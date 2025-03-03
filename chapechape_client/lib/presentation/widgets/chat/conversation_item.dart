@@ -22,19 +22,23 @@ class ConversationItem extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: Theme.of(context).primaryColor,
         child: Text(
-          conversation.supportAgentId[0].toUpperCase(),
+          conversation.participants.isNotEmpty && conversation.participants[1].name.isNotEmpty 
+              ? conversation.participants[1].name[0].toUpperCase() 
+              : 'A',
           style: const TextStyle(color: Colors.white),
         ),
       ),
       title: Text(
-        'Agent ${conversation.supportAgentId}',
+        conversation.participants.isNotEmpty && conversation.participants.length > 1
+            ? conversation.participants[1].name
+            : 'Agent',
         style: const TextStyle(
           fontWeight: FontWeight.bold,
         ),
       ),
       subtitle: lastMessage != null
           ? Text(
-              lastMessage.content,
+              lastMessage.content ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )

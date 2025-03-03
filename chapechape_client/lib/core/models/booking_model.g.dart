@@ -37,9 +37,12 @@ Map<String, dynamic> _$$BookingImplToJson(_$BookingImpl instance) =>
       'numberOfGuests': instance.numberOfGuests,
       'totalPrice': instance.totalPrice,
       'status': instance.status,
-      'paymentId': instance.paymentId,
-      'paymentStatus': instance.paymentStatus,
-      'cancellationReason': instance.cancellationReason,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
+      if (instance.paymentId case final value?) 'paymentId': value,
+      if (instance.paymentStatus case final value?) 'paymentStatus': value,
+      if (instance.cancellationReason case final value?)
+        'cancellationReason': value,
+      if (instance.createdAt?.toIso8601String() case final value?)
+        'createdAt': value,
+      if (instance.updatedAt?.toIso8601String() case final value?)
+        'updatedAt': value,
     };

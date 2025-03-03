@@ -84,7 +84,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                         context.push('/settings');
                         break;
                       case 'logout':
-                        context.read<AuthBloc>().add(const AuthLogoutRequested());
+                        context.read<AuthBloc>().add(const LogoutRequested());
                         break;
                     }
                   },

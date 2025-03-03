@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/constants/app_assets.dart';
 
 class FooterWidget extends StatelessWidget {
   const FooterWidget({Key? key}) : super(key: key);
@@ -104,7 +105,7 @@ class FooterWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   _buildContactButton(
-                    icon: Icons.chat,
+                    icon: Icons.chat_bubble_outline,
                     text: 'Chat',
                     onTap: _openChat,
                   ),
@@ -114,7 +115,59 @@ class FooterWidget extends StatelessWidget {
           ),
           const SizedBox(height: 40),
 
-          // Télécharger l'application
+          // Méthodes de paiement
+          Column(
+            children: [
+              const Text(
+                'Méthodes de paiement',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildPaymentMethodLogo('assets/images/payment/visa.png'),
+                  _buildPaymentMethodLogo('assets/images/payment/mastercard.png'),
+                  _buildPaymentMethodLogo('assets/images/payment/paypal.png'),
+                  _buildPaymentMethodLogo('assets/images/payment/orange_money.png'),
+                  _buildPaymentMethodLogo('assets/images/payment/mtn_money.png'),
+                  _buildPaymentMethodLogo('assets/images/payment/moov_money.png'),
+                  _buildPaymentMethodLogo('assets/images/payment/wave_money.png'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+
+          // Nos partenaires
+          Column(
+            children: [
+              const Text(
+                'Nos partenaires',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildPartnerLogo('assets/logos/partners/partner1_logo.png'),
+                  _buildPartnerLogo('assets/logos/partners/partner2_logo.png'),
+                  _buildPartnerLogo('assets/logos/partners/partner3_logo.png'),
+                  _buildPartnerLogo('assets/logos/partners/partner4_logo.png'),
+                  _buildPartnerLogo('assets/logos/partners/partner5_logo.png'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+
+          // Téléchargez notre application
           Column(
             children: [
               const Text(
@@ -129,15 +182,15 @@ class FooterWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildStoreButton(
-                    'Google Play',
-                    Icons.android,
-                    () => _launchURL('https://play.google.com/store/apps/details?id=com.chapechape.residences'),
-                  ),
-                  const SizedBox(width: 20),
-                  _buildStoreButton(
                     'App Store',
-                    Icons.apple,
-                    () => _launchURL('https://apps.apple.com/app/chapechape-residences/id123456789'),
+                    FontAwesomeIcons.appStoreIos,
+                    () {},
+                  ),
+                  const SizedBox(width: 16),
+                  _buildStoreButton(
+                    'Google Play',
+                    FontAwesomeIcons.googlePlay,
+                    () {},
                   ),
                 ],
               ),
@@ -185,6 +238,30 @@ class FooterWidget extends StatelessWidget {
           const SizedBox(height: 8),
           Text(text),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodLogo(String assetPath) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Image.asset(
+        assetPath,
+        height: 30,
+        width: 50,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
+  Widget _buildPartnerLogo(String assetPath) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Image.asset(
+        assetPath,
+        height: 40,
+        width: 80,
+        fit: BoxFit.contain,
       ),
     );
   }

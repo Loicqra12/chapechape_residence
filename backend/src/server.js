@@ -12,6 +12,25 @@ const SocketService = require('./services/socket.service');
 // Connect to database
 connectDB();
 
+// Configuration du proxy global si spécifié dans les variables d'environnement
+const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy;
+const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+
+if (httpProxy || httpsProxy) {
+  const globalAgent = require('global-agent');
+  globalAgent.bootstrap();
+  
+  if (httpProxy) {
+    global.GLOBAL_AGENT.HTTP_PROXY = httpProxy;
+  }
+  
+  if (httpsProxy) {
+    global.GLOBAL_AGENT.HTTPS_PROXY = httpsProxy;
+  }
+  
+  console.log('Proxy configured:', { HTTP_PROXY: httpProxy, HTTPS_PROXY: httpsProxy });
+}
+
 const server = http.createServer(app);
 
 // Initialiser le service de socket

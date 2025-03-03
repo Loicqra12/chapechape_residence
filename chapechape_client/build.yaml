@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      freezed:
+        generate_for:
+          include:
+            - lib/core/models/**.dart
+            - lib/core/blocs/**.dart
+      json_serializable:
+        options:
+          explicit_to_json: true
+          include_if_null: false
+        generate_for:
+          include:
+            - lib/core/models/**.dart

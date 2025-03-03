@@ -35,6 +35,8 @@ mixin _$Residence {
   Map<String, dynamic> get location => throw _privateConstructorUsedError;
   List<String> get amenities => throw _privateConstructorUsedError;
   List<String> get rules => throw _privateConstructorUsedError;
+  bool get isFavorite => throw _privateConstructorUsedError;
+  ResidenceType get type => throw _privateConstructorUsedError;
   double? get rating => throw _privateConstructorUsedError;
   int? get reviewCount => throw _privateConstructorUsedError;
   String? get ownerId => throw _privateConstructorUsedError;
@@ -72,6 +74,8 @@ abstract class $ResidenceCopyWith<$Res> {
       Map<String, dynamic> location,
       List<String> amenities,
       List<String> rules,
+      bool isFavorite,
+      ResidenceType type,
       double? rating,
       int? reviewCount,
       String? ownerId,
@@ -109,6 +113,8 @@ class _$ResidenceCopyWithImpl<$Res, $Val extends Residence>
     Object? location = null,
     Object? amenities = null,
     Object? rules = null,
+    Object? isFavorite = null,
+    Object? type = null,
     Object? rating = freezed,
     Object? reviewCount = freezed,
     Object? ownerId = freezed,
@@ -176,6 +182,14 @@ class _$ResidenceCopyWithImpl<$Res, $Val extends Residence>
           ? _value.rules
           : rules // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      isFavorite: null == isFavorite
+          ? _value.isFavorite
+          : isFavorite // ignore: cast_nullable_to_non_nullable
+              as bool,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as ResidenceType,
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
@@ -224,6 +238,8 @@ abstract class _$$ResidenceImplCopyWith<$Res>
       Map<String, dynamic> location,
       List<String> amenities,
       List<String> rules,
+      bool isFavorite,
+      ResidenceType type,
       double? rating,
       int? reviewCount,
       String? ownerId,
@@ -259,6 +275,8 @@ class __$$ResidenceImplCopyWithImpl<$Res>
     Object? location = null,
     Object? amenities = null,
     Object? rules = null,
+    Object? isFavorite = null,
+    Object? type = null,
     Object? rating = freezed,
     Object? reviewCount = freezed,
     Object? ownerId = freezed,
@@ -326,6 +344,14 @@ class __$$ResidenceImplCopyWithImpl<$Res>
           ? _value._rules
           : rules // ignore: cast_nullable_to_non_nullable
               as List<String>,
+      isFavorite: null == isFavorite
+          ? _value.isFavorite
+          : isFavorite // ignore: cast_nullable_to_non_nullable
+              as bool,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as ResidenceType,
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
@@ -369,6 +395,8 @@ class _$ResidenceImpl implements _Residence {
       required final Map<String, dynamic> location,
       final List<String> amenities = const [],
       final List<String> rules = const [],
+      this.isFavorite = false,
+      this.type = ResidenceType.apartment,
       this.rating,
       this.reviewCount,
       this.ownerId,
@@ -439,6 +467,12 @@ class _$ResidenceImpl implements _Residence {
   }
 
   @override
+  @JsonKey()
+  final bool isFavorite;
+  @override
+  @JsonKey()
+  final ResidenceType type;
+  @override
   final double? rating;
   @override
   final int? reviewCount;
@@ -451,7 +485,7 @@ class _$ResidenceImpl implements _Residence {
 
   @override
   String toString() {
-    return 'Residence(id: $id, name: $name, description: $description, price: $price, address: $address, city: $city, country: $country, images: $images, bedrooms: $bedrooms, bathrooms: $bathrooms, surface: $surface, isAvailable: $isAvailable, location: $location, amenities: $amenities, rules: $rules, rating: $rating, reviewCount: $reviewCount, ownerId: $ownerId, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Residence(id: $id, name: $name, description: $description, price: $price, address: $address, city: $city, country: $country, images: $images, bedrooms: $bedrooms, bathrooms: $bathrooms, surface: $surface, isAvailable: $isAvailable, location: $location, amenities: $amenities, rules: $rules, isFavorite: $isFavorite, type: $type, rating: $rating, reviewCount: $reviewCount, ownerId: $ownerId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -479,6 +513,9 @@ class _$ResidenceImpl implements _Residence {
             const DeepCollectionEquality()
                 .equals(other._amenities, _amenities) &&
             const DeepCollectionEquality().equals(other._rules, _rules) &&
+            (identical(other.isFavorite, isFavorite) ||
+                other.isFavorite == isFavorite) &&
+            (identical(other.type, type) || other.type == type) &&
             (identical(other.rating, rating) || other.rating == rating) &&
             (identical(other.reviewCount, reviewCount) ||
                 other.reviewCount == reviewCount) &&
@@ -508,6 +545,8 @@ class _$ResidenceImpl implements _Residence {
         const DeepCollectionEquality().hash(_location),
         const DeepCollectionEquality().hash(_amenities),
         const DeepCollectionEquality().hash(_rules),
+        isFavorite,
+        type,
         rating,
         reviewCount,
         ownerId,
@@ -548,6 +587,8 @@ abstract class _Residence implements Residence {
       required final Map<String, dynamic> location,
       final List<String> amenities,
       final List<String> rules,
+      final bool isFavorite,
+      final ResidenceType type,
       final double? rating,
       final int? reviewCount,
       final String? ownerId,
@@ -587,6 +628,10 @@ abstract class _Residence implements Residence {
   List<String> get amenities;
   @override
   List<String> get rules;
+  @override
+  bool get isFavorite;
+  @override
+  ResidenceType get type;
   @override
   double? get rating;
   @override

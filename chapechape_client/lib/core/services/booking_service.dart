@@ -3,7 +3,16 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
 
 class BookingService {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
+
+  BookingService._({
+    required ApiService apiService,
+  }) : _apiService = apiService;
+
+  static Future<BookingService> initialize() async {
+    final apiService = await ApiService.initialize();
+    return BookingService._(apiService: apiService);
+  }
 
   // Créer une nouvelle réservation
   Future<Booking> createBooking({

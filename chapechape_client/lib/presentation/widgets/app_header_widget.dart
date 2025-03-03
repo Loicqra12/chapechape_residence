@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'auth_button_widget.dart';
 
 class AppHeaderWidget extends StatelessWidget {
   const AppHeaderWidget({Key? key}) : super(key: key);
@@ -12,7 +13,7 @@ class AppHeaderWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Image.asset(
-            'assets/logos/logo.png',
+            'assets/logos/app_logo.png',
             height: 40,
           ),
           Row(
@@ -36,13 +37,8 @@ class AppHeaderWidget extends StatelessWidget {
                 },
               ),
               const SizedBox(width: 8),
-              CircleAvatar(
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: const Icon(
-                  Icons.person_outline,
-                  color: Colors.black54,
-                ),
-              ),
+              // Ajout du widget de boutons d'authentification
+              const AuthButtonWidget(),
             ],
           ),
         ],

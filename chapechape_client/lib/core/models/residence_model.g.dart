@@ -29,6 +29,9 @@ _$ResidenceImpl _$$ResidenceImplFromJson(Map<String, dynamic> json) =>
       rules:
           (json['rules'] as List<dynamic>?)?.map((e) => e as String).toList() ??
               const [],
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      type: $enumDecodeNullable(_$ResidenceTypeEnumMap, json['type']) ??
+          ResidenceType.apartment,
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: (json['reviewCount'] as num?)?.toInt(),
       ownerId: json['ownerId'] as String?,
@@ -57,9 +60,26 @@ Map<String, dynamic> _$$ResidenceImplToJson(_$ResidenceImpl instance) =>
       'location': instance.location,
       'amenities': instance.amenities,
       'rules': instance.rules,
-      'rating': instance.rating,
-      'reviewCount': instance.reviewCount,
-      'ownerId': instance.ownerId,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
+      'isFavorite': instance.isFavorite,
+      'type': _$ResidenceTypeEnumMap[instance.type]!,
+      if (instance.rating case final value?) 'rating': value,
+      if (instance.reviewCount case final value?) 'reviewCount': value,
+      if (instance.ownerId case final value?) 'ownerId': value,
+      if (instance.createdAt?.toIso8601String() case final value?)
+        'createdAt': value,
+      if (instance.updatedAt?.toIso8601String() case final value?)
+        'updatedAt': value,
     };
+
+const _$ResidenceTypeEnumMap = {
+  ResidenceType.apartment: 'apartment',
+  ResidenceType.studio: 'studio',
+  ResidenceType.villa: 'villa',
+  ResidenceType.room: 'room',
+  ResidenceType.bungalow: 'bungalow',
+  ResidenceType.penthouse: 'penthouse',
+  ResidenceType.hotel: 'hotel',
+  ResidenceType.luxury: 'luxury',
+  ResidenceType.coworking: 'coworking',
+  ResidenceType.student: 'student',
+};

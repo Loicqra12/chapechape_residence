@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
+import '../../core/blocs/residence/residence_state.dart';
+import '../../core/blocs/residence/residence_event.dart';
 import '../../core/models/residence_model.dart';
 import 'residence_card.dart';
 
@@ -61,10 +63,7 @@ class NewListingsWidget extends StatelessWidget {
                         child: ResidenceCard(
                           residence: residence,
                           onTap: () {
-                            context.read<ResidenceBloc>().add(
-                                  LoadDetails(residence.id),
-                                );
-                            context.goNamed('residence_details', pathParameters: {'id': residence.id});
+                            loadDetails(context, residence.id);
                           },
                         ),
                       ),
@@ -81,10 +80,14 @@ class NewListingsWidget extends StatelessWidget {
     );
   }
 
-  bool _isNewListing(ResidenceModel residence) {
+  void loadDetails(BuildContext context, String residenceId) {
+    context.read<ResidenceBloc>().add(LoadResidenceDetails(residenceId: residenceId));
+    context.go('/residence-details/$residenceId');
+  }
+
+  bool _isNewListing(Residence residence) {
     final now = DateTime.now();
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
-    // TODO: Ajouter un champ createdAt dans le modèle ResidenceModel
-    return true; // Temporairement retourne true
+    return residence.createdAt != null && residence.createdAt!.isAfter(sevenDaysAgo);
   }
 }

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
+import '../../core/blocs/residence/residence_state.dart';
+import '../../core/blocs/residence/residence_event.dart';
+import '../../core/models/residence_model.dart';
 import 'residence_card.dart';
 
 class VacationResidencesWidget extends StatelessWidget {
-  const VacationResidencesWidget({Key? key}) : super(key: key);
+  const VacationResidencesWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +66,9 @@ class VacationResidencesWidget extends StatelessWidget {
                           showBeachBadge: true,
                           onTap: () {
                             context.read<ResidenceBloc>().add(
-                                  LoadDetails(residence.id),
+                                  LoadResidenceDetails(residenceId: residence.id),
                                 );
-                            context.goNamed('residence_details', pathParameters: {'id': residence.id});
+                            context.go('/residence-details/${residence.id}');
                           },
                         ),
                       ),

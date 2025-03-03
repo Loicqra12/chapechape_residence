@@ -11,55 +11,58 @@ class AuthCheckRequested extends AuthEvent {
   const AuthCheckRequested();
 }
 
-class AuthLoginRequested extends AuthEvent {
+class LoginRequested extends AuthEvent {
   final String email;
   final String password;
+  final bool rememberMe;
 
-  const AuthLoginRequested({
+  const LoginRequested({
     required this.email,
     required this.password,
+    this.rememberMe = false,
   });
 
   @override
-  List<Object?> get props => [email, password];
+  List<Object?> get props => [email, password, rememberMe];
 }
 
-class AuthRegisterRequested extends AuthEvent {
-  final String email;
-  final String password;
+class RegisterRequested extends AuthEvent {
   final String firstName;
   final String lastName;
-  final String phoneNumber;
+  final String email;
+  final String phone;
+  final String password;
 
-  const AuthRegisterRequested({
-    required this.email,
-    required this.password,
+  const RegisterRequested({
     required this.firstName,
     required this.lastName,
-    required this.phoneNumber,
+    required this.email,
+    required this.phone,
+    required this.password,
   });
 
   @override
-  List<Object?> get props => [email, password, firstName, lastName, phoneNumber];
+  List<Object?> get props => [firstName, lastName, email, phone, password];
 }
 
-class AuthLogoutRequested extends AuthEvent {
-  const AuthLogoutRequested();
-}
+class ForgotPasswordRequested extends AuthEvent {
+  final String email;
 
-class AuthUpdateProfileRequested extends AuthEvent {
-  final String? firstName;
-  final String? lastName;
-  final String? phoneNumber;
-  final String? profilePicture;
-
-  const AuthUpdateProfileRequested({
-    this.firstName,
-    this.lastName,
-    this.phoneNumber,
-    this.profilePicture,
-  });
+  const ForgotPasswordRequested({required this.email});
 
   @override
-  List<Object?> get props => [firstName, lastName, phoneNumber, profilePicture];
+  List<Object?> get props => [email];
+}
+
+class LogoutRequested extends AuthEvent {
+  const LogoutRequested();
+}
+
+class UpdateProfileRequested extends AuthEvent {
+  final Map<String, dynamic> userData;
+
+  const UpdateProfileRequested({required this.userData});
+
+  @override
+  List<Object?> get props => [userData];
 }

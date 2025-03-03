@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/blocs/chat/chat_bloc.dart';
+import '../../core/blocs/chat/chat_state.dart';
+import '../../core/blocs/chat/chat_event.dart';
 import '../../core/models/chat_model.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -25,30 +27,30 @@ class _CustomerSupportWidgetState extends State<CustomerSupportWidget> {
   Widget build(BuildContext context) {
     return BlocBuilder<ChatBloc, ChatState>(
       builder: (context, state) {
-        return state.maybeWhen(
-          initial: () {
-            context.read<ChatBloc>().add(const ChatEvent.started());
-            return const Center(child: CircularProgressIndicator());
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          loaded: (conversations) {
-            if (conversations.isEmpty) {
-              return _buildStartChatButton(context);
-            }
-            _currentConversation = conversations.firstWhere(
-              (conv) => !conv.isResolved,
-              orElse: () => conversations.last,
-            );
-            return _buildChatInterface(context, _currentConversation!);
-          },
-          error: (message) => Center(
+        if (state is ChatInitial) {
+          context.read<ChatBloc>().add(const LoadConversations());
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is ChatLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is ConversationsLoaded) {
+          if (state.conversations.isEmpty) {
+            return _buildStartChatButton(context);
+          }
+          _currentConversation = state.conversations.firstWhere(
+            (conv) => !conv.isArchived,
+            orElse: () => state.conversations.last,
+          );
+          return _buildChatInterface(context, _currentConversation!);
+        } else if (state is ChatError) {
+          return Center(
             child: Text(
-              'Erreur: $message',
+              'Erreur: ${state.message}',
               style: AppTheme.errorTextStyle,
             ),
-          ),
-          orElse: () => const SizedBox(),
-        );
+          );
+        } else {
+          return const SizedBox();
+        }
       },
     );
   }
@@ -57,74 +59,62 @@ class _CustomerSupportWidgetState extends State<CustomerSupportWidget> {
     return Center(
       child: ElevatedButton.icon(
         onPressed: () {
-          context.read<ChatBloc>().add(const ChatEvent.startConversation());
+          context.read<ChatBloc>().add(CreateConversation('agent2'));
         },
         icon: const Icon(Icons.chat),
         label: const Text('Démarrer une conversation'),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(
             horizontal: 24,
-            vertical: 16,
+            vertical: 12,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildChatInterface(
-    BuildContext context,
-    ChatConversation conversation,
-  ) {
+  Widget _buildChatInterface(BuildContext context, ChatConversation conversation) {
     return Column(
       children: [
         _buildChatHeader(context, conversation),
         Expanded(
-          child: _buildMessagesList(conversation),
+          child: _buildChatMessages(context, conversation),
         ),
-        if (!conversation.isResolved) _buildMessageInput(context, conversation),
+        _buildChatInput(context, conversation),
       ],
     );
   }
 
-  Widget _buildChatHeader(
-    BuildContext context,
-    ChatConversation conversation,
-  ) {
+  Widget _buildChatHeader(BuildContext context, ChatConversation conversation) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Theme.of(context).primaryColor,
       child: Row(
         children: [
-          const Icon(
-            Icons.support_agent,
-            color: Colors.white,
-            size: 24,
+          CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Icon(
+              Icons.support_agent,
+              color: Theme.of(context).primaryColor,
+            ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Support Client',
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          if (!conversation.isResolved)
+          if (!conversation.isArchived)
             IconButton(
               onPressed: () {
-                context.read<ChatBloc>().add(
-                  ChatEvent.endConversation(
-                    conversationId: conversation.id,
-                  ),
-                );
+                context.read<ChatBloc>().add(MarkAllAsRead(
+                      conversation.id,
+                    ));
               },
               icon: const Icon(
                 Icons.close,
@@ -136,65 +126,58 @@ class _CustomerSupportWidgetState extends State<CustomerSupportWidget> {
     );
   }
 
-  Widget _buildMessagesList(ChatConversation conversation) {
-    return ListView.builder(
+  Widget _buildChatMessages(BuildContext context, ChatConversation conversation) {
+    // Ici, nous devrions charger les messages de la conversation
+    // Pour l'instant, nous affichons un message fictif
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemCount: conversation.messages.length,
-      itemBuilder: (context, index) {
-        final message = conversation.messages[index];
-        final isUserMessage = message.senderId == 'user_id'; // TODO: Get from auth
-
-        return Align(
-          alignment: isUserMessage
-              ? Alignment.centerRight
-              : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              color: isUserMessage
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey[200],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              message.content,
-              style: TextStyle(
-                color: isUserMessage ? Colors.white : Colors.black,
-              ),
-            ),
-          ),
-        );
-      },
+      children: [
+        _buildMessageBubble(
+          'Bonjour, comment puis-je vous aider aujourd\'hui?',
+          isUser: false,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+        ),
+      ],
     );
   }
 
-  Widget _buildMessageInput(
-    BuildContext context,
-    ChatConversation conversation,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ],
+  Widget _buildMessageBubble(String message, {required bool isUser, required DateTime timestamp}) {
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isUser ? Colors.blue[100] : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            Text(
+              '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildChatInput(BuildContext context, ChatConversation conversation) {
+    return Container(
+      padding: const EdgeInsets.all(8),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _messageController,
               decoration: const InputDecoration(
-                hintText: 'Écrivez votre message...',
+                hintText: 'Tapez votre message...',
                 border: OutlineInputBorder(),
               ),
               maxLines: null,
@@ -204,12 +187,10 @@ class _CustomerSupportWidgetState extends State<CustomerSupportWidget> {
           IconButton(
             onPressed: () {
               if (_messageController.text.trim().isNotEmpty) {
-                context.read<ChatBloc>().add(
-                  ChatEvent.sendMessage(
-                    conversationId: conversation.id,
-                    content: _messageController.text.trim(),
-                  ),
-                );
+                context.read<ChatBloc>().add(SendMessage(
+                      conversationId: conversation.id,
+                      content: _messageController.text,
+                    ));
                 _messageController.clear();
               }
             },
