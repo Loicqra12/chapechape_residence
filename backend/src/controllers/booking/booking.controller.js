@@ -8,6 +8,75 @@ const Residence = require('../../models/residence.model');
 const Payment = require('../../models/payment.model');
 const { validateBookingDates } = require('../../utils/validation');
 
+// Obtenir toutes les réservations (admin seulement)
+exports.getAllBookings = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, sort, status, search, startDate, endDate, residence, partner } = req.query;
+
+    // Construire le filtre
+    const filter = {};
+    
+    if (status) {
+        filter.status = status;
+    }
+    
+    if (startDate) {
+        filter.visitDate = { $gte: new Date(startDate) };
+    }
+    
+    if (endDate) {
+        filter.visitDate = { ...filter.visitDate, $lte: new Date(endDate) };
+    }
+    
+    if (residence) {
+        filter.residence = residence;
+    }
+    
+    if (partner) {
+        filter.partner = partner;
+    }
+
+    // Construire le tri
+    let sortQuery = { visitDate: -1 }; // Par défaut, trier par date de visite décroissante
+    if (sort) {
+        const [field, direction] = sort.split(':');
+        sortQuery = { [field]: direction === 'desc' ? -1 : 1 };
+    }
+
+    // Effectuer la requête avec pagination
+    const skip = (page - 1) * limit;
+    
+    const bookings = await Booking.find(filter)
+        .populate({
+            path: 'residence',
+            select: 'name images location',
+            transform: doc => ({
+                ...doc.toObject(),
+                imageUrl: doc.images?.[0] || '/placeholder.jpg',
+                title: doc.name,
+                status: doc.isAvailable ? 'available' : 'unavailable'
+            })
+        })
+        .populate('client', 'firstName lastName email')
+        .populate('partner', 'name email')
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(parseInt(limit));
+
+    // Obtenir le nombre total de réservations
+    const total = await Booking.countDocuments(filter);
+
+    res.status(200).json({
+        success: true,
+        data: bookings,
+        pagination: {
+            total,
+            pages: Math.ceil(total / limit),
+            page: parseInt(page),
+            limit: parseInt(limit)
+        }
+    });
+});
+
 // Créer une nouvelle réservation
 exports.createBooking = asyncHandler(async (req, res) => {
     const { residenceId, checkIn, checkOut, guests } = req.body;

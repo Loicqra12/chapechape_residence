@@ -2,7 +2,7 @@ const express = require('express');
 const bookingController = require('../controllers/booking/booking.controller');
 const validate = require('../middlewares/validate.middleware');
 const bookingValidation = require('../validations/booking.validation');
-const { protect, authorize } = require('../middlewares/auth.middleware');
+const { protect, restrictTo } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -20,8 +20,8 @@ router.route('/:bookingId')
     .delete(validate(bookingValidation.deleteBooking), bookingController.cancelBooking);
 
 // Routes pour les administrateurs
-router.use(authorize('admin'));
+router.use(restrictTo('admin'));
 
-router.get('/all', validate(bookingValidation.getBookings), bookingController.getAllBookings);
+router.get('/bookings/all', validate(bookingValidation.getBookings), bookingController.getAllBookings);
 
 module.exports = router;

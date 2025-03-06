@@ -13,12 +13,11 @@ const bookingSchema = new mongoose.Schema({
     },
     partner: {
         type: mongoose.Schema.ObjectId,
-        ref: 'Partner',
-        required: [true, 'Un partenaire est requis pour la réservation']
+        ref: 'Partner'
     },
     status: {
         type: String,
-        enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+        enum: ['pending', 'confirmed', 'cancelled', 'completed', 'refunded'],
         default: 'pending'
     },
     visitDate: {
@@ -65,7 +64,9 @@ const bookingSchema = new mongoose.Schema({
         sentAt: Date
     }]
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 });
 
 // Indexes
@@ -97,14 +98,16 @@ bookingSchema.methods.cancel = async function(userId, reason) {
     this.status = 'cancelled';
     this.cancellationReason = reason;
     this.cancelledBy = userId;
-    this.cancelledAt = Date.now();
+    this.cancelledAt = new Date();
     await this.save();
+    return this;
 };
 
 // Méthode pour confirmer une réservation
 bookingSchema.methods.confirm = async function() {
     this.status = 'confirmed';
     await this.save();
+    return this;
 };
 
 // Méthode pour compléter une réservation
@@ -113,12 +116,35 @@ bookingSchema.methods.complete = async function(rating, comment) {
     if (rating) {
         this.feedback = {
             rating,
-            comment,
+            comment: comment || '',
             createdAt: Date.now()
         };
     }
     await this.save();
+    return this;
 };
+
+// Extension ResidenceProperties virtuelle
+bookingSchema.virtual('residenceProperties').get(function() {
+    if (!this.residence) return null;
+    
+    return {
+        imageUrl: this.residence.images?.[0] || '/placeholder.jpg',
+        title: this.residence.name,
+        status: this.residence.isAvailable ? 'available' : 'unavailable',
+        hasPool: this.residence.amenities?.includes('pool'),
+        isVacationResidence: this.residence.type === 'vacation',
+        isSpecialResidence: this.residence.type === 'special'
+    };
+});
+
+// Extension LocationExtension virtuelle
+bookingSchema.virtual('locationDisplay').get(function() {
+    if (!this.residence?.location) return '';
+    
+    const location = this.residence.location;
+    return `${location.street}, ${location.city}, ${location.country}`;
+});
 
 const Booking = mongoose.model('Booking', bookingSchema);
 
