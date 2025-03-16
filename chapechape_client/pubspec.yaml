@@ -1,10 +1,10 @@
 name: chapechape_client
 description: "Application de réservation de résidences"
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: ">=3.2.3 <4.0.0"
 
 dependencies:
   flutter:
@@ -51,17 +51,20 @@ dependencies:
   google_maps_flutter: ^2.5.0
   geolocator: ^10.1.0
   js: ^0.6.7
+  webview_flutter: ^4.5.0
+  confetti: ^0.7.0
 
   # Authentification et sécurité
   jwt_decoder: ^2.0.1
   flutter_secure_storage: ^9.0.0
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
-  build_runner: ^2.4.7
-  freezed: ^2.4.5
+  flutter_lints: ^2.0.0
+  build_runner: ^2.4.8
+  freezed: ^2.4.6
   json_serializable: ^6.7.1
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.3.8
@@ -70,41 +73,31 @@ flutter:
   uses-material-design: true
 
   assets:
+    # Logos
+    - assets/logos/
+    - assets/logos/partners/
+
     # Images
     - assets/images/
-    - assets/images/onboarding/
     - assets/images/backgrounds/
+    - assets/images/flags/
+    - assets/images/map/
+    - assets/images/onboarding/
+    - assets/images/payment/
+    - assets/images/placeholders/
     - assets/images/residences/
     - assets/images/residences/apartments/
     - assets/images/residences/luxury/
     - assets/images/residences/studios/
     - assets/images/residences/villas/
-    - assets/images/placeholders/
-    - assets/images/flags/
-    - assets/images/map/
-    - assets/images/payment/
-    - assets/images/video_thumbnails/
-    
-    # Logos
-    - assets/logos/
-    - assets/logos/partners/
-    
-    # Videos
-    - assets/videos/
-    
+
     # Icons
     - assets/icons/
     - assets/icons/amenities/
     - assets/icons/categories/
-    
-    # Configuration
     - .env
-    - .env.example
-    - web/.env
-    - web/.env.example
-    
-    # Fonts
     - assets/fonts/
+    - assets/animations/
 
   fonts:
     - family: Poppins

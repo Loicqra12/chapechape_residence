@@ -5,280 +5,216 @@ import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/blocs/residence/residence_state.dart';
 import '../../core/blocs/residence/residence_event.dart';
 import '../../core/models/residence_model.dart';
+import 'residence_card_alias.dart';
+import 'shimmer_residence_card.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/utils/responsive_utils.dart';
-import 'residence_card.dart';
-import 'amenities_widget.dart';
 
-class SpecialResidencesWidget extends StatelessWidget {
-  const SpecialResidencesWidget({Key? key}) : super(key: key);
+class SpecialResidencesWidget extends StatefulWidget {
+  const SpecialResidencesWidget({super.key});
+
+  @override
+  State<SpecialResidencesWidget> createState() => _SpecialResidencesWidgetState();
+}
+
+class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollLeft() {
+    if (_scrollController.hasClients) {
+      final double currentPosition = _scrollController.offset;
+      final double newPosition = currentPosition - 300;
+      _scrollController.animateTo(
+        newPosition < 0 ? 0 : newPosition,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _scrollRight() {
+    if (_scrollController.hasClients) {
+      final double currentPosition = _scrollController.offset;
+      final double maxPosition = _scrollController.position.maxScrollExtent;
+      final double newPosition = currentPosition + 300;
+      _scrollController.animateTo(
+        newPosition > maxPosition ? maxPosition : newPosition,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ResidenceBloc, ResidenceState>(
       builder: (context, state) {
         if (state is ResidenceLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildShimmerLoading();
         } else if (state is ResidencesLoaded) {
+          // Filtrer pour obtenir les résidences avec piscine ou équipements spéciaux
           final specialResidences = state.residences
-              .where((r) => r.hasPool || r.isVacationResidence)
+              .where((r) => r.amenities.contains('pool') || r.amenities.contains('gym') || r.amenities.contains('spa'))
               .take(5)
               .toList();
-
+          
           if (specialResidences.isEmpty) {
-            return const Center(
-              child: Text('Aucune résidence spéciale disponible pour le moment'),
-            );
+            return _buildMockSpecialResidences(context);
           }
-
-          return _buildSpecialResidencesGrid(context, specialResidences);
+          
+          return _buildResidencesList(context, specialResidences);
         } else if (state is ResidenceError) {
           return Center(
-            child: Text('Erreur: ${state.message}'),
-          );
-        } else {
-          return const Center(
-            child: Text('Aucune résidence disponible'),
+            child: Text(
+              'Erreur: ${state.message}',
+              style: const TextStyle(color: Colors.red),
+            ),
           );
         }
+
+        return _buildMockSpecialResidences(context);
       },
     );
   }
 
-  Widget _buildSpecialResidencesGrid(BuildContext context, List<Residence> residences) {
-    // Déterminer le nombre de colonnes en fonction de la largeur de l'écran
-    int crossAxisCount;
-    if (context.screenWidth < 600) {
-      crossAxisCount = 1; // Mobile
-    } else if (context.screenWidth < 900) {
-      crossAxisCount = 2; // Tablette
-    } else {
-      crossAxisCount = 3; // Desktop
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Résidences spéciales',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Découvrez nos résidences avec piscine et idéales pour les vacances',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-          ),
-          const SizedBox(height: 24),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: residences.length,
-            itemBuilder: (context, index) {
-              return _buildResidenceCard(context, residences[index]);
-            },
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                context.go('/residences', extra: {'filter': 'special'});
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Voir toutes les résidences spéciales',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
+  Widget _buildShimmerLoading() {
+    return SizedBox(
+      height: 370,
+      child: ListView.builder(
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        itemCount: 5,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemBuilder: (context, index) {
+          return const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: ShimmerResidenceCard(),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildResidenceCard(BuildContext context, Residence residence) {
-    // Vérifier si la résidence est null
-    if (residence == null) {
-      return const SizedBox.shrink();
-    }
-    
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: () {
-          context.go('/residence/${residence.id}');
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            Expanded(
-              flex: 3,
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                    child: _buildResidenceImage(residence),
-                  ),
-                  
-                  // Badge spécial
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.isMobileSmall ? 8 : 12,
-                        vertical: context.isMobileSmall ? 4 : 6,
+  Widget _buildResidencesList(BuildContext context, List<Residence> residences) {
+    return Stack(
+      children: [
+        SizedBox(
+          height: 370,
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            itemCount: residences.length,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemBuilder: (context, index) {
+              final residence = residences[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: ResidenceCard(
+                  residence: residence,
+                  onTap: () => context.go('/residence/${residence.id}'),
+                  onFavoritePressed: () {
+                    context.read<ResidenceBloc>().add(
+                      ToggleFavorite(
+                        residenceId: residence.id,
+                        isFavorite: !residence.isFavorite,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.secondaryColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        residence.hasPool ? 'Piscine' : 'Vacances',
-                        style: TextStyle(
-                          fontSize: context.responsiveFontSize(12),
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Informations
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: EdgeInsets.all(context.isMobileSmall ? 8 : 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      residence.title,
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(16),
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      residence.location['displayAddress'] ?? 'Adresse non disponible',
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(12),
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    // Équipements
-                    if (residence.amenities != null && residence.amenities!.isNotEmpty)
-                      Expanded(
-                        child: AmenitiesWidget(
-                          amenities: residence.amenities!.take(3).toList(),
-                          isDetailed: false,
-                        ),
-                      ),
-                    
-                    // Prix
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${residence.pricePerNight} FCFA',
-                          style: TextStyle(
-                            fontSize: context.responsiveFontSize(16),
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: residence.status == 'available' 
-                                ? Colors.green[100] 
-                                : Colors.red[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            residence.status == 'available' ? 'Disponible' : 'Indisponible',
-                            style: TextStyle(
-                              fontSize: context.responsiveFontSize(10),
-                              fontWeight: FontWeight.bold,
-                              color: residence.status == 'available' 
-                                  ? Colors.green[800] 
-                                  : Colors.red[800],
-                            ),
-                          ),
-                        ),
-                      ],
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        // Bouton Précédent
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: InkWell(
+              onTap: _scrollLeft,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
+                child: const Icon(Icons.arrow_back_ios, size: 24),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        
+        // Bouton Suivant
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: InkWell(
+              onTap: _scrollRight,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.arrow_forward_ios, size: 24),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildResidenceImage(Residence residence) {
-    return Image.network(
-      residence.imageUrl,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        // Utiliser une image locale en cas d'erreur
-        return Image.asset(
-          residence.getDefaultImageByType(),
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey[300],
-              child: const Center(
-                child: Icon(Icons.home, color: Colors.white, size: 50),
-              ),
-            );
-          },
-        );
-      },
+  Widget _buildMockSpecialResidences(BuildContext context) {
+    // Créer des résidences de luxe avec piscine
+    final mockResidences = List.generate(
+      4,
+      (index) => Residence(
+        id: 'mock_special_$index',
+        name: 'Villa de Luxe ${index + 1}',
+        description: 'Villa luxueuse avec piscine privée et vue panoramique',
+        price: 350000 + (index * 50000),
+        address: 'Adresse spéciale ${index + 1}',
+        city: 'Abidjan',
+        country: 'Côte d\'Ivoire',
+        images: ['assets/images/residences/luxury/Waterfront_view-5B-e1670065708270.webp'],
+        bedrooms: 3 + index,
+        bathrooms: 2 + (index % 2),
+        surface: 200 + (index * 50),
+        isAvailable: true,
+        location: {
+          'displayAddress': 'Cocody, Abidjan',
+          'city': 'Abidjan',
+          'coordinates': [5.359952, -4.008256],
+        },
+        amenities: ['wifi', 'parking', 'pool', 'gym', 'spa', 'security'],
+        type: ResidenceType.luxury,
+        rating: 4.5 + (index * 0.1 > 0.5 ? 0.5 : index * 0.1),
+      ),
     );
+
+    return _buildResidencesList(context, mockResidences);
   }
 }

@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import '../../core/blocs/chat/chat_bloc.dart';
-import '../../core/blocs/chat/chat_event.dart';
-import '../../core/blocs/chat/chat_state.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../core/blocs/chat/chat_bloc.dart' as chat;
 import '../../core/models/chat_model.dart';
-import '../../core/utils/date_formatter.dart';
+import '../../core/services/chat_service.dart';
+import '../../core/services/api_service.dart';
+import '../widgets/chat/message_bubble.dart';
 
 class ChatConversationScreen extends StatefulWidget {
-  final String conversationId;
-
+  final ChatConversation conversation;
+  final ChatService chatService;
+  final ApiService apiService;
+  
   const ChatConversationScreen({
-    Key? key,
-    required this.conversationId,
-  }) : super(key: key);
+    super.key,
+    required this.conversation,
+    required this.chatService,
+    required this.apiService,
+  });
 
   @override
   State<ChatConversationScreen> createState() => _ChatConversationScreenState();
@@ -22,17 +26,14 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  late ChatBloc _chatBloc;
-
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color blackColor = Color(0xFF1A1A1A);
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isSending = false;
+  String? _selectedImagePath;
 
   @override
   void initState() {
     super.initState();
-    _chatBloc = BlocProvider.of<ChatBloc>(context);
-    _chatBloc.add(MarkMessageAsRead(widget.conversationId));
+    // Le BloC est déjà initialisé dans le router, pas besoin de charger les messages ici
   }
 
   @override
@@ -43,349 +44,255 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+    // Ajouter un léger délai pour permettre à Flutter de mettre à jour la liste
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      setState(() {
+        _isSending = true;
+      });
+      
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 70, // Réduire la qualité pour optimiser l'envoi
       );
+      
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+        
+        // Afficher une prévisualisation temporaire dans le chat
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Envoi de l\'image en cours...')),
+        );
+        
+        context.read<chat.ChatBloc>().add(
+          chat.SendFile(
+            conversationId: widget.conversation.id,
+            filePath: image.path,
+            type: 'image',
+          ),
+        );
+        
+        // Faire défiler vers le bas après l'envoi
+        _scrollToBottom();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la sélection de l\'image: $e')),
+      );
+    } finally {
+      setState(() {
+        _isSending = false;
+      });
     }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Prendre une photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choisir depuis la galerie'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              // On pourrait ajouter d'autres options ici (documents, audio, etc.)
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<ChatBloc, ChatState>(
+    return BlocConsumer<chat.ChatBloc, chat.ChatState>(
       listener: (context, state) {
-        if (state is MessagesLoaded) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
+        // Détecte les changements d'état pour afficher des indicateurs
+        if (state is chat.ChatLoaded && _isSending) {
+          setState(() {
+            _isSending = false;
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Message envoyé avec succès')),
+          );
+          _scrollToBottom();
+        } else if (state is chat.ChatError) {
+          setState(() {
+            _isSending = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur: ${state.message}')),
+          );
         }
       },
       builder: (context, state) {
+        if (state is chat.ChatLoading && state is! chat.ChatLoaded) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (state is chat.ChatError && state is! chat.ChatLoaded) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Erreur'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            body: Center(
+              child: Text('Erreur: ${state.message}'),
+            ),
+          );
+        }
+
+        // Même si l'état n'est pas chargé, on peut afficher l'interface avec les données de base
+        final conversation = widget.conversation;
+        // Si des messages sont chargés dans l'état, on les utilise
+        final messages = state is chat.ChatLoaded && state.selectedConversation != null 
+            ? state.selectedConversation!.messages 
+            : [];
+        
+        // Trouver l'autre participant
+        final otherParticipant = conversation.participants.isNotEmpty 
+            ? conversation.participants.firstWhere(
+                (p) => p.role == 'client',
+                orElse: () => conversation.participants.isNotEmpty 
+                    ? conversation.participants[0] 
+                    : ChatParticipant(id: '', name: 'Utilisateur', role: 'client'),
+              )
+            : ChatParticipant(id: '', name: 'Utilisateur', role: 'client');
+
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: goldColor,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(otherParticipant.name),
+                if (conversation.residenceId != null || conversation.bookingId != null)
+                  Text(
+                    conversation.bookingId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+              ],
+            ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                context.go('/chat');
-              },
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            title: Builder(
-              builder: (context) {
-                if (state is MessagesLoaded) {
-                  final otherParticipant = state.conversations
-                      .firstWhere((c) => c.id == widget.conversationId)
-                      .participants
-                      .firstWhere(
-                        (p) => p.id != 'user1',
-                        orElse: () => ChatParticipant(id: 'unknown', name: 'Inconnu'),
-                      );
-                  return Text(otherParticipant.name);
-                }
-                return const Text('Conversation');
-              },
-            ),
-            actions: [
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'archive') {
-                    _chatBloc.add(MarkAllAsRead(widget.conversationId));
-                    context.go('/chat');
-                  } else if (value == 'delete') {
-                    _showDeleteConfirmationDialog();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'archive',
-                    child: Row(
-                      children: [
-                        Icon(Icons.archive),
-                        SizedBox(width: 8),
-                        Text('Archiver'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Supprimer', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
-          body: _buildBody(state),
-        );
-      },
-    );
-  }
-
-  Widget _buildBody(ChatState state) {
-    if (state is ChatLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    } else if (state is MessagesLoaded) {
-      return Column(
-        children: [
-          Expanded(
-            child: _buildMessagesList(state.messages),
-          ),
-          _buildMessageInput(),
-        ],
-      );
-    } else if (state is ChatError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Erreur',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.red[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                state.message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[700]),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _chatBloc.add(LoadMessages(widget.conversationId));
-              },
-              child: const Text('Réessayer'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      return const Center(
-        child: Text('Chargement de la conversation...'),
-      );
-    }
-  }
-
-  Widget _buildMessagesList(List<ChatMessage> messages) {
-    if (messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun message',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                'Commencez la conversation en envoyant un message',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: messages.length,
-      itemBuilder: (context, index) {
-        final message = messages[index];
-        final isUserMessage = message.senderId == 'user1';
-        final showAvatar = index == 0 || messages[index - 1].senderId != message.senderId;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            mainAxisAlignment:
-                isUserMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          body: Column(
             children: [
-              if (!isUserMessage && showAvatar)
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.grey[300],
-                  child: const Icon(Icons.person, size: 20, color: Colors.white),
-                )
-              else if (!isUserMessage)
-                const SizedBox(width: 32),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isUserMessage ? goldColor : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        message.content ?? '',
-                        style: TextStyle(
-                          color: isUserMessage ? blackColor : Colors.black87,
-                        ),
+              Expanded(
+                child: messages.isEmpty
+                    ? const Center(child: Text('Aucun message dans cette conversation'))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        itemCount: messages.length + (_selectedImagePath != null && _isSending ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // Si nous affichons un message temporaire en cours d'envoi
+                          if (_selectedImagePath != null && _isSending && index == 0) {
+                            return const Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+                          
+                          final adjustedIndex = _selectedImagePath != null && _isSending ? index - 1 : index;
+                          if (adjustedIndex < 0 || adjustedIndex >= messages.length) return const SizedBox();
+                          
+                          final message = messages[adjustedIndex];
+                          final isMe = message.senderId != otherParticipant.id;
+                          return MessageBubble(
+                            message: message,
+                            isMe: isMe,
+                          );
+                        },
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormatter.formatTime(message.timestamp),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isUserMessage
-                              ? blackColor.withOpacity(0.6)
-                              : Colors.grey[600],
+              ),
+              if (_isSending)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text('Envoi en cours...', style: TextStyle(fontStyle: FontStyle.italic)),
+                ),
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.attach_file),
+                      onPressed: _isSending ? null : _showAttachmentOptions,
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'Écrivez un message...',
+                          border: OutlineInputBorder(),
                         ),
+                        enabled: !_isSending,
                       ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: _isSending 
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.send),
+                      onPressed: _isSending
+                          ? null
+                          : () {
+                              if (_messageController.text.isNotEmpty) {
+                                setState(() {
+                                  _isSending = true;
+                                });
+                                context.read<chat.ChatBloc>().add(
+                                      chat.SendMessage(
+                                        conversationId: widget.conversation.id,
+                                        content: _messageController.text,
+                                      ),
+                                    );
+                                _messageController.clear();
+                              }
+                            },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              if (isUserMessage && showAvatar)
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: goldColor,
-                  child: const Icon(Icons.person, size: 20, color: Colors.white),
-                )
-              else if (isUserMessage)
-                const SizedBox(width: 32),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.attach_file),
-            onPressed: () {
-              // Fonctionnalité de pièce jointe à implémenter
-            },
-          ),
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Tapez votre message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-              ),
-              textCapitalization: TextCapitalization.sentences,
-              minLines: 1,
-              maxLines: 5,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send, color: darkGold),
-            onPressed: _sendMessage,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendMessage() {
-    final message = _messageController.text.trim();
-    if (message.isNotEmpty) {
-      _chatBloc.add(SendMessage(
-        conversationId: widget.conversationId,
-        content: message,
-      ));
-      _messageController.clear();
-    }
-  }
-
-  void _showDeleteConfirmationDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Supprimer la conversation'),
-          content: const Text(
-            'Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                context.pop();
-              },
-              child: const Text('Annuler'),
-            ),
-            TextButton(
-              onPressed: () {
-                context.pop(); // Fermer la boîte de dialogue
-                _chatBloc.add(MarkAllAsRead(widget.conversationId));
-                context.go('/chat'); // Retourner à l'écran de chat
-              },
-              child: const Text(
-                'Supprimer',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
         );
       },
     );

@@ -1,153 +1,286 @@
-import 'dart:async';
 import 'package:dio/dio.dart';
 import '../../models/message/message.dart';
-import 'api_service.dart';
+import '../../models/message/conversation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class MessageService {
-  final ApiService _apiService;
-  final _mockMessages = <Message>[];
-  Timer? _mockMessageTimer;
+  late final Dio _dio;
+  final _storage = const FlutterSecureStorage();
 
-  MessageService(this._apiService) {
-    // Simulation de messages pour le test
-    _mockMessages.addAll([
-      Message(
-        id: '1',
-        senderId: 'client_1',
-        receiverId: 'partner_1',
-        receiverName: 'John Doe',
-        receiverRole: 'client',
-        content: 'Bonjour, je suis intéressé par votre résidence',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+  MessageService(Dio dio) {
+    _dio = dio;
+    // Ajouter l'intercepteur pour le token
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _storage.read(key: 'token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
       ),
-      Message(
-        id: '2',
-        senderId: 'partner_1',
-        receiverId: 'client_1',
-        receiverName: 'John Doe',
-        receiverRole: 'client',
-        content: 'Bonjour ! Bien sûr, je peux vous donner plus d\'informations',
-        timestamp: DateTime.now().subtract(const Duration(hours: 23)),
-      ),
-      Message(
-        id: '3',
-        senderId: 'client_1',
-        receiverId: 'partner_1',
-        receiverName: 'John Doe',
-        receiverRole: 'client',
-        content: 'Quel est le prix par nuit ?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 22)),
-      ),
-    ]);
-
-    // Simulation de nouveaux messages
-    _startMockMessageTimer();
+    );
   }
 
-  void _startMockMessageTimer() {
-    _mockMessageTimer?.cancel();
-    _mockMessageTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      final mockClientMessages = [
-        'Est-ce que la résidence est disponible le mois prochain ?',
-        'Y a-t-il une piscine ?',
-        'Combien de chambres y a-t-il ?',
-        'Le wifi est-il inclus ?',
-        'Y a-t-il un parking ?',
-      ];
+  String? get currentUserId {
+    final headers = _dio.options.headers;
+    final authHeader = headers['Authorization'] as String?;
+    if (authHeader != null && authHeader.startsWith('Bearer ')) {
+      return authHeader.split(' ')[1];
+    }
+    return null;
+  }
 
-      final randomMessage = mockClientMessages[DateTime.now().second % mockClientMessages.length];
+  /// Récupère toutes les conversations de l'utilisateur
+  Future<List<Conversation>> getConversations() async {
+    try {
+      final response = await _dio.get('/messages/conversations');
       
-      _mockMessages.add(Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: 'client_1',
-        receiverId: 'partner_1',
-        receiverName: 'John Doe',
-        receiverRole: 'client',
-        content: randomMessage,
-        timestamp: DateTime.now(),
-      ));
-    });
+      if (response.statusCode == 200 || response.statusCode == 304) {
+        final data = response.data;
+        if (data == null) {
+          return [];
+        }
+
+        // Extraire la liste des conversations
+        final List conversationsList = data['data'] as List? ?? [];
+
+        // Convertir chaque conversation au format attendu
+        return conversationsList.map((json) {
+          // Adapter le format de l'API à notre modèle
+          final adaptedJson = {
+            'id': json['_id'],
+            'participants': (json['participants'] as List?)?.map((p) => {
+              'id': p['_id'],
+              'name': p['name'] ?? 'Utilisateur',
+              'role': p['role'] ?? 'user',
+              'isActive': p['isActive'] ?? true,
+            }).toList() ?? [],
+            'unreadCount': json['unreadCount'] ?? 0,
+            'createdAt': json['createdAt'],
+            'updatedAt': json['updatedAt'],
+          };
+
+          // Adapter le lastMessage s'il existe
+          if (json['lastMessage'] != null) {
+            adaptedJson['lastMessage'] = {
+              'id': json['lastMessage']['_id'],
+              'conversationId': json['_id'],
+              'content': json['lastMessage']['content'] ?? '',
+              'senderId': json['lastMessage']['sender'],
+              'senderName': 'Utilisateur', // Valeur par défaut
+              'timestamp': json['lastMessage']['createdAt'],
+              'read': json['lastMessage']['read'] ?? false,
+              'attachments': (json['lastMessage']['attachments'] as List?)?.map((a) => {
+                'id': a['_id'] ?? '',
+                'url': a['url'] ?? '',
+                'type': a['type'] ?? 'file',
+                'name': a['name'],
+                'size': a['size'] ?? 0,
+              }).toList() ?? []
+            };
+          }
+
+          return Conversation.fromJson(adaptedJson);
+        }).toList();
+      } else {
+        throw Exception('Erreur lors du chargement des conversations: Status ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('Exception détaillée: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('Erreur lors du chargement des conversations: $e');
+    }
   }
 
-  void dispose() {
-    _mockMessageTimer?.cancel();
+  /// Crée une nouvelle conversation
+  Future<Conversation> createConversation({
+    required List<String> participants, 
+    String? title, 
+    String? bookingId,
+    String? initialMessage
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/messages/conversations',
+        data: {
+          'participants': participants,
+          if (title != null) 'title': title,
+          if (bookingId != null) 'bookingId': bookingId,
+          if (initialMessage != null) 'initialMessage': initialMessage,
+        },
+      );
+      return Conversation.fromJson(response.data['data']);
+    } catch (e) {
+      throw _handleError(e);
+    }
   }
 
-  Future<List<Message>> getMessages(String userId) async {
-    // En production, nous utiliserions l'API
-    // try {
-    //   final response = await _apiService.dio.get('/messages/$userId');
-    //   final List<dynamic> data = response.data['messages'];
-    //   return data.map((json) => Message.fromJson(json)).toList();
-    // } catch (e) {
-    //   throw _handleError(e);
-    // }
-
-    // Pour le test, on retourne les messages simulés
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulation de latence
-    return _mockMessages.where((m) => 
-      m.senderId == userId || m.receiverId == userId
-    ).toList()
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  /// Récupère une conversation
+  Future<Conversation?> getConversation(String conversationId) async {
+    try {
+      final response = await _dio.get('/messages/conversations/$conversationId');
+      final data = response.data['data'];
+      return Conversation.fromJson(data);
+    } catch (e) {
+      return null;
+    }
   }
 
-  Future<Message> sendMessage(Message message) async {
-    // En production, nous utiliserions l'API
-    // try {
-    //   final response = await _apiService.dio.post(
-    //     '/messages',
-    //     data: message.toJson(),
-    //   );
-    //   return Message.fromJson(response.data['message']);
-    // } catch (e) {
-    //   throw _handleError(e);
-    // }
+  /// Envoie un nouveau message
+  Future<Message> sendMessage(String conversationId, String content, {List<MessageAttachment>? attachments}) async {
+    try {
+      final response = await _dio.post(
+        '/messages/conversations/$conversationId/messages',
+        data: {
+          'content': content,
+          if (attachments != null && attachments.isNotEmpty)
+            'attachments': attachments.map((a) => {
+              '_id': a.id,
+              'type': a.type,
+              'url': a.url,
+              'name': a.name,
+              'size': a.size,
+            }).toList(),
+        },
+      );
 
-    // Pour le test, on ajoute le message à notre liste simulée
-    await Future.delayed(const Duration(milliseconds: 300)); // Simulation de latence
-    _mockMessages.add(message);
+      if (response.statusCode == 201 && response.data['success'] == true) {
+        final messageData = response.data['data'];
+        return Message(
+          id: messageData['_id'] ?? '',
+          conversationId: messageData['conversation'] ?? conversationId,
+          content: messageData['content'] ?? '',
+          senderId: messageData['sender']?['_id'] ?? '',
+          senderName: messageData['sender']?['name'] ?? 'Utilisateur',
+          senderAvatar: messageData['sender']?['avatar'],
+          timestamp: DateTime.parse(messageData['createdAt']),
+          read: messageData['read'] ?? false,
+          attachments: (messageData['attachments'] as List?)?.map((a) => MessageAttachment(
+            id: a['_id'] ?? '',
+            url: a['url'] ?? '',
+            type: a['type'] ?? 'file',
+            name: a['name'],
+            size: a['size'] ?? 0,
+          )).toList() ?? [],
+        );
+      }
 
-    // Simulation d'une réponse automatique du client
-    Timer(const Duration(seconds: 2), () {
-      final responses = [
-        'D\'accord, merci pour l\'information !',
-        'Je vais y réfléchir.',
-        'Pouvez-vous m\'en dire plus ?',
-        'C\'est parfait !',
-        'Je comprends.',
-      ];
+      throw Exception('Erreur lors de l\'envoi du message');
+    } catch (e) {
+      print('Erreur détaillée lors de l\'envoi du message: $e');
+      throw Exception('Erreur lors de l\'envoi du message');
+    }
+  }
 
-      final randomResponse = responses[DateTime.now().second % responses.length];
+  /// Récupère les messages d'une conversation
+  Future<List<Message>> getMessages(String conversationId, {int? page, int? limit}) async {
+    try {
+      final response = await _dio.get(
+        '/messages/conversations/$conversationId/messages',
+        queryParameters: {
+          if (page != null) 'page': page,
+          if (limit != null) 'limit': limit,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        if (data == null) return [];
+        
+        if (data is List) {
+          return data.map((messageData) => Message(
+            id: messageData['_id'] ?? '',
+            conversationId: messageData['conversation'] ?? conversationId,
+            content: messageData['content'] ?? '',
+            senderId: messageData['sender']?['_id'] ?? '',
+            senderName: messageData['sender']?['name'] ?? 'Utilisateur',
+            senderAvatar: messageData['sender']?['avatar'],
+            timestamp: DateTime.parse(messageData['createdAt']),
+            read: messageData['read'] ?? false,
+            attachments: (messageData['attachments'] as List?)?.map((a) => MessageAttachment(
+              id: a['_id'] ?? '',
+              url: a['url'] ?? '',
+              type: a['type'] ?? 'file',
+              name: a['name'],
+              size: a['size'] ?? 0,
+            )).toList() ?? [],
+            bookingId: messageData['bookingId'],
+            bookingStatus: messageData['bookingStatus'],
+            metadata: messageData['metadata'] as Map<String, dynamic>?,
+          )).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Erreur lors de la récupération des messages: $e');
+      throw Exception('Erreur lors de la récupération des messages');
+    }
+  }
+
+  /// Upload un fichier pour une conversation
+  Future<MessageAttachment> uploadAttachment(String conversationId, String filePath, {String? name}) async {
+    try {
+      FormData formData;
       
-      _mockMessages.add(Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: 'client_1',
-        receiverId: 'partner_1',
-        receiverName: message.receiverName,
-        receiverRole: 'client',
-        content: randomResponse,
-        timestamp: DateTime.now(),
-      ));
-    });
+      if (kIsWeb) {
+        // Pour le web, on utilise les données brutes du fichier
+        formData = FormData.fromMap({
+          'file': MultipartFile.fromBytes(
+            base64Decode(filePath.split(',').last),
+            filename: name ?? 'file.jpg',
+          ),
+        });
+      } else {
+        // Pour mobile/desktop
+        formData = FormData.fromMap({
+          'file': await MultipartFile.fromFile(
+            filePath,
+            filename: name ?? filePath.split('/').last,
+          ),
+        });
+      }
 
-    return message;
+      final response = await _dio.post(
+        '/messages/conversations/$conversationId/attachments',
+        data: formData,
+        options: Options(
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      if (response.statusCode == 201 && response.data['success'] == true) {
+        final attachmentData = response.data['data']['attachments']?[0];
+        if (attachmentData == null) {
+          throw Exception('Aucune pièce jointe dans la réponse');
+        }
+        
+        return MessageAttachment(
+          id: attachmentData['_id'] ?? '',
+          url: attachmentData['url'] ?? '',
+          type: attachmentData['type'] ?? 'file',
+          name: attachmentData['name'],
+          size: attachmentData['size'] ?? 0,
+        );
+      }
+      throw Exception('Erreur lors de l\'upload du fichier');
+    } catch (e) {
+      print('Erreur détaillée lors de l\'upload: $e');
+      throw Exception('Erreur lors de l\'upload du fichier');
+    }
   }
 
-  Future<void> markMessageAsRead(String messageId) async {
-    // En production, nous utiliserions l'API
-    // try {
-    //   await _apiService.dio.patch(
-    //     '/messages/$messageId/read',
-    //   );
-    // } catch (e) {
-    //   throw _handleError(e);
-    // }
-
-    // Pour le test, on marque le message comme lu dans notre liste simulée
-    await Future.delayed(const Duration(milliseconds: 200)); // Simulation de latence
-    final index = _mockMessages.indexWhere((m) => m.id == messageId);
-    if (index != -1) {
-      _mockMessages[index] = _mockMessages[index].copyWith(isRead: true);
+  /// Marque une conversation comme lue
+  Future<void> markAsRead(String conversationId) async {
+    try {
+      await _dio.patch('/messages/conversations/$conversationId/read');
+    } catch (e) {
+      throw _handleError(e);
     }
   }
 
@@ -155,10 +288,13 @@ class MessageService {
     if (error is DioException) {
       final response = error.response;
       if (response != null) {
-        final message = response.data['message'] ?? 'Une erreur est survenue';
-        return Exception(message);
+        final data = response.data;
+        if (data is Map<String, dynamic> && data.containsKey('message')) {
+          return Exception(data['message']);
+        }
       }
+      return Exception(error.message);
     }
-    return Exception('Une erreur est survenue lors de la communication avec le serveur');
+    return Exception('Une erreur est survenue');
   }
 }

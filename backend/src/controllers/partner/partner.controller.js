@@ -3,6 +3,7 @@ const Residence = require('../../models/residence.model');
 const Booking = require('../../models/booking.model');
 const Payment = require('../../models/payment.model');
 const statsService = require('../../services/stats.service');
+const dashboardService = require('../../services/dashboard.service');
 const ApiError = require('../../utils/apiError');
 const asyncHandler = require('../../middlewares/async.middleware');
 
@@ -134,5 +135,38 @@ exports.getEarnings = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         data: earnings
+    });
+});
+
+// Vue d'ensemble du dashboard
+exports.getDashboardOverview = asyncHandler(async (req, res) => {
+    const partnerId = req.user.id;
+    const overview = await dashboardService.getOverview(partnerId);
+    
+    res.status(200).json({
+        success: true,
+        data: overview
+    });
+});
+
+// Statistiques financières détaillées
+exports.getDashboardFinances = asyncHandler(async (req, res) => {
+    const partnerId = req.user.id;
+    const financialStats = await dashboardService.getFinancialStats(partnerId);
+    
+    res.status(200).json({
+        success: true,
+        data: financialStats
+    });
+});
+
+// Analytics en temps réel
+exports.getDashboardRealtime = asyncHandler(async (req, res) => {
+    const partnerId = req.user.id;
+    const realtimeStats = await dashboardService.getRealTimeAnalytics(partnerId);
+    
+    res.status(200).json({
+        success: true,
+        data: realtimeStats
     });
 });

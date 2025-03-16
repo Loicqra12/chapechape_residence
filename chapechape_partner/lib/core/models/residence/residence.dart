@@ -33,6 +33,13 @@ class Residence {
   final bool allowsPets;
   final bool allowsParties;
   final List<String> amenities;
+  
+  // Propriétés de tarification
+  final String pricePeriod;
+  final double hourlyRate;
+  final double halfDayRate;
+  final double fullDayRate;
+  final double weekendRate;
 
   Residence({
     required this.id,
@@ -65,26 +72,60 @@ class Residence {
     this.allowsPets = false,
     this.allowsParties = false,
     this.amenities = const [],
+    this.pricePeriod = '',
+    this.hourlyRate = 0.0,
+    this.halfDayRate = 0.0,
+    this.fullDayRate = 0.0,
+    this.weekendRate = 0.0,
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
+    // Convertir les amenities en propriétés booléennes
+    final amenities = (json['amenities'] as List<dynamic>?)?.cast<String>() ?? [];
+    
+    // Ajouter les propriétés du partenaire si présentes
+    Map<String, dynamic>? partnerInfo;
+    if (json['partner'] != null) {
+      partnerInfo = {
+        'id': json['partner']['_id'] ?? '',
+        'name': '${json['partner']['firstName'] ?? ''} ${json['partner']['lastName'] ?? ''}'.trim(),
+        'email': json['partner']['email'] ?? '',
+        'phoneNumber': json['partner']['phoneNumber'] ?? '',
+      };
+    } else if (json['partnerInfo'] != null) {
+      partnerInfo = json['partnerInfo'] as Map<String, dynamic>;
+    }
+    
+    // Ajouter les règles
+    final maxGuests = json['rules']?['maxGuests'] ?? json['maxGuests'] ?? 2;
+    final allowsSmoking = json['rules']?['smoking'] ?? json['allowsSmoking'] ?? false;
+    final allowsPets = json['rules']?['pets'] ?? json['allowsPets'] ?? false;
+    final allowsParties = json['rules']?['parties'] ?? json['allowsParties'] ?? false;
+    
+    // Ajouter les propriétés de tarification
+    final pricePeriod = json['pricePeriod']?.toString() ?? '';
+    final hourlyRate = (json['hourlyRate'] as num?)?.toDouble() ?? 0.0;
+    final halfDayRate = (json['halfDayRate'] as num?)?.toDouble() ?? 0.0;
+    final fullDayRate = (json['fullDayRate'] as num?)?.toDouble() ?? 0.0;
+    final weekendRate = (json['weekendRate'] as num?)?.toDouble() ?? 0.0;
+    
     return Residence(
       id: json['_id']?.toString() ?? '',
-      name: json['title']?.toString() ?? '',
+      name: json['title']?.toString() ?? json['name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       images: json['images'] ?? [],
       mainImage: json['mainImage']?.toString(),
-      address: json['location']?['address']?.toString() ?? '',
-      city: json['location']?['city']?.toString() ?? '',
+      address: json['address']?.toString() ?? json['location']?['address']?.toString() ?? '',
+      city: json['city']?.toString() ?? json['location']?['city']?.toString() ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      bedrooms: json['features']?['bedrooms'] as int? ?? json['bedrooms'] as int? ?? 0,
-      bathrooms: json['features']?['bathrooms'] as int? ?? json['bathrooms'] as int? ?? 0,
-      surface: json['features']?['area'] as double? ?? json['area'] as double? ?? 0.0,
-      hasPool: json['features']?['hasPool'] as bool? ?? json['hasPool'] as bool? ?? false,
-      hasWifi: json['features']?['hasWifi'] as bool? ?? json['hasWifi'] as bool? ?? false,
-      hasRestaurant: json['features']?['hasRestaurant'] as bool? ?? json['hasRestaurant'] as bool? ?? false,
-      isVacationResidence: json['features']?['isVacationResidence'] as bool? ?? json['isVacationResidence'] as bool? ?? false,
-      isSpecialResidence: json['features']?['isSpecialResidence'] as bool? ?? json['isSpecialResidence'] as bool? ?? false,
+      bedrooms: json['bedrooms'] as int? ?? 0,
+      bathrooms: json['bathrooms'] as int? ?? 0,
+      surface: json['area'] as double? ?? json['surface'] as double? ?? 0.0,
+      hasPool: amenities.contains('pool'),
+      hasWifi: amenities.contains('wifi'),
+      hasRestaurant: amenities.contains('kitchen'),
+      isVacationResidence: json['type'] == 'villa',
+      isSpecialResidence: false,
       isAvailable: json['status']?.toString().toLowerCase() == 'available',
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
@@ -97,12 +138,17 @@ class Residence {
           ? DateTime.parse(json['updatedAt'].toString())
           : DateTime.now(),
       isFurnished: json['isFurnished'] as bool? ?? false,
-      partnerInfo: json['partnerInfo'] as Map<String, dynamic>?,
-      maxGuests: json['maxGuests'] as int? ?? 2,
-      allowsSmoking: json['allowsSmoking'] as bool? ?? false,
-      allowsPets: json['allowsPets'] as bool? ?? false,
-      allowsParties: json['allowsParties'] as bool? ?? false,
-      amenities: (json['amenities'] as List<dynamic>?)?.cast<String>() ?? [],
+      partnerInfo: partnerInfo,
+      maxGuests: maxGuests,
+      allowsSmoking: allowsSmoking,
+      allowsPets: allowsPets,
+      allowsParties: allowsParties,
+      amenities: amenities,
+      pricePeriod: pricePeriod,
+      hourlyRate: hourlyRate,
+      halfDayRate: halfDayRate,
+      fullDayRate: fullDayRate,
+      weekendRate: weekendRate,
     );
   }
 
@@ -142,6 +188,11 @@ class Residence {
       'allowsPets': allowsPets,
       'allowsParties': allowsParties,
       'amenities': amenities,
+      'pricePeriod': pricePeriod,
+      'hourlyRate': hourlyRate,
+      'halfDayRate': halfDayRate,
+      'fullDayRate': fullDayRate,
+      'weekendRate': weekendRate,
     };
   }
 

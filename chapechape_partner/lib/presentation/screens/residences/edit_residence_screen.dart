@@ -54,8 +54,13 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   late final TextEditingController _bedroomsController;
   late final TextEditingController _bathroomsController;
   late final TextEditingController _surfaceController;
+  late final TextEditingController _hourlyRateController;
+  late final TextEditingController _halfDayRateController;
+  late final TextEditingController _fullDayRateController;
+  late final TextEditingController _weekendRateController;
   String _selectedType = 'studio_meuble';
   String _selectedCategory = 'residence_meublee';
+  String _selectedPricePeriod = 'month'; // Valeurs possibles: hour, day, week, month
   bool _hasPool = false;
   bool _isVacationResidence = false;
   bool _isSpecialResidence = false;
@@ -110,6 +115,10 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     },
   };
 
+  List<ResidenceType> get _availableTypesForCategory {
+    return _residenceCategories[_selectedCategory]!['types'] as List<ResidenceType>;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -118,17 +127,58 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     _addressController = TextEditingController(text: widget.residence?.address);
     _cityController = TextEditingController(text: widget.residence?.city);
     _priceController = TextEditingController(
-      text: widget.residence?.price.toString(),
+      text: widget.residence?.price.toString() ?? '0',
     );
     _bedroomsController = TextEditingController(
-      text: widget.residence?.bedrooms.toString(),
+      text: widget.residence?.bedrooms.toString() ?? '0',
     );
     _bathroomsController = TextEditingController(
-      text: widget.residence?.bathrooms.toString(),
+      text: widget.residence?.bathrooms.toString() ?? '0',
     );
     _surfaceController = TextEditingController(
-      text: widget.residence?.surface.toString(),
+      text: widget.residence?.surface.toString() ?? '0',
     );
+    _hourlyRateController = TextEditingController(
+      text: widget.residence?.hourlyRate?.toString() ?? '0',
+    );
+    _halfDayRateController = TextEditingController(
+      text: widget.residence?.halfDayRate?.toString() ?? '0',
+    );
+    _fullDayRateController = TextEditingController(
+      text: widget.residence?.fullDayRate?.toString() ?? '0',
+    );
+    _weekendRateController = TextEditingController(
+      text: widget.residence?.weekendRate?.toString() ?? '0',
+    );
+    
+    // Initialiser le type et la catégorie s'il s'agit d'une édition
+    if (widget.residence != null) {
+      _selectedType = widget.residence?.type ?? 'studio_meuble';
+      
+      // Déterminer la catégorie en fonction du type
+      bool categoryFound = false;
+      for (var category in _residenceCategories.keys) {
+        final types = _residenceCategories[category]!['types'] as List<dynamic>;
+        for (var type in types) {
+          if (type.value == _selectedType) {
+            _selectedCategory = category;
+            categoryFound = true;
+            break;
+          }
+        }
+        if (categoryFound) break;
+      }
+
+      // Si la catégorie n'est pas trouvée, utiliser la première catégorie et son premier type
+      if (!categoryFound) {
+        _selectedCategory = _residenceCategories.keys.first;
+        final firstTypes = _residenceCategories[_selectedCategory]!['types'] as List<dynamic>;
+        if (firstTypes.isNotEmpty) {
+          _selectedType = firstTypes.first.value;
+        }
+      }
+    }
+    
     _hasPool = widget.residence?.hasPool ?? false;
     _isVacationResidence = widget.residence?.isVacationResidence ?? false;
     _isSpecialResidence = widget.residence?.isSpecialResidence ?? false;
@@ -145,6 +195,10 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     _bedroomsController.dispose();
     _bathroomsController.dispose();
     _surfaceController.dispose();
+    _hourlyRateController.dispose();
+    _halfDayRateController.dispose();
+    _fullDayRateController.dispose();
+    _weekendRateController.dispose();
     super.dispose();
   }
 
@@ -276,6 +330,10 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         'isVacationResidence': _isVacationResidence,
         'isSpecialResidence': _isSpecialResidence,
         'isAvailable': _isAvailable,
+        'hourlyRate': double.parse(_hourlyRateController.text),
+        'halfDayRate': double.parse(_halfDayRateController.text),
+        'fullDayRate': double.parse(_fullDayRateController.text),
+        'weekendRate': double.parse(_weekendRateController.text),
       };
 
       if (widget.residence != null) {
@@ -320,6 +378,12 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Modifier la résidence' : 'Nouvelle résidence'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _submitForm,
+          ),
+        ],
       ),
       body: BlocListener<ResidenceBloc, ResidenceState>(
         listener: (context, state) {
@@ -327,14 +391,35 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message)),
             );
-            Navigator.pop(context);
-          }
+            Navigator.of(context).pop();
+          } else if (state is ResidenceError) {
+            String errorMessage = state.message;
+            Widget? action;
 
-          if (state is ResidenceError) {
+            if (state.isAuthError) {
+              errorMessage = 'Vous devez être connecté pour effectuer cette action.';
+              action = TextButton(
+                onPressed: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                },
+                child: const Text('SE CONNECTER'),
+              );
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Text(errorMessage),
                 backgroundColor: theme.colorScheme.error,
+                duration: const Duration(seconds: 5),
+                action: action != null
+                    ? SnackBarAction(
+                        label: 'FERMER',
+                        textColor: Colors.white,
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        },
+                      )
+                    : null,
               ),
             );
           }
@@ -359,6 +444,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Le nom est requis';
+                  }
+                  if (value.length < 5) {
+                    return 'Le nom doit contenir au moins 5 caractères';
                   }
                   return null;
                 },
@@ -459,16 +547,16 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
               // Type de résidence
               DropdownButtonFormField<String>(
-                value: _selectedType,
                 decoration: const InputDecoration(
-                  labelText: 'Type d\'hébergement',
+                  labelText: 'Type de résidence',
                 ),
-                items: (_residenceCategories[_selectedCategory]!['types'] as List<ResidenceType>)
-                    .map((type) => DropdownMenuItem<String>(
-                          value: type.value,
-                          child: Text(type.label),
-                        ))
-                    .toList(),
+                value: _selectedType,
+                items: _availableTypesForCategory.map((type) {
+                  return DropdownMenuItem<String>(
+                    value: type.value,
+                    child: Text(type.label),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
@@ -478,7 +566,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Le type est requis';
+                    return 'Veuillez sélectionner un type de résidence';
                   }
                   return null;
                 },
@@ -560,6 +648,116 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Le prix est requis';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedPricePeriod,
+                decoration: const InputDecoration(
+                  labelText: 'Période de tarification',
+                ),
+                items: const [
+                  DropdownMenuItem<String>(
+                    value: 'hour',
+                    child: Text('Heure'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'day',
+                    child: Text('Jour'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'week',
+                    child: Text('Semaine'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'month',
+                    child: Text('Mois'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedPricePeriod = value;
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'La période de tarification est requise';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _hourlyRateController,
+                decoration: const InputDecoration(
+                  labelText: 'Tarif horaire (FCFA)',
+                  hintText: 'ex: 5000',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Le tarif horaire est requis';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _halfDayRateController,
+                decoration: const InputDecoration(
+                  labelText: 'Tarif demi-journée (FCFA)',
+                  hintText: 'ex: 25000',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Le tarif demi-journée est requis';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _fullDayRateController,
+                decoration: const InputDecoration(
+                  labelText: 'Tarif journée (FCFA)',
+                  hintText: 'ex: 50000',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Le tarif journée est requis';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _weekendRateController,
+                decoration: const InputDecoration(
+                  labelText: 'Tarif week-end (FCFA)',
+                  hintText: 'ex: 75000',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Le tarif week-end est requis';
                   }
                   return null;
                 },

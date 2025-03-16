@@ -8,6 +8,7 @@ import 'package:chapechape_partner/core/blocs/dashboard/dashboard_bloc.dart';
 import 'package:chapechape_partner/core/blocs/residence/residence_bloc.dart';
 import 'package:chapechape_partner/core/blocs/message/message_bloc.dart';
 import 'package:chapechape_partner/core/blocs/reservation/reservation_bloc.dart';
+import 'package:chapechape_partner/presentation/screens/residences/edit_residence_screen.dart';
 import 'custom_sliver_app_bar.dart';
 
 class ScreenAppBars {
@@ -126,7 +127,32 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir la recherche de résidences
+            // Afficher une boîte de dialogue pour la recherche
+            showDialog(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Rechercher des résidences'),
+                content: TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Nom, adresse, ville...',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onSubmitted: (query) {
+                    if (query.isNotEmpty) {
+                      context.read<ResidenceBloc>().add(SearchResidences(query));
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('ANNULER'),
+                  ),
+                ],
+              ),
+            );
           },
         ),
         IconButton(
@@ -140,7 +166,142 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir le filtre des résidences
+            // Afficher une boîte de dialogue pour les filtres
+            showDialog(
+              context: context,
+              builder: (dialogContext) {
+                bool hasPool = false;
+                bool isVacationResidence = false;
+                bool isSpecialResidence = false;
+                String selectedType = 'all';
+                double minPrice = 0;
+                double maxPrice = 1000000;
+                
+                return StatefulBuilder(
+                  builder: (context, setState) => AlertDialog(
+                    title: const Text('Filtrer les résidences'),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Type de résidence'),
+                          DropdownButton<String>(
+                            isExpanded: true,
+                            value: selectedType,
+                            items: [
+                              const DropdownMenuItem(
+                                value: 'all',
+                                child: Text('Tous les types'),
+                              ),
+                              const DropdownMenuItem(
+                                value: 'studio_meuble',
+                                child: Text('Studio meublé'),
+                              ),
+                              const DropdownMenuItem(
+                                value: 'appartement_meuble',
+                                child: Text('Appartement meublé'),
+                              ),
+                              const DropdownMenuItem(
+                                value: 'villa_meublee',
+                                child: Text('Villa meublée'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                selectedType = value!;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('Fourchette de prix'),
+                          RangeSlider(
+                            values: RangeValues(minPrice, maxPrice),
+                            min: 0,
+                            max: 1000000,
+                            divisions: 100,
+                            labels: RangeLabels(
+                              '${minPrice.round()} FCFA',
+                              '${maxPrice.round()} FCFA',
+                            ),
+                            onChanged: (values) {
+                              setState(() {
+                                minPrice = values.start;
+                                maxPrice = values.end;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('Caractéristiques'),
+                          CheckboxListTile(
+                            title: const Text('Avec piscine'),
+                            value: hasPool,
+                            onChanged: (value) {
+                              setState(() {
+                                hasPool = value!;
+                              });
+                            },
+                          ),
+                          CheckboxListTile(
+                            title: const Text('Résidence de vacances'),
+                            value: isVacationResidence,
+                            onChanged: (value) {
+                              setState(() {
+                                isVacationResidence = value!;
+                              });
+                            },
+                          ),
+                          CheckboxListTile(
+                            title: const Text('Résidence spéciale'),
+                            value: isSpecialResidence,
+                            onChanged: (value) {
+                              setState(() {
+                                isSpecialResidence = value!;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('ANNULER'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Construire les filtres
+                          final filters = <String, dynamic>{};
+                          
+                          if (selectedType != 'all') {
+                            filters['type'] = selectedType;
+                          }
+                          
+                          filters['minPrice'] = minPrice;
+                          filters['maxPrice'] = maxPrice;
+                          
+                          if (hasPool) {
+                            filters['hasPool'] = true;
+                          }
+                          
+                          if (isVacationResidence) {
+                            filters['isVacationResidence'] = true;
+                          }
+                          
+                          if (isSpecialResidence) {
+                            filters['isSpecialResidence'] = true;
+                          }
+                          
+                          context.read<ResidenceBloc>().add(FilterResidences(filters));
+                          Navigator.pop(dialogContext);
+                        },
+                        child: const Text('APPLIQUER'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
           },
         ),
         IconButton(
@@ -154,7 +315,12 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            context.go('/residences/add');
+            // Utiliser Navigator plutôt que GoRouter pour une meilleure compatibilité avec IndexedStack
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => EditResidenceScreen(),
+              ),
+            );
           },
         ),
         IconButton(
@@ -168,7 +334,56 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir le tri des résidences
+            // Afficher un menu popup pour les options de tri
+            final RenderBox button = context.findRenderObject() as RenderBox;
+            final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+            final RelativeRect position = RelativeRect.fromRect(
+              Rect.fromPoints(
+                button.localToGlobal(Offset.zero, ancestor: overlay),
+                button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+              ),
+              Offset.zero & overlay.size,
+            );
+            
+            showMenu<String>(
+              context: context,
+              position: position,
+              items: [
+                const PopupMenuItem<String>(
+                  value: 'name_asc',
+                  child: Text('Nom (A-Z)'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'name_desc',
+                  child: Text('Nom (Z-A)'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'price_asc',
+                  child: Text('Prix (croissant)'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'price_desc',
+                  child: Text('Prix (décroissant)'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'surface_asc',
+                  child: Text('Surface (croissant)'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'surface_desc',
+                  child: Text('Surface (décroissant)'),
+                ),
+              ],
+            ).then((value) {
+              if (value != null) {
+                // Extraire le champ de tri et l'ordre
+                final parts = value.split('_');
+                final field = parts[0];
+                final ascending = parts[1] == 'asc';
+                
+                context.read<ResidenceBloc>().add(SortResidences(field, ascending: ascending));
+              }
+            });
           },
         ),
       ],
@@ -204,7 +419,7 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            context.read<MessageBloc>().add(LoadMessages(userId: 'unread', refresh: true));
+            context.read<MessageBloc>().add(LoadConversations());
           },
         ),
         IconButton(
@@ -274,4 +489,42 @@ class ScreenAppBars {
       ],
     );
   }
+}
+
+class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final String subtitle;
+
+  const ChatAppBar({
+    Key? key,
+    required this.title,
+    required this.subtitle,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.info_outline),
+          onPressed: () {
+            // TODO: Show thread details
+          },
+        ),
+      ],
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

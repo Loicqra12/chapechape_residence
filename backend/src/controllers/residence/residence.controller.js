@@ -8,8 +8,25 @@ const path = require('path');
 // @route   POST /api/residences
 // @access  Private (Partner only)
 exports.createResidence = asyncHandler(async (req, res) => {
-    req.body.partner = req.user.id;
-    const residence = await Residence.create(req.body);
+    let residenceData;
+
+    // Vérifier si les données sont envoyées via le champ residenceData (approche JSON)
+    if (req.body.residenceData) {
+        try {
+            residenceData = JSON.parse(req.body.residenceData);
+            // Assigner l'id du partenaire
+            residenceData.partner = req.user.id;
+        } catch (error) {
+            throw new ApiError('Format de données invalide', 400);
+        }
+    } else {
+        // Approche traditionnelle (champs individuels)
+        residenceData = req.body;
+        residenceData.partner = req.user.id;
+    }
+
+    // Créer la résidence
+    const residence = await Residence.create(residenceData);
 
     res.status(201).json({
         success: true,

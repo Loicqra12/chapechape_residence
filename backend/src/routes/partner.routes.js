@@ -7,6 +7,11 @@ const partnerController = require('../controllers/partner/partner.controller');
 // Routes protégées pour les partenaires
 router.use(protect, isPartner);
 
+// Dashboard
+router.get('/dashboard/overview', partnerController.getDashboardOverview);
+router.get('/dashboard/finances', partnerController.getDashboardFinances);
+router.get('/dashboard/realtime', partnerController.getDashboardRealtime);
+
 // Profil du partenaire
 router.get('/profile', partnerController.getPartnerProfile);
 router.put('/profile', partnerController.updatePartnerProfile);

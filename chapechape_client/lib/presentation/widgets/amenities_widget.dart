@@ -14,10 +14,10 @@ class AmenitiesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isDetailed) ...[
+    if (isDetailed) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
             'Équipements et services',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -25,13 +25,49 @@ class AmenitiesWidget extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 16),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: amenities.map((amenity) => _buildAmenityItem(amenity)).toList(),
+          ),
         ],
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: amenities.map((amenity) => _buildAmenityItem(amenity)).toList(),
-        ),
-      ],
+      );
+    } else {
+      // Version simplifiée pour les petits espaces
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: amenities
+            .take(3)
+            .map((amenity) => Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: _buildSimpleAmenityItem(amenity),
+                ))
+            .toList(),
+      );
+    }
+  }
+
+  Widget _buildSimpleAmenityItem(String amenity) {
+    final String iconPath = _getAmenityIconPath(amenity);
+    
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: iconPath.endsWith('.svg')
+          ? SvgPicture.asset(
+              iconPath,
+              height: 16,
+              width: 16,
+              color: AppTheme.primaryColor,
+            )
+          : Image.asset(
+              iconPath,
+              height: 16,
+              width: 16,
+            ),
     );
   }
 

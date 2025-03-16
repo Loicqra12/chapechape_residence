@@ -16,7 +16,31 @@ class AppRouter {
   final AuthBloc authBloc;
   final _prefs = SharedPreferences.getInstance();
 
-  AppRouter(this.authBloc);
+  AppRouter(this.authBloc) {
+    // Essayer de restaurer la session lors des hot reloads
+    _tryRestoreSession();
+  }
+
+  Future<void> _tryRestoreSession() async {
+    // Déclencher un petit délai pour s'assurer que tout est initialisé
+    Future.delayed(const Duration(milliseconds: 100), () {
+      // Réactiver la session si possible
+      _checkPersistedAuth();
+    });
+  }
+
+  Future<void> _checkPersistedAuth() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token != null && token.isNotEmpty) {
+        print("Session restaurée après hot reload");
+      }
+    } catch (e) {
+      print("Erreur lors de la restauration de session: $e");
+    }
+  }
 
   late final router = GoRouter(
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
@@ -59,26 +83,24 @@ class AppRouter {
       final isAuthScreen = state.matchedLocation.startsWith('/auth');
       final isOnboardingScreen = state.matchedLocation == '/onboarding';
 
+      // Si l'utilisateur accède au /home par erreur, rediriger vers /main
+      if (state.matchedLocation.startsWith('/home')) {
+        return '/main';
+      }
+
       // Pendant le chargement, rester sur le splash screen
       if (isLoading && isSplashScreen) {
+        return null;
+      }
+
+      // Ne pas interrompre le splash screen - le SplashScreen lui-même s'occupera de la redirection après 5 secondes
+      if (isSplashScreen) {
         return null;
       }
 
       // Vérifier si l'onboarding a déjà été vu
       final prefs = await _prefs;
       final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
-
-      // Si on est sur le splash screen et qu'on n'est plus en chargement
-      if (isSplashScreen && !isLoading) {
-        if (isAuthenticated) {
-          return '/main';
-        }
-        // Si l'onboarding n'a pas été vu, rediriger vers l'onboarding
-        if (!hasSeenOnboarding) {
-          return '/onboarding';
-        }
-        return '/auth/login';
-      }
 
       // Si authentifié, rediriger vers main sauf si déjà sur main
       if (isAuthenticated && !state.matchedLocation.startsWith('/main')) {

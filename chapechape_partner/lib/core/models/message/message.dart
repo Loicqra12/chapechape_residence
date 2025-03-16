@@ -1,106 +1,92 @@
-import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+import 'conversation.dart';
 
-class Message extends Equatable {
+part 'message.g.dart';
+
+@JsonSerializable()
+class MessageAttachment {
   final String id;
-  final String senderId;
-  final String receiverId;
-  final String receiverName;
-  final String receiverRole;
-  final String content;
-  final DateTime timestamp;
-  final bool isRead;
-  final String? attachmentUrl;
-  final String messageType;
-  final Map<String, dynamic>? metadata;
+  final String url;
+  final String type;
+  final String? name;
+  final int size;
 
-  const Message({
+  MessageAttachment({
     required this.id,
-    required this.senderId,
-    required this.receiverId,
-    required this.receiverName,
-    required this.receiverRole,
-    required this.content,
-    required this.timestamp,
-    this.isRead = false,
-    this.attachmentUrl,
-    this.messageType = 'text',
-    this.metadata,
+    required this.url,
+    required this.type,
+    this.name,
+    required this.size,
   });
 
-  factory Message.fromJson(Map<String, dynamic> json) {
-    return Message(
-      id: json['_id'] ?? '',
-      senderId: json['senderId'] ?? '',
-      receiverId: json['receiverId'] ?? '',
-      receiverName: json['receiverName'] ?? '',
-      receiverRole: json['receiverRole'] ?? 'client',
-      content: json['content'] ?? '',
-      timestamp: json['timestamp'] != null 
-        ? DateTime.parse(json['timestamp']) 
-        : DateTime.now(),
-      isRead: json['isRead'] ?? false,
-      attachmentUrl: json['attachmentUrl'],
-      messageType: json['messageType'] ?? 'text',
-      metadata: json['metadata'],
-    );
-  }
+  factory MessageAttachment.fromJson(Map<String, dynamic> json) => _$MessageAttachmentFromJson(json);
+  Map<String, dynamic> toJson() => _$MessageAttachmentToJson(this);
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'receiverName': receiverName,
-      'receiverRole': receiverRole,
-      'content': content,
-      'timestamp': timestamp.toIso8601String(),
-      'isRead': isRead,
-      'attachmentUrl': attachmentUrl,
-      'messageType': messageType,
-      'metadata': metadata,
-    };
-  }
+@JsonSerializable()
+class Message {
+  final String id;
+  final String conversationId;
+  final String content;
+  final String senderId;
+  final String senderName;
+  final String? senderAvatar;
+  final DateTime timestamp;
+  final bool read;
+  final List<MessageAttachment> attachments;
+  final String? bookingId;
+  final String? bookingStatus;
+  final Map<String, dynamic>? metadata;
+  final Conversation? conversation;
 
-  @override
-  List<Object?> get props => [
-    id,
-    senderId,
-    receiverId,
-    receiverName,
-    receiverRole,
-    content,
-    timestamp,
-    isRead,
-    attachmentUrl,
-    messageType,
-    metadata,
-  ];
+  Message({
+    required this.id,
+    required this.conversationId,
+    required this.content,
+    required this.senderId,
+    required this.senderName,
+    this.senderAvatar,
+    required this.timestamp,
+    required this.read,
+    required this.attachments,
+    this.bookingId,
+    this.bookingStatus,
+    this.metadata,
+    this.conversation,
+  });
+
+  factory Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
+  Map<String, dynamic> toJson() => _$MessageToJson(this);
 
   Message copyWith({
     String? id,
-    String? senderId,
-    String? receiverId,
-    String? receiverName,
-    String? receiverRole,
+    String? conversationId,
     String? content,
+    String? senderId,
+    String? senderName,
+    String? senderAvatar,
     DateTime? timestamp,
-    bool? isRead,
-    String? attachmentUrl,
-    String? messageType,
+    bool? read,
+    List<MessageAttachment>? attachments,
+    String? bookingId,
+    String? bookingStatus,
     Map<String, dynamic>? metadata,
+    Conversation? conversation,
   }) {
     return Message(
       id: id ?? this.id,
-      senderId: senderId ?? this.senderId,
-      receiverId: receiverId ?? this.receiverId,
-      receiverName: receiverName ?? this.receiverName,
-      receiverRole: receiverRole ?? this.receiverRole,
+      conversationId: conversationId ?? this.conversationId,
       content: content ?? this.content,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      senderAvatar: senderAvatar ?? this.senderAvatar,
       timestamp: timestamp ?? this.timestamp,
-      isRead: isRead ?? this.isRead,
-      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
-      messageType: messageType ?? this.messageType,
+      read: read ?? this.read,
+      attachments: attachments ?? this.attachments,
+      bookingId: bookingId ?? this.bookingId,
+      bookingStatus: bookingStatus ?? this.bookingStatus,
       metadata: metadata ?? this.metadata,
+      conversation: conversation ?? this.conversation,
     );
   }
 }

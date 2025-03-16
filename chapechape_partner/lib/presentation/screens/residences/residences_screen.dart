@@ -7,6 +7,7 @@ import '../../../core/services/api/residence_service.dart';
 import '../../../core/config/app_config.dart';
 import 'edit_residence_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
+import 'residence_details_screen.dart'; // Importer l'écran de détail
 
 class ResidencesScreen extends StatelessWidget {
   const ResidencesScreen({super.key});
@@ -54,14 +55,21 @@ class _ResidencesViewState extends State<_ResidencesView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.error_outline,
+                        Icon(
+                          state.isNetworkError 
+                              ? Icons.signal_wifi_off
+                              : state.isAuthError
+                                  ? Icons.lock
+                                  : Icons.error_outline,
                           size: 48,
-                          color: Colors.red,
+                          color: state.isNetworkError || state.isAuthError
+                              ? Colors.orange
+                              : Colors.red,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           state.message,
+                          textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 16),
@@ -70,6 +78,17 @@ class _ResidencesViewState extends State<_ResidencesView> {
                           icon: const Icon(Icons.refresh),
                           label: const Text('Réessayer'),
                         ),
+                        if (state.isAuthError)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: TextButton(
+                              onPressed: () {
+                                // Rediriger vers la page de connexion
+                                Navigator.of(context).pushReplacementNamed('/login');
+                              },
+                              child: const Text('Se reconnecter'),
+                            ),
+                          ),
                       ],
                     ),
                   );
@@ -117,7 +136,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
       builder: (context) => AlertDialog(
         title: const Text('Supprimer la résidence'),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer la résidence "${residence.name}" ?',
+          'Êtes-vous sûr de vouloir supprimer la résidence "${residence.title}" ?',
         ),
         actions: [
           TextButton(
@@ -136,6 +155,15 @@ class _ResidencesViewState extends State<_ResidencesView> {
     );
 
     if (confirmed == true && mounted) {
+      // Afficher un indicateur de progression
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Suppression en cours...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Supprimer la résidence
       context.read<ResidenceBloc>().add(DeleteResidence(residence.id));
     }
   }
@@ -159,174 +187,189 @@ class _ResidenceCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image de la résidence
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: _buildResidenceImage(theme),
-          ),
+      child: InkWell(
+        onTap: () {
+          // Vérifier d'abord si la résidence existe avant de naviguer
+          final bloc = context.read<ResidenceBloc>();
+          bloc.add(CheckResidenceExists(residence.id, onSuccess: () {
+            // Naviguer vers les détails de la résidence seulement si elle existe
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ResidenceDetailsScreen(residence: residence),
+              ),
+            );
+          }));
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image de la résidence
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: _buildResidenceImage(theme),
+            ),
 
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Titre et statut
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        residence.name,
-                        style: theme.textTheme.titleLarge,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: residence.isAvailable
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        residence.isAvailable ? 'Disponible' : 'Indisponible',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: residence.isAvailable
-                              ? Colors.green
-                              : Colors.red,
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Titre et statut
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          residence.title,
+                          style: theme.textTheme.titleLarge,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Adresse
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${residence.address}, ${residence.city}',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Caractéristiques
-                Row(
-                  children: [
-                    _FeatureChip(
-                      icon: Icons.king_bed,
-                      label: '${residence.bedrooms} chambres',
-                    ),
-                    const SizedBox(width: 8),
-                    _FeatureChip(
-                      icon: Icons.bathtub,
-                      label: '${residence.bathrooms} SDB',
-                    ),
-                    const SizedBox(width: 8),
-                    _FeatureChip(
-                      icon: Icons.square_foot,
-                      label: residence.formattedSurface,
-                    ),
-                    if (residence.hasPool) ...[
-                      const SizedBox(width: 8),
-                      _FeatureChip(
-                        icon: Icons.pool,
-                        label: 'Piscine',
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: residence.statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          residence.status,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: residence.statusColor,
+                          ),
+                        ),
                       ),
                     ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Prix
-                Text(
-                  residence.formattedPrice,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
-                // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Supprimer'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
+                  // Prix
+                  Text(
+                    residence.formattedPrice,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Adresse et localisation
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.icon(
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Modifier'),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          '${residence.address}, ${residence.city}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Caractéristiques
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _FeatureChip(
+                        icon: Icons.king_bed_outlined,
+                        label: '${residence.bedrooms} chambre${residence.bedrooms > 1 ? 's' : ''}',
+                      ),
+                      _FeatureChip(
+                        icon: Icons.bathtub_outlined,
+                        label: '${residence.bathrooms} salle${residence.bathrooms > 1 ? 's' : ''} de bain',
+                      ),
+                      _FeatureChip(
+                        icon: Icons.square_foot_outlined,
+                        label: residence.formattedSurface,
+                      ),
+                      if (residence.hasPool)
+                        const _FeatureChip(
+                          icon: Icons.pool_outlined,
+                          label: 'Piscine',
+                        ),
+                      if (residence.hasWifi)
+                        const _FeatureChip(
+                          icon: Icons.wifi_outlined,
+                          label: 'Wi-Fi',
+                        ),
+                      if (residence.isFurnished)
+                        const _FeatureChip(
+                          icon: Icons.chair_outlined,
+                          label: 'Meublé',
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Modifier'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Supprimer'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildResidenceImage(ThemeData theme) {
-    final imageUrl = residence.firstImageUrl;
-    
-    if (imageUrl != null) {
+    if (residence.firstImageUrl != null) {
       return Image.network(
-        imageUrl,
+        residence.firstImageUrl!,
         fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
         errorBuilder: (context, error, stackTrace) {
-          return _buildDefaultImage(theme);
+          return _buildPlaceholderImage(theme);
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
         },
       );
     }
-    
-    return _buildDefaultImage(theme);
+    return _buildPlaceholderImage(theme);
   }
 
-  Widget _buildDefaultImage(ThemeData theme) {
+  Widget _buildPlaceholderImage(ThemeData theme) {
     return Container(
       color: theme.colorScheme.surfaceVariant,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.home,
-              size: 48,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Image non disponible',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        child: Icon(
+          Icons.image_outlined,
+          size: 48,
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );

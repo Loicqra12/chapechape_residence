@@ -1,270 +1,291 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/chat_model.dart';
-import 'api_service.dart';
+import '../services/api_service.dart';
 
 class ChatService {
   final ApiService _apiService;
+  final _storage = const FlutterSecureStorage();
 
-  ChatService._({
-    required ApiService apiService,
-  }) : _apiService = apiService;
+  ChatService({required ApiService apiService}) : _apiService = apiService;
 
-  static Future<ChatService> initialize() async {
-    final apiService = await ApiService.initialize();
-    return ChatService._(apiService: apiService);
-  }
-
-  // Récupérer les conversations de l'utilisateur
   Future<List<ChatConversation>> getConversations() async {
     try {
-      // Comme nous n'avons pas trouvé d'endpoint spécifique pour les messages/chat dans le backend,
-      // nous allons utiliser des données fictives pour le moment
-      // Dans une implémentation réelle, vous appelleriez l'API comme ceci:
-      // final response = await _apiService.get('/api/messages/conversations');
-      
-      await Future.delayed(const Duration(milliseconds: 500)); // Simuler un délai réseau
-      
-      return _getMockConversations();
-    } on DioException catch (e) {
-      print('Erreur lors de la récupération des conversations: ${e.message}');
-      return [];
-    }
-  }
-  
-  // Récupérer les messages d'une conversation
-  Future<List<ChatMessage>> getMessages(String conversationId) async {
-    try {
-      // Dans une implémentation réelle, vous appelleriez l'API comme ceci:
-      // final response = await _apiService.get('/api/messages/conversations/$conversationId');
-      
-      await Future.delayed(const Duration(milliseconds: 500)); // Simuler un délai réseau
-      
-      return _getMockMessages(conversationId);
-    } on DioException catch (e) {
-      print('Erreur lors de la récupération des messages: ${e.message}');
-      return [];
-    }
-  }
-  
-  // Envoyer un message
-  Future<ChatMessage?> sendMessage(String conversationId, String content) async {
-    try {
-      // Dans une implémentation réelle, vous appelleriez l'API comme ceci:
-      // final response = await _apiService.post(
-      //   '/api/messages',
-      //   data: {
-      //     'conversationId': conversationId,
-      //     'content': content,
-      //   },
-      // );
-      
-      await Future.delayed(const Duration(milliseconds: 300)); // Simuler un délai réseau
-      
-      // Créer un message fictif
-      return ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: 'user1', // ID de l'utilisateur actuel
-        content: content,
-        timestamp: DateTime.now(),
-        status: MessageStatus.sent,
-      );
-    } on DioException catch (e) {
-      print('Erreur lors de l\'envoi du message: ${e.message}');
-      return null;
-    }
-  }
-  
-  // Marquer un message comme lu
-  Future<bool> markMessageAsRead(String messageId) async {
-    try {
-      final response = await _apiService.patch(
-        '/api/messages/$messageId/read',
-        data: {'read': true},
-      );
-      
-      if (response.data['success'] != true) {
-        throw Exception('Erreur lors du marquage du message comme lu');
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
       }
       
-      return true;
-    } on DioException catch (e) {
-      print('Erreur lors du marquage du message comme lu: ${e.message}');
-      return false;
+      debugPrint('Token found, fetching conversations...');
+      final response = await _apiService.get('/messages/conversations');
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+      
+      final data = response.data['data'] as List? ?? [];
+      
+      return data.map((json) {
+        final adaptedJson = {
+          'id': json['_id'],
+          'participants': (json['participants'] as List?)?.map((p) => {
+            'id': p['_id'],
+            'name': p['name'] ?? 'Utilisateur',
+            'role': p['role'] ?? 'user',
+          }).toList() ?? [],
+          'createdAt': json['createdAt'],
+          'updatedAt': json['updatedAt'],
+          'messages': [],
+        };
+        return ChatConversation.fromJson(adaptedJson);
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching conversations: $e');
+      throw Exception('Failed to load conversations: ${e.toString()}');
     }
   }
-  
-  // Marquer tous les messages d'une conversation comme lus
-  Future<bool> markAllAsRead(String conversationId) async {
+
+  Future<ChatConversation> getConversation(String id) async {
     try {
-      // Dans une implémentation réelle, vous appelleriez l'API comme ceci:
-      // final response = await _apiService.put('/api/messages/conversations/$conversationId/read-all');
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
       
-      await Future.delayed(const Duration(milliseconds: 200)); // Simuler un délai réseau
-      
-      return true;
-    } on DioException catch (e) {
-      print('Erreur lors du marquage de tous les messages: ${e.message}');
-      return false;
+      debugPrint('Token found, fetching conversation $id...');
+      final response = await _apiService.get('/messages/conversations/$id');
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+      final data = response.data['data'];
+      final adaptedJson = {
+        'id': data['_id'],
+        'participants': (data['participants'] as List?)?.map((p) => {
+          'id': p['_id'],
+          'name': p['name'] ?? 'Utilisateur',
+          'role': p['role'] ?? 'user',
+        }).toList() ?? [],
+        'createdAt': data['createdAt'],
+        'updatedAt': data['updatedAt'],
+        'messages': [],
+      };
+      return ChatConversation.fromJson(adaptedJson);
+    } catch (e) {
+      debugPrint('Error fetching conversation: $e');
+      throw Exception('Failed to load conversation: ${e.toString()}');
     }
   }
-  
-  // Créer une nouvelle conversation
-  Future<ChatConversation?> createConversation(String recipientId) async {
+
+  Future<List<ChatMessage>> getMessages(String conversationId) async {
     try {
-      // Dans une implémentation réelle, vous appelleriez l'API comme ceci:
-      // final response = await _apiService.post(
-      //   '/api/messages/conversations',
-      //   data: {
-      //     'recipientId': recipientId,
-      //   },
-      // );
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
       
-      await Future.delayed(const Duration(milliseconds: 300)); // Simuler un délai réseau
+      debugPrint('Token found, fetching messages for conversation $conversationId...');
+      final response = await _apiService.get('/messages/conversations/$conversationId/messages');
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
       
-      // Créer une conversation fictive
-      return ChatConversation(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        participants: [
-          ChatParticipant(id: 'user1', name: 'Vous'),
-          ChatParticipant(id: recipientId, name: 'Agent Immobilier'),
-        ],
-        lastMessage: null,
-        unreadCount: 0,
-        updatedAt: DateTime.now(),
-        isArchived: false,
+      // Corriger l'accès aux données - la réponse est un objet avec des messages et pagination
+      final data = response.data['data'];
+      final messages = data['messages'] as List? ?? [];
+      
+      return messages.map((messageData) => ChatMessage(
+        id: messageData['_id'] ?? '',
+        conversationId: messageData['conversation'] ?? conversationId,
+        content: messageData['content'] ?? '',
+        senderId: messageData['sender']?['_id'] ?? '',
+        createdAt: DateTime.parse(messageData['createdAt']),
+        isRead: messageData['read'] ?? false,
+      )).toList();
+    } catch (e) {
+      debugPrint('Error fetching messages: $e');
+      throw Exception('Failed to load messages: ${e.toString()}');
+    }
+  }
+
+  Future<ChatConversation> createConversation({
+    required String userId,
+    String? residenceId,
+    String? bookingId,
+  }) async {
+    try {
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      
+      debugPrint('Token found, creating conversation...');
+      final response = await _apiService.post(
+        '/messages/conversations',
+        data: {
+          'userId': userId,
+          if (residenceId != null) 'residenceId': residenceId,
+          if (bookingId != null) 'bookingId': bookingId,
+        },
       );
-    } on DioException catch (e) {
-      print('Erreur lors de la création de la conversation: ${e.message}');
-      return null;
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+      return ChatConversation.fromJson(response.data);
+    } catch (e) {
+      debugPrint('Error creating conversation: $e');
+      throw Exception('Failed to create conversation: ${e.toString()}');
     }
   }
-  
-  // Données fictives pour les conversations
-  List<ChatConversation> _getMockConversations() {
-    return [
-      ChatConversation(
-        id: '1',
-        participants: [
-          ChatParticipant(id: 'user1', name: 'Vous'),
-          ChatParticipant(id: 'agent1', name: 'Agent Immobilier', avatarUrl: 'assets/images/agent1.jpg'),
-        ],
-        lastMessage: ChatMessage(
-          id: 'm1',
-          senderId: 'agent1',
-          content: 'Bonjour, je suis disponible pour répondre à vos questions sur la résidence Cocody.',
-          timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-          status: MessageStatus.read,
-        ),
-        unreadCount: 0,
-        updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
-        isArchived: false,
-      ),
-      ChatConversation(
-        id: '2',
-        participants: [
-          ChatParticipant(id: 'user1', name: 'Vous'),
-          ChatParticipant(id: 'agent2', name: 'Support Client', avatarUrl: 'assets/images/agent2.jpg'),
-        ],
-        lastMessage: ChatMessage(
-          id: 'm2',
-          senderId: 'agent2',
-          content: 'Votre réservation a été confirmée. N\'hésitez pas si vous avez des questions.',
-          timestamp: DateTime.now().subtract(const Duration(days: 1)),
-          status: MessageStatus.delivered,
-        ),
-        unreadCount: 1,
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        isArchived: false,
-      ),
-    ];
-  }
-  
-  // Données fictives pour les messages
-  List<ChatMessage> _getMockMessages(String conversationId) {
-    if (conversationId == '1') {
-      return [
-        ChatMessage(
-          id: 'm1-1',
-          senderId: 'agent1',
-          content: 'Bonjour, je suis l\'agent immobilier responsable de la résidence Cocody. Comment puis-je vous aider?',
-          timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm1-2',
-          senderId: 'user1',
-          content: 'Bonjour, je suis intéressé par cette résidence. Est-elle disponible pour le mois prochain?',
-          timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 1, minutes: 45)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm1-3',
-          senderId: 'agent1',
-          content: 'Oui, la résidence est disponible à partir du 15 du mois prochain. Souhaitez-vous la visiter?',
-          timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 1, minutes: 30)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm1-4',
-          senderId: 'user1',
-          content: 'Ce serait parfait. Quels sont les horaires de visite possibles?',
-          timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 1)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm1-5',
-          senderId: 'agent1',
-          content: 'Nous pouvons organiser une visite du lundi au samedi, de 9h à 17h. Quelle date vous conviendrait?',
-          timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-          status: MessageStatus.read,
-        ),
-      ];
-    } else if (conversationId == '2') {
-      return [
-        ChatMessage(
-          id: 'm2-1',
-          senderId: 'agent2',
-          content: 'Bonjour, je suis du service client. Bienvenue sur ChapeChape Residence!',
-          timestamp: DateTime.now().subtract(const Duration(days: 3)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm2-2',
-          senderId: 'user1',
-          content: 'Merci! J\'ai une question concernant le processus de réservation.',
-          timestamp: DateTime.now().subtract(const Duration(days: 2, hours: 12)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm2-3',
-          senderId: 'agent2',
-          content: 'Bien sûr, je serais ravi de vous aider. Que souhaitez-vous savoir?',
-          timestamp: DateTime.now().subtract(const Duration(days: 2, hours: 11)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm2-4',
-          senderId: 'user1',
-          content: 'Comment puis-je modifier une réservation déjà confirmée?',
-          timestamp: DateTime.now().subtract(const Duration(days: 2, hours: 10)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm2-5',
-          senderId: 'agent2',
-          content: 'Vous pouvez modifier votre réservation jusqu\'à 48h avant la date d\'arrivée. Allez dans "Mes réservations" et cliquez sur "Modifier".',
-          timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
-          status: MessageStatus.read,
-        ),
-        ChatMessage(
-          id: 'm2-6',
-          senderId: 'agent2',
-          content: 'Votre réservation a été confirmée. N\'hésitez pas si vous avez des questions.',
-          timestamp: DateTime.now().subtract(const Duration(days: 1)),
-          status: MessageStatus.delivered,
-        ),
-      ];
+
+  Future<ChatMessage> sendMessage({
+    required String conversationId,
+    required String content,
+  }) async {
+    try {
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      
+      debugPrint('Token found, sending message...');
+      final response = await _apiService.post(
+        '/messages/conversations/$conversationId/messages',
+        data: {
+          'content': content,
+          'type': 'text',
+        },
+      );
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+
+      if (response.statusCode == 201 && response.data['success'] == true) {
+        final messageData = response.data['data'];
+        return ChatMessage(
+          id: messageData['_id'] ?? '',
+          conversationId: messageData['conversation'] ?? conversationId,
+          content: messageData['content'] ?? '',
+          senderId: messageData['sender']?['_id'] ?? '',
+          createdAt: DateTime.parse(messageData['createdAt']),
+          isRead: messageData['read'] ?? false,
+        );
+      }
+      throw Exception('Failed to send message');
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      throw Exception('Failed to send message: ${e.toString()}');
     }
-    return [];
+  }
+
+  Future<ChatMessage> sendFile({
+    required String conversationId,
+    required String filePath,
+    String? type,
+  }) async {
+    try {
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      
+      debugPrint('Token found, sending file...');
+      final file = File(filePath);
+      final fileName = filePath.split('/').last;
+      final formData = FormData.fromMap({
+        'conversationId': conversationId,
+        'type': type ?? 'file',
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        ),
+      });
+
+      final response = await _apiService.post(
+        '/messages/files',
+        data: formData,
+      );
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+      return ChatMessage.fromJson(response.data);
+    } catch (e) {
+      debugPrint('Error sending file: $e');
+      throw Exception('Failed to send file: ${e.toString()}');
+    }
+  }
+
+  Future<ChatMessage> sendImage({
+    required String conversationId,
+    required String imagePath,
+  }) async {
+    try {
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      
+      debugPrint('Token found, sending image...');
+      final file = File(imagePath);
+      final fileName = imagePath.split('/').last;
+      final formData = FormData.fromMap({
+        'conversationId': conversationId,
+        'type': 'image',
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        ),
+      });
+
+      final response = await _apiService.post(
+        '/messages/images',
+        data: formData,
+      );
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response data: ${response.data}');
+      return ChatMessage.fromJson(response.data);
+    } catch (e) {
+      debugPrint('Error sending image: $e');
+      throw Exception('Failed to send image: ${e.toString()}');
+    }
+  }
+
+  Future<void> markAsRead(String messageId) async {
+    try {
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      
+      debugPrint('Token found, marking message as read...');
+      await _apiService.patch(
+        '/messages/$messageId/read',
+      );
+      debugPrint('Message marked as read');
+    } catch (e) {
+      debugPrint('Error marking message as read: $e');
+      throw Exception('Failed to mark message as read: ${e.toString()}');
+    }
+  }
+
+  Future<void> markAllAsRead(String conversationId) async {
+    try {
+      // Vérifier si nous avons un token
+      final token = await _storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      
+      debugPrint('Token found, marking all messages as read...');
+      await _apiService.patch(
+        '/messages/conversations/$conversationId/read',
+      );
+      debugPrint('All messages marked as read');
+    } catch (e) {
+      debugPrint('Error marking all messages as read: $e');
+      throw Exception('Failed to mark all messages as read: ${e.toString()}');
+    }
   }
 }

@@ -21,6 +21,7 @@ const userRoutes = require('./routes/user.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const reviewRoutes = require('./routes/review.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const messageRoutes = require('./routes/message.routes');
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const superAdminRoutes = require('./routes/superadmin.routes');
@@ -86,6 +87,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/messages', messageRoutes); // Routes de messagerie
 
 // Middleware de sécurité pour les fichiers
 app.use('/api/uploads', fileSecurityMiddleware);
@@ -98,10 +100,21 @@ app.get('/', (req, res) => {
 // Gestion des erreurs
 app.use((err, req, res, next) => {
     logger.error('Error:', err);
-    res.status(err.status || 500).json({
+    
+    // Récupérer le code d'état numérique approprié
+    let statusCode = 500;
+    if (err.statusCode && typeof err.statusCode === 'number') {
+        statusCode = err.statusCode;
+    }
+    
+    res.status(statusCode).json({
         success: false,
         message: err.message || 'Une erreur est survenue',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        status: err.status || 'error',
+        ...(process.env.NODE_ENV === 'development' && { 
+            stack: err.stack,
+            details: err 
+        })
     });
 });
 

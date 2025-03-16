@@ -8,12 +8,13 @@ import '../../core/models/residence_model.dart';
 import '../../core/models/amenity.dart' as amenity;
 import 'residence_amenities.dart';
 
-class ResidenceCard extends StatelessWidget {
+// Renommé pour éviter les conflits avec l'autre widget ResidenceCard
+class StandardResidenceCard extends StatelessWidget {
   final ResidenceModel residence;
   final VoidCallback? onTap;
   final VoidCallback? onFavoritePressed;
 
-  const ResidenceCard({
+  const StandardResidenceCard({
     super.key,
     required this.residence,
     this.onTap,

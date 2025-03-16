@@ -1,5 +1,37 @@
 const mongoose = require('mongoose');
 
+const conversationSchema = new mongoose.Schema({
+    participants: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    }],
+    lastMessage: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Message'
+    },
+    unreadCount: {
+        type: Number,
+        default: 0
+    },
+    bookingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking'
+    },
+    residenceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Residence'
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
 const messageSchema = new mongoose.Schema({
     conversation: {
         type: mongoose.Schema.Types.ObjectId,
@@ -36,121 +68,91 @@ const messageSchema = new mongoose.Schema({
         name: String,
         size: Number
     }],
+    bookingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking'
+    },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-// Index pour améliorer les performances
-messageSchema.index({ conversation: 1, createdAt: -1 });
-messageSchema.index({ sender: 1, createdAt: -1 });
+// Méthodes statiques pour Conversation
+conversationSchema.statics.getUserConversations = async function(userId) {
+    const conversations = await this.find({ participants: userId })
+        .populate('participants', 'name avatar')
+        .populate('lastMessage')
+        .populate('bookingId', 'status')
+        .populate('residenceId', 'name')
+        .sort('-updatedAt');
 
-// Méthodes statiques
+    return conversations.map(conversation => {
+        const otherParticipant = conversation.participants.find(p => p._id.toString() !== userId);
+        return {
+            id: conversation._id,
+            clientId: otherParticipant._id,
+            clientName: otherParticipant.name,
+            clientAvatar: otherParticipant.avatar,
+            lastMessage: conversation.lastMessage ? conversation.lastMessage.content : '',
+            timestamp: conversation.updatedAt,
+            hasUnread: conversation.unreadCount > 0,
+            unreadCount: conversation.unreadCount,
+            residenceId: conversation.residenceId ? conversation.residenceId._id : null,
+            residenceName: conversation.residenceId ? conversation.residenceId.name : null,
+            bookingId: conversation.bookingId ? conversation.bookingId._id : null,
+            bookingStatus: conversation.bookingId ? conversation.bookingId.status : null
+        };
+    });
+};
+
+// Méthodes statiques pour Message
 messageSchema.statics.getConversationMessages = async function(conversationId, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    
-    return this.find({ conversation: conversationId })
+    const messages = await this.find({ conversation: conversationId })
+        .populate('sender', 'name avatar')
         .sort('-createdAt')
         .skip(skip)
-        .limit(limit)
-        .populate('sender', 'firstName lastName avatar');
+        .limit(limit);
+
+    return messages.map(message => ({
+        id: message._id,
+        senderId: message.sender._id,
+        senderName: message.sender.name,
+        senderAvatar: message.sender.avatar,
+        content: message.content,
+        timestamp: message.createdAt,
+        read: message.read,
+        readAt: message.readAt,
+        attachments: message.attachments,
+        bookingId: message.bookingId
+    }));
 };
 
-messageSchema.statics.markAsRead = async function(messageId, userId) {
-    return this.findOneAndUpdate(
-        { _id: messageId, sender: { $ne: userId } },
-        { read: true, readAt: new Date() },
-        { new: true }
-    );
-};
-
-// Méthodes d'instance
-messageSchema.methods.isReadable = function(userId) {
-    return this.sender.toString() !== userId.toString();
-};
-
-// Middleware pre-save
-messageSchema.pre('save', function(next) {
-    // Si le message est marqué comme lu, définir readAt
-    if (this.read && !this.readAt) {
-        this.readAt = new Date();
+// Middleware pre-save pour Message
+messageSchema.pre('save', async function(next) {
+    if (this.isNew) {
+        // Incrémenter le compteur de messages non lus dans la conversation
+        await mongoose.model('Conversation').updateOne(
+            { _id: this.conversation },
+            { $inc: { unreadCount: 1 }, updatedAt: Date.now() }
+        );
     }
     next();
 });
 
-// Middleware post-save
-messageSchema.post('save', async function(doc) {
-    // Mettre à jour la dernière activité de la conversation
-    await mongoose.model('Conversation').findByIdAndUpdate(
-        doc.conversation,
-        {
-            lastMessage: doc._id,
-            lastActivity: doc.createdAt
-        }
-    );
-});
-
-const conversationSchema = new mongoose.Schema({
-    participants: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }],
-    lastMessage: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Message'
-    },
-    lastActivity: {
-        type: Date,
-        default: Date.now
-    },
-    type: {
-        type: String,
-        enum: ['direct', 'group'],
-        default: 'direct'
-    },
-    name: {
-        type: String,
-        trim: true
-    },
-    createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
+// Middleware pre-update pour Message
+messageSchema.pre('updateMany', async function(next) {
+    const update = this.getUpdate();
+    if (update.read === true) {
+        // Réinitialiser le compteur de messages non lus dans la conversation
+        await mongoose.model('Conversation').updateOne(
+            { _id: this._conditions.conversation },
+            { $set: { unreadCount: 0 } }
+        );
     }
+    next();
 });
-
-// Index pour améliorer les performances
-conversationSchema.index({ participants: 1 });
-conversationSchema.index({ lastActivity: -1 });
-
-// Méthodes statiques
-conversationSchema.statics.getUserConversations = async function(userId) {
-    return this.find({ participants: userId })
-        .populate('participants', 'firstName lastName avatar')
-        .populate('lastMessage')
-        .sort('-lastActivity');
-};
-
-conversationSchema.statics.findOrCreateDirectConversation = async function(user1Id, user2Id) {
-    let conversation = await this.findOne({
-        type: 'direct',
-        participants: { $all: [user1Id, user2Id], $size: 2 }
-    });
-
-    if (!conversation) {
-        conversation = await this.create({
-            participants: [user1Id, user2Id],
-            type: 'direct',
-            createdBy: user1Id
-        });
-    }
-
-    return conversation;
-};
 
 module.exports = {
     Message: mongoose.model('Message', messageSchema),

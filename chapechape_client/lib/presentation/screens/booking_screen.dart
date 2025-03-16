@@ -1,25 +1,403 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
+import 'package:chapechape_client/core/blocs/booking/booking_event.dart' as booking_events;
+import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as booking_states;
+import 'package:chapechape_client/core/blocs/residence/residence_bloc.dart';
+import 'package:chapechape_client/core/blocs/residence/residence_event.dart' as residence_events;
+import 'package:chapechape_client/core/blocs/residence/residence_state.dart' as residence_states;
+import 'package:chapechape_client/core/models/residence_model.dart';
+import 'package:chapechape_client/core/models/booking_model.dart';
+import 'package:chapechape_client/core/extensions/model_extensions.dart';
+import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
+import 'package:chapechape_client/config/theme.dart';
 
-class BookingScreen extends StatelessWidget {
+class BookingScreen extends StatefulWidget {
   final String residenceId;
   
   const BookingScreen({super.key, required this.residenceId});
 
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
+  @override
+  State<BookingScreen> createState() => _BookingScreenState();
+}
+
+class _BookingScreenState extends State<BookingScreen> {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Contrôleurs pour les champs du formulaire
+  final _guestsController = TextEditingController(text: '1');
+  
+  // Dates de réservation
+  DateTime? _checkInDate;
+  DateTime? _checkOutDate;
+  
+  // Prix estimé
+  double _estimatedPrice = 0;
+  
+  // Résidence à réserver
+  Residence? _residence;
+  
+  // Disponibilité vérifiée
+  bool _isAvailabilityChecked = false;
+  bool _isAvailable = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Charger les détails de la résidence
+    context.read<ResidenceBloc>().add(
+      residence_events.LoadResidenceDetails(residenceId: widget.residenceId)
+    );
+    
+    // Initialiser les dates par défaut
+    _checkInDate = DateTime.now().add(const Duration(days: 1));
+    _checkOutDate = DateTime.now().add(const Duration(days: 3));
+  }
+  
+  // Vérifier la disponibilité
+  void _checkAvailability() {
+    if (_checkInDate != null && _checkOutDate != null) {
+      // Déboguer le residenceId
+      debugPrint('Vérification de disponibilité pour residenceId: ${widget.residenceId}');
+      
+      // Vérifier si le residenceId est valide
+      if (widget.residenceId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur: ID de résidence manquant')),
+        );
+        return;
+      }
+      
+      context.read<BookingBloc>().add(
+        booking_events.CheckResidenceAvailability(
+          residenceId: widget.residenceId,
+          checkIn: _checkInDate!,
+          checkOut: _checkOutDate!,
+        )
+      );
+    }
+  }
+  
+  // Créer une réservation
+  void _createBooking() {
+    if (_formKey.currentState!.validate() && _isAvailable) {
+      final numberOfGuests = int.tryParse(_guestsController.text) ?? 1;
+      
+      context.read<BookingBloc>().add(
+        booking_events.CreateBooking(
+          residenceId: widget.residenceId,
+          checkIn: _checkInDate!,
+          checkOut: _checkOutDate!,
+          numberOfGuests: numberOfGuests,
+          totalPrice: _estimatedPrice,
+        )
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Réservation'),
-        backgroundColor: goldColor,
+        title: const Text('Réserver'),
+        elevation: 0,
       ),
-      body: Center(
-        child: Text('Booking Screen: $residenceId'),
+      body: LoadingOverlay(
+        isLoading: _isLoadingState(context),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Informations sur la résidence
+              _buildResidenceInfo(),
+              
+              const SizedBox(height: 24),
+              
+              // Formulaire de réservation
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildDateSelectionSection(),
+                    const SizedBox(height: 16),
+                    _buildGuestsField(),
+                    const SizedBox(height: 24),
+                    _buildPriceSection(),
+                    const SizedBox(height: 24),
+                    _buildBookingButton(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+  
+  // Vérifier si un état de chargement est actif
+  bool _isLoadingState(BuildContext context) {
+    final bookingState = context.watch<BookingBloc>().state;
+    final residenceState = context.watch<ResidenceBloc>().state;
+    
+    return bookingState is booking_states.BookingLoading || 
+           residenceState is residence_states.ResidenceLoading;
+  }
+  
+  // Construire les informations sur la résidence
+  Widget _buildResidenceInfo() {
+    return BlocBuilder<ResidenceBloc, residence_states.ResidenceState>(
+      builder: (context, state) {
+        if (state is residence_states.ResidenceDetailsLoaded) {
+          _residence = state.residence;
+          
+          // Mettre à jour le prix estimé
+          if (_residence != null && _checkInDate != null && _checkOutDate != null && !_isAvailabilityChecked) {
+            _estimatedPrice = _residence!.estimateTotalPrice(_checkInDate!, _checkOutDate!);
+            _checkAvailability();
+          }
+          
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _residence!.name,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _residence!.address,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _residence!.shortDescription,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // État de chargement ou d'erreur
+        return const Card(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(
+              child: Text('Chargement des informations...'),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  // Construire la section de sélection des dates
+  Widget _buildDateSelectionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Dates de séjour',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDateField(
+                label: 'Arrivée',
+                date: _checkInDate,
+                onSelect: (date) {
+                  setState(() {
+                    _checkInDate = date;
+                    _isAvailabilityChecked = false;
+                    // Mettre à jour le checkout si nécessaire
+                    if (_checkOutDate != null && _checkOutDate!.isBefore(_checkInDate!)) {
+                      _checkOutDate = _checkInDate!.add(const Duration(days: 1));
+                    }
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildDateField(
+                label: 'Départ',
+                date: _checkOutDate,
+                onSelect: (date) {
+                  setState(() {
+                    _checkOutDate = date;
+                    _isAvailabilityChecked = false;
+                  });
+                },
+                minDate: _checkInDate?.add(const Duration(days: 1)),
+              ),
+            ),
+          ],
+        ),
+        
+        // Afficher le résultat de la vérification de disponibilité
+        BlocListener<BookingBloc, booking_states.BookingState>(
+          listener: (context, state) {
+            if (state is booking_states.ResidenceAvailabilityChecked) {
+              setState(() {
+                _isAvailabilityChecked = true;
+                _isAvailable = state.isAvailable;
+                if (state.price != null) {
+                  _estimatedPrice = state.price!;
+                }
+              });
+            }
+          },
+          child: _isAvailabilityChecked
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    _isAvailable
+                        ? 'Cette résidence est disponible pour les dates sélectionnées'
+                        : 'Cette résidence n\'est pas disponible pour les dates sélectionnées',
+                    style: TextStyle(
+                      color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+  
+  // Construire un champ de sélection de date
+  Widget _buildDateField({
+    required String label,
+    required DateTime? date,
+    required Function(DateTime) onSelect,
+    DateTime? minDate,
+  }) {
+    return InkWell(
+      onTap: () async {
+        final selectedDate = await showDatePicker(
+          context: context,
+          initialDate: date ?? DateTime.now().add(const Duration(days: 1)),
+          firstDate: minDate ?? DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 365)),
+        );
+        
+        if (selectedDate != null) {
+          onSelect(selectedDate);
+        }
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        child: Text(
+          date != null
+              ? DateFormat('dd/MM/yyyy').format(date)
+              : 'Sélectionner une date',
+        ),
+      ),
+    );
+  }
+  
+  // Construire le champ pour le nombre d'invités
+  Widget _buildGuestsField() {
+    return TextFormField(
+      controller: _guestsController,
+      decoration: const InputDecoration(
+        labelText: 'Nombre de personnes',
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: TextInputType.number,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Veuillez entrer le nombre de personnes';
+        }
+        final guests = int.tryParse(value);
+        if (guests == null || guests < 1) {
+          return 'Le nombre de personnes doit être au moins 1';
+        }
+        return null;
+      },
+    );
+  }
+  
+  // Construire la section du prix
+  Widget _buildPriceSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Détails du prix',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Prix total'),
+                Text(
+                  '${_estimatedPrice.toStringAsFixed(0)} FCFA',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            if (_checkInDate != null && _checkOutDate != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Pour ${_checkOutDate!.difference(_checkInDate!).inDays} nuits',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Construire le bouton de réservation
+  Widget _buildBookingButton() {
+    return BlocListener<BookingBloc, booking_states.BookingState>(
+      listener: (context, state) {
+        if (state is booking_states.BookingCreated) {
+          // Rediriger vers l'écran de paiement ou de confirmation
+          context.go('/booking-confirmation/${state.booking.id}');
+        } else if (state is booking_states.BookingError) {
+          // Afficher une erreur
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      child: ElevatedButton(
+        onPressed: _isAvailable ? _createBooking : null,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: const Text('Réserver maintenant'),
+      ),
+    );
+  }
+  
+  @override
+  void dispose() {
+    _guestsController.dispose();
+    super.dispose();
   }
 }

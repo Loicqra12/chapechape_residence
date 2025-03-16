@@ -6,7 +6,12 @@ import '../../core/models/testimonial_model.dart';
 import '../../core/data/testimonials_data.dart';
 
 class TestimonialsWidget extends StatelessWidget {
-  const TestimonialsWidget({Key? key}) : super(key: key);
+  final bool showTitle;
+  
+  const TestimonialsWidget({
+    Key? key,
+    this.showTitle = true,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -18,24 +23,26 @@ class TestimonialsWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Titre et description
-          Text(
-            'Ce que disent nos clients',
-            style: TextStyle(
-              fontSize: context.responsiveFontSize(24),
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryColor,
+          // Titre et description, conditionnellement affichés
+          if (showTitle) ...[
+            Text(
+              'Ce que disent nos clients',
+              style: TextStyle(
+                fontSize: context.responsiveFontSize(24),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Découvrez les expériences de nos clients satisfaits',
-            style: TextStyle(
-              fontSize: context.responsiveFontSize(16),
-              color: Colors.grey[600],
+            const SizedBox(height: 8),
+            Text(
+              'Découvrez les expériences de nos clients satisfaits',
+              style: TextStyle(
+                fontSize: context.responsiveFontSize(16),
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
+          ],
           
           // Carousel de témoignages
           FlutterCarousel(

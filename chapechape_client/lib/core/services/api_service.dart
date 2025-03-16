@@ -42,22 +42,8 @@ class ApiService {
       ),
     );
 
-    // Ajouter l'intercepteur pour le token
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          // Récupérer le token depuis le storage
-          const storage = FlutterSecureStorage();
-          final token = await storage.read(key: 'token');
-          
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          
-          return handler.next(options);
-        },
-      ),
-    );
+    // Configuration des intercepteurs
+    _setupInterceptors();
 
     // Ajouter le logger pour le débogage
     if (!kIsWeb && (kDebugMode || kProfileMode)) {
@@ -82,6 +68,28 @@ class ApiService {
         },
       );
     }
+  }
+
+  // Configuration des intercepteurs
+  void _setupInterceptors() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Ajouter le token d'authentification à chaque requête si disponible
+          const storage = FlutterSecureStorage();
+          final token = await storage.read(key: 'token');
+          
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+            debugPrint('Token d\'authentification ajouté à la requête: ${options.path}');
+          } else {
+            debugPrint('⚠️ ATTENTION: Pas de token d\'authentification pour la requête: ${options.path}');
+          }
+          
+          return handler.next(options);
+        },
+      ),
+    );
   }
 
   Future<String?> _getToken() async {
@@ -111,9 +119,11 @@ class ApiService {
     Options? options,
   }) async {
     try {
-      // Ne pas ajouter /api car c'est déjà dans l'URL de base
+      // Assurer qu'il y a un slash entre l'URL de base et le chemin
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
       final response = await _dio.get(
-        path, 
+        sanitizedPath, 
         queryParameters: queryParameters,
         options: options,
       );
@@ -132,27 +142,45 @@ class ApiService {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      // Ajouter des logs pour déboguer
-      debugPrint('POST request to: ${AppConfig.apiUrl}/$path');
-      debugPrint('Data: $data');
+      // Assurer qu'il y a un slash entre l'URL de base et le chemin
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
+      // Créer des options avec des en-têtes supplémentaires qui pourraient être nécessaires
+      Options finalOptions = options ?? Options();
+      finalOptions.headers = {
+        ...?finalOptions.headers,
+        'Accept': 'application/json',
+        'User-Agent': 'ChapecapeApp/1.0',
+        // Attention : Content-Length sera ajouté automatiquement par Dio
+      };
+      
+      // Ajouter des logs détaillés pour déboguer
+      debugPrint('---------- DÉTAILS COMPLETS DE LA REQUÊTE POST ----------');
+      debugPrint('URL: ${AppConfig.apiUrl}$sanitizedPath');
+      debugPrint('Données: $data');
+      debugPrint('En-têtes: ${finalOptions.headers}');
+      debugPrint('-------------------------------------------------------');
       
       final response = await _dio.post(
-        path,
+        sanitizedPath,
         data: data,
         queryParameters: queryParameters,
-        options: options,
+        options: finalOptions,
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
       );
       
-      // Ajouter des logs pour déboguer
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response data: ${response.data}');
+      // Ajouter des logs détaillés pour la réponse
+      debugPrint('---------- DÉTAILS COMPLETS DE LA RÉPONSE ----------');
+      debugPrint('Statut: ${response.statusCode}');
+      debugPrint('En-têtes de réponse: ${response.headers.map}');
+      debugPrint('Corps de réponse: ${response.data}');
+      debugPrint('---------------------------------------------------');
       
       return response;
     } catch (e) {
-      debugPrint('Error in POST request: $e');
+      debugPrint('Erreur dans la requête POST: $e');
       rethrow;
     }
   }
@@ -161,14 +189,22 @@ class ApiService {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      // Ne pas ajouter /api car c'est déjà dans l'URL de base
+      // Assurer qu'il y a un slash entre l'URL de base et le chemin
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
       final response = await _dio.put(
-        path,
+        sanitizedPath,
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
       );
       return response;
     } catch (e) {
@@ -180,14 +216,18 @@ class ApiService {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
-      // Ne pas ajouter /api car c'est déjà dans l'URL de base
+      // Assurer qu'il y a un slash entre l'URL de base et le chemin
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
       final response = await _dio.delete(
-        path,
+        sanitizedPath,
         data: data,
         queryParameters: queryParameters,
         options: options,
+        cancelToken: cancelToken,
       );
       return response;
     } catch (e) {
@@ -198,13 +238,23 @@ class ApiService {
   Future<Response> patch(String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      // Ne pas ajouter /api car c'est déjà dans l'URL de base
+      // Assurer qu'il y a un slash entre l'URL de base et le chemin
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
       final response = await _dio.patch(
-        path,
+        sanitizedPath,
         data: data,
         queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
       );
       return response;
     } catch (e) {

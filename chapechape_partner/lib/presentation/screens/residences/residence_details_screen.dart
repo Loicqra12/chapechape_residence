@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
-import '../../../core/models/residence/residence_extensions.dart';
+import '../../../core/extensions/residence_extensions.dart';
+import '../../../core/services/api/residence_service.dart';
+import '../../../core/config/app_config.dart';
 import 'edit_residence_screen.dart';
 
 class ResidenceDetailsScreen extends StatelessWidget {
@@ -15,48 +17,98 @@ class ResidenceDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(residence.name),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditResidenceScreen(
-                      residence: residence as Residence?,
-                    ),
+    return BlocProvider(
+      create: (context) => ResidenceBloc(
+        ResidenceService(baseUrl: AppConfig.apiUrl),
+      )..add(CheckResidenceExists(residence.id, 
+          onSuccess: () {}, 
+          onError: () {
+            // Si la résidence n'existe plus, afficher un message et retourner
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Cette résidence n\'existe plus ou a été supprimée.'),
+                duration: Duration(seconds: 3),
+              ),
+            );
+            // Retourner à la page précédente après un court délai
+            Future.delayed(const Duration(milliseconds: 500), () {
+              Navigator.of(context).pop();
+            });
+          }
+        )),
+      child: BlocConsumer<ResidenceBloc, ResidenceState>(
+        listener: (context, state) {
+          if (state is ResidenceError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is ResidenceLoading) {
+            return Scaffold(
+              appBar: AppBar(title: Text(residence.name)),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+          
+          return DefaultTabController(
+            length: 4,
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text(residence.name),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () {
+                      // Vérifier si la résidence existe encore avant d'éditer
+                      context.read<ResidenceBloc>().add(CheckResidenceExists(
+                        residence.id,
+                        onSuccess: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditResidenceScreen(
+                                residence: residence,
+                              ),
+                            ),
+                          ).then((_) {
+                            // Rafraîchir les données après l'édition
+                            context.read<ResidenceBloc>().add(CheckResidenceExists(residence.id, onSuccess: () {}));
+                          });
+                        },
+                      ));
+                    },
                   ),
-                );
-              },
+                ],
+                bottom: const TabBar(
+                  isScrollable: true,
+                  tabs: [
+                    Tab(text: 'Aperçu'),
+                    Tab(text: 'Disponibilités'),
+                    Tab(text: 'Galerie'),
+                    Tab(text: 'Avis'),
+                  ],
+                ),
+              ),
+              body: TabBarView(
+                children: [
+                  // Onglet Aperçu
+                  _OverviewTab(residence: residence),
+                  // Onglet Disponibilités
+                  _AvailabilityTab(residence: residence),
+                  // Onglet Galerie
+                  _GalleryTab(residence: residence),
+                  // Onglet Avis
+                  _ReviewsTab(residence: residence),
+                ],
+              ),
             ),
-          ],
-          bottom: const TabBar(
-            isScrollable: true,
-            tabs: [
-              Tab(text: 'Aperçu'),
-              Tab(text: 'Disponibilités'),
-              Tab(text: 'Galerie'),
-              Tab(text: 'Avis'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            // Onglet Aperçu
-            _OverviewTab(residence: residence),
-            // Onglet Disponibilités
-            _AvailabilityTab(residence: residence),
-            // Onglet Galerie
-            _GalleryTab(residence: residence),
-            // Onglet Avis
-            _ReviewsTab(residence: residence),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

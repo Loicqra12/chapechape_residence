@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/blocs/favorite/favorite_bloc.dart';
 import '../../core/blocs/favorite/favorite_event.dart';
 import '../../core/blocs/favorite/favorite_state.dart';
@@ -89,7 +90,7 @@ class FavoritesScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
-            'assets/images/empty_favorites.png',
+            'images/empty_favorites.png',
             height: 150,
             width: 150,
             errorBuilder: (context, error, stackTrace) {
@@ -123,8 +124,15 @@ class FavoritesScreen extends StatelessWidget {
               foregroundColor: blackColor,
             ),
             onPressed: () {
-              // Naviguer vers l'écran de recherche ou d'accueil
-              Navigator.of(context).pushReplacementNamed('/');
+              // Navigation vers l'écran d'accueil avec GoRouter
+              // Note: En cas de problème, vous pouvez utiliser Navigator.of(context).pop()
+              try {
+                context.go('/home');
+              } catch (e) {
+                debugPrint('Erreur de navigation: $e');
+                // Fallback en cas d'erreur
+                Navigator.of(context).pop();
+              }
             },
           ),
         ],

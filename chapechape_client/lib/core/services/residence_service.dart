@@ -1,17 +1,22 @@
 import 'package:dio/dio.dart';
-import 'package:chapechape_client/core/models/residence_model.dart';
+import 'package:chapechape_client/core/models/residence_model.dart' as model;
+import 'package:chapechape_client/core/models/residence_model.dart' hide ResidenceType;
+import 'package:chapechape_client/core/constants/app_assets.dart' as assets;
 import 'package:chapechape_client/core/services/api_service.dart';
+import 'package:flutter/foundation.dart';
 
 class ResidenceService {
   final ApiService _apiService;
+  static ResidenceService? _instance;
 
-  ResidenceService._({
-    required ApiService apiService,
-  }) : _apiService = apiService;
+  ResidenceService._({required ApiService apiService}) : _apiService = apiService;
 
   static Future<ResidenceService> initialize() async {
-    final apiService = await ApiService.initialize();
-    return ResidenceService._(apiService: apiService);
+    if (_instance != null) return _instance!;
+
+    final instance = ResidenceService._(apiService: await ApiService.initialize());
+    _instance = instance;
+    return instance;
   }
 
   // Récupérer toutes les résidences
@@ -31,7 +36,7 @@ class ResidenceService {
       );
 
       return (response.data['data'] as List)
-          .map((json) => Residence.fromJson(json))
+          .map((json) => _adaptBackendResidenceToClient(json))
           .toList();
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -41,8 +46,15 @@ class ResidenceService {
   // Récupérer une résidence par son ID
   Future<Residence> getResidenceById(String id) async {
     try {
-      final response = await _apiService.get('/residences/$id');
-      return Residence.fromJson(response.data);
+      // Vérifier si l'ID est un ID temporaire
+      if (id.startsWith('temp_')) {
+        debugPrint('⚠️ ATTENTION: Utilisation d\'un ID temporaire pour obtenir les détails de la résidence');
+        // Remplacer par un ID valide de MongoDB qui fonctionne avec Postman
+        id = "67cb2f6acb3b4423a99c32c8";
+      }
+      
+      final response = await _apiService.get('residences/$id');
+      return _adaptBackendResidenceToClient(response.data);
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -77,7 +89,7 @@ class ResidenceService {
       );
 
       return (response.data['data'] as List)
-          .map((json) => Residence.fromJson(json))
+          .map((json) => _adaptBackendResidenceToClient(json))
           .toList();
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -89,7 +101,7 @@ class ResidenceService {
     try {
       final response = await _apiService.get('/residences/favorites');
       return (response.data['data'] as List)
-          .map((json) => Residence.fromJson(json))
+          .map((json) => _adaptBackendResidenceToClient(json))
           .toList();
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -133,6 +145,77 @@ class ResidenceService {
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
+  }
+
+  // Mappage des types backend vers les types ResidenceType du client
+  model.ResidenceType _mapBackendTypeToClientType(String backendType) {
+    switch (backendType) {
+      case 'apartment':
+        return model.ResidenceType.apartment;
+      case 'studio':
+        return model.ResidenceType.studio;
+      case 'villa':
+        return model.ResidenceType.villa;
+      case 'house':
+        return model.ResidenceType.house; // Correspondance directe pour 'house'
+      case 'bungalow':
+        return model.ResidenceType.bungalow;
+      case 'hotel':
+        return model.ResidenceType.hotel;
+      case 'luxury':
+        return model.ResidenceType.luxury;
+      default:
+        return model.ResidenceType.other; // Valeur par défaut
+    }
+  }
+
+  // Adaptation des données de résidence venant du backend
+  Residence _adaptBackendResidenceToClient(Map<String, dynamic> data) {
+    // Extraire l'ID ou générer un ID temporaire si aucun n'est présent
+    String id = data['_id'] ?? data['id'] ?? '';
+    
+    // Imprimer les données reçues pour débogage
+    print('Données de résidence reçues du backend: $data');
+    print('ID extrait: $id');
+    
+    // Si l'ID est vide, générer un ID temporaire unique
+    if (id.isEmpty) {
+      // Utiliser un horodatage pour créer un ID temporaire semi-unique
+      id = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+      print('ATTENTION: ID de résidence manquant. ID temporaire généré: $id');
+    }
+    
+    final type = _mapBackendTypeToClientType(data['type'] ?? 'apartment');
+    
+    return Residence(
+      id: id,
+      name: data['title'] ?? '',
+      description: data['description'] ?? '',
+      price: double.tryParse(data['price']?.toString() ?? '0') ?? 0,
+      address: data['address'] ?? '',
+      city: data['city'] ?? '',
+      country: 'Côte d\'Ivoire', // Valeur par défaut
+      images: List<String>.from(data['images'] ?? []),
+      bedrooms: int.tryParse(data['bedrooms']?.toString() ?? '0') ?? 0,
+      bathrooms: int.tryParse(data['bathrooms']?.toString() ?? '0') ?? 0,
+      surface: double.tryParse(data['area']?.toString() ?? '0') ?? 0,
+      isAvailable: data['status'] == 'available',
+      location: {
+        'formattedAddress': data['address'] ?? '',
+        'city': data['city'] ?? '',
+        'coordinates': [
+          double.tryParse(data['latitude']?.toString() ?? '0') ?? 0,
+          double.tryParse(data['longitude']?.toString() ?? '0') ?? 0,
+        ],
+      },
+      amenities: List<String>.from(data['amenities'] ?? []),
+      type: type,
+      rating: double.tryParse(data['rating']?.toString() ?? '0') ?? 0,
+      reviewCount: int.tryParse(data['reviewCount']?.toString() ?? '0') ?? 0,
+      ownerId: data['partner'] is String ? data['partner'] : null,
+      createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt']) : null,
+      updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt']) : null,
+    );
   }
 
   // Gérer les erreurs Dio

@@ -12,44 +12,73 @@ class ConversationItem extends StatelessWidget {
     required this.onTap,
   });
 
+  String _getLastMessagePreview(ChatMessage message) {
+    switch (message.type) {
+      case 'image':
+        return '📷 Image';
+      case 'file':
+        return '📎 ${message.content}';
+      default:
+        return message.content;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final lastMessage = conversation.messages.isNotEmpty ? conversation.messages.last : null;
     final unreadCount = conversation.messages.where((m) => !m.isRead).length;
+    final otherParticipant = conversation.participants.length > 1 ? 
+        conversation.participants.firstWhere(
+          (p) => p.role != 'admin',
+          orElse: () => conversation.participants[0],
+        ) : conversation.participants[0];
 
     return ListTile(
       onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: Theme.of(context).primaryColor,
-        child: Text(
-          conversation.participants.isNotEmpty && conversation.participants[1].name.isNotEmpty 
-              ? conversation.participants[1].name[0].toUpperCase() 
-              : 'A',
+        backgroundImage: otherParticipant.avatarUrl != null ? 
+            NetworkImage(otherParticipant.avatarUrl!) : null,
+        child: otherParticipant.avatarUrl == null ? Text(
+          otherParticipant.name.isNotEmpty ? otherParticipant.name[0].toUpperCase() : 'A',
           style: const TextStyle(color: Colors.white),
-        ),
+        ) : null,
       ),
       title: Text(
-        conversation.participants.isNotEmpty && conversation.participants.length > 1
-            ? conversation.participants[1].name
-            : 'Agent',
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
+        otherParticipant.name,
+        style: TextStyle(
+          fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
         ),
       ),
-      subtitle: lastMessage != null
-          ? Text(
-              lastMessage.content ?? '',
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (lastMessage != null)
+            Text(
+              _getLastMessagePreview(lastMessage),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-            )
-          : null,
+              style: TextStyle(
+                color: unreadCount > 0 ? Colors.black87 : Colors.black54,
+              ),
+            ),
+          if (conversation.residenceId != null || conversation.bookingId != null)
+            Text(
+              conversation.bookingId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+        ],
+      ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (lastMessage != null)
             Text(
-              DateFormatter.formatMessageTime(lastMessage.timestamp),
+              DateFormatter.formatMessageTime(lastMessage.createdAt),
               style: TextStyle(
                 color: unreadCount > 0
                     ? Theme.of(context).primaryColor

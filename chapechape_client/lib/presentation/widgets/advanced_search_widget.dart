@@ -46,6 +46,10 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      constraints: const BoxConstraints(
+        minHeight: 100,
+        maxHeight: 400,
+      ),
       margin: context.responsiveMargin,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -59,22 +63,26 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
           ),
         ],
       ),
-      child: Padding(
-        padding: context.responsivePadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Trouvez votre résidence idéale',
-              style: TextStyle(
-                fontSize: context.responsiveFontSize(20),
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Padding(
+          padding: context.responsivePadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Trouvez votre résidence idéale',
+                style: TextStyle(
+                  fontSize: context.responsiveFontSize(20),
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryColor,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildSearchLayout(context),
-          ],
+              const SizedBox(height: 16),
+              _buildSearchLayout(context),
+            ],
+          ),
         ),
       ),
     );
@@ -92,6 +100,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
   Widget _buildMobileLayout(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Champ de recherche
         _buildSearchField(context),
@@ -110,13 +119,18 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
           ),
         ),
         const SizedBox(height: 8),
-        ResidenceTypeSelectorWidget(
-          types: availableResidenceTypes,
-          onTypeSelected: (type) {
-            setState(() {
-              _selectedResidenceType = type;
-            });
-          },
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxHeight: 100,
+          ),
+          child: ResidenceTypeSelectorWidget(
+            types: availableResidenceTypes,
+            onTypeSelected: (type) {
+              setState(() {
+                _selectedResidenceType = type;
+              });
+            },
+          ),
         ),
         const SizedBox(height: 16),
         
@@ -161,6 +175,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
   Widget _buildTabletDesktopLayout(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Première ligne: Recherche et dates
         Row(
@@ -189,6 +204,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
               flex: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Type de résidence',
@@ -198,13 +214,18 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ResidenceTypeSelectorWidget(
-                    types: availableResidenceTypes,
-                    onTypeSelected: (type) {
-                      setState(() {
-                        _selectedResidenceType = type;
-                      });
-                    },
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 100,
+                    ),
+                    child: ResidenceTypeSelectorWidget(
+                      types: availableResidenceTypes,
+                      onTypeSelected: (type) {
+                        setState(() {
+                          _selectedResidenceType = type;
+                        });
+                      },
+                    ),
                   ),
                 ],
               ),

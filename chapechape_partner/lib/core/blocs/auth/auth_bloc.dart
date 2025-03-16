@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/partner/partner_model.dart';
 import '../../services/api/auth_service.dart';
 
@@ -85,24 +86,72 @@ class AuthFailure extends AuthState {
 }
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthService authService;
+  final AuthService _authService;
   final FlutterSecureStorage storage;
 
   AuthBloc({
-    required this.authService,
+    required AuthService authService,
     required this.storage,
-  }) : super(AuthInitial()) {
+  })  : _authService = authService,
+        super(AuthInitial()) {
     on<AuthCheckRequested>((event, emit) async {
       emit(AuthLoading());
       try {
         final token = await storage.read(key: 'token');
         if (token != null) {
-          final partner = await authService.getProfile();
+          // Sauvegarder également dans SharedPreferences pour la persistance à travers les hot reloads
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('token', token);
+          
+          final partner = await _authService.getProfile();
           emit(AuthAuthenticated(token: token, partner: partner));
         } else {
+          // Si pas de token dans le secure storage, vérifier dans SharedPreferences
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final savedToken = prefs.getString('token');
+            if (savedToken != null && savedToken.isNotEmpty) {
+              print("Restauration de la session après hot reload");
+              // Restaurer le token dans le secure storage
+              await storage.write(key: 'token', value: savedToken);
+              
+              try {
+                final partner = await _authService.getProfile();
+                emit(AuthAuthenticated(token: savedToken, partner: partner));
+                return;
+              } catch (profileError) {
+                print("Impossible de récupérer le profil: $profileError");
+                // Continuer à la déconnexion ci-dessous
+              }
+            }
+          } catch (e) {
+            print("Erreur lors de la récupération des préférences: $e");
+          }
+          
           emit(AuthUnauthenticated());
         }
       } catch (e) {
+        // Vérifier SharedPreferences en cas d'erreur avec le secure storage
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final savedToken = prefs.getString('token');
+          if (savedToken != null && savedToken.isNotEmpty) {
+            print("Restauration de la session après erreur: $e");
+            // Restaurer le token dans le secure storage
+            await storage.write(key: 'token', value: savedToken);
+            
+            try {
+              final partner = await _authService.getProfile();
+              emit(AuthAuthenticated(token: savedToken, partner: partner));
+              return;
+            } catch (profileError) {
+              print("Impossible de récupérer le profil: $profileError");
+            }
+          }
+        } catch (prefsError) {
+          print("Erreur lors de la récupération des préférences: $prefsError");
+        }
+        
         emit(AuthUnauthenticated());
       }
     });
@@ -110,7 +159,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        final loginResult = await authService.login(
+        final loginResult = await _authService.login(
           email: event.email,
           password: event.password,
         );
@@ -127,7 +176,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        final registerResult = await authService.register(
+        final registerResult = await _authService.register(
           firstName: event.firstName,
           lastName: event.lastName,
           email: event.email,

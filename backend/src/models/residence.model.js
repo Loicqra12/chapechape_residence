@@ -16,6 +16,22 @@ const residenceSchema = mongoose.Schema({
     required: [true, 'Le prix est requis'],
     min: [0, 'Le prix ne peut pas être négatif']
   },
+  pricePeriod: {
+    type: String,
+    enum: ['hour', 'day', 'week', 'month'],
+    default: 'month'
+  },
+  hourlyRates: {
+    oneHour: { type: Number, default: 0 },
+    twoHours: { type: Number, default: 0 },
+    threeHours: { type: Number, default: 0 },
+    additionalHour: { type: Number, default: 0 }
+  },
+  dailyRates: {
+    halfDay: { type: Number, default: 0 },
+    fullDay: { type: Number, default: 0 },
+    weekend: { type: Number, default: 0 }
+  },
   address: {
     type: String,
     required: [true, 'L\'adresse est requise']

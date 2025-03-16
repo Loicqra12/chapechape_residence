@@ -1,71 +1,41 @@
-import 'package:equatable/equatable.dart';
+part of 'chat_bloc.dart';
 
-abstract class ChatEvent extends Equatable {
-  const ChatEvent();
-
-  @override
-  List<Object?> get props => [];
-}
-
-class LoadConversations extends ChatEvent {
-  const LoadConversations();
-}
-
-class LoadMessages extends ChatEvent {
-  final String conversationId;
-  final bool markAsRead;
-
-  const LoadMessages(this.conversationId, {this.markAsRead = false});
-
-  @override
-  List<Object?> get props => [conversationId, markAsRead];
-}
-
-class SendMessage extends ChatEvent {
-  final String conversationId;
-  final String content;
-
-  const SendMessage({
-    required this.conversationId,
-    required this.content,
-  });
-
-  @override
-  List<Object?> get props => [conversationId, content];
-}
-
-class MarkMessageAsRead extends ChatEvent {
-  final String messageId;
-
-  const MarkMessageAsRead(this.messageId);
-
-  @override
-  List<Object?> get props => [messageId];
-}
-
-class MarkAllAsRead extends ChatEvent {
-  final String conversationId;
-
-  const MarkAllAsRead(this.conversationId);
-
-  @override
-  List<Object?> get props => [conversationId];
-}
-
-class CreateConversation extends ChatEvent {
-  final String recipientId;
-
-  const CreateConversation(this.recipientId);
-
-  @override
-  List<Object?> get props => [recipientId];
-}
-
-class SelectConversation extends ChatEvent {
-  final String conversationId;
-
-  const SelectConversation(this.conversationId);
-
-  @override
-  List<Object?> get props => [conversationId];
+@freezed
+class ChatEvent with _$ChatEvent {
+  const factory ChatEvent.loadConversations() = LoadConversations;
+  
+  const factory ChatEvent.createConversation({
+    required String userId,
+    String? residenceId,
+    String? bookingId,
+  }) = CreateConversation;
+  
+  const factory ChatEvent.sendMessage({
+    required String conversationId,
+    required String content,
+  }) = SendMessage;
+  
+  const factory ChatEvent.sendFile({
+    required String conversationId,
+    required String filePath,
+    String? type,
+  }) = SendFile;
+  
+  const factory ChatEvent.sendImage({
+    required String conversationId,
+    required String imagePath,
+  }) = SendImage;
+  
+  const factory ChatEvent.loadMessages({
+    required String conversationId,
+  }) = LoadMessages;
+  
+  const factory ChatEvent.markAsRead({
+    required String messageId,
+    required String conversationId,
+  }) = MarkAsRead;
+  
+  const factory ChatEvent.markAllAsRead({
+    required String conversationId,
+  }) = MarkAllAsRead;
 }

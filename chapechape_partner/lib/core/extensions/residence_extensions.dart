@@ -14,20 +14,42 @@ extension ResidenceProperties on Residence {
   String? get firstImageUrl {
     if (images.isEmpty) return null;
     
+    // Si mainImage est défini, l'utiliser en priorité
+    if (mainImage != null && mainImage!.isNotEmpty) {
+      return _formatImageUrl(mainImage!);
+    }
+    
+    // Sinon, utiliser la première image disponible
+    var firstImage = images.first;
+    
     // Si l'image est une Map avec une URL (nouveau format)
-    if (images.first is Map) {
-      final imageMap = images.first as Map;
-      if (imageMap['url'] != null) {
-        return 'http://localhost:4000${imageMap['url']}';
+    if (firstImage is Map) {
+      if (firstImage['url'] != null) {
+        return _formatImageUrl(firstImage['url']);
       }
     }
     
     // Si l'image est une String (ancien format)
-    if (images.first is String) {
-      return images.first as String;
+    if (firstImage is String) {
+      return _formatImageUrl(firstImage);
     }
     
     return null;
+  }
+  
+  String _formatImageUrl(String url) {
+    // Si l'URL est déjà absolue (commence par http:// ou https://)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Si l'URL est relative (commence par /)
+    if (url.startsWith('/')) {
+      return 'http://localhost:4000$url';
+    }
+    
+    // Si l'URL ne commence ni par '/' ni par 'http'
+    return 'http://localhost:4000/$url';
   }
 
   String get formattedPrice {
@@ -37,6 +59,23 @@ extension ResidenceProperties on Residence {
       decimalDigits: 0,
     );
     return numberFormat.format(price);
+  }
+
+  String get priceDisplay {
+    final formattedAmount = formattedPrice;
+  
+    switch (pricePeriod.toLowerCase()) {
+      case 'monthly':
+        return '$formattedAmount / mois';
+      case 'weekly':
+        return '$formattedAmount / semaine';
+      case 'daily':
+        return '$formattedAmount / jour';
+      case 'hourly':
+        return '$formattedAmount / heure';
+      default:
+        return formattedAmount;
+    }
   }
 
   String get formattedSurface {
