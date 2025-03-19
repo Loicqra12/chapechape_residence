@@ -17,7 +17,7 @@ class MessageThread {
   final int unreadCount;
   final String? residenceId;
   final String? residenceName;
-  final String? bookingId;
+  final String? reservationId;
 
   MessageThread({
     required this.id,
@@ -31,7 +31,7 @@ class MessageThread {
     required this.unreadCount,
     this.residenceId,
     this.residenceName,
-    this.bookingId,
+    this.reservationId,
   });
 
   factory MessageThread.fromJson(Map<String, dynamic> json) {
@@ -47,7 +47,7 @@ class MessageThread {
       unreadCount: json['unreadCount'],
       residenceId: json['residenceId'],
       residenceName: json['residenceName'],
-      bookingId: json['bookingId'],
+      reservationId: json['reservationId'],
     );
   }
 
@@ -64,7 +64,7 @@ class MessageThread {
       'unreadCount': unreadCount,
       'residenceId': residenceId,
       'residenceName': residenceName,
-      'bookingId': bookingId,
+      'reservationId': reservationId,
     };
   }
 }

@@ -67,7 +67,7 @@ _$ChatConversationImpl _$$ChatConversationImplFromJson(
               .toList() ??
           const [],
       residenceId: json['residenceId'] as String?,
-      bookingId: json['bookingId'] as String?,
+      reservationId: json['reservationId'] as String?,
       isUnread: json['isUnread'] as bool? ?? false,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
@@ -80,7 +80,7 @@ Map<String, dynamic> _$$ChatConversationImplToJson(
       'participants': instance.participants.map((e) => e.toJson()).toList(),
       'messages': instance.messages.map((e) => e.toJson()).toList(),
       if (instance.residenceId case final value?) 'residenceId': value,
-      if (instance.bookingId case final value?) 'bookingId': value,
+      if (instance.reservationId case final value?) 'reservationId': value,
       'isUnread': instance.isUnread,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),

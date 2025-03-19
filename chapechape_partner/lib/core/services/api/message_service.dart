@@ -100,7 +100,7 @@ class MessageService {
   Future<Conversation> createConversation({
     required List<String> participants, 
     String? title, 
-    String? bookingId,
+    String? reservationId,
     String? initialMessage
   }) async {
     try {
@@ -109,7 +109,7 @@ class MessageService {
         data: {
           'participants': participants,
           if (title != null) 'title': title,
-          if (bookingId != null) 'bookingId': bookingId,
+          if (reservationId != null) 'reservationId': reservationId,
           if (initialMessage != null) 'initialMessage': initialMessage,
         },
       );
@@ -208,8 +208,8 @@ class MessageService {
               name: a['name'],
               size: a['size'] ?? 0,
             )).toList() ?? [],
-            bookingId: messageData['bookingId'],
-            bookingStatus: messageData['bookingStatus'],
+            reservationId: messageData['reservationId'],
+            reservationStatus: messageData['reservationStatus'],
             metadata: messageData['metadata'] as Map<String, dynamic>?,
           )).toList();
         }

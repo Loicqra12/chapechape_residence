@@ -3,6 +3,7 @@ const asyncHandler = require('../middlewares/async.middleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
+const Reservation = require('../models/reservation.model');
 
 // Création du dossier uploads/messages s'il n'existe pas
 const ensureUploadDirExists = async () => {
@@ -54,6 +55,8 @@ exports.getConversations = asyncHandler(async (req, res) => {
     })
     .populate('participants', 'name avatar')
     .populate('lastMessage')
+    .populate('reservationId', 'status')
+    .populate('residenceId', 'name')
     .sort('-updatedAt');
 
     // Ajouter le compte des messages non lus pour chaque conversation
@@ -78,7 +81,9 @@ exports.getConversations = asyncHandler(async (req, res) => {
 exports.getConversation = asyncHandler(async (req, res) => {
     const conversation = await Conversation.findById(req.params.id)
         .populate('participants', 'name avatar')
-        .populate('lastMessage');
+        .populate('lastMessage')
+        .populate('reservationId', 'status')
+        .populate('residenceId', 'name');
 
     if (!conversation) {
         return res.status(404).json({ success: false, error: 'Conversation non trouvée' });
@@ -123,7 +128,7 @@ exports.getMessages = asyncHandler(async (req, res) => {
 // @route   POST /api/messages/conversations/:id/messages
 // @access  Private
 exports.sendMessage = asyncHandler(async (req, res) => {
-    const { content, attachments, bookingId } = req.body;
+    const { content, attachments, reservationId } = req.body;
     const conversationId = req.params.id;
 
     const conversation = await Conversation.findById(conversationId);
@@ -134,13 +139,24 @@ exports.sendMessage = asyncHandler(async (req, res) => {
     if (!conversation.participants.some(p => p.toString() === req.user.id)) {
         return res.status(403).json({ success: false, error: 'Non autorisé à envoyer des messages dans cette conversation' });
     }
+    
+    // Vérifier si la messagerie est activée pour cette réservation
+    if (conversation.reservationId) {
+        const reservation = await Reservation.findById(conversation.reservationId);
+        if (!reservation || !reservation.messagingEnabled) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.' 
+            });
+        }
+    }
 
     const message = await Message.create({
         conversation: conversationId,
         sender: req.user.id,
         content,
         attachments: attachments || [],
-        bookingId
+        reservationId
     });
 
     conversation.lastMessage = message._id;
@@ -165,6 +181,17 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
 
     if (!conversation.participants.some(p => p.toString() === req.user.id)) {
         return res.status(403).json({ success: false, error: 'Non autorisé à envoyer des fichiers dans cette conversation' });
+    }
+    
+    // Vérifier si la messagerie est activée pour cette réservation
+    if (conversation.reservationId) {
+        const reservation = await Reservation.findById(conversation.reservationId);
+        if (!reservation || !reservation.messagingEnabled) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.' 
+            });
+        }
     }
 
     // Debugging information
@@ -234,7 +261,25 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
 // @route   POST /api/messages/conversations
 // @access  Private
 exports.createConversation = asyncHandler(async (req, res) => {
-    const { title, participants, bookingId, initialMessage } = req.body;
+    const { title, participants, reservationId, residenceId, initialMessage } = req.body;
+
+    // Vérifier si la conversation est liée à une réservation et si la messagerie est activée
+    if (reservationId) {
+        const reservation = await Reservation.findById(reservationId);
+        if (!reservation) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Réservation non trouvée' 
+            });
+        }
+        
+        if (!reservation.messagingEnabled) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.' 
+            });
+        }
+    }
 
     // Vérifier si les participants existent et incluent l'utilisateur actuel
     let allParticipants = [...new Set([...participants, req.user.id])];
@@ -243,7 +288,8 @@ exports.createConversation = asyncHandler(async (req, res) => {
     const conversation = await Conversation.create({
         title,
         participants: allParticipants,
-        bookingId,
+        reservationId,
+        residenceId,
         createdAt: Date.now(),
         updatedAt: Date.now()
     });
@@ -262,8 +308,11 @@ exports.createConversation = asyncHandler(async (req, res) => {
     }
 
     await conversation.populate('participants', 'name avatar');
-    if (bookingId) {
-        await conversation.populate('bookingId', 'status');
+    if (reservationId) {
+        await conversation.populate('reservationId', 'status');
+    }
+    if (residenceId) {
+        await conversation.populate('residenceId', 'name');
     }
     
     res.status(201).json({

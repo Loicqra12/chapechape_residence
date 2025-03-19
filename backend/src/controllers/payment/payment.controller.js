@@ -1,6 +1,7 @@
 const Payment = require('../../models/payment.model');
 const Reservation = require('../../models/reservation.model');
 const PaymentService = require('../../services/payment.service');
+const { Conversation, Message } = require('../../models/message.model');
 
 // Créer une intention de paiement
 exports.createPaymentIntent = async (req, res) => {
@@ -156,7 +157,39 @@ exports.confirmPayment = async (req, res) => {
                 if (otherCompletedPayments.length === 0) {
                     reservation.paymentStatus = 'paid';
                     reservation.status = 'confirmed';
+                    
+                    // Activer la messagerie pour cette réservation
+                    reservation.messagingEnabled = true;
                     await reservation.save();
+                    
+                    // Créer une conversation entre le client et le partenaire si elle n'existe pas déjà
+                    const existingConversation = await Conversation.findOne({
+                        reservationId: reservation._id
+                    });
+                    
+                    if (!existingConversation) {
+                        // Obtenir les informations de l'utilisateur et du partenaire
+                        await reservation.populate('user partner residence');
+                        
+                        const conversation = await Conversation.create({
+                            participants: [reservation.user, reservation.partner],
+                            reservationId: reservation._id,
+                            residenceId: reservation.residence._id,
+                            createdAt: Date.now(),
+                            updatedAt: Date.now()
+                        });
+                        
+                        // Envoyer un message automatique de bienvenue
+                        const message = await Message.create({
+                            conversation: conversation._id,
+                            sender: reservation.partner,
+                            content: `Merci pour votre réservation de "${reservation.residence.name}" ! N'hésitez pas à me contacter pour toute question concernant votre séjour.`
+                        });
+                        
+                        // Mettre à jour le dernier message de la conversation
+                        conversation.lastMessage = message._id;
+                        await conversation.save();
+                    }
                 }
             }
         }

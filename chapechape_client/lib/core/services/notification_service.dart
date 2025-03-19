@@ -18,7 +18,7 @@ class NotificationService {
   Future<List<NotificationModel>> getNotifications({int page = 1, int limit = 10}) async {
     try {
       final response = await _apiService.get(
-        '/api/notifications',
+        '/notifications',
         queryParameters: {
           'page': page,
           'limit': limit,
@@ -40,7 +40,7 @@ class NotificationService {
   // Marquer une notification comme lue
   Future<bool> markAsRead(String notificationId) async {
     try {
-      final response = await _apiService.put('/api/notifications/$notificationId/read');
+      final response = await _apiService.put('/notifications/$notificationId/read');
       return response.data['success'] == true;
     } on DioException catch (e) {
       print('Erreur lors du marquage de la notification: ${e.message}');
@@ -51,7 +51,7 @@ class NotificationService {
   // Marquer toutes les notifications comme lues
   Future<bool> markAllAsRead() async {
     try {
-      final response = await _apiService.put('/api/notifications/read-all');
+      final response = await _apiService.put('/notifications/read-all');
       return response.data['success'] == true;
     } on DioException catch (e) {
       print('Erreur lors du marquage de toutes les notifications: ${e.message}');
@@ -62,7 +62,7 @@ class NotificationService {
   // Supprimer une notification
   Future<bool> deleteNotification(String notificationId) async {
     try {
-      final response = await _apiService.delete('/api/notifications/$notificationId');
+      final response = await _apiService.delete('/notifications/$notificationId');
       return response.data['success'] == true;
     } on DioException catch (e) {
       print('Erreur lors de la suppression de la notification: ${e.message}');

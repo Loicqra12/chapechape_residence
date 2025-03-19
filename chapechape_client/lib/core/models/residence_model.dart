@@ -395,13 +395,54 @@ extension LocationExtension on Map<String, dynamic> {
 
 // Types de résidences dans notre modèle
 enum ResidenceType {
-  apartment,
-  house,
-  villa,
-  studio,
+  // 🏠 Résidences meublées
+  studioMeuble,
+  appartementMeuble,
+  villaMeublee,
+  penthouse,
+  grenier,
+  
+  // 🏨 Hôtels & Hébergements classiques
+  hotelDePassage,
+  motel,
+  boutiqueHotel,
+  hotelDeLuxe,
+  aubergeEtMaisonDHotes,
+  residenceHoteliere,
+  
+  // 🌍 Hébergements insolites & nature
   bungalow,
+  lodgeEtEcolodge,
+  caseTraditionnelle,
+  maisonFlottante,
+  campementTouristique,
+  
+  // 🏘️ Colocation & résidences partagées
+  chambreEnColocation,
+  cohabitation,
+  residenceUniversitaire,
+  citeDortoir,
+  
+  // 🏡 Résidences longue durée
+  appartementNonMeuble,
+  villaNonMeublee,
+  immeuble,
+  courCommune,
+  
+  // ⛺ Hébergements économiques et populaires
+  maisonDHotesEconomique,
+  residenceFamilialeEnLocation,
+  chambresDePassage,
+  
+  // Types génériques de base (pour compatibilité)
+  apartment,
+  studio,
+  villa,
+  house,
   hotel,
   luxury,
+  
+  // Valeur par défaut
   other
 }
 
@@ -424,5 +465,168 @@ ResidenceType _parseResidenceType(String value) {
       return ResidenceType.luxury;
     default:
       return ResidenceType.other;
+  }
+}
+
+// Extension pour obtenir le nom d'affichage en français de chaque type de résidence
+extension ResidenceTypeExtension on ResidenceType {
+  String get displayName {
+    switch (this) {
+      // 🏠 Résidences meublées
+      case ResidenceType.studioMeuble:
+        return 'Studio meublé';
+      case ResidenceType.appartementMeuble:
+        return 'Appartement meublé';
+      case ResidenceType.villaMeublee:
+        return 'Villa meublée';
+      case ResidenceType.penthouse:
+        return 'Penthouse';
+      case ResidenceType.grenier:
+        return 'Grenier';
+
+      // 🏨 Hôtels & Hébergements classiques
+      case ResidenceType.hotelDePassage:
+        return 'Hôtel de passage';
+      case ResidenceType.motel:
+        return 'Motel';
+      case ResidenceType.boutiqueHotel:
+        return 'Boutique-Hôtel';
+      case ResidenceType.hotelDeLuxe:
+        return 'Hôtel de luxe';
+      case ResidenceType.aubergeEtMaisonDHotes:
+        return 'Auberge et maison d\'hôtes';
+      case ResidenceType.residenceHoteliere:
+        return 'Résidence hôtelière';
+
+      // 🌍 Hébergements insolites & nature
+      case ResidenceType.bungalow:
+        return 'Bungalow';
+      case ResidenceType.lodgeEtEcolodge:
+        return 'Lodge & Écolodge';
+      case ResidenceType.caseTraditionnelle:
+        return 'Case traditionnelle';
+      case ResidenceType.maisonFlottante:
+        return 'Maison flottante';
+      case ResidenceType.campementTouristique:
+        return 'Campement touristique';
+
+      // 🏘️ Colocation & résidences partagées
+      case ResidenceType.chambreEnColocation:
+        return 'Chambre en colocation';
+      case ResidenceType.cohabitation:
+        return 'Cohabitation';
+      case ResidenceType.residenceUniversitaire:
+        return 'Résidence universitaire';
+      case ResidenceType.citeDortoir:
+        return 'Cité dortoir';
+
+      // 🏡 Résidences longue durée
+      case ResidenceType.appartementNonMeuble:
+        return 'Appartement non meublé';
+      case ResidenceType.villaNonMeublee:
+        return 'Villa non meublée';
+      case ResidenceType.immeuble:
+        return 'Immeuble';
+      case ResidenceType.courCommune:
+        return 'Cour commune';
+
+      // ⛺ Hébergements économiques et populaires
+      case ResidenceType.maisonDHotesEconomique:
+        return 'Maison d\'hôtes économique';
+      case ResidenceType.residenceFamilialeEnLocation:
+        return 'Résidence familiale en location';
+      case ResidenceType.chambresDePassage:
+        return 'Chambres de passage';
+
+      // Types génériques de base
+      case ResidenceType.apartment:
+        return 'Appartement';
+      case ResidenceType.studio:
+        return 'Studio';
+      case ResidenceType.villa:
+        return 'Villa';
+      case ResidenceType.house:
+        return 'Maison';
+      case ResidenceType.hotel:
+        return 'Hôtel';
+      case ResidenceType.luxury:
+        return 'Résidence de luxe';
+      case ResidenceType.other:
+        return 'Autre';
+    }
+  }
+
+  // Récupérer l'icône appropriée pour chaque type de résidence
+  String get icon {
+    switch (this) {
+      // 🏠 Résidences meublées
+      case ResidenceType.studioMeuble:
+      case ResidenceType.appartementMeuble:
+        return '🏠';
+      case ResidenceType.villaMeublee:
+      case ResidenceType.penthouse:
+        return '🏘️';
+      case ResidenceType.grenier:
+        return '🏠';
+
+      // 🏨 Hôtels & Hébergements classiques
+      case ResidenceType.hotelDePassage:
+      case ResidenceType.motel:
+      case ResidenceType.boutiqueHotel:
+      case ResidenceType.hotelDeLuxe:
+      case ResidenceType.residenceHoteliere:
+        return '🏨';
+      case ResidenceType.aubergeEtMaisonDHotes:
+        return '🏡';
+
+      // 🌍 Hébergements insolites & nature
+      case ResidenceType.bungalow:
+      case ResidenceType.lodgeEtEcolodge:
+      case ResidenceType.caseTraditionnelle:
+        return '🌴';
+      case ResidenceType.maisonFlottante:
+        return '🚣';
+      case ResidenceType.campementTouristique:
+        return '⛺';
+
+      // 🏘️ Colocation & résidences partagées
+      case ResidenceType.chambreEnColocation:
+      case ResidenceType.cohabitation:
+      case ResidenceType.residenceUniversitaire:
+      case ResidenceType.citeDortoir:
+        return '🏘️';
+
+      // 🏡 Résidences longue durée
+      case ResidenceType.appartementNonMeuble:
+        return '🏢';
+      case ResidenceType.villaNonMeublee:
+        return '🏡';
+      case ResidenceType.immeuble:
+        return '🏢';
+      case ResidenceType.courCommune:
+        return '🏘️';
+
+      // ⛺ Hébergements économiques et populaires
+      case ResidenceType.maisonDHotesEconomique:
+      case ResidenceType.residenceFamilialeEnLocation:
+      case ResidenceType.chambresDePassage:
+        return '⛺';
+
+      // Types génériques de base
+      case ResidenceType.apartment:
+        return '🏢';
+      case ResidenceType.studio:
+        return '🏠';
+      case ResidenceType.villa:
+        return '🏡';
+      case ResidenceType.house:
+        return '🏠';
+      case ResidenceType.hotel:
+        return '🏨';
+      case ResidenceType.luxury:
+        return '🏰';
+      case ResidenceType.other:
+        return '🏠';
+    }
   }
 }

@@ -338,19 +338,19 @@ class BookingService {
       
       // Sinon, utiliser un message par défaut basé sur le statut HTTP
       switch (statusCode) {
-        case 400:
+      case 400:
           return Exception('Données invalides');
-        case 401:
-          return Exception('Non autorisé');
+      case 401:
+        return Exception('Non autorisé');
         case 403:
           return Exception('Accès interdit');
-        case 404:
+      case 404:
           return Exception('Ressource non trouvée');
-        case 409:
+      case 409:
           return Exception('Conflit avec une réservation existante');
-        case 500:
-          return Exception('Erreur serveur');
-        default:
+      case 500:
+        return Exception('Erreur serveur');
+      default:
           return Exception('Erreur $statusCode: ${e.message}');
       }
     }

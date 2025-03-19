@@ -13,8 +13,8 @@ class MessageThread extends Equatable {
   final String partnerId;
   final String? residenceId;
   final String? residenceName;
-  final String? bookingId;
-  final String? bookingStatus;
+  final String? reservationId;
+  final String? reservationStatus;
   final DateTime lastMessageTime;
   final int unreadCount;
   final List<Message> messages;
@@ -27,8 +27,8 @@ class MessageThread extends Equatable {
     required this.partnerId,
     this.residenceId,
     this.residenceName,
-    this.bookingId,
-    this.bookingStatus,
+    this.reservationId,
+    this.reservationStatus,
     required this.lastMessageTime,
     required this.unreadCount,
     required this.messages,
@@ -47,8 +47,8 @@ class MessageThread extends Equatable {
     String? partnerId,
     String? residenceId,
     String? residenceName,
-    String? bookingId,
-    String? bookingStatus,
+    String? reservationId,
+    String? reservationStatus,
     DateTime? lastMessageTime,
     int? unreadCount,
     List<Message>? messages,
@@ -61,8 +61,8 @@ class MessageThread extends Equatable {
       partnerId: partnerId ?? this.partnerId,
       residenceId: residenceId ?? this.residenceId,
       residenceName: residenceName ?? this.residenceName,
-      bookingId: bookingId ?? this.bookingId,
-      bookingStatus: bookingStatus ?? this.bookingStatus,
+      reservationId: reservationId ?? this.reservationId,
+      reservationStatus: reservationStatus ?? this.reservationStatus,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
       messages: messages ?? this.messages,
@@ -78,8 +78,8 @@ class MessageThread extends Equatable {
     partnerId,
     residenceId,
     residenceName,
-    bookingId,
-    bookingStatus,
+    reservationId,
+    reservationStatus,
     lastMessageTime,
     unreadCount,
     messages,

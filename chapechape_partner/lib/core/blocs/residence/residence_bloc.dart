@@ -6,11 +6,14 @@ import '../../models/residence/residence_image.dart';
 import '../../services/api/residence_service.dart';
 import '../../exceptions/api_exception.dart';
 import 'dart:typed_data';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Events
 abstract class ResidenceEvent {}
 
 class LoadResidences extends ResidenceEvent {}
+
+class LoadMyResidences extends ResidenceEvent {}
 
 class SearchResidences extends ResidenceEvent {
   final String query;
@@ -62,6 +65,11 @@ class CheckResidenceExists extends ResidenceEvent {
   CheckResidenceExists(this.id, {required this.onSuccess, this.onError});
 }
 
+class LoadResidenceDetails extends ResidenceEvent {
+  final String residenceId;
+  LoadResidenceDetails(this.residenceId);
+}
+
 // States
 abstract class ResidenceState {}
 
@@ -104,12 +112,20 @@ class ResidenceLoaded extends ResidenceState {
   });
 }
 
+class ResidenceOperationSuccessful extends ResidenceState {}
+
+class ResidenceDetailsLoaded extends ResidenceState {
+  final Residence residence;
+  ResidenceDetailsLoaded(this.residence);
+}
+
 // Bloc
 class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
   final ResidenceService _residenceService;
 
   ResidenceBloc(this._residenceService) : super(ResidenceInitial()) {
     on<LoadResidences>(_onLoadResidences);
+    on<LoadMyResidences>(_onLoadMyResidences);
     on<SearchResidences>(_onSearchResidences);
     on<FilterResidences>(_onFilterResidences);
     on<SortResidences>(_onSortResidences);
@@ -118,6 +134,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     on<UploadResidenceImages>(_onUploadResidenceImages);
     on<DeleteResidence>(_onDeleteResidence);
     on<CheckResidenceExists>(_onCheckResidenceExists);
+    on<LoadResidenceDetails>(_onLoadResidenceDetails);
   }
 
   Future<void> _onLoadResidences(
@@ -131,6 +148,39 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     } on ApiException catch (e) {
       emit(ResidenceError.fromApiException(e));
     } catch (e) {
+      emit(ResidenceError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadMyResidences(
+    LoadMyResidences event,
+    Emitter<ResidenceState> emit,
+  ) async {
+    try {
+      print("🔍 Début du chargement des résidences du partenaire");
+      emit(ResidenceLoading());
+      
+      // Vérifier si l'ID utilisateur est bien stocké
+      final storage = const FlutterSecureStorage();
+      final userId = await storage.read(key: 'userId');
+      print("🔑 ID utilisateur trouvé dans le storage: $userId");
+      
+      final residences = await _residenceService.getMyResidences();
+      print("📋 Résidences du partenaire chargées: ${residences.length}");
+      
+      // Afficher les ID des résidences chargées
+      if (residences.isNotEmpty) {
+        print("🏠 Résidences filtrées:");
+        for (var residence in residences) {
+          print("   - ${residence.name} (${residence.id})");
+        }
+      } else {
+        print("⚠️ Aucune résidence trouvée pour ce partenaire");
+      }
+      
+      emit(ResidenceLoaded(residences));
+    } catch (e) {
+      print("❌ Erreur lors du chargement des résidences du partenaire: $e");
       emit(ResidenceError(e.toString()));
     }
   }
@@ -220,9 +270,20 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     try {
       emit(ResidenceLoading());
       final images = ResidenceImage.fromMixed(event.images);
-      await _residenceService.uploadResidenceImages(event.residenceId, images);
-      emit(ResidenceSuccess('Images téléchargées avec succès'));
-      add(LoadResidences());
+      
+      if (images.isNotEmpty) {
+        print("Téléchargement et rafraîchissement des données de la résidence");
+        // Utiliser la nouvelle méthode qui télécharge les images et récupère la résidence mise à jour
+        final updatedResidence = await _residenceService.uploadImagesAndRefreshResidence(event.residenceId, images);
+        
+        emit(ResidenceSuccess('Images téléchargées avec succès'));
+        // Recharger toutes les résidences pour mettre à jour la liste
+        add(LoadResidences());
+      } else {
+        // Si aucune image n'est à télécharger, simplement émettre un succès
+        emit(ResidenceSuccess('Aucune image à télécharger'));
+        add(LoadResidences());
+      }
     } on ApiException catch (e) {
       emit(ResidenceError.fromApiException(e));
     } catch (e) {
@@ -268,6 +329,21 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       } else {
         emit(ResidenceError(e.toString()));
       }
+    }
+  }
+
+  Future<void> _onLoadResidenceDetails(
+    LoadResidenceDetails event,
+    Emitter<ResidenceState> emit,
+  ) async {
+    try {
+      emit(ResidenceLoading());
+      final residence = await _residenceService.getResidenceById(event.residenceId);
+      emit(ResidenceLoaded([residence], totalCount: 1));
+    } on ApiException catch (e) {
+      emit(ResidenceError.fromApiException(e));
+    } catch (e) {
+      emit(ResidenceError(e.toString()));
     }
   }
 }

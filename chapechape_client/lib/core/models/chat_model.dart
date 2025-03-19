@@ -42,7 +42,7 @@ class ChatConversation with _$ChatConversation {
     required List<ChatParticipant> participants,
     @Default([]) List<ChatMessage> messages,
     String? residenceId,
-    String? bookingId,
+    String? reservationId,
     @Default(false) bool isUnread,
     required DateTime createdAt,
     required DateTime updatedAt,

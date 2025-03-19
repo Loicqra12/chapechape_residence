@@ -48,7 +48,7 @@ class CustomerSupportWidget extends StatelessWidget {
               context.read<ChatBloc>().add(CreateConversation(
                     userId: userId,
                     residenceId: residenceId,
-                    bookingId: bookingId,
+                    reservationId: bookingId,
                   ));
             },
             icon: const Icon(Icons.support_agent),

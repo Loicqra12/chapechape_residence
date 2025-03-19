@@ -583,7 +583,7 @@ mixin _$ChatConversation {
   List<ChatParticipant> get participants => throw _privateConstructorUsedError;
   List<ChatMessage> get messages => throw _privateConstructorUsedError;
   String? get residenceId => throw _privateConstructorUsedError;
-  String? get bookingId => throw _privateConstructorUsedError;
+  String? get reservationId => throw _privateConstructorUsedError;
   bool get isUnread => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
@@ -609,7 +609,7 @@ abstract class $ChatConversationCopyWith<$Res> {
       List<ChatParticipant> participants,
       List<ChatMessage> messages,
       String? residenceId,
-      String? bookingId,
+      String? reservationId,
       bool isUnread,
       DateTime createdAt,
       DateTime updatedAt});
@@ -634,7 +634,7 @@ class _$ChatConversationCopyWithImpl<$Res, $Val extends ChatConversation>
     Object? participants = null,
     Object? messages = null,
     Object? residenceId = freezed,
-    Object? bookingId = freezed,
+    Object? reservationId = freezed,
     Object? isUnread = null,
     Object? createdAt = null,
     Object? updatedAt = null,
@@ -656,9 +656,9 @@ class _$ChatConversationCopyWithImpl<$Res, $Val extends ChatConversation>
           ? _value.residenceId
           : residenceId // ignore: cast_nullable_to_non_nullable
               as String?,
-      bookingId: freezed == bookingId
-          ? _value.bookingId
-          : bookingId // ignore: cast_nullable_to_non_nullable
+      reservationId: freezed == reservationId
+          ? _value.reservationId
+          : reservationId // ignore: cast_nullable_to_non_nullable
               as String?,
       isUnread: null == isUnread
           ? _value.isUnread
@@ -689,7 +689,7 @@ abstract class _$$ChatConversationImplCopyWith<$Res>
       List<ChatParticipant> participants,
       List<ChatMessage> messages,
       String? residenceId,
-      String? bookingId,
+      String? reservationId,
       bool isUnread,
       DateTime createdAt,
       DateTime updatedAt});
@@ -712,7 +712,7 @@ class __$$ChatConversationImplCopyWithImpl<$Res>
     Object? participants = null,
     Object? messages = null,
     Object? residenceId = freezed,
-    Object? bookingId = freezed,
+    Object? reservationId = freezed,
     Object? isUnread = null,
     Object? createdAt = null,
     Object? updatedAt = null,
@@ -734,9 +734,9 @@ class __$$ChatConversationImplCopyWithImpl<$Res>
           ? _value.residenceId
           : residenceId // ignore: cast_nullable_to_non_nullable
               as String?,
-      bookingId: freezed == bookingId
-          ? _value.bookingId
-          : bookingId // ignore: cast_nullable_to_non_nullable
+      reservationId: freezed == reservationId
+          ? _value.reservationId
+          : reservationId // ignore: cast_nullable_to_non_nullable
               as String?,
       isUnread: null == isUnread
           ? _value.isUnread
@@ -762,7 +762,7 @@ class _$ChatConversationImpl implements _ChatConversation {
       required final List<ChatParticipant> participants,
       final List<ChatMessage> messages = const [],
       this.residenceId,
-      this.bookingId,
+      this.reservationId,
       this.isUnread = false,
       required this.createdAt,
       required this.updatedAt})
@@ -794,7 +794,7 @@ class _$ChatConversationImpl implements _ChatConversation {
   @override
   final String? residenceId;
   @override
-  final String? bookingId;
+  final String? reservationId;
   @override
   @JsonKey()
   final bool isUnread;
@@ -805,7 +805,7 @@ class _$ChatConversationImpl implements _ChatConversation {
 
   @override
   String toString() {
-    return 'ChatConversation(id: $id, participants: $participants, messages: $messages, residenceId: $residenceId, bookingId: $bookingId, isUnread: $isUnread, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ChatConversation(id: $id, participants: $participants, messages: $messages, residenceId: $residenceId, reservationId: $reservationId, isUnread: $isUnread, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -819,8 +819,8 @@ class _$ChatConversationImpl implements _ChatConversation {
             const DeepCollectionEquality().equals(other._messages, _messages) &&
             (identical(other.residenceId, residenceId) ||
                 other.residenceId == residenceId) &&
-            (identical(other.bookingId, bookingId) ||
-                other.bookingId == bookingId) &&
+            (identical(other.reservationId, reservationId) ||
+                other.reservationId == reservationId) &&
             (identical(other.isUnread, isUnread) ||
                 other.isUnread == isUnread) &&
             (identical(other.createdAt, createdAt) ||
@@ -837,7 +837,7 @@ class _$ChatConversationImpl implements _ChatConversation {
       const DeepCollectionEquality().hash(_participants),
       const DeepCollectionEquality().hash(_messages),
       residenceId,
-      bookingId,
+      reservationId,
       isUnread,
       createdAt,
       updatedAt);
@@ -865,7 +865,7 @@ abstract class _ChatConversation implements ChatConversation {
       required final List<ChatParticipant> participants,
       final List<ChatMessage> messages,
       final String? residenceId,
-      final String? bookingId,
+      final String? reservationId,
       final bool isUnread,
       required final DateTime createdAt,
       required final DateTime updatedAt}) = _$ChatConversationImpl;
@@ -882,7 +882,7 @@ abstract class _ChatConversation implements ChatConversation {
   @override
   String? get residenceId;
   @override
-  String? get bookingId;
+  String? get reservationId;
   @override
   bool get isUnread;
   @override

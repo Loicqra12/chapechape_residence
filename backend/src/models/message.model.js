@@ -14,9 +14,9 @@ const conversationSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    bookingId: {
+    reservationId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Booking'
+        ref: 'Reservation'
     },
     residenceId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -68,9 +68,9 @@ const messageSchema = new mongoose.Schema({
         name: String,
         size: Number
     }],
-    bookingId: {
+    reservationId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Booking'
+        ref: 'Reservation'
     },
     createdAt: {
         type: Date,
@@ -83,7 +83,7 @@ conversationSchema.statics.getUserConversations = async function(userId) {
     const conversations = await this.find({ participants: userId })
         .populate('participants', 'name avatar')
         .populate('lastMessage')
-        .populate('bookingId', 'status')
+        .populate('reservationId', 'status')
         .populate('residenceId', 'name')
         .sort('-updatedAt');
 
@@ -100,8 +100,8 @@ conversationSchema.statics.getUserConversations = async function(userId) {
             unreadCount: conversation.unreadCount,
             residenceId: conversation.residenceId ? conversation.residenceId._id : null,
             residenceName: conversation.residenceId ? conversation.residenceId.name : null,
-            bookingId: conversation.bookingId ? conversation.bookingId._id : null,
-            bookingStatus: conversation.bookingId ? conversation.bookingId.status : null
+            reservationId: conversation.reservationId ? conversation.reservationId._id : null,
+            reservationStatus: conversation.reservationId ? conversation.reservationId.status : null
         };
     });
 };
@@ -125,7 +125,7 @@ messageSchema.statics.getConversationMessages = async function(conversationId, p
         read: message.read,
         readAt: message.readAt,
         attachments: message.attachments,
-        bookingId: message.bookingId
+        reservationId: message.reservationId
     }));
 };
 
@@ -150,6 +150,26 @@ messageSchema.pre('updateMany', async function(next) {
             { _id: this._conditions.conversation },
             { $set: { unreadCount: 0 } }
         );
+    }
+    next();
+});
+
+// Middleware de validation pour la création de conversation
+conversationSchema.pre('save', async function(next) {
+    if (this.isNew && this.reservationId) {
+        try {
+            // Vérifier si la conversation est liée à une réservation
+            const Reservation = mongoose.model('Reservation');
+            const reservation = await Reservation.findById(this.reservationId);
+            
+            // Si la réservation existe mais n'a pas la messagerie activée
+            if (reservation && !reservation.messagingEnabled) {
+                const error = new Error('La conversation ne peut pas être créée car la messagerie n\'est pas activée pour cette réservation');
+                return next(error);
+            }
+        } catch (error) {
+            return next(error);
+        }
     }
     next();
 });

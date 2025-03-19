@@ -9,10 +9,19 @@ class LoadReservations extends ReservationEvent {}
 
 class LoadMyReservations extends ReservationEvent {}
 
+class LoadPartnerReservations extends ReservationEvent {}
+
 class LoadResidenceReservations extends ReservationEvent {
   final String residenceId;
 
   LoadResidenceReservations(this.residenceId);
+}
+
+// Nouvel événement pour charger les détails d'une réservation spécifique
+class LoadReservationDetails extends ReservationEvent {
+  final String reservationId;
+
+  LoadReservationDetails(this.reservationId);
 }
 
 class UpdateReservationStatus extends ReservationEvent {
@@ -26,6 +35,14 @@ class CancelReservation extends ReservationEvent {
   final String reservationId;
 
   CancelReservation(this.reservationId);
+}
+
+// Nouvel événement pour ajouter une note à une réservation
+class AddReservationNote extends ReservationEvent {
+  final String reservationId;
+  final String note;
+
+  AddReservationNote(this.reservationId, this.note);
 }
 
 // States
@@ -58,6 +75,13 @@ class ReservationLoaded extends ReservationState {
   }
 }
 
+// Nouvel état pour les détails d'une réservation spécifique
+class ReservationDetailsLoaded extends ReservationState {
+  final Reservation reservation;
+
+  ReservationDetailsLoaded(this.reservation);
+}
+
 class ReservationError extends ReservationState {
   final String message;
 
@@ -70,9 +94,13 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
   ReservationBloc(this._reservationService) : super(ReservationInitial()) {
     on<LoadReservations>(_onLoadReservations);
     on<LoadMyReservations>(_onLoadMyReservations);
+    on<LoadPartnerReservations>(_onLoadPartnerReservations);
     on<LoadResidenceReservations>(_onLoadResidenceReservations);
     on<UpdateReservationStatus>(_onUpdateReservationStatus);
     on<CancelReservation>(_onCancelReservation);
+    // Nouveaux gestionnaires d'événements
+    on<LoadReservationDetails>(_onLoadReservationDetails);
+    on<AddReservationNote>(_onAddReservationNote);
   }
 
   Future<void> _onLoadReservations(
@@ -97,6 +125,30 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       final reservations = await _reservationService.getMyReservations();
       emit(ReservationLoaded(reservations));
     } catch (e) {
+      emit(ReservationError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadPartnerReservations(
+    LoadPartnerReservations event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      emit(ReservationLoading());
+      
+      // Utiliser d'abord la méthode directe qui utilise le nouvel endpoint
+      List<Reservation> reservations = await _reservationService.getPartnerReservationsDirect();
+      
+      // Si ça échoue, revenir à la méthode indirecte
+      if (reservations.isEmpty) {
+        print("Utilisation de la méthode indirecte pour récupérer les réservations...");
+        reservations = await _reservationService.getPartnerReservations();
+      }
+      
+      print("Réservations partenaire chargées: ${reservations.length}");
+      emit(ReservationLoaded(reservations));
+    } catch (e) {
+      print("Erreur lors du chargement des réservations partenaire: $e");
       emit(ReservationError(e.toString()));
     }
   }
@@ -126,8 +178,14 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
         event.newStatus,
       );
       
-      // Recharger les réservations pour avoir l'état à jour
-      add(LoadReservations());
+      // Recharger les détails de la réservation pour avoir l'état à jour
+      // au lieu de recharger toutes les réservations
+      final currentState = state;
+      if (currentState is ReservationDetailsLoaded) {
+        add(LoadReservationDetails(event.reservationId));
+      } else {
+        add(LoadMyReservations());
+      }
     } catch (e) {
       emit(ReservationError(e.toString()));
     }
@@ -140,8 +198,60 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     try {
       await _reservationService.cancelReservation(event.reservationId);
       
-      // Recharger les réservations pour avoir l'état à jour
-      add(LoadReservations());
+      // Recharger selon l'état actuel
+      final currentState = state;
+      if (currentState is ReservationDetailsLoaded) {
+        add(LoadReservationDetails(event.reservationId));
+      } else {
+        add(LoadMyReservations());
+      }
+    } catch (e) {
+      emit(ReservationError(e.toString()));
+    }
+  }
+
+  // Ajouter la nouvelle méthode pour charger les détails d'une réservation
+  Future<void> _onLoadReservationDetails(
+    LoadReservationDetails event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      emit(ReservationLoading());
+      final reservation = await _reservationService.getReservation(event.reservationId);
+      
+      if (reservation != null) {
+        emit(ReservationDetailsLoaded(reservation));
+      } else {
+        emit(ReservationError('Réservation non trouvée'));
+      }
+    } catch (e) {
+      emit(ReservationError(e.toString()));
+    }
+  }
+
+  // Ajouter la nouvelle méthode pour ajouter une note à une réservation
+  Future<void> _onAddReservationNote(
+    AddReservationNote event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      emit(ReservationLoading());
+      
+      try {
+        await _reservationService.addNote(event.reservationId, event.note);
+      } catch (e) {
+        print("Erreur lors de l'ajout de la note: $e");
+        // Continuer même si l'ajout de note échoue
+      }
+      
+      // Recharger la réservation pour avoir les données à jour
+      final reservation = await _reservationService.getReservation(event.reservationId);
+      
+      if (reservation != null) {
+        emit(ReservationDetailsLoaded(reservation));
+      } else {
+        emit(ReservationError('Impossible de recharger les détails de la réservation'));
+      }
     } catch (e) {
       emit(ReservationError(e.toString()));
     }

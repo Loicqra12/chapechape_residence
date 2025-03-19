@@ -57,13 +57,13 @@ Future<void> main() async {
     chatServiceInstance: chatService,
     apiServiceInstance: apiService,
   );
-  
+
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc(
-            authService: authService,
+      authService: authService,
           )..add(AuthCheckRequested()),
         ),
         BlocProvider<LocaleCubit>(
@@ -79,7 +79,7 @@ Future<void> main() async {
         ),
         BlocProvider<ChatBloc>(
           create: (context) => ChatBloc(
-            chatService: chatService,
+      chatService: chatService,
           ),
         ),
         BlocProvider<UserBloc>(
@@ -89,12 +89,12 @@ Future<void> main() async {
         ),
         BlocProvider<NotificationBloc>(
           create: (context) => NotificationBloc(
-            notificationRepository: notificationRepository,
+      notificationRepository: notificationRepository,
           ),
         ),
         BlocProvider<FavoriteBloc>(
           create: (context) => FavoriteBloc(
-            favoriteRepository: favoriteRepository,
+      favoriteRepository: favoriteRepository,
           ),
         ),
         BlocProvider<BookingBloc>(

@@ -34,8 +34,8 @@ class Message {
   final DateTime timestamp;
   final bool read;
   final List<MessageAttachment> attachments;
-  final String? bookingId;
-  final String? bookingStatus;
+  final String? reservationId;
+  final String? reservationStatus;
   final Map<String, dynamic>? metadata;
   final Conversation? conversation;
 
@@ -49,8 +49,8 @@ class Message {
     required this.timestamp,
     required this.read,
     required this.attachments,
-    this.bookingId,
-    this.bookingStatus,
+    this.reservationId,
+    this.reservationStatus,
     this.metadata,
     this.conversation,
   });
@@ -68,8 +68,8 @@ class Message {
     DateTime? timestamp,
     bool? read,
     List<MessageAttachment>? attachments,
-    String? bookingId,
-    String? bookingStatus,
+    String? reservationId,
+    String? reservationStatus,
     Map<String, dynamic>? metadata,
     Conversation? conversation,
   }) {
@@ -83,8 +83,8 @@ class Message {
       timestamp: timestamp ?? this.timestamp,
       read: read ?? this.read,
       attachments: attachments ?? this.attachments,
-      bookingId: bookingId ?? this.bookingId,
-      bookingStatus: bookingStatus ?? this.bookingStatus,
+      reservationId: reservationId ?? this.reservationId,
+      reservationStatus: reservationStatus ?? this.reservationStatus,
       metadata: metadata ?? this.metadata,
       conversation: conversation ?? this.conversation,
     );

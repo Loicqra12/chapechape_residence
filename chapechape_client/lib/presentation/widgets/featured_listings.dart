@@ -257,6 +257,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
   // Méthode de conversion des types
   model.ResidenceType _convertToModelType(assets.ResidenceType type) {
     switch (type) {
+      // Types de base
       case assets.ResidenceType.apartment:
         return model.ResidenceType.apartment;
       case assets.ResidenceType.villa:
@@ -271,9 +272,57 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         return model.ResidenceType.hotel;
       case assets.ResidenceType.room:
         return model.ResidenceType.house;
+        
+      // 🏠 Résidences meublées
+      case assets.ResidenceType.studioMeuble:
+        return model.ResidenceType.studioMeuble;
+      case assets.ResidenceType.appartementMeuble:
+        return model.ResidenceType.appartementMeuble;
+      case assets.ResidenceType.villaMeublee:
+        return model.ResidenceType.villaMeublee;
+      case assets.ResidenceType.grenier:
+        return model.ResidenceType.grenier;
+        
+      // 🏨 Hôtels & Hébergements classiques
+      case assets.ResidenceType.hotelDePassage:
+        return model.ResidenceType.hotelDePassage;
+      case assets.ResidenceType.motel:
+        return model.ResidenceType.motel;
+      case assets.ResidenceType.boutiqueHotel:
+        return model.ResidenceType.boutiqueHotel;
+      case assets.ResidenceType.hotelDeLuxe:
+        return model.ResidenceType.hotelDeLuxe;
+      case assets.ResidenceType.aubergeEtMaisonDHotes:
+        return model.ResidenceType.aubergeEtMaisonDHotes;
+      case assets.ResidenceType.residenceHoteliere:
+        return model.ResidenceType.residenceHoteliere;
+        
+      // 🌍 Hébergements insolites & nature
+      case assets.ResidenceType.lodgeEtEcolodge:
+        return model.ResidenceType.lodgeEtEcolodge;
+      case assets.ResidenceType.caseTraditionnelle:
+        return model.ResidenceType.caseTraditionnelle;
+      case assets.ResidenceType.maisonFlottante:
+        return model.ResidenceType.maisonFlottante;
+      case assets.ResidenceType.campementTouristique:
+        return model.ResidenceType.campementTouristique;
+        
+      // 🏘️ Colocation & résidences partagées et autres cas
       case assets.ResidenceType.penthouse:
       case assets.ResidenceType.coworking:
       case assets.ResidenceType.student:
+      case assets.ResidenceType.chambreEnColocation:
+      case assets.ResidenceType.cohabitation:
+      case assets.ResidenceType.residenceUniversitaire:
+      case assets.ResidenceType.citeDortoir:
+      case assets.ResidenceType.appartementNonMeuble:
+      case assets.ResidenceType.villaNonMeublee:
+      case assets.ResidenceType.immeuble:
+      case assets.ResidenceType.courCommune:
+      case assets.ResidenceType.maisonDHotesEconomique:
+      case assets.ResidenceType.residenceFamilialeEnLocation:
+      case assets.ResidenceType.chambresDePassage:
+      case assets.ResidenceType.other:
       default:
         return model.ResidenceType.other;
     }

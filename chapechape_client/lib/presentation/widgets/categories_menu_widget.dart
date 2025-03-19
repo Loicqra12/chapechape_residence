@@ -183,14 +183,24 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
 
   List<Widget> _getCategoryItems(BuildContext context) {
     final categories = [
+      // Types de base traditionnels
       {'type': ResidenceType.apartment, 'title': 'Appartements'},
       {'type': ResidenceType.studio, 'title': 'Studios'},
       {'type': ResidenceType.villa, 'title': 'Villas'},
-      {'type': ResidenceType.penthouse, 'title': 'Penthouses'},
-      {'type': ResidenceType.bungalow, 'title': 'Bungalows'},
       {'type': ResidenceType.hotel, 'title': 'Hôtels'},
-      {'type': ResidenceType.room, 'title': 'Chambres'},
       {'type': ResidenceType.luxury, 'title': 'Luxe'},
+      
+      // Nouveaux groupes de catégories
+      {'type': ResidenceType.studioMeuble, 'title': 'Studios meublés'},
+      {'type': ResidenceType.appartementMeuble, 'title': 'Apparts meublés'},
+      {'type': ResidenceType.boutiqueHotel, 'title': 'Boutique-Hôtels'},
+      {'type': ResidenceType.lodgeEtEcolodge, 'title': 'Lodges & Écolodges'},
+      {'type': ResidenceType.maisonFlottante, 'title': 'Maisons flottantes'},
+      {'type': ResidenceType.chambreEnColocation, 'title': 'Colocation'},
+      {'type': ResidenceType.residenceUniversitaire, 'title': 'Pour étudiants'},
+      {'type': ResidenceType.appartementNonMeuble, 'title': 'Longue durée'},
+      {'type': ResidenceType.courCommune, 'title': 'Cours communes'},
+      {'type': ResidenceType.maisonDHotesEconomique, 'title': 'Économiques'},
     ];
 
     return categories.map((category) {
@@ -233,11 +243,22 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
             padding: const EdgeInsets.all(15),
             child: Row(
               children: [
-                Icon(
-                  _getCategoryIcon(type),
-                  size: 24,
-                  color: Theme.of(context).primaryColor,
-                ),
+                type.hasCustomIcon 
+                    ? Icon(
+                        type.materialIcon,
+                        size: 24,
+                        color: Theme.of(context).primaryColor,
+                      )
+                    : Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage(type.iconPath),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -340,7 +361,14 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
   }
 
   IconData _getCategoryIcon(ResidenceType type) {
+    // Si le type a une icône matérielle personnalisée, l'utiliser
+    if (type.hasCustomIcon) {
+      return type.materialIcon;
+    }
+    
+    // Sinon, utiliser les icônes existantes
     switch (type) {
+      // Types existants
       case ResidenceType.apartment:
         return Icons.apartment;
       case ResidenceType.studio:
@@ -361,10 +389,144 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
         return Icons.bedroom_child;
       case ResidenceType.luxury:
         return Icons.star;
+        
+      // 🏠 Résidences meublées
+      case ResidenceType.studioMeuble:
+        return Icons.single_bed;
+      case ResidenceType.appartementMeuble:
+        return Icons.apartment;
+      case ResidenceType.villaMeublee:
+        return Icons.house;
+        
+      // 🏨 Hôtels & Hébergements classiques
+      case ResidenceType.hotelDePassage:
+        return Icons.hotel;
+      case ResidenceType.motel:
+        return Icons.local_hotel;
+      case ResidenceType.boutiqueHotel:
+        return Icons.storefront;
+      case ResidenceType.hotelDeLuxe:
+        return Icons.stars;
+      case ResidenceType.aubergeEtMaisonDHotes:
+        return Icons.house_siding;
+      case ResidenceType.residenceHoteliere:
+        return Icons.apartment;
+        
+      // 🌍 Hébergements insolites & nature
+      case ResidenceType.lodgeEtEcolodge:
+        return Icons.forest;
+        
+      // 🏘️ Colocation & résidences partagées
+      case ResidenceType.chambreEnColocation:
+        return Icons.people;
+      case ResidenceType.cohabitation:
+        return Icons.diversity_3;
+      case ResidenceType.residenceUniversitaire:
+        return Icons.school;
+      case ResidenceType.citeDortoir:
+        return Icons.bed;
+        
+      // 🏡 Résidences longue durée
+      case ResidenceType.appartementNonMeuble:
+        return Icons.apartment;
+      case ResidenceType.villaNonMeublee:
+        return Icons.house;
+        
+      // ⛺ Hébergements économiques et populaires
+      case ResidenceType.maisonDHotesEconomique:
+        return Icons.cottage;
+      case ResidenceType.residenceFamilialeEnLocation:
+        return Icons.family_restroom;
+      case ResidenceType.chambresDePassage:
+        return Icons.bedroom_child;
+        
+      // Autre
+      case ResidenceType.other:
+      default:
+        return Icons.home;
     }
   }
 
   List<String> _getCategoryFeatures(ResidenceType type) {
+    // Appartements meublés et studios meublés
+    if (type == ResidenceType.studioMeuble || 
+        type == ResidenceType.appartementMeuble ||
+        type == ResidenceType.villaMeublee) {
+      return [
+        'Tout équipé',
+        'Prêt à emménager',
+        'Court & moyen séjour',
+        'Sans frais d\'ameublement',
+      ];
+    }
+    
+    // Hébergements classiques & luxe
+    if (type == ResidenceType.hotel || 
+        type == ResidenceType.luxury ||
+        type == ResidenceType.boutiqueHotel ||
+        type == ResidenceType.hotelDeLuxe ||
+        type == ResidenceType.residenceHoteliere) {
+      return [
+        'Services hôteliers',
+        'Séjours courts',
+        'Confort premium',
+        'Restaurant & room service',
+      ];
+    }
+    
+    // Hébergements insolites & nature
+    if (type == ResidenceType.bungalow || 
+        type == ResidenceType.lodgeEtEcolodge ||
+        type == ResidenceType.maisonFlottante ||
+        type == ResidenceType.campementTouristique ||
+        type == ResidenceType.caseTraditionnelle) {
+      return [
+        'Expérience unique',
+        'Proche de la nature',
+        'Séjours détente',
+        'Aventure & découverte',
+      ];
+    }
+    
+    // Colocation & résidences partagées
+    if (type == ResidenceType.chambreEnColocation || 
+        type == ResidenceType.cohabitation ||
+        type == ResidenceType.residenceUniversitaire ||
+        type == ResidenceType.citeDortoir) {
+      return [
+        'Espaces communs',
+        'Budget abordable',
+        'Vie communautaire',
+        'Charges incluses',
+      ];
+    }
+    
+    // Résidences longue durée
+    if (type == ResidenceType.appartementNonMeuble || 
+        type == ResidenceType.villaNonMeublee ||
+        type == ResidenceType.immeuble ||
+        type == ResidenceType.courCommune) {
+      return [
+        'Location longue durée',
+        'Bail standard',
+        'Investissement',
+        'Personnalisable',
+      ];
+    }
+    
+    // Hébergements économiques
+    if (type == ResidenceType.maisonDHotesEconomique || 
+        type == ResidenceType.residenceFamilialeEnLocation ||
+        type == ResidenceType.chambresDePassage) {
+      return [
+        'Prix abordables',
+        'Ambiance locale',
+        'Authenticité',
+        'Court séjour économique',
+      ];
+    }
+    
+    // Types génériques existants
     if (type.isVacationResidence) {
       return [
         'Locations saisonnières',

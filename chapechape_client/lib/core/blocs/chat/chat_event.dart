@@ -7,7 +7,7 @@ class ChatEvent with _$ChatEvent {
   const factory ChatEvent.createConversation({
     required String userId,
     String? residenceId,
-    String? bookingId,
+    String? reservationId,
   }) = CreateConversation;
   
   const factory ChatEvent.sendMessage({

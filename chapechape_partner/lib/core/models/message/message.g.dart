@@ -36,8 +36,8 @@ Message _$MessageFromJson(Map<String, dynamic> json) => Message(
       attachments: (json['attachments'] as List<dynamic>)
           .map((e) => MessageAttachment.fromJson(e as Map<String, dynamic>))
           .toList(),
-      bookingId: json['bookingId'] as String?,
-      bookingStatus: json['bookingStatus'] as String?,
+      reservationId: json['reservationId'] as String?,
+      reservationStatus: json['reservationStatus'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
       conversation: json['conversation'] == null
           ? null
@@ -54,8 +54,8 @@ Map<String, dynamic> _$MessageToJson(Message instance) => <String, dynamic>{
       'timestamp': instance.timestamp.toIso8601String(),
       'read': instance.read,
       'attachments': instance.attachments,
-      'bookingId': instance.bookingId,
-      'bookingStatus': instance.bookingStatus,
+      'reservationId': instance.reservationId,
+      'reservationStatus': instance.reservationStatus,
       'metadata': instance.metadata,
       'conversation': instance.conversation,
     };

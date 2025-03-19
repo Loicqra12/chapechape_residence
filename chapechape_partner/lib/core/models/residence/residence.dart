@@ -40,6 +40,17 @@ class Residence {
   final double halfDayRate;
   final double fullDayRate;
   final double weekendRate;
+  
+  // Options spécifiques ajoutées
+  final Map<String, dynamic>? options;
+  
+  // Propriétés de localisation
+  final String? country;
+  final String? countryName;
+  final String? region;
+  final String? regionName;
+  final String? cityCode;
+  final String? cityName;
 
   Residence({
     required this.id,
@@ -77,6 +88,13 @@ class Residence {
     this.halfDayRate = 0.0,
     this.fullDayRate = 0.0,
     this.weekendRate = 0.0,
+    this.options,
+    this.country,
+    this.countryName,
+    this.region,
+    this.regionName,
+    this.cityCode,
+    this.cityName,
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -108,6 +126,40 @@ class Residence {
     final halfDayRate = (json['halfDayRate'] as num?)?.toDouble() ?? 0.0;
     final fullDayRate = (json['fullDayRate'] as num?)?.toDouble() ?? 0.0;
     final weekendRate = (json['weekendRate'] as num?)?.toDouble() ?? 0.0;
+    
+    // Extraire les options
+    Map<String, dynamic>? options = json['options'] as Map<String, dynamic>?;
+    
+    // Si les options ne sont pas présentes directement, essayer de les construire
+    if (options == null) {
+      options = {
+        'hasPool': json['hasPool'] ?? false,
+        'isVacationResidence': json['isVacationResidence'] ?? false,
+        'isSpecialResidence': json['isSpecialResidence'] ?? false,
+      };
+      
+      // Ajouter d'autres options si présentes dans le JSON
+      for (final option in [
+        'hasAirConditioning', 'hasWifi', 'hasParking', 'hasSecurity',
+        'hasCleaning', 'hasHotWater', 'hasBalcony', 'hasGarden',
+        'hasTerrace', 'hasKitchen', 'hasSharedKitchen', 'hasTv',
+        'hasGenerator', 'hasSolarEnergy', 'hasGym', 'hasSpa',
+        'hasRestaurant', 'hasBar', 'hasRoomService', 'hasLaundry',
+        'hasMeetingRoom'
+      ]) {
+        if (json[option] != null) {
+          options[option] = json[option];
+        }
+      }
+    }
+    
+    // Extraire les informations de localisation
+    String? country = json['country']?.toString();
+    String? countryName = json['countryName']?.toString();
+    String? region = json['region']?.toString();
+    String? regionName = json['regionName']?.toString();
+    String? cityCode = json['cityCode']?.toString();
+    String? cityName = json['cityName']?.toString();
     
     return Residence(
       id: json['_id']?.toString() ?? '',
@@ -149,6 +201,13 @@ class Residence {
       halfDayRate: halfDayRate,
       fullDayRate: fullDayRate,
       weekendRate: weekendRate,
+      options: options,
+      country: country,
+      countryName: countryName,
+      region: region,
+      regionName: regionName,
+      cityCode: cityCode,
+      cityName: cityName,
     );
   }
 
@@ -193,6 +252,13 @@ class Residence {
       'halfDayRate': halfDayRate,
       'fullDayRate': fullDayRate,
       'weekendRate': weekendRate,
+      'options': options,
+      'country': country,
+      'countryName': countryName,
+      'region': region,
+      'regionName': regionName,
+      'cityCode': cityCode,
+      'cityName': cityName,
     };
   }
 

@@ -268,6 +268,7 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
 
   model.ResidenceType? convertToResidenceType(assets.ResidenceType type) {
     switch (type) {
+      // Types de base
       case assets.ResidenceType.apartment:
         return model.ResidenceType.apartment;
       case assets.ResidenceType.luxury:
@@ -276,8 +277,83 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
         return model.ResidenceType.villa;
       case assets.ResidenceType.studio:
         return model.ResidenceType.studio;
+      case assets.ResidenceType.bungalow:
+        return model.ResidenceType.bungalow;
+      case assets.ResidenceType.hotel:
+        return model.ResidenceType.hotel;
+      case assets.ResidenceType.room:
+        return model.ResidenceType.house;
+      case assets.ResidenceType.penthouse:
+        return model.ResidenceType.penthouse;
+      case assets.ResidenceType.coworking:
+      case assets.ResidenceType.student:
+        
+      // 🏠 Résidences meublées
+      case assets.ResidenceType.studioMeuble:
+        return model.ResidenceType.studioMeuble;
+      case assets.ResidenceType.appartementMeuble:
+        return model.ResidenceType.appartementMeuble;
+      case assets.ResidenceType.villaMeublee:
+        return model.ResidenceType.villaMeublee;
+      case assets.ResidenceType.grenier:
+        return model.ResidenceType.grenier;
+        
+      // 🏨 Hôtels & Hébergements classiques
+      case assets.ResidenceType.hotelDePassage:
+        return model.ResidenceType.hotelDePassage;
+      case assets.ResidenceType.motel:
+        return model.ResidenceType.motel;
+      case assets.ResidenceType.boutiqueHotel:
+        return model.ResidenceType.boutiqueHotel;
+      case assets.ResidenceType.hotelDeLuxe:
+        return model.ResidenceType.hotelDeLuxe;
+      case assets.ResidenceType.aubergeEtMaisonDHotes:
+        return model.ResidenceType.aubergeEtMaisonDHotes;
+      case assets.ResidenceType.residenceHoteliere:
+        return model.ResidenceType.residenceHoteliere;
+        
+      // 🌍 Hébergements insolites & nature
+      case assets.ResidenceType.lodgeEtEcolodge:
+        return model.ResidenceType.lodgeEtEcolodge;
+      case assets.ResidenceType.caseTraditionnelle:
+        return model.ResidenceType.caseTraditionnelle;
+      case assets.ResidenceType.maisonFlottante:
+        return model.ResidenceType.maisonFlottante;
+      case assets.ResidenceType.campementTouristique:
+        return model.ResidenceType.campementTouristique;
+        
+      // 🏘️ Colocation & résidences partagées
+      case assets.ResidenceType.chambreEnColocation:
+        return model.ResidenceType.chambreEnColocation;
+      case assets.ResidenceType.cohabitation:
+        return model.ResidenceType.cohabitation;
+      case assets.ResidenceType.residenceUniversitaire:
+        return model.ResidenceType.residenceUniversitaire;
+      case assets.ResidenceType.citeDortoir:
+        return model.ResidenceType.citeDortoir;
+        
+      // 🏡 Résidences longue durée
+      case assets.ResidenceType.appartementNonMeuble:
+        return model.ResidenceType.appartementNonMeuble;
+      case assets.ResidenceType.villaNonMeublee:
+        return model.ResidenceType.villaNonMeublee;
+      case assets.ResidenceType.immeuble:
+        return model.ResidenceType.immeuble;
+      case assets.ResidenceType.courCommune:
+        return model.ResidenceType.courCommune;
+        
+      // ⛺ Hébergements économiques et populaires
+      case assets.ResidenceType.maisonDHotesEconomique:
+        return model.ResidenceType.maisonDHotesEconomique;
+      case assets.ResidenceType.residenceFamilialeEnLocation:
+        return model.ResidenceType.residenceFamilialeEnLocation;
+      case assets.ResidenceType.chambresDePassage:
+        return model.ResidenceType.chambresDePassage;
+        
+      // Valeur par défaut
+      case assets.ResidenceType.other:
       default:
-        return model.ResidenceType.other; // Remplacer null par une valeur par défaut
+        return model.ResidenceType.other;
     }
   }
 }

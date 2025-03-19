@@ -46,7 +46,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final conversation = await _chatService.createConversation(
         userId: event.userId,
         residenceId: event.residenceId,
-        bookingId: event.bookingId,
+        reservationId: event.reservationId,
       );
       final conversations = await _chatService.getConversations();
       emit(ChatState.loaded(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
 import '../../../core/models/reservation/reservation.dart';
@@ -14,9 +15,7 @@ class ReservationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ReservationBloc(
-        ReservationService(
-          ApiService().dio,
-        ),
+        context.read<ReservationService>(),
       )..add(LoadMyReservations()),
       child: const _ReservationsView(),
     );
@@ -40,7 +39,8 @@ class _ReservationsViewState extends State<_ReservationsView> {
   }
 
   void _loadReservations() {
-    context.read<ReservationBloc>().add(LoadMyReservations());
+    print("Chargement des réservations partenaire...");
+    context.read<ReservationBloc>().add(LoadPartnerReservations());
   }
 
   @override
@@ -62,6 +62,7 @@ class _ReservationsViewState extends State<_ReservationsView> {
               }
 
               if (state is ReservationError) {
+                print("Erreur de chargement des réservations: ${state.message}");
                 return SliverFillRemaining(
                   child: Center(
                     child: Text(
@@ -75,6 +76,7 @@ class _ReservationsViewState extends State<_ReservationsView> {
               }
 
               if (state is ReservationLoaded) {
+                print("Réservations chargées: ${state.reservations.length}");
                 if (state.reservations.isEmpty) {
                   return const SliverFillRemaining(
                     child: Center(
@@ -170,7 +172,7 @@ class _ReservationsViewState extends State<_ReservationsView> {
 
 class _ReservationCard extends StatelessWidget {
   final Reservation reservation;
-  final ValueChanged<ReservationStatus> onStatusUpdate;
+  final Function(ReservationStatus) onStatusUpdate;
   final VoidCallback onCancel;
 
   const _ReservationCard({
@@ -189,196 +191,194 @@ class _ReservationCard extends StatelessWidget {
     );
 
     return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête avec image de la résidence
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          context.go('/reservations/${reservation.id}');
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Image.network(
+                reservation.residenceImage,
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
-            child: Image.network(
-              reservation.residenceImage,
-              height: 150,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Titre et statut
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        reservation.residenceName,
-                        style: theme.textTheme.titleLarge,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        reservation.status.displayName,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: statusColor,
+            
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          reservation.residenceName,
+                          style: theme.textTheme.titleLarge,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                
-                // Informations client
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    child: Text(
-                      reservation.clientName[0].toUpperCase(),
-                    ),
-                  ),
-                  title: Text(reservation.clientName),
-                  subtitle: Text(reservation.clientPhone),
-                ),
-                
-                const Divider(),
-                
-                // Détails de la réservation
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DetailItem(
-                        icon: Icons.calendar_today,
-                        label: 'Dates',
-                        value: reservation.formattedDates,
-                      ),
-                    ),
-                    Expanded(
-                      child: _DetailItem(
-                        icon: Icons.people,
-                        label: 'Voyageurs',
-                        value: '${reservation.guestsCount} personne${reservation.guestsCount > 1 ? 's' : ''}',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DetailItem(
-                        icon: Icons.attach_money,
-                        label: 'Montant',
-                        value: reservation.formattedTotalAmount,
-                      ),
-                    ),
-                    Expanded(
-                      child: _DetailItem(
-                        icon: Icons.access_time,
-                        label: 'Créée le',
-                        value: reservation.formattedCreatedAt,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                if (reservation.notes != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.note,
-                          size: 20,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            reservation.notes!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          reservation.status.displayName,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: statusColor,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-                
-                const SizedBox(height: 16),
-                
-                // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (reservation.status != ReservationStatus.cancelled)
-                      TextButton.icon(
-                        onPressed: onCancel,
-                        icon: const Icon(Icons.cancel),
-                        label: const Text('Annuler'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.error,
+                  const SizedBox(height: 8),
+                  
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      child: Text(
+                        reservation.clientName[0].toUpperCase(),
+                      ),
+                    ),
+                    title: Text(reservation.clientName),
+                    subtitle: Text(reservation.clientPhone),
+                  ),
+                  
+                  const Divider(),
+                  
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DetailItem(
+                          icon: Icons.calendar_today,
+                          label: 'Dates',
+                          value: reservation.formattedDates,
                         ),
                       ),
-                    const SizedBox(width: 8),
-                    PopupMenuButton<ReservationStatus>(
-                      itemBuilder: (context) {
-                        return ReservationStatus.values
-                            .where((s) => s != reservation.status)
-                            .map((status) {
-                          return PopupMenuItem(
-                            value: status,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.circle,
-                                  size: 12,
-                                  color: Color(
-                                    int.parse(
-                                      status.color.replaceAll('#', '0xFF'),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(status.displayName),
-                              ],
+                      Expanded(
+                        child: _DetailItem(
+                          icon: Icons.people,
+                          label: 'Voyageurs',
+                          value: '${reservation.guestsCount} personne${reservation.guestsCount > 1 ? 's' : ''}',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DetailItem(
+                          icon: Icons.attach_money,
+                          label: 'Montant',
+                          value: reservation.formattedTotalAmount,
+                        ),
+                      ),
+                      Expanded(
+                        child: _DetailItem(
+                          icon: Icons.access_time,
+                          label: 'Créée le',
+                          value: reservation.formattedCreatedAt,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  if (reservation.notes != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.note,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              reservation.notes!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          );
-                        }).toList();
-                      },
-                      onSelected: onStatusUpdate,
-                      child: TextButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Changer le statut'),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ],
+                  
+                  const SizedBox(height: 16),
+                  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (reservation.status != ReservationStatus.cancelled)
+                        TextButton.icon(
+                          onPressed: onCancel,
+                          icon: const Icon(Icons.cancel),
+                          label: const Text('Annuler'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: theme.colorScheme.error,
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<ReservationStatus>(
+                        itemBuilder: (context) {
+                          return ReservationStatus.values
+                              .where((s) => s != reservation.status)
+                              .map((status) {
+                            return PopupMenuItem(
+                              value: status,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.circle,
+                                    size: 12,
+                                    color: Color(
+                                      int.parse(
+                                        status.color.replaceAll('#', '0xFF'),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(status.displayName),
+                                ],
+                              ),
+                            );
+                          }).toList();
+                        },
+                        onSelected: onStatusUpdate,
+                        child: TextButton.icon(
+                          onPressed: null,
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Changer le statut'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

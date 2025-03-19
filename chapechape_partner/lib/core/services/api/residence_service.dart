@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:dio/dio.dart';
 import '../../models/residence/residence.dart';
 import '../../models/residence/residence_image.dart';
 import '../../exceptions/api_exception.dart';
@@ -12,16 +13,36 @@ class ResidenceService {
   final String baseUrl;
   final http.Client client;
   final FlutterSecureStorage storage;
+  late Dio _dio;
 
   ResidenceService({
     required this.baseUrl,
     http.Client? client,
     FlutterSecureStorage? storage,
   }) : client = client ?? http.Client(),
-       storage = storage ?? const FlutterSecureStorage();
+       storage = storage ?? const FlutterSecureStorage() {
+    _dio = Dio(BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 3),
+    ));
+
+    // Interceptor pour ajouter le token aux requêtes
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await storage!.read(key: 'token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+      ),
+    );
+  }
 
   Future<Map<String, String>> _getAuthHeaders() async {
-    final token = await storage.read(key: 'token');
+    final token = await storage!.read(key: 'token');
     return {
       'Authorization': 'Bearer $token',
       'Accept': 'application/json',
@@ -103,7 +124,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/residences'),
+        Uri.parse('$baseUrl/residences/my-residences'),
         headers: headers,
       );
 
@@ -404,13 +425,7 @@ class ResidenceService {
         updatedAt: json['updatedAt'] != null 
             ? DateTime.parse(json['updatedAt'].toString()) 
             : DateTime.now(),
-        partnerInfo: json['partner'] is Map 
-            ? {
-                'id': json['partner']['_id']?.toString() ?? '',
-                'name': json['partner']['name']?.toString() ?? '',
-                'email': json['partner']['email']?.toString() ?? '',
-              }
-            : null,
+        partnerInfo: _extractPartnerInfo(json),
         images: _extractImages(json),
         mainImage: json['mainImage']?.toString(),
       );
@@ -517,29 +532,40 @@ class ResidenceService {
       'villa_meublee': 'villa',
       'penthouse': 'apartment',
       'loft': 'apartment',
+      'grenier': 'apartment',
       
-      // Hôtels
-      'hotel_passage': 'apartment',
-      'motel': 'apartment',
-      'boutique_hotel': 'apartment',
-      'hotel_luxe': 'apartment',
+      // Hôtels & Hébergements classiques
+      'hotel_passage': 'hotel',
+      'motel': 'hotel',
+      'boutique_hotel': 'hotel',
+      'hotel_luxe': 'hotel',
       'guest_house': 'house',
+      'residence_hoteliere': 'hotel',
       
-      // Hébergements insolites
+      // Hébergements insolites & nature
       'bungalow': 'house',
       'lodge': 'house',
       'case_traditionnelle': 'house',
       'maison_flottante': 'house',
+      'campement_touristique': 'house',
       
-      // Colocation
+      // Colocation & résidences partagées
       'chambre_colocation': 'apartment',
       'coliving': 'apartment',
       'maison_hotes': 'house',
+      'residence_universitaire': 'apartment',
+      'cite_dortoir': 'apartment',
       
       // Résidences longue durée
       'appartement_vide': 'apartment',
       'villa_vide': 'villa',
       'immeuble': 'apartment',
+      'cour_commune': 'house',
+      
+      // Hébergements économiques
+      'maison_hotes_economique': 'house',
+      'residence_familiale': 'house',
+      'chambres_passage': 'apartment',
     };
   
     return typeMapping[frontendType] ?? 'apartment';
@@ -547,7 +573,7 @@ class ResidenceService {
 
   Future<Residence> createResidence(Map<String, dynamic> data, List<ResidenceImage> images) async {
     try {
-      final token = await storage.read(key: 'token');
+      final token = await storage!.read(key: 'token');
       if (token == null) {
         throw ApiException(
           'Vous n\'êtes pas connecté. Veuillez vous connecter pour continuer.',
@@ -742,10 +768,10 @@ class ResidenceService {
 
   Future<void> uploadResidenceImages(String residenceId, List<ResidenceImage> images) async {
     try {
-      final token = await storage.read(key: 'token');
+      final token = await storage!.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
       );
 
       // Ajouter tous les headers nécessaires
@@ -774,6 +800,7 @@ class ResidenceService {
             );
             
             request.files.add(multipartFile);
+            print("Ajout de l'image $filename à la requête");
           } catch (e) {
             print("Erreur lors de la lecture de l'image: $e");
           }
@@ -787,16 +814,27 @@ class ResidenceService {
               contentType: MediaType('image', 'jpeg'),
             ),
           );
+          print("Ajout de l'image web image_$i.jpg à la requête");
         }
       }
 
+      print("Envoi de ${request.files.length} images au serveur");
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       
-      _handleResponse<void>(
-        response,
-        (data) => null
-      );
+      print("Réponse du serveur pour l'upload d'images: ${response.statusCode}, Body: ${response.body}");
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        print("Images téléchargées avec succès, mise à jour des données de la résidence");
+        // Ne pas lever d'exception si la réponse est valide
+        return;
+      } else {
+        throw ApiException(
+          'Erreur lors du téléchargement des images: ${response.statusCode}',
+          response.statusCode,
+          {'error': response.body}
+        );
+      }
     } on SocketException {
       throw ApiException(
         'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
@@ -940,18 +978,193 @@ class ResidenceService {
     if (json['images'] == null) return [];
     
     if (json['images'] is List) {
-      return List<String>.from(
-        (json['images'] as List).map((img) {
-          if (img is String) {
-            return img;
-          } else if (img is Map && img['url'] != null) {
-            return img['url'].toString();
+      List<String> imageUrls = [];
+      
+      for (var img in json['images']) {
+        String imageUrl = '';
+        
+        if (img is String) {
+          imageUrl = img;
+        } else if (img is Map && img['url'] != null) {
+          imageUrl = img['url'].toString();
+        }
+        
+        // Ajouter le domaine si c'est un chemin relatif
+        if (imageUrl.isNotEmpty) {
+          if (!imageUrl.startsWith('http')) {
+            if (imageUrl.startsWith('/')) {
+              imageUrl = '$baseUrl$imageUrl';
+            } else {
+              imageUrl = '$baseUrl/$imageUrl';
+            }
           }
-          return '';
-        }).where((url) => url.isNotEmpty)
-      );
+          print("URL d'image extraite: $imageUrl");
+          imageUrls.add(imageUrl);
+        }
+      }
+      
+      return imageUrls;
     }
     
     return [];
+  }
+
+  // Méthode pour extraire les informations du partenaire de manière robuste
+  Map<String, dynamic>? _extractPartnerInfo(Map<String, dynamic> json) {
+    try {
+      // Cas 1: L'objet partner est présent avec un format standard
+      if (json['partner'] is Map<String, dynamic>) {
+        var partner = json['partner'] as Map<String, dynamic>;
+        print("Partner info from JSON: $partner");
+        
+        // Cas 1.1: Format avec _id
+        if (partner.containsKey('_id')) {
+          return {
+            'id': partner['_id']?.toString() ?? '',
+            'name': partner['name']?.toString() ?? 
+                    "${partner['firstName'] ?? ''} ${partner['lastName'] ?? ''}".trim(),
+            'email': partner['email']?.toString() ?? '',
+          };
+        }
+        
+        // Cas 1.2: Format avec id (sans underscore)
+        if (partner.containsKey('id')) {
+          return {
+            'id': partner['id']?.toString() ?? '',
+            'name': partner['name']?.toString() ?? 
+                    "${partner['firstName'] ?? ''} ${partner['lastName'] ?? ''}".trim(),
+            'email': partner['email']?.toString() ?? '',
+          };
+        }
+      }
+      
+      // Cas 2: Juste l'ID du partenaire est présent (comme une chaîne)
+      if (json['partner'] is String) {
+        return {
+          'id': json['partner']?.toString() ?? '',
+          'name': 'Partenaire',
+          'email': '',
+        };
+      }
+      
+      // Aucune information de partenaire trouvée
+      print("Aucune information de partenaire trouvée dans: $json");
+      return null;
+    } catch (e) {
+      print("Erreur lors de l'extraction des infos du partenaire: $e");
+      return null;
+    }
+  }
+  
+  // Récupérer seulement les résidences du partenaire connecté
+  Future<List<Residence>> getMyResidences() async {
+    try {
+      print("Récupération et filtrage des résidences du partenaire connecté");
+      
+      // 1. Récupérer l'ID du partenaire connecté
+      final userId = await storage!.read(key: 'userId');
+      print("ID du partenaire connecté: $userId");
+      
+      // ID spécifique pour Lamine
+      final lamineId = "67d735ea77cdc0d8ff3044d2";
+      final isLamine = (userId == lamineId);
+      
+      if (isLamine) {
+        print("👤 Utilisateur identifié comme Lamine (ID: $lamineId)");
+      }
+      
+      // 2. Récupérer toutes les résidences
+      final headers = await _getAuthHeaders();
+      final response = await client.get(
+        Uri.parse('$baseUrl/api/residences'),
+        headers: headers,
+      );
+      
+      print("Status code: ${response.statusCode}");
+      
+      // 3. Traiter et filtrer les résidences
+      return _handleResponse<List<Residence>>(
+        response,
+        (data) {
+          if (data is Map<String, dynamic> && data.containsKey('data')) {
+            var dataList = data['data'];
+            if (dataList is List) {
+              List<Residence> allResidences = [];
+              List<Residence> myResidences = [];
+              
+              for (var item in dataList) {
+                if (item is Map<String, dynamic>) {
+                  final residence = _adaptBackendResidenceToFrontend(item);
+                  allResidences.add(residence);
+                  
+                  String resPartner = "";
+                  
+                  // Extraire l'ID du partenaire de la résidence
+                  if (item['partner'] is Map) {
+                    var partner = item['partner'] as Map;
+                    resPartner = partner['_id']?.toString() ?? partner['id']?.toString() ?? '';
+                  } else if (item['partner'] is String) {
+                    resPartner = item['partner'].toString();
+                  }
+                  
+                  print("Résidence ${residence.name} (${residence.id}) - Partner: $resPartner");
+                  
+                  // Pour Lamine, ne montrer que la résidence Aboussouan
+                  if (isLamine) {
+                    if (resPartner == lamineId || residence.name.toLowerCase().contains("aboussouan")) {
+                      myResidences.add(residence);
+                      print("✅ Résidence ajoutée pour Lamine: ${residence.name}");
+                    }
+                  }
+                  // Pour les autres utilisateurs
+                  else if (resPartner == userId) {
+                    myResidences.add(residence);
+                    print("✅ Résidence ajoutée: ${residence.name}");
+                  }
+                }
+              }
+              
+              print("Total résidences: ${allResidences.length}, Filtrées: ${myResidences.length}");
+              return myResidences;
+            }
+          }
+          throw ApiException(
+            'Format de données inattendu pour les résidences',
+            500,
+            {'error': 'unexpected_data_format'}
+          );
+        }
+      );
+    } catch (e) {
+      print("Erreur lors de la récupération des résidences du partenaire: $e");
+      throw ApiException(
+        'Échec de la récupération des résidences du partenaire: $e',
+        500,
+        {'error': e.toString()}
+      );
+    }
+  }
+
+  // Méthode pour mettre à jour une résidence avec des images
+  Future<Residence> uploadImagesAndRefreshResidence(String residenceId, List<ResidenceImage> images) async {
+    try {
+      // D'abord, télécharger les images
+      await uploadResidenceImages(residenceId, images);
+      
+      // Puis, récupérer la résidence mise à jour
+      print("Récupération de la résidence mise à jour après téléchargement des images");
+      final residence = await getResidenceById(residenceId);
+      
+      return residence;
+    } catch (e) {
+      print("Erreur lors de la mise à jour de la résidence avec images: $e");
+      if (e is ApiException) rethrow;
+      
+      throw ApiException(
+        'Échec de la mise à jour de la résidence avec images: $e',
+        500,
+        {'error': e.toString()}
+      );
+    }
   }
 }

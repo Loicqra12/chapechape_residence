@@ -62,9 +62,9 @@ class ConversationItem extends StatelessWidget {
                 color: unreadCount > 0 ? Colors.black87 : Colors.black54,
               ),
             ),
-          if (conversation.residenceId != null || conversation.bookingId != null)
+          if (conversation.residenceId != null || conversation.reservationId != null)
             Text(
-              conversation.bookingId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
+              conversation.reservationId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).primaryColor,

@@ -65,23 +65,109 @@ class Reservation {
   });
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
+    // Vérification préliminaire des valeurs nulles
+    final Map<String, dynamic> data = json;
+    
+    // Extraire l'ID de la résidence (peut être sous différentes formes)
+    final residenceId = data['residence_id'] ?? 
+                       (data['residence'] is Map ? data['residence']['_id'] : data['residence'])?.toString() ?? '';
+    
+    // Extraire le nom de la résidence
+    final residenceName = data['residence_name'] ?? 
+                         (data['residence'] is Map ? data['residence']['title'] : null) ??
+                         data['residenceName'] ?? 'Résidence';
+    
+    // Extraire l'image de la résidence
+    final residenceImage = data['residence_image'] ?? 
+                          (data['residence'] is Map && data['residence']['images'] is List && data['residence']['images'].isNotEmpty
+                              ? data['residence']['images'][0]
+                              : 'https://via.placeholder.com/300x200?text=Image+non+disponible');
+    
+    // Extraire les informations du client
+    final clientName = data['client_name'] ?? 
+                      (data['user'] is Map 
+                           ? "${data['user']['firstName'] ?? ''} ${data['user']['lastName'] ?? ''}"
+                           : data['clientName'] ?? 'Client');
+    
+    final clientPhone = data['client_phone'] ?? 
+                       (data['user'] is Map ? data['user']['phoneNumber'] : null) ??
+                       data['clientPhone'] ?? 'Non renseigné';
+    
+    // Extraire le nombre de personnes (guests)
+    final guestsCount = data['guests_count'] != null 
+        ? (data['guests_count'] as num).toInt() 
+        : (data['numberOfGuests'] != null 
+            ? (data['numberOfGuests'] as num).toInt() 
+            : (data['guestsCount'] as num?)?.toInt() ?? 1);
+    
+    // Extraire les dates
+    DateTime? checkIn;
+    if (data['check_in'] != null) {
+      checkIn = DateTime.parse(data['check_in'].toString());
+    } else if (data['checkIn'] != null) {
+      checkIn = data['checkIn'] is String 
+          ? DateTime.parse(data['checkIn']) 
+          : DateTime.parse(data['checkIn'].toString());
+    } else {
+      checkIn = DateTime.now();
+    }
+    
+    DateTime? checkOut;
+    if (data['check_out'] != null) {
+      checkOut = DateTime.parse(data['check_out'].toString());
+    } else if (data['checkOut'] != null) {
+      checkOut = data['checkOut'] is String 
+          ? DateTime.parse(data['checkOut']) 
+          : DateTime.parse(data['checkOut'].toString());
+    } else {
+      checkOut = DateTime.now().add(const Duration(days: 1));
+    }
+    
+    // Extraire le montant total
+    final totalAmount = data['total_amount'] != null 
+        ? (data['total_amount'] as num).toDouble() 
+        : (data['totalPrice'] != null 
+            ? (data['totalPrice'] as num).toDouble() 
+            : (data['totalAmount'] as num?)?.toDouble() ?? 0.0);
+    
+    // Extraire le statut
+    final status = data['status'] != null 
+        ? ReservationStatus.values.firstWhere(
+            (e) => e.name.toLowerCase() == data['status'].toString().toLowerCase(),
+            orElse: () => ReservationStatus.pending,
+          ) 
+        : ReservationStatus.pending;
+    
+    // Extraire la date de création
+    DateTime? createdAt;
+    if (data['created_at'] != null) {
+      createdAt = DateTime.parse(data['created_at'].toString());
+    } else if (data['createdAt'] != null) {
+      createdAt = data['createdAt'] is String 
+          ? DateTime.parse(data['createdAt']) 
+          : DateTime.parse(data['createdAt'].toString());
+    } else {
+      createdAt = DateTime.now();
+    }
+    
+    // Extraire les notes
+    final notes = data['notes'] ?? data['specialRequests'];
+    
+    // Construire l'objet Reservation
     return Reservation(
-      id: json['id'] as String,
-      residenceId: json['residence_id'] as String,
-      residenceName: json['residence_name'] as String,
-      residenceImage: json['residence_image'] as String,
-      clientName: json['client_name'] as String,
-      clientPhone: json['client_phone'] as String,
-      checkIn: DateTime.parse(json['check_in'] as String),
-      checkOut: DateTime.parse(json['check_out'] as String),
-      totalAmount: (json['total_amount'] as num).toDouble(),
-      status: ReservationStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => ReservationStatus.pending,
-      ),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      guestsCount: json['guests_count'] as int,
-      notes: json['notes'] as String?,
+      id: data['id'] as String? ?? data['_id']?.toString() ?? '',
+      residenceId: residenceId,
+      residenceName: residenceName,
+      residenceImage: residenceImage,
+      clientName: clientName,
+      clientPhone: clientPhone,
+      checkIn: checkIn,
+      checkOut: checkOut,
+      totalAmount: totalAmount,
+      status: status,
+      createdAt: createdAt,
+      guestsCount: guestsCount,
+      notes: notes,
     );
   }
 

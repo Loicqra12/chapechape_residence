@@ -20,7 +20,7 @@ mixin _$ChatEvent {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -38,7 +38,8 @@ mixin _$ChatEvent {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -52,7 +53,7 @@ mixin _$ChatEvent {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -166,7 +167,7 @@ class _$LoadConversationsImpl implements LoadConversations {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -187,7 +188,8 @@ class _$LoadConversationsImpl implements LoadConversations {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -204,7 +206,7 @@ class _$LoadConversationsImpl implements LoadConversations {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -281,7 +283,7 @@ abstract class _$$CreateConversationImplCopyWith<$Res> {
           $Res Function(_$CreateConversationImpl) then) =
       __$$CreateConversationImplCopyWithImpl<$Res>;
   @useResult
-  $Res call({String userId, String? residenceId, String? bookingId});
+  $Res call({String userId, String? residenceId, String? reservationId});
 }
 
 /// @nodoc
@@ -299,7 +301,7 @@ class __$$CreateConversationImplCopyWithImpl<$Res>
   $Res call({
     Object? userId = null,
     Object? residenceId = freezed,
-    Object? bookingId = freezed,
+    Object? reservationId = freezed,
   }) {
     return _then(_$CreateConversationImpl(
       userId: null == userId
@@ -310,9 +312,9 @@ class __$$CreateConversationImplCopyWithImpl<$Res>
           ? _value.residenceId
           : residenceId // ignore: cast_nullable_to_non_nullable
               as String?,
-      bookingId: freezed == bookingId
-          ? _value.bookingId
-          : bookingId // ignore: cast_nullable_to_non_nullable
+      reservationId: freezed == reservationId
+          ? _value.reservationId
+          : reservationId // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -322,18 +324,18 @@ class __$$CreateConversationImplCopyWithImpl<$Res>
 
 class _$CreateConversationImpl implements CreateConversation {
   const _$CreateConversationImpl(
-      {required this.userId, this.residenceId, this.bookingId});
+      {required this.userId, this.residenceId, this.reservationId});
 
   @override
   final String userId;
   @override
   final String? residenceId;
   @override
-  final String? bookingId;
+  final String? reservationId;
 
   @override
   String toString() {
-    return 'ChatEvent.createConversation(userId: $userId, residenceId: $residenceId, bookingId: $bookingId)';
+    return 'ChatEvent.createConversation(userId: $userId, residenceId: $residenceId, reservationId: $reservationId)';
   }
 
   @override
@@ -344,12 +346,13 @@ class _$CreateConversationImpl implements CreateConversation {
             (identical(other.userId, userId) || other.userId == userId) &&
             (identical(other.residenceId, residenceId) ||
                 other.residenceId == residenceId) &&
-            (identical(other.bookingId, bookingId) ||
-                other.bookingId == bookingId));
+            (identical(other.reservationId, reservationId) ||
+                other.reservationId == reservationId));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, userId, residenceId, bookingId);
+  int get hashCode =>
+      Object.hash(runtimeType, userId, residenceId, reservationId);
 
   /// Create a copy of ChatEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -365,7 +368,7 @@ class _$CreateConversationImpl implements CreateConversation {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -379,14 +382,15 @@ class _$CreateConversationImpl implements CreateConversation {
         markAsRead,
     required TResult Function(String conversationId) markAllAsRead,
   }) {
-    return createConversation(userId, residenceId, bookingId);
+    return createConversation(userId, residenceId, reservationId);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -396,14 +400,14 @@ class _$CreateConversationImpl implements CreateConversation {
     TResult? Function(String messageId, String conversationId)? markAsRead,
     TResult? Function(String conversationId)? markAllAsRead,
   }) {
-    return createConversation?.call(userId, residenceId, bookingId);
+    return createConversation?.call(userId, residenceId, reservationId);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -415,7 +419,7 @@ class _$CreateConversationImpl implements CreateConversation {
     required TResult orElse(),
   }) {
     if (createConversation != null) {
-      return createConversation(userId, residenceId, bookingId);
+      return createConversation(userId, residenceId, reservationId);
     }
     return orElse();
   }
@@ -474,11 +478,11 @@ abstract class CreateConversation implements ChatEvent {
   const factory CreateConversation(
       {required final String userId,
       final String? residenceId,
-      final String? bookingId}) = _$CreateConversationImpl;
+      final String? reservationId}) = _$CreateConversationImpl;
 
   String get userId;
   String? get residenceId;
-  String? get bookingId;
+  String? get reservationId;
 
   /// Create a copy of ChatEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -567,7 +571,7 @@ class _$SendMessageImpl implements SendMessage {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -588,7 +592,8 @@ class _$SendMessageImpl implements SendMessage {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -605,7 +610,7 @@ class _$SendMessageImpl implements SendMessage {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -776,7 +781,7 @@ class _$SendFileImpl implements SendFile {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -797,7 +802,8 @@ class _$SendFileImpl implements SendFile {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -814,7 +820,7 @@ class _$SendFileImpl implements SendFile {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -979,7 +985,7 @@ class _$SendImageImpl implements SendImage {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -1000,7 +1006,8 @@ class _$SendImageImpl implements SendImage {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -1017,7 +1024,7 @@ class _$SendImageImpl implements SendImage {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -1170,7 +1177,7 @@ class _$LoadMessagesImpl implements LoadMessages {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -1191,7 +1198,8 @@ class _$LoadMessagesImpl implements LoadMessages {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -1208,7 +1216,7 @@ class _$LoadMessagesImpl implements LoadMessages {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -1369,7 +1377,7 @@ class _$MarkAsReadImpl implements MarkAsRead {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -1390,7 +1398,8 @@ class _$MarkAsReadImpl implements MarkAsRead {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -1407,7 +1416,7 @@ class _$MarkAsReadImpl implements MarkAsRead {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?
@@ -1560,7 +1569,7 @@ class _$MarkAllAsReadImpl implements MarkAllAsRead {
   TResult when<TResult extends Object?>({
     required TResult Function() loadConversations,
     required TResult Function(
-            String userId, String? residenceId, String? bookingId)
+            String userId, String? residenceId, String? reservationId)
         createConversation,
     required TResult Function(String conversationId, String content)
         sendMessage,
@@ -1581,7 +1590,8 @@ class _$MarkAllAsReadImpl implements MarkAllAsRead {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? loadConversations,
-    TResult? Function(String userId, String? residenceId, String? bookingId)?
+    TResult? Function(
+            String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult? Function(String conversationId, String content)? sendMessage,
     TResult? Function(String conversationId, String filePath, String? type)?
@@ -1598,7 +1608,7 @@ class _$MarkAllAsReadImpl implements MarkAllAsRead {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? loadConversations,
-    TResult Function(String userId, String? residenceId, String? bookingId)?
+    TResult Function(String userId, String? residenceId, String? reservationId)?
         createConversation,
     TResult Function(String conversationId, String content)? sendMessage,
     TResult Function(String conversationId, String filePath, String? type)?

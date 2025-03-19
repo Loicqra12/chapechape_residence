@@ -29,12 +29,12 @@ class ChatRepository {
   Future<ChatConversation> createConversation({
     required String userId,
     String? residenceId,
-    String? bookingId,
+    String? reservationId,
   }) async {
     return await _chatService.createConversation(
       userId: userId,
       residenceId: residenceId,
-      bookingId: bookingId,
+      reservationId: reservationId,
     );
   }
 

@@ -16,6 +16,9 @@ exports.createReservation = async (req, res) => {
             });
         }
 
+        // Récupérer le partenaire associé à la résidence
+        const partnerId = residence.partner;
+        
         // Vérifier si les dates sont disponibles
         const conflictingReservation = await Reservation.findOne({
             residence: residenceId,
@@ -43,6 +46,7 @@ exports.createReservation = async (req, res) => {
         const reservation = new Reservation({
             residence: residenceId,
             user: req.user._id,
+            partner: partnerId,
             checkIn: new Date(checkIn),
             checkOut: new Date(checkOut),
             numberOfGuests,

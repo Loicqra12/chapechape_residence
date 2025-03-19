@@ -24,22 +24,33 @@ class ChatService {
       debugPrint('Response status: ${response.statusCode}');
       debugPrint('Response data: ${response.data}');
       
-      final data = response.data['data'] as List? ?? [];
-      
-      return data.map((json) {
-        final adaptedJson = {
-          'id': json['_id'],
-          'participants': (json['participants'] as List?)?.map((p) => {
-            'id': p['_id'],
-            'name': p['name'] ?? 'Utilisateur',
-            'role': p['role'] ?? 'user',
-          }).toList() ?? [],
-          'createdAt': json['createdAt'],
-          'updatedAt': json['updatedAt'],
-          'messages': [],
-        };
-        return ChatConversation.fromJson(adaptedJson);
-      }).toList();
+      if (response.statusCode == 200) {
+        final jsonData = response.data['data'] as List? ?? [];
+        
+        return jsonData.map((conversationJson) {
+          // Adapter le format de la réponse API au modèle ChatConversation
+          final adaptedJson = {
+            'id': conversationJson['_id'] ?? '',
+            'participants': (conversationJson['participants'] as List? ?? []).map((participant) => {
+              'id': participant['_id'] ?? '',
+              'name': participant['name'] ?? 'Utilisateur',
+              'avatarUrl': participant['avatar'],
+              'role': participant['role'] ?? 'user',
+            }).toList(),
+            'messages': [],
+            'residenceId': conversationJson['residenceId']?['_id'] ?? '',
+            'reservationId': conversationJson['reservationId']?['_id'] ?? '',
+            'isUnread': conversationJson['unreadCount'] > 0,
+            'createdAt': conversationJson['createdAt'] ?? DateTime.now().toIso8601String(),
+            'updatedAt': conversationJson['updatedAt'] ?? DateTime.now().toIso8601String(),
+          };
+          
+          return ChatConversation.fromJson(adaptedJson);
+        }).toList();
+      } else {
+        debugPrint('Error fetching conversations: ${response.statusCode}');
+        throw Exception('Failed to load conversations');
+      }
     } catch (e) {
       debugPrint('Error fetching conversations: $e');
       throw Exception('Failed to load conversations: ${e.toString()}');
@@ -111,7 +122,7 @@ class ChatService {
   Future<ChatConversation> createConversation({
     required String userId,
     String? residenceId,
-    String? bookingId,
+    String? reservationId,
   }) async {
     try {
       // Vérifier si nous avons un token
@@ -121,18 +132,29 @@ class ChatService {
       }
       
       debugPrint('Token found, creating conversation...');
+      
       final response = await _apiService.post(
         '/messages/conversations',
         data: {
-          'userId': userId,
-          if (residenceId != null) 'residenceId': residenceId,
-          if (bookingId != null) 'bookingId': bookingId,
+          'participants': [userId],
+          'residenceId': residenceId,
+          'reservationId': reservationId,
         },
       );
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response data: ${response.data}');
-      return ChatConversation.fromJson(response.data);
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ChatConversation.fromJson(response.data);
+      } else {
+        debugPrint('Error creating conversation: ${response.statusCode}');
+        throw Exception('Failed to create conversation');
+      }
     } catch (e) {
+      // Vérifier si l'erreur est liée à l'activation de la messagerie
+      if (e.toString().contains('messagerie n\'est pas encore activée') || 
+          e.toString().contains('paiement doit être effectué')) {
+        throw Exception('La messagerie n\'est pas activée pour cette réservation. Veuillez effectuer le paiement pour débloquer cette fonctionnalité.');
+      }
+      
       debugPrint('Error creating conversation: $e');
       throw Exception('Failed to create conversation: ${e.toString()}');
     }
@@ -150,29 +172,36 @@ class ChatService {
       }
       
       debugPrint('Token found, sending message...');
+      
       final response = await _apiService.post(
         '/messages/conversations/$conversationId/messages',
         data: {
           'content': content,
-          'type': 'text',
         },
       );
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response data: ${response.data}');
-
-      if (response.statusCode == 201 && response.data['success'] == true) {
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final messageData = response.data['data'];
         return ChatMessage(
           id: messageData['_id'] ?? '',
-          conversationId: messageData['conversation'] ?? conversationId,
+          conversationId: conversationId,
           content: messageData['content'] ?? '',
-          senderId: messageData['sender']?['_id'] ?? '',
+          senderId: messageData['sender']['_id'] ?? '',
           createdAt: DateTime.parse(messageData['createdAt']),
           isRead: messageData['read'] ?? false,
+          type: 'text',
         );
+      } else {
+        debugPrint('Error sending message: ${response.statusCode}');
+        throw Exception('Failed to send message');
       }
-      throw Exception('Failed to send message');
     } catch (e) {
+      // Vérifier si l'erreur est liée à l'activation de la messagerie
+      if (e.toString().contains('messagerie n\'est pas encore activée') || 
+          e.toString().contains('paiement doit être effectué')) {
+        throw Exception('La messagerie n\'est pas activée pour cette conversation. Veuillez effectuer le paiement pour débloquer cette fonctionnalité.');
+      }
+      
       debugPrint('Error sending message: $e');
       throw Exception('Failed to send message: ${e.toString()}');
     }
@@ -195,7 +224,7 @@ class ChatService {
       final fileName = filePath.split('/').last;
       final formData = FormData.fromMap({
         'conversationId': conversationId,
-        'type': type ?? 'file',
+        'type': type,
         'file': await MultipartFile.fromFile(
           file.path,
           filename: fileName,
@@ -210,6 +239,12 @@ class ChatService {
       debugPrint('Response data: ${response.data}');
       return ChatMessage.fromJson(response.data);
     } catch (e) {
+      // Vérifier si l'erreur est liée à l'activation de la messagerie
+      if (e.toString().contains('messagerie n\'est pas encore activée') || 
+          e.toString().contains('paiement doit être effectué')) {
+        throw Exception('La messagerie n\'est pas activée pour cette conversation. Veuillez effectuer le paiement pour débloquer cette fonctionnalité.');
+      }
+      
       debugPrint('Error sending file: $e');
       throw Exception('Failed to send file: ${e.toString()}');
     }

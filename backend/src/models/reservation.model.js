@@ -11,6 +11,11 @@ const reservationSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    partner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Partner',
+        required: true
+    },
     checkIn: {
         type: Date,
         required: true
@@ -37,6 +42,10 @@ const reservationSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'paid', 'failed', 'refunded'],
         default: 'pending'
+    },
+    messagingEnabled: {
+        type: Boolean,
+        default: false
     },
     specialRequests: {
         type: String

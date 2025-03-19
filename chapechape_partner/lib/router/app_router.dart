@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../core/blocs/auth/auth_bloc.dart';
+import '../core/blocs/reservation/reservation_bloc.dart';
+import '../core/services/api/reservation_service.dart';
 import '../presentation/screens/auth/forgot_password_screen.dart';
 import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/auth/register_screen.dart';
 import '../presentation/screens/main/main_screen.dart';
 import '../presentation/screens/onboarding/onboarding_screen.dart';
 import '../presentation/screens/residences/edit_residence_screen.dart';
+import '../presentation/screens/reservations/reservation_details_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -73,6 +76,13 @@ class AppRouter {
       GoRoute(
         path: '/residences/add',
         builder: (context, state) => EditResidenceScreen(),
+      ),
+      GoRoute(
+        path: '/reservations/:id',
+        builder: (context, state) {
+          final reservationId = state.pathParameters['id'] ?? '';
+          return ReservationDetailsScreen(reservationId: reservationId);
+        },
       ),
     ],
     redirect: (context, state) async {

@@ -10,6 +10,9 @@ class ApiService {
   late final Dio _dio;
   static ApiService? _instance;
 
+  // Ajouter un getter pour accéder à l'URL de base
+  String get baseUrl => _dio.options.baseUrl;
+
   ApiService._();
 
   static Future<ApiService> initialize() async {
