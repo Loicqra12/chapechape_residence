@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/residence/residence.dart';
+import '../constants/app_images.dart';
 
 extension ResidenceProperties on Residence {
   String get title => name;
@@ -12,7 +13,10 @@ extension ResidenceProperties on Residence {
   Color get statusColor => isAvailable ? Colors.green : Colors.red;
 
   String? get firstImageUrl {
-    if (images.isEmpty) return null;
+    if (images.isEmpty) {
+      // Retourner l'image placeholder locale comme fallback
+      return AppImages.residencePlaceholder;
+    }
     
     // Si mainImage est défini, l'utiliser en priorité
     if (mainImage != null && mainImage!.isNotEmpty) {
@@ -34,7 +38,8 @@ extension ResidenceProperties on Residence {
       return _formatImageUrl(firstImage);
     }
     
-    return null;
+    // Si aucune image valide n'est trouvée
+    return AppImages.residencePlaceholder;
   }
   
   String _formatImageUrl(String url) {

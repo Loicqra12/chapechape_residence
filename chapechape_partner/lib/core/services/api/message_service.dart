@@ -62,6 +62,8 @@ class MessageService {
             'unreadCount': json['unreadCount'] ?? 0,
             'createdAt': json['createdAt'],
             'updatedAt': json['updatedAt'],
+            'residenceId': json['residenceId']?['_id'] ?? '',
+            'residenceName': json['residenceId']?['name'] ?? '',
           };
 
           // Adapter le lastMessage s'il existe
@@ -96,6 +98,31 @@ class MessageService {
     }
   }
 
+  /// Récupère tous les messages de toutes les conversations
+  Future<List<Message>> getAllMessages() async {
+    try {
+      // D'abord récupérer toutes les conversations
+      final conversations = await getConversations();
+      
+      // Ensuite récupérer tous les messages de chaque conversation
+      final allMessages = <Message>[];
+      for (final conversation in conversations) {
+        try {
+          final messages = await getMessages(conversation.id);
+          allMessages.addAll(messages);
+        } catch (e) {
+          print('Erreur lors de la récupération des messages pour la conversation ${conversation.id}: $e');
+          // Continuer avec la prochaine conversation même si celle-ci échoue
+        }
+      }
+      
+      return allMessages;
+    } catch (e) {
+      print('Erreur lors de la récupération de tous les messages: $e');
+      return [];
+    }
+  }
+
   /// Crée une nouvelle conversation
   Future<Conversation> createConversation({
     required List<String> participants, 
@@ -113,7 +140,16 @@ class MessageService {
           if (initialMessage != null) 'initialMessage': initialMessage,
         },
       );
-      return Conversation.fromJson(response.data['data']);
+      
+      // Adapter le format de la réponse pour inclure residenceId et residenceName
+      final data = response.data['data'];
+      final adaptedData = {
+        ...data as Map<String, dynamic>,
+        'residenceId': data['residenceId']?['_id'] ?? '',
+        'residenceName': data['residenceId']?['name'] ?? '',
+      };
+      
+      return Conversation.fromJson(adaptedData);
     } catch (e) {
       throw _handleError(e);
     }
@@ -124,7 +160,15 @@ class MessageService {
     try {
       final response = await _dio.get('/messages/conversations/$conversationId');
       final data = response.data['data'];
-      return Conversation.fromJson(data);
+      
+      // Adapter le format de la réponse pour inclure residenceId et residenceName
+      final adaptedData = {
+        ...data as Map<String, dynamic>,
+        'residenceId': data['residenceId']?['_id'] ?? '',
+        'residenceName': data['residenceId']?['name'] ?? '',
+      };
+      
+      return Conversation.fromJson(adaptedData);
     } catch (e) {
       return null;
     }

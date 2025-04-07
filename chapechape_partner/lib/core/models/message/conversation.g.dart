@@ -40,6 +40,8 @@ Conversation _$ConversationFromJson(Map<String, dynamic> json) => Conversation(
       booking: json['booking'] == null
           ? null
           : Booking.fromJson(json['booking'] as Map<String, dynamic>),
+      residenceId: json['residenceId'] as String?,
+      residenceName: json['residenceName'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       metadata: json['metadata'] as Map<String, dynamic>?,
@@ -53,6 +55,8 @@ Map<String, dynamic> _$ConversationToJson(Conversation instance) =>
       'lastMessage': instance.lastMessage,
       'unreadCount': instance.unreadCount,
       'booking': instance.booking,
+      'residenceId': instance.residenceId,
+      'residenceName': instance.residenceName,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
       'metadata': instance.metadata,

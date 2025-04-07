@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import '../models/notification_model.dart';
 import 'api_service.dart';
+import '../utils/logger.dart';
 
 class NotificationService {
   final ApiService _apiService;
+  final AppLogger _logger = AppLogger('NotificationService');
 
   NotificationService._({
     required ApiService apiService,
@@ -32,8 +34,22 @@ class NotificationService {
       
       return [];
     } on DioException catch (e) {
-      print('Erreur lors de la récupération des notifications: ${e.message}');
-      return [];
+      _logger.error('Erreur lors de la récupération des notifications', e);
+      rethrow;
+    }
+  }
+  
+  // Obtenir le nombre de notifications non lues
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _apiService.get('/notifications/unread/count');
+      if (response.data['success'] == true) {
+        return response.data['data']['count'] ?? 0;
+      }
+      return 0;
+    } on DioException catch (e) {
+      _logger.error('Erreur lors du comptage des notifications non lues', e);
+      return 0;
     }
   }
   
@@ -43,8 +59,8 @@ class NotificationService {
       final response = await _apiService.put('/notifications/$notificationId/read');
       return response.data['success'] == true;
     } on DioException catch (e) {
-      print('Erreur lors du marquage de la notification: ${e.message}');
-      return false;
+      _logger.error('Erreur lors du marquage de la notification', e);
+      rethrow;
     }
   }
   
@@ -54,8 +70,8 @@ class NotificationService {
       final response = await _apiService.put('/notifications/read-all');
       return response.data['success'] == true;
     } on DioException catch (e) {
-      print('Erreur lors du marquage de toutes les notifications: ${e.message}');
-      return false;
+      _logger.error('Erreur lors du marquage de toutes les notifications', e);
+      rethrow;
     }
   }
   
@@ -65,25 +81,30 @@ class NotificationService {
       final response = await _apiService.delete('/notifications/$notificationId');
       return response.data['success'] == true;
     } on DioException catch (e) {
-      print('Erreur lors de la suppression de la notification: ${e.message}');
-      return false;
+      _logger.error('Erreur lors de la suppression de la notification', e);
+      rethrow;
     }
   }
   
   // Convertir les données du backend en modèle NotificationModel
   NotificationModel _mapToNotificationModel(Map<String, dynamic> json) {
-    return NotificationModel(
-      id: json['_id'] ?? '',
-      title: _getTitleFromType(json['type']),
-      message: json['message'] ?? '',
-      timestamp: json['createdAt'] != null 
-        ? DateTime.parse(json['createdAt']) 
-        : DateTime.now(),
-      isRead: json['read'] ?? false,
-      type: json['type'],
-      actionUrl: json['data']?['actionUrl'],
-      imageUrl: json['data']?['imageUrl'],
-    );
+    try {
+      return NotificationModel(
+        id: json['_id'] ?? '',
+        title: _getTitleFromType(json['type']),
+        message: json['message'] ?? '',
+        timestamp: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
+        isRead: json['read'] ?? false,
+        type: json['type'],
+        actionUrl: json['data']?['actionUrl'],
+        imageUrl: json['data']?['imageUrl'],
+      );
+    } catch (e) {
+      _logger.error('Erreur lors de la conversion des données de notification', e);
+      rethrow;
+    }
   }
   
   // Obtenir un titre basé sur le type de notification

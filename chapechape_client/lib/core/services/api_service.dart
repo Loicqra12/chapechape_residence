@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
@@ -91,8 +92,46 @@ class ApiService {
           
           return handler.next(options);
         },
+        onError: (DioException error, handler) async {
+          // Si l'erreur est liée à une expiration de token, essayer de rafraîchir
+          if (error.response?.statusCode == 401) {
+            await _handleTokenExpiration();
+          }
+          
+          // Pour certaines erreurs, mettre en place une tentative de retry
+          if (_isRetryable(error)) {
+            try {
+              // Utiliser des options modifiées pour le retry
+              final options = error.requestOptions;
+              final response = await _dio.request(
+                options.path,
+                data: options.data,
+                queryParameters: options.queryParameters,
+                options: Options(
+                  method: options.method,
+                  headers: options.headers,
+                ),
+              );
+              return handler.resolve(response);
+            } catch (e) {
+              return handler.next(error);
+            }
+          }
+          
+          return handler.next(error);
+        },
       ),
     );
+  }
+
+  // Vérifier si une erreur peut être réessayée
+  bool _isRetryable(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+           e.type == DioExceptionType.sendTimeout ||
+           e.type == DioExceptionType.receiveTimeout ||
+           (e.response?.statusCode != null && 
+            (e.response!.statusCode == 429 || 
+             (e.response!.statusCode! >= 500 && e.response!.statusCode! < 600)));
   }
 
   Future<String?> _getToken() async {
@@ -116,22 +155,48 @@ class ApiService {
     }
   }
 
+  // Méthode générique pour les requêtes avec retry
+  Future<Response> _retryRequest(
+    Future<Response> Function() request, {
+    int maxRetries = 3,
+  }) async {
+    int retryCount = 0;
+    while (retryCount < maxRetries) {
+      try {
+        return await request();
+      } on DioException catch (e) {
+        if (_isRetryable(e)) {
+          retryCount++;
+          if (retryCount == maxRetries) rethrow;
+          
+          // Backoff exponentiel: 500ms, 1s, 2s, 4s, etc.
+          final delay = Duration(milliseconds: (math.pow(2, retryCount) * 500).toInt());
+          debugPrint('Retry ${retryCount}/${maxRetries} pour la requête après ${delay.inMilliseconds}ms');
+          await Future.delayed(delay);
+          continue;
+        }
+        rethrow;
+      }
+    }
+    throw Exception('Failed after $maxRetries retries');
+  }
+
   // Méthodes HTTP génériques
   Future<Response> get(String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    CancelToken? cancelToken,
   }) async {
     try {
-      // Assurer qu'il y a un slash entre l'URL de base et le chemin
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
-      
-      final response = await _dio.get(
+      return await _retryRequest(() => _dio.get(
         sanitizedPath, 
         queryParameters: queryParameters,
         options: options,
-      );
-      return response;
+        cancelToken: cancelToken,
+      ));
     } catch (e) {
+      debugPrint('Erreur dans la requête GET: $e');
       rethrow;
     }
   }
@@ -145,26 +210,22 @@ class ApiService {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      // Assurer qu'il y a un slash entre l'URL de base et le chemin
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
       
-      // Créer des options avec des en-têtes supplémentaires qui pourraient être nécessaires
       Options finalOptions = options ?? Options();
       finalOptions.headers = {
         ...?finalOptions.headers,
         'Accept': 'application/json',
         'User-Agent': 'ChapecapeApp/1.0',
-        // Attention : Content-Length sera ajouté automatiquement par Dio
       };
       
-      // Ajouter des logs détaillés pour déboguer
       debugPrint('---------- DÉTAILS COMPLETS DE LA REQUÊTE POST ----------');
       debugPrint('URL: ${AppConfig.apiUrl}$sanitizedPath');
       debugPrint('Données: $data');
       debugPrint('En-têtes: ${finalOptions.headers}');
       debugPrint('-------------------------------------------------------');
       
-      final response = await _dio.post(
+      return await _retryRequest(() => _dio.post(
         sanitizedPath,
         data: data,
         queryParameters: queryParameters,
@@ -172,16 +233,7 @@ class ApiService {
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
-      );
-      
-      // Ajouter des logs détaillés pour la réponse
-      debugPrint('---------- DÉTAILS COMPLETS DE LA RÉPONSE ----------');
-      debugPrint('Statut: ${response.statusCode}');
-      debugPrint('En-têtes de réponse: ${response.headers.map}');
-      debugPrint('Corps de réponse: ${response.data}');
-      debugPrint('---------------------------------------------------');
-      
-      return response;
+      ));
     } catch (e) {
       debugPrint('Erreur dans la requête POST: $e');
       rethrow;
@@ -197,10 +249,9 @@ class ApiService {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      // Assurer qu'il y a un slash entre l'URL de base et le chemin
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
       
-      final response = await _dio.put(
+      return await _retryRequest(() => _dio.put(
         sanitizedPath,
         data: data,
         queryParameters: queryParameters,
@@ -208,9 +259,9 @@ class ApiService {
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
-      );
-      return response;
+      ));
     } catch (e) {
+      debugPrint('Erreur dans la requête PUT: $e');
       rethrow;
     }
   }
@@ -222,18 +273,17 @@ class ApiService {
     CancelToken? cancelToken,
   }) async {
     try {
-      // Assurer qu'il y a un slash entre l'URL de base et le chemin
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
       
-      final response = await _dio.delete(
+      return await _retryRequest(() => _dio.delete(
         sanitizedPath,
         data: data,
         queryParameters: queryParameters,
         options: options,
         cancelToken: cancelToken,
-      );
-      return response;
+      ));
     } catch (e) {
+      debugPrint('Erreur dans la requête DELETE: $e');
       rethrow;
     }
   }
@@ -247,10 +297,9 @@ class ApiService {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      // Assurer qu'il y a un slash entre l'URL de base et le chemin
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
       
-      final response = await _dio.patch(
+      return await _retryRequest(() => _dio.patch(
         sanitizedPath,
         data: data,
         queryParameters: queryParameters,
@@ -258,9 +307,9 @@ class ApiService {
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
-      );
-      return response;
+      ));
     } catch (e) {
+      debugPrint('Erreur dans la requête PATCH: $e');
       rethrow;
     }
   }

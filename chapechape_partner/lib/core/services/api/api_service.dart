@@ -1,14 +1,30 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:flutter/foundation.dart';
 import '../../config/app_config.dart';
+import './interceptors/auth_interceptor.dart';
+import '../../utils/error_handler.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import 'dart:async';
 
 class ApiService {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
   final String _baseUrl = AppConfig.apiUrl;
+  
+  // Clés de stockage des tokens
+  static const String _accessTokenKey = 'token';
+  static const String _refreshTokenKey = 'refresh_token';
+  static const String _tokenExpiryKey = 'token_expiry';
+  
+  // Variables pour le refresh token
+  static bool _isRefreshing = false;
+  static Completer<String?>? _refreshCompleter;
+  
+  final AuthBloc? authBloc;
 
-  ApiService() {
+  ApiService({this.authBloc}) {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
@@ -27,37 +43,116 @@ class ApiService {
       ),
     );
 
-    // Ajouter l'intercepteur pour le token
+    // Ajouter l'intercepteur d'authentification
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Ajouter le token s'il existe
-          final token = await _storage.read(key: 'token');
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
+          // Vérifier et ajouter le token d'accès s'il existe
+          if (await _shouldRefreshToken()) {
+            // Token expiré, besoin de le rafraîchir avant de continuer
+            final refreshResult = await _refreshToken();
+            if (refreshResult) {
+              final newToken = await _storage.read(key: _accessTokenKey);
+              if (newToken != null) {
+                options.headers['Authorization'] = 'Bearer $newToken';
+                print('🔄 Token rafraîchi et ajouté à la requête');
+              }
+            } else {
+              // Échec du rafraîchissement, déconnexion
+              if (authBloc != null) {
+                authBloc!.add(AuthLogoutRequested());
+              }
+            }
+          } else {
+            // Utiliser le token actuel s'il existe
+            final token = await _storage.read(key: _accessTokenKey);
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+              
+              // Log sécurisé du token
+              final maskedToken = _maskToken(token);
+              print('🔐 Token ajouté à la requête: $maskedToken');
+            }
           }
+          
           return handler.next(options);
         },
         onError: (DioException error, handler) async {
-          if (error.type == DioExceptionType.connectionTimeout ||
-              error.type == DioExceptionType.sendTimeout ||
-              error.type == DioExceptionType.receiveTimeout) {
-            // Retry the request
-            try {
-              final response = await _dio.request(
-                error.requestOptions.path,
-                data: error.requestOptions.data,
-                queryParameters: error.requestOptions.queryParameters,
-                options: Options(
-                  method: error.requestOptions.method,
-                  headers: error.requestOptions.headers,
-                ),
+          // Si l'erreur est 401 (token expiré), essayer de rafraîchir
+          if (error.response?.statusCode == 401) {
+            print('🔑 Erreur 401 détectée, tentative de rafraîchissement du token');
+            
+            // Vérifier si nous sommes déjà en train de rafraîchir
+            if (!_isRefreshing) {
+              final success = await _refreshToken();
+              
+              if (success) {
+                // Réessayer la requête avec le nouveau token
+                final token = await _storage.read(key: _accessTokenKey);
+                error.requestOptions.headers['Authorization'] = 'Bearer $token';
+                
+                try {
+                  print('🔄 Réessai de la requête avec le nouveau token');
+                  final response = await _dio.fetch(error.requestOptions);
+                  return handler.resolve(response);
+                } catch (e) {
+                  return handler.next(DioException(
+                    requestOptions: error.requestOptions,
+                    error: 'Échec de la requête après rafraîchissement du token: $e',
+                  ));
+                }
+              } else {
+                // Si le rafraîchissement a échoué, déconnexion
+                if (authBloc != null) {
+                  authBloc!.add(AuthLogoutRequested());
+                }
+              }
+            } else {
+              // Attendre que le rafraîchissement en cours soit terminé
+              try {
+                await _refreshCompleter?.future;
+                // Réessayer la requête
+                final token = await _storage.read(key: _accessTokenKey);
+                error.requestOptions.headers['Authorization'] = 'Bearer $token';
+                final response = await _dio.fetch(error.requestOptions);
+                return handler.resolve(response);
+              } catch (e) {
+                return handler.next(error);
+              }
+            }
+          } 
+          // Gestion des erreurs 429 (Too Many Requests)
+          else if (error.response?.statusCode == 429) {
+            if (_rateLimitRetries < _maxRateLimitRetries) {
+              _rateLimitRetries++;
+              
+              // Calculer le délai avec un backoff exponentiel
+              final backoffDelay = Duration(
+                seconds: _initialBackoffDelay.inSeconds * (1 << (_rateLimitRetries - 1))
               );
-              return handler.resolve(response);
-            } catch (e) {
+              final delayToUse = backoffDelay > _maxBackoffDelay ? _maxBackoffDelay : backoffDelay;
+              
+              debugPrint('⚠️ Rate limiting (429) détecté - Attente de ${delayToUse.inSeconds}s avant nouvelle tentative (${_rateLimitRetries}/${_maxRateLimitRetries})');
+              
+              // Attendre avant de réessayer
+              await Future.delayed(delayToUse);
+              
+              try {
+                // Réessayer la requête
+                final response = await _dio.fetch(error.requestOptions);
+                // Réinitialiser le compteur en cas de succès
+                _rateLimitRetries = 0;
+                return handler.resolve(response);
+              } catch (e) {
+                return handler.next(error);
+              }
+            } else {
+              debugPrint('❌ Rate limiting - Nombre maximum de tentatives atteint (${_maxRateLimitRetries})');
+              _rateLimitRetries = 0;
               return handler.next(error);
             }
           }
+          
           return handler.next(error);
         },
       ),
@@ -75,21 +170,141 @@ class ApiService {
       ),
     );
   }
+  
+  // Configuration pour la gestion des limites de taux (rate limiting)
+  int _rateLimitRetries = 0;
+  static const int _maxRateLimitRetries = 3;
+  static const Duration _initialBackoffDelay = Duration(seconds: 2);
+  static const Duration _maxBackoffDelay = Duration(seconds: 30);
+  static const Duration _requestDelayDuration = Duration(milliseconds: 500);
+  DateTime _lastRequestTime = DateTime.now().subtract(const Duration(seconds: 1));
+
+  // Méthode pour respecter un délai entre les requêtes
+  Future<void> _respectRequestDelay() async {
+    final now = DateTime.now();
+    final timeSinceLastRequest = now.difference(_lastRequestTime);
+    
+    if (timeSinceLastRequest < _requestDelayDuration) {
+      final waitTime = _requestDelayDuration - timeSinceLastRequest;
+      debugPrint('⏱️ Attente de ${waitTime.inMilliseconds}ms entre les requêtes pour éviter le rate limiting');
+      await Future.delayed(waitTime);
+    }
+    
+    _lastRequestTime = DateTime.now();
+  }
+  
+  // Vérifier si le token a besoin d'être rafraîchi
+  Future<bool> _shouldRefreshToken() async {
+    final expiryStr = await _storage.read(key: _tokenExpiryKey);
+    if (expiryStr == null) return false;
+    
+    try {
+      final expiry = DateTime.parse(expiryStr);
+      final now = DateTime.now();
+      
+      // Rafraîchir si le token expire dans moins de 5 minutes
+      return now.isAfter(expiry.subtract(const Duration(minutes: 5)));
+    } catch (e) {
+      print('❌ Erreur lors de la vérification de l\'expiration du token: $e');
+      return false;
+    }
+  }
+  
+  // Rafraîchir le token d'accès
+  Future<bool> _refreshToken() async {
+    // Si un rafraîchissement est déjà en cours, attendre sa fin
+    if (_isRefreshing) {
+      await _refreshCompleter?.future;
+      return true;
+    }
+    
+    _isRefreshing = true;
+    _refreshCompleter = Completer<String?>();
+    
+    try {
+      final refreshToken = await _storage.read(key: _refreshTokenKey);
+      if (refreshToken == null) {
+        _isRefreshing = false;
+        _refreshCompleter?.complete(null);
+        return false;
+      }
+      
+      print('🔄 Début du rafraîchissement du token...');
+      
+      final response = await _dio.post(
+        '/auth/refresh-token',
+        data: {'refreshToken': refreshToken},
+        options: Options(
+          headers: {'Authorization': null}, // Ne pas inclure de token ici
+        ),
+      );
+      
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final newAccessToken = response.data['accessToken'];
+        final newRefreshToken = response.data['refreshToken'];
+        
+        // Calculer la date d'expiration (par défaut: maintenant + 24h)
+        final expiry = DateTime.now().add(const Duration(hours: 24));
+        
+        // Stocker les nouveaux tokens
+        await _storage.write(key: _accessTokenKey, value: newAccessToken);
+        await _storage.write(key: _refreshTokenKey, value: newRefreshToken);
+        await _storage.write(key: _tokenExpiryKey, value: expiry.toIso8601String());
+        
+        print('✅ Token rafraîchi avec succès');
+        
+        _isRefreshing = false;
+        _refreshCompleter?.complete(newAccessToken);
+        return true;
+      } else {
+        print('❌ Échec du rafraîchissement du token: ${response.statusCode}');
+        _isRefreshing = false;
+        _refreshCompleter?.complete(null);
+        return false;
+      }
+    } catch (e) {
+      print('❌ Exception lors du rafraîchissement du token: $e');
+      _isRefreshing = false;
+      _refreshCompleter?.completeError(e);
+      return false;
+    }
+  }
+  
+  // Masquer le token pour les logs (sécurité)
+  String _maskToken(String token) {
+    if (token.length <= 8) return '****';
+    return '${token.substring(0, 4)}...${token.substring(token.length - 4)}';
+  }
+  
+  // Stocker les tokens après la connexion ou l'inscription
+  Future<void> saveTokens(String accessToken, String refreshToken) async {
+    final expiry = DateTime.now().add(const Duration(hours: 24));
+    
+    await _storage.write(key: _accessTokenKey, value: accessToken);
+    await _storage.write(key: _refreshTokenKey, value: refreshToken);
+    await _storage.write(key: _tokenExpiryKey, value: expiry.toIso8601String());
+    
+    print('📝 Tokens enregistrés (expire le ${expiry.toLocal()})');
+  }
 
   Future<String?> getToken() async {
-    return _storage.read(key: 'token');
+    return _storage.read(key: _accessTokenKey);
   }
 
   Future<void> setToken(String token) async {
-    await _storage.write(key: 'token', value: token);
+    await _storage.write(key: _accessTokenKey, value: token);
   }
 
   Future<void> removeToken() async {
-    await _storage.delete(key: 'token');
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _tokenExpiryKey);
   }
 
   Future<void> clearToken() async {
-    await _storage.delete(key: 'token');
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _tokenExpiryKey);
   }
 
   Dio get dio => _dio;
@@ -116,24 +331,51 @@ class ApiService {
     throw Exception('Failed after $maxRetries retries');
   }
 
-  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) {
-    return _retryRequest(() => _dio.get(path, queryParameters: queryParameters));
+  // Méthodes HTTP avec gestion d'erreur améliorée
+
+  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+    await _respectRequestDelay();
+    try {
+      return await _retryRequest(() => _dio.get(path, queryParameters: queryParameters));
+    } catch (e) {
+      throw ErrorHandler.handleError(e);
+    }
   }
 
-  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) {
-    return _retryRequest(() => _dio.post(path, data: data, queryParameters: queryParameters));
+  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    await _respectRequestDelay();
+    try {
+      return await _retryRequest(() => _dio.post(path, data: data, queryParameters: queryParameters));
+    } catch (e) {
+      throw ErrorHandler.handleError(e);
+    }
   }
 
-  Future<Response> put(String path, {dynamic data, Map<String, dynamic>? queryParameters}) {
-    return _retryRequest(() => _dio.put(path, data: data, queryParameters: queryParameters));
+  Future<Response> put(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    await _respectRequestDelay();
+    try {
+      return await _retryRequest(() => _dio.put(path, data: data, queryParameters: queryParameters));
+    } catch (e) {
+      throw ErrorHandler.handleError(e);
+    }
   }
 
-  Future<Response> patch(String path, {dynamic data, Map<String, dynamic>? queryParameters}) {
-    return _retryRequest(() => _dio.patch(path, data: data, queryParameters: queryParameters));
+  Future<Response> patch(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    await _respectRequestDelay();
+    try {
+      return await _retryRequest(() => _dio.patch(path, data: data, queryParameters: queryParameters));
+    } catch (e) {
+      throw ErrorHandler.handleError(e);
+    }
   }
 
-  Future<Response> delete(String path, {dynamic data, Map<String, dynamic>? queryParameters}) {
-    return _retryRequest(() => _dio.delete(path, data: data, queryParameters: queryParameters));
+  Future<Response> delete(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    await _respectRequestDelay();
+    try {
+      return await _retryRequest(() => _dio.delete(path, data: data, queryParameters: queryParameters));
+    } catch (e) {
+      throw ErrorHandler.handleError(e);
+    }
   }
 
   void _validateResponse(Response response) {

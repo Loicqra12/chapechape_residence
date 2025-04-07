@@ -15,6 +15,7 @@ import 'package:chapechape_client/core/blocs/favorite/favorite_bloc.dart';
 import 'package:chapechape_client/core/services/auth_service.dart';
 import 'package:chapechape_client/core/services/chat_service.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
+import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/user_service.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:chapechape_client/core/services/notification_service.dart';
@@ -22,7 +23,8 @@ import 'package:chapechape_client/core/services/favorite_service.dart';
 import 'package:chapechape_client/core/services/booking_service.dart';
 import 'package:chapechape_client/core/repositories/notification_repository.dart';
 import 'package:chapechape_client/core/repositories/favorite_repository.dart';
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui' as ui;
 import 'package:chapechape_client/core/config/app_config.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/router/app_router.dart';
@@ -40,6 +42,12 @@ Future<void> main() async {
   await Hive.initFlutter();
   await Hive.openBox('settings');
   await Hive.openBox('cache');
+
+  // Initialiser le service de cache
+  final cacheService = await CacheService.initialize(
+    defaultCacheDuration: const Duration(minutes: 10),
+  );
+  debugPrint('✅ Service de cache initialisé avec succès');
 
   // Initialiser tous les services et repositories
   final authService = await AuthService.initialize();

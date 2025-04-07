@@ -1,4 +1,5 @@
 const Partner = require('../../models/partner.model');
+const User = require('../../models/user.model');
 const Residence = require('../../models/residence.model');
 const Booking = require('../../models/booking.model');
 const Payment = require('../../models/payment.model');
@@ -9,26 +10,161 @@ const asyncHandler = require('../../middlewares/async.middleware');
 
 // Obtenir le profil du partenaire
 exports.getPartnerProfile = asyncHandler(async (req, res) => {
-    const partner = await Partner.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-password');
     res.status(200).json({
         success: true,
-        data: partner
+        data: user
     });
 });
 
 // Mettre à jour le profil du partenaire
 exports.updatePartnerProfile = asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, phone, address } = req.body;
-    const partner = await Partner.findByIdAndUpdate(
-        req.user.id,
-        { firstName, lastName, email, phone, address },
-        { new: true, runValidators: true }
-    ).select('-password');
+    try {
+        // Log pour déboguer
+        console.log('Requête reçue pour mise à jour du profil');
+        console.log('req.body:', req.body);
+        console.log('req.files:', req.files);
+        
+        // Récupérer les données du formulaire
+        const { firstName, lastName, email, phone, address } = req.body;
+        
+        // Créer l'objet de mise à jour
+        const updateData = { 
+            firstName, 
+            lastName, 
+            email, 
+            phone, 
+            address 
+        };
+        
+        // Gérer l'upload de photo de profil avec une meilleure gestion d'erreur
+        if (req.files) {
+            // Chercher le fichier quel que soit le nom du champ
+            let profileImage = null;
+            
+            // Vérifier plusieurs noms possibles de champs
+            if (req.files.profileImage && req.files.profileImage.length > 0) {
+                profileImage = req.files.profileImage[0];
+                console.log('Trouvé image avec champ profileImage');
+            } else if (req.files.profileimage && req.files.profileimage.length > 0) {
+                profileImage = req.files.profileimage[0];
+                console.log('Trouvé image avec champ profileimage');
+            } else {
+                // Parcourir tous les champs pour trouver un fichier image
+                Object.keys(req.files).forEach(fieldName => {
+                    if (!profileImage && req.files[fieldName].length > 0) {
+                        console.log(`Trouvé image potentielle dans le champ ${fieldName}`);
+                        profileImage = req.files[fieldName][0];
+                    }
+                });
+            }
+            
+            if (profileImage) {
+                // Créer une URL relative pour l'image
+                updateData.profileImage = profileImage.filename;
+                console.log('Photo de profil mise à jour:', profileImage.filename);
+            }
+        }
+        
+        // Éviter l'erreur "Cannot read properties of null"
+        if (!updateData.profileImage) {
+            console.log('Aucune image de profil fournie ou image non reconnue');
+        }
+        
+        // Mettre à jour l'utilisateur
+        console.log('ID utilisateur:', req.user.id);
+        console.log('Données de mise à jour:', updateData);
 
-    res.status(200).json({
-        success: true,
-        data: partner
-    });
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+        // Mettre à jour les champs
+        if (updateData.firstName) user.firstName = updateData.firstName;
+        if (updateData.lastName) user.lastName = updateData.lastName;
+        if (updateData.email) user.email = updateData.email;
+        if (updateData.phone) user.phoneNumber = updateData.phone;
+        if (updateData.address) user.address = updateData.address;
+        if (updateData.profileImage) user.profileImage = updateData.profileImage;
+
+        // Sauvegarder les modifications
+        await user.save();
+
+        // Construire les URLs complètes pour les fichiers
+        if (user.profileImage && user.profileImage !== 'default.jpg') {
+            user.profileImage = `/uploads/profiles/${user.profileImage}`;
+        }
+        
+        res.status(200).json({
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour du profil:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la mise à jour du profil',
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Upload d'un document
+exports.uploadDocument = asyncHandler(async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Aucun document fourni'
+            });
+        }
+        
+        const documentType = req.body.documentType || 'identity';
+        
+        // Récupérer le partenaire actuel
+        const partner = await Partner.findById(req.user.id);
+        
+        // Créer un nouveau document
+        const newDocument = {
+            type: documentType,
+            url: req.file.filename,
+            verified: false,
+            uploadedAt: new Date()
+        };
+        
+        // Ajouter le document à la liste
+        const existingDocs = partner.documents || [];
+        partner.documents = [...existingDocs, newDocument];
+        
+        // Sauvegarder le partenaire
+        await partner.save();
+        
+        // URL du document
+        const documentUrl = `/uploads/documents/${req.file.filename}`;
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                document: {
+                    ...newDocument.toObject(),
+                    url: documentUrl
+                },
+                url: documentUrl
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'upload du document:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de l\'upload du document',
+            error: error.message
+        });
+    }
 });
 
 // Obtenir les résidences du partenaire

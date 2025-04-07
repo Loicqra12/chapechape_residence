@@ -7,6 +7,8 @@ const emailService = require('../../services/email.service');
 const Residence = require('../../models/residence.model');
 const Payment = require('../../models/payment.model');
 const { validateBookingDates } = require('../../utils/validation');
+const bookingService = require('../../services/booking.service');
+const availabilityService = require('../../services/availability.service');
 
 // Obtenir toutes les réservations (admin seulement)
 exports.getAllBookings = asyncHandler(async (req, res) => {
@@ -77,123 +79,208 @@ exports.getAllBookings = asyncHandler(async (req, res) => {
     });
 });
 
-// Créer une nouvelle réservation
+/**
+ * @desc    Créer une nouvelle réservation
+ * @route   POST /api/bookings
+ * @access  Privé
+ */
 exports.createBooking = asyncHandler(async (req, res) => {
-    const { residenceId, checkIn, checkOut, guests } = req.body;
-
-    // Valider les dates
-    if (!validateBookingDates(checkIn, checkOut)) {
-        throw new ApiError('Dates de réservation invalides', 400);
-    }
-
-    // Vérifier la disponibilité
-    const isAvailable = await Booking.checkAvailability(residenceId, checkIn, checkOut);
-    if (!isAvailable) {
-        throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
-    }
-
-    // Calculer le prix total
-    const residence = await Residence.findById(residenceId);
-    const numberOfDays = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
-    const totalAmount = residence.pricePerNight * numberOfDays;
-
-    // Créer la réservation
-    const booking = await Booking.create({
-        user: req.user._id,
-        residence: residenceId,
-        checkIn,
-        checkOut,
-        guests,
-        totalAmount,
-        status: 'pending'
-    });
-
-    // Envoyer les notifications
-    await Promise.all([
-        notificationService.sendBookingNotification(booking),
-        emailService.sendBookingConfirmation(req.user.email, booking)
-    ]);
-
+    const booking = await bookingService.createBooking(req.body, req.user._id);
+    
     res.status(201).json({
         success: true,
         data: booking
     });
 });
 
-// Obtenir les réservations de l'utilisateur
+/**
+ * @desc    Obtenir toutes les réservations de l'utilisateur
+ * @route   GET /api/bookings
+ * @access  Privé
+ */
 exports.getUserBookings = asyncHandler(async (req, res) => {
-    const bookings = await Booking.find({ user: req.user._id })
-        .populate('residence', 'name address images')
-        .sort('-createdAt');
-
+    const filter = {};
+    
+    // Appliquer les filtres de la requête
+    if (req.query.status) {
+        filter.status = req.query.status;
+    }
+    
+    // Date future ou passée
+    if (req.query.upcoming === 'true') {
+        filter.checkIn = { $gte: new Date() };
+    } else if (req.query.upcoming === 'false') {
+        filter.checkIn = { $lt: new Date() };
+    }
+    
+    const bookings = await bookingService.getUserBookings(req.user._id, filter);
+    
     res.status(200).json({
         success: true,
+        count: bookings.length,
         data: bookings
     });
 });
 
-// Obtenir une réservation spécifique
+/**
+ * @desc    Obtenir les réservations d'une résidence
+ * @route   GET /api/residences/:residenceId/bookings
+ * @access  Privé - Propriétaire ou Admin
+ */
+exports.getResidenceBookings = asyncHandler(async (req, res) => {
+    const filter = {};
+    
+    // Appliquer les filtres de la requête
+    if (req.query.status) {
+        filter.status = req.query.status;
+    }
+    
+    // Filtre par date
+    if (req.query.startDate) {
+        filter.checkIn = { $gte: new Date(req.query.startDate) };
+    }
+    
+    if (req.query.endDate) {
+        filter.checkOut = { ...(filter.checkOut || {}), $lte: new Date(req.query.endDate) };
+    }
+    
+    const isAdmin = req.user.role === 'admin';
+    const bookings = await bookingService.getResidenceBookings(
+        req.params.residenceId,
+        filter,
+        isAdmin
+    );
+    
+    res.status(200).json({
+        success: true,
+        count: bookings.length,
+        data: bookings
+    });
+});
+
+/**
+ * @desc    Obtenir une réservation spécifique
+ * @route   GET /api/bookings/:bookingId
+ * @access  Privé
+ */
 exports.getBooking = asyncHandler(async (req, res) => {
-    const booking = await Booking.findById(req.params.id)
-        .populate('residence', 'name address images')
-        .populate('user', 'firstName lastName email');
-
-    if (!booking) {
-        throw new ApiError('Réservation non trouvée', 404);
-    }
-
-    // Vérifier que l'utilisateur a le droit d'accéder à cette réservation
-    if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-        throw new ApiError('Non autorisé', 403);
-    }
-
+    const isAdmin = req.user.role === 'admin';
+    const booking = await bookingService.getBookingById(
+        req.params.bookingId,
+        req.user._id,
+        isAdmin
+    );
+    
     res.status(200).json({
         success: true,
         data: booking
     });
 });
 
-// Annuler une réservation
-exports.cancelBooking = asyncHandler(async (req, res) => {
-    const booking = await Booking.findById(req.params.id);
-
-    if (!booking) {
-        throw new ApiError('Réservation non trouvée', 404);
-    }
-
-    // Vérifier que l'utilisateur a le droit d'annuler cette réservation
-    if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-        throw new ApiError('Non autorisé', 403);
-    }
-
-    // Vérifier si l'annulation est possible selon les règles
-    const checkIn = new Date(booking.checkIn);
-    const now = new Date();
-    const hoursUntilCheckIn = (checkIn - now) / (1000 * 60 * 60);
-
-    if (hoursUntilCheckIn < 24) {
-        throw new ApiError('Impossible d\'annuler moins de 24h avant l\'arrivée', 400);
-    }
-
-    booking.status = 'cancelled';
-    await booking.save();
-
-    // Traiter le remboursement si nécessaire
-    const payment = await Payment.findOne({ booking: booking._id });
-    if (payment) {
-        payment.status = 'refunded';
-        await payment.save();
-    }
-
-    // Envoyer les notifications
-    await Promise.all([
-        notificationService.sendCancellationNotification(booking),
-        emailService.sendCancellationConfirmation(req.user.email, booking)
-    ]);
-
+/**
+ * @desc    Modifier une réservation
+ * @route   PUT /api/bookings/:bookingId
+ * @access  Privé
+ */
+exports.updateBooking = asyncHandler(async (req, res) => {
+    const isAdmin = req.user.role === 'admin';
+    const booking = await bookingService.updateBooking(
+        req.params.bookingId,
+        req.user._id,
+        req.body,
+        isAdmin
+    );
+    
     res.status(200).json({
         success: true,
         data: booking
+    });
+});
+
+/**
+ * @desc    Annuler une réservation
+ * @route   DELETE /api/bookings/:bookingId
+ * @access  Privé
+ */
+exports.cancelBooking = asyncHandler(async (req, res) => {
+    const isAdmin = req.user.role === 'admin';
+    const result = await bookingService.cancelBooking(
+        req.params.bookingId,
+        req.user._id,
+        req.body.reason || 'Annulation par l\'utilisateur',
+        isAdmin
+    );
+    
+    res.status(200).json({
+        success: true,
+        data: result.booking,
+        refundAmount: result.refundAmount,
+        refundPercentage: result.refundPercentage
+    });
+});
+
+/**
+ * @desc    Mettre à jour le statut d'une réservation
+ * @route   PATCH /api/bookings/:bookingId/status
+ * @access  Privé - Admin ou Propriétaire
+ */
+exports.updateBookingStatus = asyncHandler(async (req, res) => {
+    const isAdmin = req.user.role === 'admin';
+    const booking = await bookingService.updateBookingStatus(
+        req.params.bookingId,
+        req.body.status,
+        req.user._id,
+        isAdmin
+    );
+    
+    res.status(200).json({
+        success: true,
+        data: booking
+    });
+});
+
+/**
+ * @desc    Ajouter un avis à une réservation
+ * @route   POST /api/bookings/:bookingId/review
+ * @access  Privé
+ */
+exports.addBookingReview = asyncHandler(async (req, res) => {
+    const { rating, comment } = req.body;
+    
+    const booking = await bookingService.addBookingReview(
+        req.params.bookingId,
+        req.user._id,
+        rating,
+        comment
+    );
+    
+    res.status(200).json({
+        success: true,
+        data: booking
+    });
+});
+
+/**
+ * @desc    Vérifier si une modification de réservation est possible
+ * @route   GET /api/bookings/:bookingId/check-modification
+ * @access  Privé
+ */
+exports.checkBookingModification = asyncHandler(async (req, res) => {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+        throw new ApiError('Les dates de début et de fin sont requises', 400);
+    }
+    
+    const result = await availabilityService.checkBookingModification(
+        req.params.bookingId,
+        startDate,
+        endDate
+    );
+    
+    res.status(200).json({
+        success: true,
+        data: result
     });
 });
 

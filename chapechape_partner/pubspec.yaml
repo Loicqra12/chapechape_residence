@@ -1,6 +1,6 @@
 name: chapechape_partner
 description: "Application de gestion pour les partenaires ChapeChape Residence"
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -18,6 +18,8 @@ dependencies:
   intl: ^0.18.1
   image_picker: ^1.0.7
   cached_network_image: ^3.3.0
+  flutter_image_compress: ^2.1.0
+  image: ^4.1.3
   shimmer: ^3.0.0
   timeago: ^3.5.0
   cupertino_icons: ^1.0.2
@@ -39,6 +41,13 @@ dependencies:
   flutter_chat_ui: ^1.6.9
   flutter_chat_types: ^3.6.2
   http: ^1.1.0
+  freezed_annotation: ^2.4.1
+  logging: ^1.2.0
+  provider: ^6.0.5
+  fpdart: ^1.1.0
+  connectivity_plus: ^5.0.1
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -46,12 +55,13 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   bloc_test: ^9.1.6
   mocktail: ^1.0.3
-  build_runner: ^2.4.13
-  json_serializable: ^6.9.0
+  build_runner: ^2.4.6
+  freezed: ^2.4.2
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
-  
+
   fonts:
     - family: Poppins
       fonts:
@@ -62,7 +72,7 @@ flutter:
           weight: 600
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
-  
+
   assets:
     - assets/images/
     - assets/images/logo/

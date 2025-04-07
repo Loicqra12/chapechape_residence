@@ -5,11 +5,17 @@ import '../../core/theme/app_theme.dart';
 class DateRangePickerWidget extends StatefulWidget {
   final Function(DateTimeRange)? onDateRangeSelected;
   final DateTimeRange? initialDateRange;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+  final int minimumNights;
 
   const DateRangePickerWidget({
     Key? key,
     this.onDateRangeSelected,
     this.initialDateRange,
+    this.firstDate,
+    this.lastDate,
+    this.minimumNights = 1,
   }) : super(key: key);
 
   @override
@@ -28,8 +34,8 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
   Future<void> _showDateRangePicker() async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: widget.firstDate ?? DateTime.now(),
+      lastDate: widget.lastDate ?? DateTime.now().add(const Duration(days: 365)),
       initialDateRange: _selectedDateRange,
       builder: (context, child) {
         return Theme(
@@ -47,6 +53,18 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
     );
 
     if (picked != null) {
+      // Vérifier la durée minimale
+      final nights = picked.end.difference(picked.start).inDays;
+      if (nights < widget.minimumNights) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('La durée minimale de séjour est de ${widget.minimumNights} nuit${widget.minimumNights > 1 ? 's' : ''}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _selectedDateRange = picked;
       });
@@ -58,6 +76,8 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final dateFormat = DateFormat.yMMMd('fr');
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -84,7 +104,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> {
                 Expanded(
                   child: Text(
                     _selectedDateRange != null
-                        ? '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}'
+                        ? '${dateFormat.format(_selectedDateRange!.start)} - ${dateFormat.format(_selectedDateRange!.end)}'
                         : 'Sélectionner les dates',
                     style: TextStyle(
                       color: _selectedDateRange != null

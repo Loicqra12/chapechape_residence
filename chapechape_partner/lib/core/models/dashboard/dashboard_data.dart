@@ -12,11 +12,39 @@ class DashboardData {
   });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
+    try {
+      return DashboardData(
+        performance: PerformanceStats.fromJson(json['performance'] ?? {}),
+        revenue: RevenueStats.fromJson(json['revenue'] ?? {}),
+        stats: GeneralStats.fromJson(json['stats'] ?? {}),
+        realtime: RealtimeStats.fromJson(json['realtime'] ?? {}),
+      );
+    } catch (e) {
+      print('❌ Erreur lors de la conversion du DashboardData: $e');
+      return DashboardData.empty();
+    }
+  }
+  
+  factory DashboardData.empty() {
     return DashboardData(
-      performance: PerformanceStats.fromJson(json['performance'] ?? {}),
-      revenue: RevenueStats.fromJson(json['revenue'] ?? {}),
-      stats: GeneralStats.fromJson(json['stats'] ?? {}),
-      realtime: RealtimeStats.fromJson(json['realtime'] ?? {}),
+      performance: PerformanceStats.empty(),
+      revenue: RevenueStats.empty(),
+      stats: GeneralStats.empty(),
+      realtime: RealtimeStats.empty(),
+    );
+  }
+  
+  DashboardData copyWith({
+    PerformanceStats? performance,
+    RevenueStats? revenue,
+    GeneralStats? stats,
+    RealtimeStats? realtime,
+  }) {
+    return DashboardData(
+      performance: performance ?? this.performance,
+      revenue: revenue ?? this.revenue,
+      stats: stats ?? this.stats,
+      realtime: realtime ?? this.realtime,
     );
   }
 }
@@ -38,13 +66,53 @@ class PerformanceStats {
 
   factory PerformanceStats.fromJson(Map<String, dynamic> json) {
     return PerformanceStats(
-      totalResidences: json['total_residences'] ?? 0,
-      totalReservations: json['total_reservations'] ?? 0,
-      occupancyRate: (json['occupancy_rate'] ?? 0).toDouble(),
-      pendingReviews: json['pending_reviews'] ?? 0,
-      newMessages: json['new_messages'] ?? 0,
+      totalResidences: _parseIntSafely(json['total_residences']),
+      totalReservations: _parseIntSafely(json['total_reservations']),
+      occupancyRate: _parseDoubleSafely(json['occupancy_rate']),
+      pendingReviews: _parseIntSafely(json['pending_reviews']),
+      newMessages: _parseIntSafely(json['new_messages']),
     );
   }
+  
+  factory PerformanceStats.empty() {
+    return PerformanceStats(
+      totalResidences: 0,
+      totalReservations: 0,
+      occupancyRate: 0.0,
+      pendingReviews: 0,
+      newMessages: 0,
+    );
+  }
+}
+
+// Méthode utilitaire pour convertir en sécurité les valeurs numériques
+int _parseIntSafely(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) {
+    try {
+      return int.parse(value);
+    } catch (e) {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+// Méthode utilitaire pour convertir en sécurité les valeurs décimales
+double _parseDoubleSafely(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    try {
+      return double.parse(value);
+    } catch (e) {
+      return 0.0;
+    }
+  }
+  return 0.0;
 }
 
 class RevenueStats {
@@ -85,14 +153,49 @@ class RevenueStats {
         {};
 
     return RevenueStats(
-      totalRevenue: (json['total_revenue'] ?? 0).toDouble(),
-      dailyRevenue: (json['daily_revenue'] ?? 0).toDouble(),
-      weeklyRevenue: (json['weekly_revenue'] ?? 0).toDouble(),
-      monthlyRevenue: (json['monthly_revenue'] ?? 0).toDouble(),
-      revenueGrowth: (json['revenue_growth'] ?? 0).toDouble(),
+      totalRevenue: _parseDoubleSafely(json['total_revenue']),
+      dailyRevenue: _parseDoubleSafely(json['daily_revenue']),
+      weeklyRevenue: _parseDoubleSafely(json['weekly_revenue']),
+      monthlyRevenue: _parseDoubleSafely(json['monthly_revenue']),
+      revenueGrowth: _parseDoubleSafely(json['revenue_growth']),
       revenueHistory: historyList,
       bestResidences: bestResidencesList,
       revenueByCategory: categoryMap,
+    );
+  }
+  
+  factory RevenueStats.empty() {
+    return RevenueStats(
+      totalRevenue: 0.0,
+      dailyRevenue: 0.0,
+      weeklyRevenue: 0.0,
+      monthlyRevenue: 0.0,
+      revenueGrowth: 0.0,
+      revenueHistory: [],
+      bestResidences: [],
+      revenueByCategory: {},
+    );
+  }
+  
+  RevenueStats copyWith({
+    double? totalRevenue,
+    double? dailyRevenue,
+    double? weeklyRevenue,
+    double? monthlyRevenue,
+    double? revenueGrowth,
+    List<RevenuePoint>? revenueHistory,
+    List<BestPerformingResidence>? bestResidences,
+    Map<String, CategoryRevenue>? revenueByCategory,
+  }) {
+    return RevenueStats(
+      totalRevenue: totalRevenue ?? this.totalRevenue,
+      dailyRevenue: dailyRevenue ?? this.dailyRevenue,
+      weeklyRevenue: weeklyRevenue ?? this.weeklyRevenue,
+      monthlyRevenue: monthlyRevenue ?? this.monthlyRevenue,
+      revenueGrowth: revenueGrowth ?? this.revenueGrowth,
+      revenueHistory: revenueHistory ?? this.revenueHistory,
+      bestResidences: bestResidences ?? this.bestResidences,
+      revenueByCategory: revenueByCategory ?? this.revenueByCategory,
     );
   }
 }
@@ -117,8 +220,18 @@ class BestPerformingResidence {
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       imageUrl: json['imageUrl'],
-      revenue: (json['revenue'] ?? 0).toDouble(),
-      bookings: json['bookings'] ?? 0,
+      revenue: _parseDoubleSafely(json['revenue']),
+      bookings: _parseIntSafely(json['bookings']),
+    );
+  }
+  
+  factory BestPerformingResidence.empty() {
+    return BestPerformingResidence(
+      id: '',
+      name: '',
+      imageUrl: null,
+      revenue: 0.0,
+      bookings: 0,
     );
   }
 }
@@ -134,8 +247,15 @@ class CategoryRevenue {
 
   factory CategoryRevenue.fromJson(Map<String, dynamic> json) {
     return CategoryRevenue(
-      revenue: (json['revenue'] ?? 0).toDouble(),
-      count: json['count'] ?? 0,
+      revenue: _parseDoubleSafely(json['revenue']),
+      count: _parseIntSafely(json['count']),
+    );
+  }
+  
+  factory CategoryRevenue.empty() {
+    return CategoryRevenue(
+      revenue: 0.0,
+      count: 0,
     );
   }
 }
@@ -152,7 +272,14 @@ class RevenuePoint {
   factory RevenuePoint.fromJson(Map<String, dynamic> json) {
     return RevenuePoint(
       date: DateTime.parse(json['date'] ?? ''),
-      amount: (json['amount'] ?? 0).toDouble(),
+      amount: _parseDoubleSafely(json['amount']),
+    );
+  }
+  
+  factory RevenuePoint.empty() {
+    return RevenuePoint(
+      date: DateTime.now(),
+      amount: 0.0,
     );
   }
 }
@@ -172,15 +299,29 @@ class GeneralStats {
 
   factory GeneralStats.fromJson(Map<String, dynamic> json) {
     final bookingsMap = (json['bookings'] as Map<String, dynamic>?)?.map(
-          (key, value) => MapEntry(key, value as int),
+          (key, value) => MapEntry(key, _parseIntSafely(value)),
         ) ??
         {};
 
     return GeneralStats(
-      responseRate: (json['response_rate'] ?? 0).toDouble(),
-      averageResponseTime: json['average_response_time'] ?? 0,
-      rating: (json['rating'] ?? 0).toDouble(),
+      responseRate: _parseDoubleSafely(json['response_rate']),
+      averageResponseTime: _parseIntSafely(json['average_response_time']),
+      rating: _parseDoubleSafely(json['rating']),
       bookingsByStatus: bookingsMap,
+    );
+  }
+  
+  factory GeneralStats.empty() {
+    return GeneralStats(
+      responseRate: 0.0,
+      averageResponseTime: 0,
+      rating: 0.0,
+      bookingsByStatus: {
+        'pending': 0,
+        'confirmed': 0,
+        'completed': 0,
+        'cancelled': 0,
+      },
     );
   }
 }
@@ -210,10 +351,19 @@ class RealtimeStats {
         [];
 
     return RealtimeStats(
-      activeBookings: json['active_bookings'] ?? 0,
-      pendingRequests: json['pending_requests'] ?? 0,
+      activeBookings: _parseIntSafely(json['active_bookings']),
+      pendingRequests: _parseIntSafely(json['pending_requests']),
       todayVisits: visitsList,
       recentActivities: activitiesList,
+    );
+  }
+  
+  factory RealtimeStats.empty() {
+    return RealtimeStats(
+      activeBookings: 0,
+      pendingRequests: 0,
+      todayVisits: [],
+      recentActivities: [],
     );
   }
 }
@@ -242,6 +392,16 @@ class TodayVisit {
       status: json['status'] ?? '',
     );
   }
+  
+  factory TodayVisit.empty() {
+    return TodayVisit(
+      id: '',
+      time: '',
+      client: ClientInfo.empty(),
+      residence: ResidenceInfo.empty(),
+      status: '',
+    );
+  }
 }
 
 class ClientInfo {
@@ -260,6 +420,14 @@ class ClientInfo {
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       avatar: json['avatar'],
+    );
+  }
+  
+  factory ClientInfo.empty() {
+    return ClientInfo(
+      id: '',
+      name: '',
+      avatar: null,
     );
   }
 }
@@ -282,6 +450,14 @@ class ResidenceInfo {
       imageUrl: json['imageUrl'],
     );
   }
+  
+  factory ResidenceInfo.empty() {
+    return ResidenceInfo(
+      id: '',
+      name: '',
+      imageUrl: null,
+    );
+  }
 }
 
 class RecentActivity {
@@ -300,6 +476,14 @@ class RecentActivity {
       type: json['type'] ?? '',
       data: json['data'] ?? {},
       timestamp: DateTime.parse(json['timestamp'] ?? ''),
+    );
+  }
+  
+  factory RecentActivity.empty() {
+    return RecentActivity(
+      type: '',
+      data: {},
+      timestamp: DateTime.now(),
     );
   }
 }
@@ -323,12 +507,29 @@ class PartnerStats {
 
   factory PartnerStats.fromJson(Map<String, dynamic> json) {
     return PartnerStats(
-      totalResidences: json['total_residences'] ?? 0,
+      totalResidences: _parseIntSafely(json['total_residences']),
       bookingsByStatus: Map<String, int>.from(json['bookings_by_status'] ?? {}),
-      averageRating: (json['average_rating'] ?? 0).toDouble(),
-      responseRate: (json['response_rate'] ?? 0).toDouble(),
-      occupancyRate: (json['occupancy_rate'] ?? 0).toDouble(),
-      monthlyRevenue: (json['monthly_revenue'] ?? 0).toDouble(),
+      averageRating: _parseDoubleSafely(json['average_rating']),
+      responseRate: _parseDoubleSafely(json['response_rate']),
+      occupancyRate: _parseDoubleSafely(json['occupancy_rate']),
+      monthlyRevenue: _parseDoubleSafely(json['monthly_revenue']),
+    );
+  }
+  
+  factory PartnerStats.empty() {
+    return PartnerStats(
+      totalResidences: 0,
+      bookingsByStatus: {
+        'pending': 0,
+        'confirmed': 0,
+        'completed': 0,
+        'cancelled': 0,
+        'refunded': 0,
+      },
+      averageRating: 0.0,
+      responseRate: 0.0,
+      occupancyRate: 0.0,
+      monthlyRevenue: 0.0,
     );
   }
 }
@@ -366,10 +567,29 @@ class ResidenceStats {
       imageUrl: (residence['images'] as List?)?.firstWhere((img) => img != null, orElse: () => '') ?? '',
       status: residence['is_available'] == true ? 'available' : 'unavailable',
       displayAddress: location['formatted_address'] ?? '',
-      totalBookings: json['total_bookings'] ?? 0,
-      revenue: (json['revenue'] ?? 0).toDouble(),
-      occupancyRate: (json['occupancy_rate'] ?? 0).toDouble(),
+      totalBookings: _parseIntSafely(json['total_bookings']),
+      revenue: _parseDoubleSafely(json['revenue']),
+      occupancyRate: _parseDoubleSafely(json['occupancy_rate']),
       bookingsByStatus: Map<String, int>.from(json['bookings_by_status'] ?? {}),
+    );
+  }
+  
+  factory ResidenceStats.empty() {
+    return ResidenceStats(
+      id: '',
+      title: '',
+      imageUrl: '',
+      status: 'unavailable',
+      displayAddress: '',
+      totalBookings: 0,
+      revenue: 0.0,
+      occupancyRate: 0.0,
+      bookingsByStatus: {
+        'pending': 0,
+        'confirmed': 0,
+        'completed': 0,
+        'cancelled': 0,
+      },
     );
   }
 }
@@ -393,7 +613,15 @@ class TrendData {
     return TrendData(
       period: json['period'] ?? 'monthly',
       points: pointsList,
-      growth: (json['growth'] ?? 0).toDouble(),
+      growth: _parseDoubleSafely(json['growth']),
+    );
+  }
+  
+  factory TrendData.empty() {
+    return TrendData(
+      period: 'monthly',
+      points: [],
+      growth: 0.0,
     );
   }
 }
@@ -414,9 +642,18 @@ class TrendPoint {
   factory TrendPoint.fromJson(Map<String, dynamic> json) {
     return TrendPoint(
       date: DateTime.parse(json['date'] ?? ''),
-      bookings: json['bookings'] ?? 0,
-      revenue: (json['revenue'] ?? 0).toDouble(),
-      occupancyRate: (json['occupancy_rate'] ?? 0).toDouble(),
+      bookings: _parseIntSafely(json['bookings']),
+      revenue: _parseDoubleSafely(json['revenue']),
+      occupancyRate: _parseDoubleSafely(json['occupancy_rate']),
+    );
+  }
+  
+  factory TrendPoint.empty() {
+    return TrendPoint(
+      date: DateTime.now(),
+      bookings: 0,
+      revenue: 0.0,
+      occupancyRate: 0.0,
     );
   }
 }
@@ -441,9 +678,18 @@ class EarningsData {
 
     return EarningsData(
       earnings: earningsList,
-      totalEarnings: (json['total_earnings'] ?? 0).toDouble(),
-      averagePerPeriod: (json['average_per_period'] ?? 0).toDouble(),
-      growth: (json['growth'] ?? 0).toDouble(),
+      totalEarnings: _parseDoubleSafely(json['total_earnings']),
+      averagePerPeriod: _parseDoubleSafely(json['average_per_period']),
+      growth: _parseDoubleSafely(json['growth']),
+    );
+  }
+  
+  factory EarningsData.empty() {
+    return EarningsData(
+      earnings: [],
+      totalEarnings: 0.0,
+      averagePerPeriod: 0.0,
+      growth: 0.0,
     );
   }
 }
@@ -462,8 +708,16 @@ class EarningPeriod {
   factory EarningPeriod.fromJson(Map<String, dynamic> json) {
     return EarningPeriod(
       date: DateTime.parse(json['date'] ?? ''),
-      amount: (json['amount'] ?? 0).toDouble(),
-      bookingsCount: json['count'] ?? 0,
+      amount: _parseDoubleSafely(json['amount']),
+      bookingsCount: _parseIntSafely(json['count']),
+    );
+  }
+  
+  factory EarningPeriod.empty() {
+    return EarningPeriod(
+      date: DateTime.now(),
+      amount: 0.0,
+      bookingsCount: 0,
     );
   }
 }

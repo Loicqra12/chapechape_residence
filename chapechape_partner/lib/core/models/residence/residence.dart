@@ -218,15 +218,13 @@ class Residence {
       'description': description,
       'images': images,
       'mainImage': mainImage,
-      'location': {
-        'address': address,
-        'city': city,
-      },
+      'address': address,
+      'city': city,
       'price': price,
+      'area': surface,
       'features': {
         'bedrooms': bedrooms,
         'bathrooms': bathrooms,
-        'area': surface,
         'hasPool': hasPool,
         'hasWifi': hasWifi,
         'hasRestaurant': hasRestaurant,

@@ -40,19 +40,33 @@ router.get('/my-residences', async (req, res) => {
     try {
       console.log('DEBUG - /my-residences - Recherche des résidences pour partner:', req.user.id);
       
-      // Essayer d'abord avec le champ partner._id
-      const residences = await Residence.find({ 'partner._id': req.user.id }).lean();
-      if (residences.length > 0) {
-        console.log(`DEBUG - /my-residences - ${residences.length} résidences trouvées avec partner._id`);
-        return res.json({ success: true, data: residences });
+      // Vérifier si le partenaire existe dans la base de données
+      const filter = { partner: req.user.id, deleted: { $ne: true } }; // Exclure les résidences supprimées
+      console.log('DEBUG - /my-residences - Filtre de recherche:', JSON.stringify(filter));
+      
+      // Récupérer toutes les résidences pour vérification (DEBUG)
+      const allResidences = await Residence.find({ partner: req.user.id }).lean();
+      console.log(`DEBUG - TOUTES les résidences pour ce partenaire (sans filtre): ${allResidences.length}`);
+      
+      if (allResidences.length > 0) {
+        allResidences.forEach(res => {
+          console.log(`- Résidence ID: ${res._id}, Titre: ${res.title}, Status: ${res.status}, Supprimée: ${res.deleted || false}`);
+        });
+      } else {
+        console.log('Aucune résidence trouvée du tout pour ce partenaire (sans filtre)');
       }
       
-      // Si aucune résidence n'est trouvée, essayer avec partner directement
-      console.log('DEBUG - /my-residences - Aucune résidence trouvée avec partner._id, essai avec partner');
-      const residencesAlt = await Residence.find({ partner: req.user.id }).lean();
-      console.log(`DEBUG - /my-residences - ${residencesAlt.length} résidences trouvées avec partner`);
+      // Maintenant avec le filtre 'deleted'
+      const residences = await Residence.find(filter).lean();
+      console.log(`DEBUG - /my-residences - ${residences.length} résidences trouvées après filtrage`);
       
-      res.json({ success: true, data: residencesAlt });
+      if (residences.length > 0) {
+        residences.forEach(res => {
+          console.log(`- APRÈS FILTRE - Résidence ID: ${res._id}, Titre: ${res.title}, Status: ${res.status}`);
+        });
+      }
+      
+      res.json({ success: true, data: residences });
     } catch (innerError) {
       console.error('DEBUG - /my-residences - Erreur spécifique lors de la recherche:', innerError);
       throw innerError; // Re-lancer l'erreur pour le catch externe
@@ -78,6 +92,6 @@ router.put('/:id', updateResidence);
 router.delete('/:id', deleteResidence);
 
 // Route pour l'upload d'images
-router.post('/:id/images', upload.array('images', 5), uploadImages);
+router.post('/:id/images', upload.residence.array('images', 5), uploadImages);
 
 module.exports = router;

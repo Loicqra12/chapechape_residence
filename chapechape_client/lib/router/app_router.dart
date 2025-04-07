@@ -16,6 +16,7 @@ import '../core/blocs/auth/auth_bloc.dart';
 import '../core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/presentation/screens/booking/booking_history_screen.dart' as booking;
 import 'package:chapechape_client/presentation/screens/booking/booking_confirmation_screen.dart' as booking;
+import 'package:chapechape_client/presentation/screens/booking/booking_modify_screen.dart' as booking;
 import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart' as payment;
 import 'package:chapechape_client/presentation/screens/payment/payment_redirect_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_success_screen.dart';
@@ -387,6 +388,20 @@ class AppRouter {
             // Cette route pourrait rediriger vers l'écran de confirmation où l'utilisateur
             // peut choisir de payer
             return booking.BookingConfirmationScreen(bookingId: bookingId);
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/booking-modify/:bookingId',
+        name: 'booking_modify',
+        builder: (context, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          // Vérifier l'authentification
+          if (_isAuthenticated(context)) {
+            return booking.BookingModifyScreen(bookingId: bookingId);
           } else {
             _redirectToLogin(context);
             return const SizedBox();

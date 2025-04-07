@@ -25,6 +25,7 @@ const messageRoutes = require('./routes/message.routes');
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const superAdminRoutes = require('./routes/superadmin.routes');
+const availabilityRoutes = require('./routes/availability.routes');
 
 const app = express();
 
@@ -88,6 +89,7 @@ app.use('/api/partners', partnerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/messages', messageRoutes); // Routes de messagerie
+app.use('/api', availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
 
 // Middleware de sécurité pour les fichiers
 app.use('/api/uploads', fileSecurityMiddleware);

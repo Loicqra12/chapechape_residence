@@ -4,7 +4,7 @@ class Booking {
   final String id;
   final String userId;
   final String residenceId;
-  final String? residenceName;
+  final String residenceName;
   final DateTime checkIn;
   final DateTime checkOut;
   final int numberOfGuests;
@@ -16,12 +16,14 @@ class Booking {
   final String? specialRequests;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<Map<String, dynamic>>? modifications;
+  final String cancellationPolicyId;
 
   Booking({
     required this.id,
     required this.userId,
     required this.residenceId,
-    this.residenceName,
+    required this.residenceName,
     required this.checkIn,
     required this.checkOut,
     required this.numberOfGuests,
@@ -33,6 +35,8 @@ class Booking {
     this.specialRequests,
     this.createdAt,
     this.updatedAt,
+    this.modifications,
+    required this.cancellationPolicyId,
   });
 
   int get nights {
@@ -59,6 +63,8 @@ class Booking {
     String? specialRequests,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<Map<String, dynamic>>? modifications,
+    String? cancellationPolicyId,
   }) {
     return Booking(
       id: id ?? this.id,
@@ -76,48 +82,54 @@ class Booking {
       specialRequests: specialRequests ?? this.specialRequests,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      modifications: modifications ?? this.modifications,
+      cancellationPolicyId: cancellationPolicyId ?? this.cancellationPolicyId,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      '_id': id,
       'userId': userId,
-      'residenceId': residenceId,
+      'residence': residenceId,
       'residenceName': residenceName,
       'checkIn': checkIn.toIso8601String(),
       'checkOut': checkOut.toIso8601String(),
       'numberOfGuests': numberOfGuests,
-      'totalPrice': totalPrice,
       'status': status,
+      'totalPrice': totalPrice,
       'paymentId': paymentId,
       'paymentStatus': paymentStatus,
       'cancellationReason': cancellationReason,
       'specialRequests': specialRequests,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'modifications': modifications,
+      'cancellationPolicyId': cancellationPolicyId,
     };
   }
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: json['_id'] as String,
       userId: json['user'] ?? json['userId'] ?? '',
-      residenceId: json['residence'] ?? json['residenceId'] ?? '',
-      residenceName: json['residenceName'] ?? (json['residence'] is Map ? json['residence']['title'] : null),
-      checkIn: DateTime.parse(json['checkIn']),
-      checkOut: DateTime.parse(json['checkOut']),
-      numberOfGuests: json['numberOfGuests'],
-      totalPrice: (json['totalPrice'] is int) 
-          ? json['totalPrice'].toDouble() 
-          : json['totalPrice'] ?? 0.0,
-      status: json['status'] ?? 'pending',
+      residenceId: json['residence'] as String,
+      residenceName: json['residenceName'] as String? ?? 'Résidence',
+      checkIn: DateTime.parse(json['checkIn'] as String),
+      checkOut: DateTime.parse(json['checkOut'] as String),
+      numberOfGuests: json['numberOfGuests'] as int,
+      totalPrice: (json['totalPrice'] as num).toDouble(),
+      status: json['status'] as String,
       paymentId: json['paymentId'],
       paymentStatus: json['paymentStatus'] ?? 'pending',
       cancellationReason: json['cancellationReason'] ?? json['reason'],
       specialRequests: json['specialRequests'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
+      modifications: json['modifications'] != null
+          ? List<Map<String, dynamic>>.from(json['modifications'] as List)
+          : null,
+      cancellationPolicyId: json['cancellationPolicyId'] as String,
     );
   }
 }

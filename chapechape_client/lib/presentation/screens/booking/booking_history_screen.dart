@@ -25,13 +25,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadBookings();
+    context.read<BookingBloc>().add(booking_events.LoadUserBookings());
   }
 
   void _loadBookings() {
-    context.read<BookingBloc>().add(
-      booking_events.LoadUserBookings(status: _selectedFilter),
-    );
+    context.read<BookingBloc>().add(booking_events.LoadUserBookings());
   }
 
   @override
@@ -361,6 +359,14 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                         context.go('/booking-payment/${booking.id}');
                       },
                       child: const Text('Payer'),
+                    ),
+                  if (booking.status == 'confirmed' && 
+                      booking.checkIn.isAfter(DateTime.now()))
+                    TextButton(
+                      onPressed: () {
+                        context.go('/booking-modify/${booking.id}');
+                      },
+                      child: const Text('Modifier'),
                     ),
                   if (booking.status == 'pending' || booking.status == 'confirmed')
                     TextButton(

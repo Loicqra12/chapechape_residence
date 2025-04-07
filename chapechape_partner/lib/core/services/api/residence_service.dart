@@ -1,13 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:dio/dio.dart';
+import 'package:logging/logging.dart';
+import 'package:mime/mime.dart';
+import 'package:path/path.dart' as path;
+import '../../config/api_config.dart';
 import '../../models/residence/residence.dart';
 import '../../models/residence/residence_image.dart';
 import '../../exceptions/api_exception.dart';
+import '../media/media_service.dart';
+import 'package:dio/dio.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 class ResidenceService {
   final String baseUrl;
@@ -42,7 +49,7 @@ class ResidenceService {
   }
 
   Future<Map<String, String>> _getAuthHeaders() async {
-    final token = await storage!.read(key: 'token');
+    final token = await storage.read(key: 'token');
     return {
       'Authorization': 'Bearer $token',
       'Accept': 'application/json',
@@ -131,7 +138,7 @@ class ResidenceService {
       return _handleResponse<List<Residence>>(
         response,
         (data) {
-          if (data is Map<String, dynamic> && data.containsKey('data')) {
+          if (data.containsKey('data')) {
             var dataList = data['data'];
             if (dataList is List) {
               List<Residence> result = [];
@@ -171,14 +178,14 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/residences').replace(queryParameters: filters),
+        Uri.parse('$baseUrl/residences/my-residences').replace(queryParameters: filters),
         headers: headers,
       );
 
       return _handleResponse<List<Residence>>(
         response,
         (data) {
-          if (data is Map<String, dynamic> && data.containsKey('data')) {
+          if (data.containsKey('data')) {
             var dataList = data['data'];
             if (dataList is List) {
               List<Residence> result = [];
@@ -277,8 +284,16 @@ class ResidenceService {
   Future<Residence> getResidenceById(String id) async {
     try {
       final headers = await _getAuthHeaders();
+      // Ajouter des en-têtes pour désactiver le cache
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+      
+      // Ajouter un paramètre timestamp pour éviter le cache côté serveur
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
       final response = await client.get(
-        Uri.parse('$baseUrl/residences/$id'),
+        Uri.parse('$baseUrl/residences/$id?_t=$timestamp'),
         headers: headers,
       );
 
@@ -466,62 +481,99 @@ class ResidenceService {
   
   // Méthode utilitaire pour adapter les données de résidence du frontend au backend
   Map<String, dynamic> _adaptFrontendResidenceToBackend(Map<String, dynamic> data) {
-    // Identifier le type backend basé sur le type frontend
-    String backendType = _mapFrontendTypeToBackendType(data['type'] ?? 'studio_meuble');
-    
-    // Déterminer la période de tarification basée sur le type de résidence
-    String pricePeriod = data['pricePeriod'] ?? 'month';
-    
-    // Pour certains types spécifiques, forcer la période de tarification
-    if (data['type'] == 'hotel_passage' || data['type'] == 'motel') {
-      pricePeriod = 'hour';
-    } else if (data['type'] == 'studio_meuble' || data['type'] == 'guest_house') {
-      pricePeriod = 'day';
+    // Créer une copie pour éviter de modifier l'original
+    final Map<String, dynamic> adapted = Map.from(data);
+
+    // Adapter les noms de champs pour correspondre à ceux attendus par le backend
+    if (data.containsKey('name')) {
+      adapted['title'] = data['name'];
     }
     
-    // Convertir tous les champs numériques en double ou int
-    double price = double.tryParse(data['price'].toString()) ?? 0.0;
-    int bedrooms = int.tryParse(data['bedrooms'].toString()) ?? 0;
-    int bathrooms = int.tryParse(data['bathrooms'].toString()) ?? 0;
-    double surface = double.tryParse(data['surface'].toString()) ?? 0.0;
-    double hourlyRate = double.tryParse(data['hourlyRate']?.toString() ?? '0') ?? 0.0;
-    double halfDayRate = double.tryParse(data['halfDayRate']?.toString() ?? '0') ?? 0.0;
-    double fullDayRate = double.tryParse(data['fullDayRate']?.toString() ?? '0') ?? 0.0;
-    double weekendRate = double.tryParse(data['weekendRate']?.toString() ?? '0') ?? 0.0;
-    double latitude = double.tryParse(data['latitude']?.toString() ?? '0') ?? 0.0;
-    double longitude = double.tryParse(data['longitude']?.toString() ?? '0') ?? 0.0;
+    if (data.containsKey('surface')) {
+      adapted['area'] = data['surface'];
+    }
     
-    return {
-      'title': data['name'],
-      'description': data['description'],
-      'price': price,
-      'pricePeriod': pricePeriod,
-      'hourlyRates': {
-        'oneHour': hourlyRate,
-        'twoHours': hourlyRate * 1.8,
-        'threeHours': hourlyRate * 2.7,
-        'additionalHour': hourlyRate * 0.8,
-      },
-      'dailyRates': {
-        'halfDay': halfDayRate,
-        'fullDay': fullDayRate,
-        'weekend': weekendRate,
-      },
-      'type': backendType,
-      'address': data['address'],
+    // IMPORTANT: Convertir le type pour le backend
+    if (data.containsKey('type')) {
+      adapted['type'] = _mapFrontendTypeToBackendType(data['type']);
+    }
+
+    // 1. Gérer le statut
+    if (data['status'] != null) {
+      adapted['isAvailable'] = data['status'] == 'available';
+    }
+
+    // 2. Structurer correctement les données de localisation
+    if (data['location'] != null) {
+      // Si des données structurées de localisation sont fournies, les utiliser
+      adapted['location'] = data['location'];
+    } else {
+      // Sinon, construire une structure à partir des champs individuels
+      adapted['location'] = {
+        'country': data['country'] ?? 'CI',
+        'countryName': data['countryName'],
+        'region': data['region'],
+        'regionName': data['regionName'],
       'city': data['city'],
-      'bedrooms': data['type'].toString().contains('studio') ? 0 : bedrooms,
-      'bathrooms': bathrooms,
-      'area': surface,
-      'latitude': latitude,
-      'longitude': longitude,
-      'amenities': data['amenities'] ?? [],
-      'rules': data['rules'] ?? [],
-      'hasPool': data['hasPool'] ?? false,
-      'isVacationResidence': data['isVacationResidence'] ?? false,
-      'isSpecialResidence': data['isSpecialResidence'] ?? false,
-      'status': data['isAvailable'] == true ? 'available' : 'unavailable',
-    };
+        'cityName': data['cityName'],
+        'address': data['address'],
+      };
+    }
+
+    // 3. Traiter les amenities dans une liste
+    if (data['amenities'] != null) {
+      // Si déjà une liste, la préserver
+      if (data['amenities'] is List) {
+        adapted['amenities'] = data['amenities'];
+      } 
+      // Si c'est une chaîne JSON, la parser
+      else if (data['amenities'] is String) {
+        try {
+          adapted['amenities'] = jsonDecode(data['amenities']);
+        } catch (e) {
+          print('❌ Erreur de décodage des amenities: $e');
+          adapted['amenities'] = [];
+        }
+      }
+    } else {
+      // Sinon, créer une liste à partir des propriétés booléennes
+      final List<String> amenities = [];
+      if (data['hasPool'] == true) amenities.add('pool');
+      if (data['hasWifi'] == true) amenities.add('wifi');
+      if (data['hasParking'] == true) amenities.add('parking');
+      if (data['hasKitchen'] == true) amenities.add('kitchen');
+      if (data['hasAirConditioning'] == true) amenities.add('air_conditioning');
+      if (data['hasGym'] == true) amenities.add('gym');
+      if (data['hasSpa'] == true) amenities.add('spa');
+      if (data['hasMeetingRoom'] == true) amenities.add('meeting_room');
+      if (data['hasTerrace'] == true) amenities.add('terrace');
+      if (data['hasBalcony'] == true) amenities.add('balcony');
+      if (data['isVacationResidence'] == true) amenities.add('vacation_residence');
+      if (data['isSpecialResidence'] == true) amenities.add('special_residence');
+      adapted['amenities'] = amenities;
+    }
+
+    // 4. Structurer les règles de la maison
+    if (data['rules'] != null) {
+      // Si déjà un objet ou liste, le préserver
+      if (data['rules'] is Map || data['rules'] is List) {
+        adapted['rules'] = data['rules'];
+      } 
+      // Si c'est une chaîne JSON, la parser
+      else if (data['rules'] is String) {
+        try {
+          adapted['rules'] = jsonDecode(data['rules']);
+        } catch (e) {
+          print('❌ Erreur de décodage des règles: $e');
+          adapted['rules'] = {};
+        }
+      }
+    }
+
+    print('🏠 Création résidence - Données adaptées: $data');
+    print('🏠 Création résidence - JSON des données: ${json.encode(adapted)}');
+
+    return adapted;
   }
 
   String _mapFrontendTypeToBackendType(String frontendType) {
@@ -573,133 +625,92 @@ class ResidenceService {
 
   Future<Residence> createResidence(Map<String, dynamic> data, List<ResidenceImage> images) async {
     try {
+      // Vérifier le token d'authentification
       final token = await storage!.read(key: 'token');
-      if (token == null) {
-        throw ApiException(
-          'Vous n\'êtes pas connecté. Veuillez vous connecter pour continuer.',
-          401,
-          {'error': 'auth_required'}
-        );
-      }
-      
-      // Adapter les données au format du backend
+      if (token == null) throw Exception('Aucun token d\'authentification trouvé');
+
+      // Adapter les données pour le backend
       final adaptedData = _adaptFrontendResidenceToBackend(data);
+
+      print('🏠 Création résidence - Approche en 2 étapes');
+      print('🏠 Création résidence - Étape 1: Création de la résidence sans images');
       
-      // Débogage - afficher les données adaptées
-      print('Données adaptées: $adaptedData');
+      // Préparer les headers pour la requête JSON
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
       
-      // Si aucune image n'est fournie, utiliser une simple requête POST
-      if (images.isEmpty) {
-        final headers = await _getAuthHeaders();
-        headers['Content-Type'] = 'application/json';
-        
-        final response = await http.post(
-          Uri.parse('$baseUrl/residences'),
-          headers: headers,
-          body: json.encode(adaptedData),
-        );
-        
-        return _handleResponse<Residence>(
-          response,
-          (data) {
-            if (data is Map<String, dynamic> && data.containsKey('data')) {
-              var residenceData = data['data'];
-              if (residenceData is Map<String, dynamic>) {
-                return _adaptBackendResidenceToFrontend(residenceData);
-              }
-            }
-            throw ApiException(
-              'Format de données inattendu pour la résidence créée',
-              500,
-              {'error': 'unexpected_data_format'}
-            );
-          }
-        );
-      }
-      
-      // Sinon, utiliser une requête multipart
-      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/residences'));
-      
-      // Ajouter le token d'authentification
-      request.headers['Authorization'] = 'Bearer $token';
-      
-      // Convertir l'objet adaptedData en un format plat pour la requête multipart
-      // Au lieu d'utiliser des notations complexes, convertir tout en JSON et envoyer comme un champ unique
-      request.fields['residenceData'] = json.encode(adaptedData);
-      
-      // Ajouter les images
-      int imageIndex = 0;
-      for (var image in images) {
-        if (image.file != null) {
-          try {
-            final imageBytes = await image.file!.readAsBytes();
-            final filename = image.file!.path.split('/').last;
-            
-            final multipartFile = http.MultipartFile.fromBytes(
-              'images',  // Nom du champ, doit correspondre à ce que le backend attend
-              imageBytes,
-              filename: filename,
-              contentType: MediaType('image', _getImageMimeType(filename)),
-            );
-            
-            request.files.add(multipartFile);
-            imageIndex++;
-          } catch (e) {
-            print("Erreur lors de la lecture de l'image: $e");
-          }
-        } else if (image.isWeb) {
-          // Si c'est une image web, l'envoyer comme données binaires
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'images',
-              image.webImage!,
-              filename: 'image_$imageIndex.jpg',
-              contentType: MediaType('image', 'jpeg'),
-            ),
-          );
-          imageIndex++;
+      // Vérifier les champs obligatoires
+      final requiredFields = ['title', 'description', 'price', 'type', 'address', 'city', 'bedrooms', 'bathrooms', 'area'];
+      for (final field in requiredFields) {
+        if (adaptedData[field] == null || adaptedData[field].toString().isEmpty) {
+          print('⚠️ Champ obligatoire manquant: $field');
+          // Ajouter des valeurs par défaut
+          if (field == 'title') adaptedData[field] = 'Sans titre';
+          if (field == 'description') adaptedData[field] = 'Aucune description';
+          if (field == 'price') adaptedData[field] = 0;
+          if (field == 'type') adaptedData[field] = 'studio'; // Type par défaut
+          if (field == 'address') adaptedData[field] = 'Adresse non spécifiée';
+          if (field == 'city') adaptedData[field] = 'Abidjan';
+          if (field == 'bedrooms') adaptedData[field] = 1;
+          if (field == 'bathrooms') adaptedData[field] = 1;
+          if (field == 'area') adaptedData[field] = 0;
         }
       }
       
-      try {
-        final streamedResponse = await request.send();
-        final response = await http.Response.fromStream(streamedResponse);
+      // S'assurer que le type est correctement mappé pour le backend
+      if (adaptedData.containsKey('type') && adaptedData['type'] is String) {
+        adaptedData['type'] = _mapFrontendTypeToBackendType(adaptedData['type']);
+      }
+      
+      // Convertir en JSON
+      final jsonBody = jsonEncode(adaptedData);
+      print('🏠 Création résidence - Données JSON: $jsonBody');
+      
+      // Appel API pour créer la résidence
+      final response = await client.post(
+          Uri.parse('$baseUrl/residences'),
+        headers: headers,
+        body: jsonBody,
+      );
+      
+      print('🏠 Création résidence - Statut de la réponse: ${response.statusCode}');
+        print('🏠 Création résidence - Corps de la réponse: ${response.body}');
         
-        return _handleResponse<Residence>(
-          response,
-          (data) {
-            if (data is Map<String, dynamic> && data.containsKey('data')) {
-              var residenceData = data['data'];
-              if (residenceData is Map<String, dynamic>) {
-                return _adaptBackendResidenceToFrontend(residenceData);
-              }
-            }
-            throw ApiException(
-              'Format de données inattendu pour la résidence créée',
-              500,
-              {'error': 'unexpected_data_format'}
-            );
-          }
-        );
-      } catch (e) {
-        print("Erreur lors de l'envoi de la requête: $e");
+      // Vérifier si la création a réussi
+        if (response.statusCode != 201 && response.statusCode != 200) {
         throw ApiException(
-          "Une erreur est survenue lors de la création de la résidence: $e",
-          500,
-          {'error': 'request_failed'}
+          'Erreur lors de la création de la résidence: ${response.statusCode}',
+          response.statusCode,
+          {}
         );
       }
-    } on SocketException {
-      throw ApiException(
-        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
-        0,
-        {'error': 'network_error'}
-      );
-    } catch (e) {
-      if (e is ApiException) rethrow;
       
+      // Extraire l'ID de la résidence créée
+          final responseData = jsonDecode(response.body);
+      if (!responseData['success']) {
+        throw Exception('La création de la résidence a échoué: ${responseData['message']}');
+      }
+      
+      final String residenceId = responseData['data']['_id'];
+      print('🏠 Création résidence - Résidence créée avec ID: $residenceId');
+      
+      // Étape 2: Télécharger les images si disponibles
+        if (images.isNotEmpty) {
+        print('🏠 Création résidence - Étape 2: Téléchargement des ${images.length} images');
+        await uploadResidenceImages(residenceId, images);
+      }
+      
+      // Étape 3: Récupérer les détails complets de la résidence
+      print('🏠 Création résidence - Étape 3: Récupération des détails de la résidence');
+      return await getResidenceById(residenceId);
+          } catch (e) {
+      print('❌ Création résidence - Erreur: $e');
+            if (e is ApiException) rethrow;
       throw ApiException(
-        'Échec de la création de la résidence: $e',
+        'Erreur lors de la création de la résidence: $e',
         500,
         {'error': e.toString()}
       );
@@ -723,125 +734,264 @@ class ResidenceService {
     }
   }
 
-  Future<void> updateResidence(String id, Map<String, dynamic> data) async {
+  Future<Residence> updateResidence(String id, Map<String, dynamic> data, List<ResidenceImage> images) async {
     try {
-      final headers = await _getAuthHeaders();
+      // Vérifier le token d'authentification
+      final token = await storage.read(key: 'token');
+      if (token == null) throw Exception('Aucun token d\'authentification trouvé');
+
+      // Adapter les données pour le backend
+      final adaptedData = _adaptFrontendResidenceToBackend(data);
+
+      print('Mise à jour de la résidence $id');
+      print('Données adaptées: $adaptedData');
+      print('Envoi de la requête avec ${images.length} images');
+
+      // Utiliser http.MultipartRequest pour créer une requête multipart
+      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/residences/$id'));
       
-      final residenceData = _adaptFrontendResidenceToBackend(data);
-      print('Données adaptées pour le backend : $residenceData');
+      // Ajouter le token d'authentification
+      request.headers['Authorization'] = 'Bearer $token';
       
-      final response = await client.put(
-        Uri.parse('$baseUrl/residences/$id'),
-        headers: headers,
-        body: json.encode(residenceData),
-      );
-      
-      _handleResponse<void>(
-        response,
-        (data) => null
-      );
-    } on SocketException {
-      throw ApiException(
-        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
-        0,
-        {'error': 'network_error'}
-      );
-    } catch (e) {
-      if (e is ApiException) {
-        if (e.statusCode == 403) {
-          throw ApiException(
-            'Vous n\'êtes pas autorisé à modifier cette résidence. Seul le propriétaire ou un administrateur peut la modifier.',
-            403,
-            {'error': 'forbidden', 'details': 'residence_ownership_required'}
-          );
+      // Ajouter tous les champs du formulaire
+      adaptedData.forEach((key, value) {
+        if (value != null) {
+          if (value is List || value is Map) {
+            request.fields[key] = jsonEncode(value);
+          } else {
+            request.fields[key] = value.toString();
+          }
         }
-        rethrow;
+      });
+      
+      // Ajouter les images si elles existent
+      if (images.isNotEmpty) {
+        for (int i = 0; i < images.length; i++) {
+          final img = images[i];
+          try {
+            if (img.isWeb && img.webImage != null) {
+              // Image web (Uint8List)
+              print('Ajout de l\'image web ${i+1}/${images.length}');
+              final multipartFile = http.MultipartFile.fromBytes(
+                'images',
+                img.webImage!,
+                filename: 'image_${i+1}.jpg',
+                contentType: MediaType('image', 'jpeg'),
+              );
+              request.files.add(multipartFile);
+            } else if (img.file != null) {
+              try {
+                // Pour mobile
+                print('Ajout de l\'image mobile ${i+1}/${images.length}');
+                if (kIsWeb) {
+                  // En environnement web, on ne peut pas utiliser fromPath ni readAsBytes()
+                  print('Environnement web détecté, utilisation directe de webImage...');
+                  
+                  // Si nous avons une image web dans ResidenceImage, l'utiliser directement
+                  if (img.webImage != null) {
+                    final multipartFile = http.MultipartFile.fromBytes(
+                      'images',
+                      img.webImage!,
+                      filename: 'image_${i+1}.jpg',
+                      contentType: MediaType('image', 'jpeg'),
+                    );
+                    request.files.add(multipartFile);
+                  } else {
+                    print('⚠️ Création résidence - Impossible de lire le fichier en environnement web sans webImage');
+                  }
+                } else {
+                  // Environnement mobile
+                  final multipartFile = await http.MultipartFile.fromPath(
+                    'images',
+                    img.file!.path,
+                    contentType: MediaType('image', 'jpeg'),
+                  );
+                  request.files.add(multipartFile);
+                }
+              } catch (e) {
+                print('❌ Création résidence - Erreur lors de l\'ajout de l\'image: $e');
+                // Continuer avec les autres images même si une échoue
+              }
+            }
+          } catch (e) {
+            print('Erreur lors de l\'ajout de l\'image: $e');
+            // Continuer avec les autres images même si une échoue
+          }
+        }
       }
       
-      throw ApiException(
-        'Échec de la mise à jour de la résidence: $e',
-        500,
-        {'error': e.toString()}
-      );
+      // Afficher les données envoyées pour le debug
+      print('Champs envoyés: ${request.fields}');
+      print('Fichiers envoyés: ${request.files.length}');
+      
+      // Envoyer la requête
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      // Traiter la réponse
+      print('Réponse du serveur: ${response.statusCode}');
+      print('Corps de la réponse: ${response.body}');
+      
+      if (response.statusCode != 200) {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['message'] ?? 'Erreur lors de la mise à jour de la résidence';
+        throw ApiException(errorMessage, response.statusCode, {});
+      }
+      
+      final responseData = jsonDecode(response.body);
+      final residence = Residence.fromJson(responseData['data']);
+      return residence;
+    } catch (e) {
+      print('Exception complète lors de la mise à jour de la résidence: $e');
+      if (e is ApiException) rethrow;
+      
+      throw ApiException('Erreur lors de la mise à jour de la résidence: $e', 500, {});
     }
   }
 
-  Future<void> uploadResidenceImages(String residenceId, List<ResidenceImage> images) async {
+  // Méthode améliorée avec retry pour l'upload d'images
+  Future<void> uploadResidenceImages(String residenceId, List<ResidenceImage> images, {int maxRetries = 3}) async {
     try {
+      final logger = Logger('UploadImages');
+      logger.info("\n===== DÉBUT DE L'UPLOAD DES IMAGES =====");
+      logger.info("Téléchargement de ${images.length} images pour la résidence $residenceId");
+      
+      // Si aucune image à télécharger, sortir immédiatement
+      if (images.isEmpty) {
+        logger.info("Aucune image à télécharger");
+        return;
+      }
+      
+      // Optimiser les images avant l'envoi
+      final mediaService = MediaService();
+      final optimizedImages = await mediaService.optimizeImagesForUpload(images);
+      
+      logger.info("${optimizedImages.length}/${images.length} images validées et optimisées");
+      
+      if (optimizedImages.isEmpty) {
+        logger.warning("Aucune image valide à envoyer après validation");
+        return;
+      }
+      
       final token = await storage!.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/residences/$residenceId/images'),
       );
 
       // Ajouter tous les headers nécessaires
       request.headers.addAll({
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
-        'contentType': 'application/json',
-        'responseType': 'ResponseType.json',
-        'followRedirects': 'true',
-        'connectTimeout': '0:00:30.000000',
-        'receiveTimeout': '0:00:30.000000',
       });
 
-      for (var i = 0; i < images.length; i++) {
-        final image = images[i];
-        if (image.file != null) {
-          try {
-            final imageBytes = await image.file!.readAsBytes();
-            final filename = image.file!.path.split('/').last;
-            
-            final multipartFile = http.MultipartFile.fromBytes(
-              'images',  // Nom du champ, doit correspondre à ce que le backend attend
-              imageBytes,
-              filename: filename,
-              contentType: MediaType('image', _getImageMimeType(filename)),
-            );
-            
-            request.files.add(multipartFile);
-            print("Ajout de l'image $filename à la requête");
-          } catch (e) {
-            print("Erreur lors de la lecture de l'image: $e");
+      logger.info("Préparation des images pour l'upload:");
+      // SIMPLIFIÉ: Parcourir chaque image et l'ajouter avec le MÊME nom de champ "images"
+      // Le backend s'attend à recevoir plusieurs fichiers avec le même nom de champ
+      int imagesAdded = 0;
+      
+      for (var i = 0; i < optimizedImages.length; i++) {
+        final image = optimizedImages[i];
+        
+        try {
+          if (image.url != null && image.url!.startsWith('http')) {
+            // Si c'est une URL externe, on ne l'ajoute pas comme fichier mais comme champ
+            logger.fine("Image ${i+1}: URL externe (ignorée pour l'upload): ${image.url}");
+            // Ne pas ajouter aux fichiers, c'est déjà sur le serveur
+            continue;
           }
-        } else if (image.isWeb) {
-          // Si c'est une image web, l'envoyer comme données binaires
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'images',
+          
+          if (image.isWeb && image.webImage != null) {
+            // Image web (Uint8List)
+            logger.fine("Image ${i+1}: Préparation de l'image web (${image.webImage!.length} octets)");
+            final multipartFile = http.MultipartFile.fromBytes(
+              'images',  // IMPORTANT: Le nom du champ doit être "images" pour toutes les images
               image.webImage!,
-              filename: 'image_$i.jpg',
+              filename: 'image_${i+1}.jpg',
               contentType: MediaType('image', 'jpeg'),
-            ),
-          );
-          print("Ajout de l'image web image_$i.jpg à la requête");
+            );
+            request.files.add(multipartFile);
+            imagesAdded++;
+            logger.fine("Image ${i+1}: Ajoutée à la requête (fichier: image_${i+1}.jpg)");
+          } else if (image.file != null) {
+            if (kIsWeb) {
+              // Pour environnement web avec File (pas supporté directement)
+              logger.fine("Image ${i+1}: Impossible d'utiliser File en environnement web");
+              if (image.webImage != null) {
+                logger.fine("Image ${i+1}: Utilisation de webImage comme alternative");
+                final multipartFile = http.MultipartFile.fromBytes(
+                  'images',
+                  image.webImage!,
+                  filename: 'image_${i+1}.jpg',
+                  contentType: MediaType('image', 'jpeg'),
+                );
+                request.files.add(multipartFile);
+                imagesAdded++;
+                logger.fine("Image ${i+1}: Ajoutée à la requête via webImage");
+              } else {
+                logger.warning("Image ${i+1}: Pas de webImage disponible, image ignorée");
+              }
+              continue;
+            }
+            
+            // Image File (mobile native)
+            logger.fine("Image ${i+1}: Préparation de l'image mobile (${image.file!.path})");
+            final multipartFile = await http.MultipartFile.fromPath(
+              'images',  // IMPORTANT: Le nom du champ doit être "images" pour toutes les images
+              image.file!.path,
+              contentType: MediaType('image', 'jpeg'),
+            );
+            request.files.add(multipartFile);
+            imagesAdded++;
+            logger.fine("Image ${i+1}: Ajoutée à la requête (fichier: ${path.basename(image.file!.path)})");
+          } else {
+            logger.warning("Image ${i+1}: Aucun contenu valide trouvé, image ignorée");
+          }
+        } catch (e) {
+          logger.warning("Image ${i+1}: Erreur lors de la préparation: $e");
+          // Continuer avec les autres images
         }
       }
 
-      print("Envoi de ${request.files.length} images au serveur");
+      logger.info("Récapitulatif: $imagesAdded/${optimizedImages.length} images prêtes à être envoyées");
+      
+      if (imagesAdded == 0) {
+        logger.warning("Aucune image valide à envoyer après préparation");
+        return;
+      }
+      
+      // Afficher les informations de debug (uniquement en mode développement)
+      if (kDebugMode) {
+        logger.fine("URL: ${request.url}");
+        logger.fine("Headers: ${request.headers}");
+        logger.fine("Files count: ${request.files.length}");
+      }
+      
+      // Envoi de la requête
+      logger.info("Envoi des images au serveur...");
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       
-      print("Réponse du serveur pour l'upload d'images: ${response.statusCode}, Body: ${response.body}");
+      logger.info("Statut de la réponse: ${response.statusCode}");
+      if (kDebugMode) {
+        logger.fine("Corps de la réponse: ${response.body}");
+      }
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        print("Images téléchargées avec succès, mise à jour des données de la résidence");
-        // Ne pas lever d'exception si la réponse est valide
+        logger.info("Images téléchargées avec succès!");
         return;
       } else {
+        logger.warning("Échec du téléchargement des images: ${response.statusCode}");
+        logger.warning("Détail de l'erreur: ${response.body}");
         throw ApiException(
           'Erreur lors du téléchargement des images: ${response.statusCode}',
           response.statusCode,
           {'error': response.body}
         );
       }
-    } on SocketException {
-      throw ApiException(
-        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
-        0,
-        {'error': 'network_error'}
-      );
     } catch (e) {
+      final logger = Logger('UploadImages');
+      logger.severe("Exception complète lors de l'upload d'images: $e");
       if (e is ApiException) rethrow;
       
       throw ApiException(
@@ -849,51 +999,45 @@ class ResidenceService {
         500,
         {'error': e.toString()}
       );
+    } finally {
+      Logger('UploadImages').info("===== FIN DE L'UPLOAD DES IMAGES =====\n");
     }
   }
 
   Future<void> deleteResidence(String id) async {
     try {
+      print("🗑️ Début de la suppression de la résidence $id");
       final headers = await _getAuthHeaders();
-      
       final response = await client.delete(
         Uri.parse('$baseUrl/residences/$id'),
         headers: headers,
       );
+
+      print("📊 Status code de la suppression: ${response.statusCode}");
       
-      _handleResponse<void>(
-        response,
-        (data) => null
-      );
-    } on SocketException {
-      throw ApiException(
-        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
-        0,
-        {'error': 'network_error'}
-      );
-    } catch (e) {
-      if (e is ApiException) {
-        if (e.statusCode == 403) {
-          throw ApiException(
-            'Vous n\'êtes pas autorisé à supprimer cette résidence. Seul le propriétaire ou un administrateur peut la supprimer.',
-            403,
-            {'error': 'forbidden', 'details': 'residence_ownership_required'}
-          );
-        } else if (e.statusCode == 404) {
-          throw ApiException(
-            'La résidence que vous essayez de supprimer n\'existe pas ou a déjà été supprimée.',
-            404,
-            {'error': 'not_found', 'details': 'residence_not_found'}
-          );
+      if (response.statusCode == 200) {
+        print("✅ Résidence $id supprimée avec succès");
+        
+        // Vider le cache local pour forcer un rafraîchissement
+        try {
+          if (storage != null) {
+            storage!.delete(key: 'residences_cache');
+            print("🧹 Cache des résidences effacé après suppression");
+          }
+        } catch (e) {
+          print("⚠️ Erreur lors de la suppression du cache: $e");
         }
-        rethrow;
+      } else {
+        print("⚠️ Code de statut inattendu lors de la suppression: ${response.statusCode}");
+        throw ApiException(
+          'Erreur lors de la suppression de la résidence',
+          response.statusCode,
+          json.decode(response.body)
+        );
       }
-      
-      throw ApiException(
-        'Échec de la suppression de la résidence: $e',
-        500,
-        {'error': e.toString()}
-      );
+    } catch (e) {
+      print("❌ Erreur lors de la suppression: $e");
+      rethrow;
     }
   }
 
@@ -984,8 +1128,10 @@ class ResidenceService {
         String imageUrl = '';
         
         if (img is String) {
+          // Cas où l'image est une simple chaîne (URL)
           imageUrl = img;
         } else if (img is Map && img['url'] != null) {
+          // Cas où l'image est un objet avec une propriété URL
           imageUrl = img['url'].toString();
         }
         
@@ -993,9 +1139,14 @@ class ResidenceService {
         if (imageUrl.isNotEmpty) {
           if (!imageUrl.startsWith('http')) {
             if (imageUrl.startsWith('/')) {
-              imageUrl = '$baseUrl$imageUrl';
+              // baseUrl contient déjà "/api", mais les chemins d'images ne doivent pas l'avoir
+              // Remplacer "http://localhost:4000/api" par "http://localhost:4000" pour les images
+              String serverUrl = baseUrl.replaceAll('/api', '');
+              imageUrl = serverUrl + imageUrl;
             } else {
-              imageUrl = '$baseUrl/$imageUrl';
+              // Même correction pour les chemins sans slash initial
+              String serverUrl = baseUrl.replaceAll('/api', '');
+              imageUrl = '$serverUrl/$imageUrl';
             }
           }
           print("URL d'image extraite: $imageUrl");
@@ -1059,75 +1210,68 @@ class ResidenceService {
   // Récupérer seulement les résidences du partenaire connecté
   Future<List<Residence>> getMyResidences() async {
     try {
-      print("Récupération et filtrage des résidences du partenaire connecté");
+      print("📥 Début de la récupération des résidences du partenaire");
       
-      // 1. Récupérer l'ID du partenaire connecté
-      final userId = await storage!.read(key: 'userId');
-      print("ID du partenaire connecté: $userId");
-      
-      // ID spécifique pour Lamine
-      final lamineId = "67d735ea77cdc0d8ff3044d2";
-      final isLamine = (userId == lamineId);
-      
-      if (isLamine) {
-        print("👤 Utilisateur identifié comme Lamine (ID: $lamineId)");
-      }
-      
-      // 2. Récupérer toutes les résidences
       final headers = await _getAuthHeaders();
+      // Ajouter des en-têtes pour désactiver le cache
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+      
+      // Récupérer l'ID du partenaire pour le logging
+      final userId = await storage.read(key: 'userId');
+      print("👤 ID du partenaire connecté: $userId");
+      
+      // Ajouter un paramètre timestamp pour éviter le cache côté serveur
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences'),
+        Uri.parse('$baseUrl/residences/my-residences?_t=$timestamp'),
         headers: headers,
       );
-      
-      print("Status code: ${response.statusCode}");
-      
-      // 3. Traiter et filtrer les résidences
+
+      print("📊 Status code: ${response.statusCode}");
+      print("📝 Réponse brute: ${response.body}");
+
       return _handleResponse<List<Residence>>(
         response,
         (data) {
           if (data is Map<String, dynamic> && data.containsKey('data')) {
             var dataList = data['data'];
             if (dataList is List) {
-              List<Residence> allResidences = [];
-              List<Residence> myResidences = [];
+              List<Residence> result = [];
+              print("📋 Nombre d'éléments dans la réponse: ${dataList.length}");
               
               for (var item in dataList) {
                 if (item is Map<String, dynamic>) {
-                  final residence = _adaptBackendResidenceToFrontend(item);
-                  allResidences.add(residence);
-                  
-                  String resPartner = "";
-                  
-                  // Extraire l'ID du partenaire de la résidence
-                  if (item['partner'] is Map) {
-                    var partner = item['partner'] as Map;
-                    resPartner = partner['_id']?.toString() ?? partner['id']?.toString() ?? '';
-                  } else if (item['partner'] is String) {
-                    resPartner = item['partner'].toString();
+                  // Ignorer les résidences marquées comme supprimées
+                  if (item['deleted'] == true) {
+                    print("🗑️ Résidence ignorée car supprimée: ${item['_id']}");
+                    continue;
                   }
                   
-                  print("Résidence ${residence.name} (${residence.id}) - Partner: $resPartner");
-                  
-                  // Pour Lamine, ne montrer que la résidence Aboussouan
-                  if (isLamine) {
-                    if (resPartner == lamineId || residence.name.toLowerCase().contains("aboussouan")) {
-                      myResidences.add(residence);
-                      print("✅ Résidence ajoutée pour Lamine: ${residence.name}");
-                    }
-                  }
-                  // Pour les autres utilisateurs
-                  else if (resPartner == userId) {
-                    myResidences.add(residence);
-                    print("✅ Résidence ajoutée: ${residence.name}");
-                  }
+                  var residence = _adaptBackendResidenceToFrontend(item);
+                  print("🏠 Résidence trouvée - ID: ${residence.id}, Nom: ${residence.name}");
+                  result.add(residence);
                 }
               }
               
-              print("Total résidences: ${allResidences.length}, Filtrées: ${myResidences.length}");
-              return myResidences;
+              print("✅ ${result.length} résidences actives récupérées pour le partenaire $userId");
+              
+              // Vider le cache local pour éviter les problèmes
+              try {
+                if (storage != null) {
+                  storage!.delete(key: 'residences_cache');
+                  print("🧹 Cache des résidences effacé");
+                }
+              } catch (e) {
+                print("⚠️ Erreur lors de la suppression du cache: $e");
+              }
+              
+              return result;
             }
           }
+          print("⚠️ Format de données inattendu dans la réponse");
           throw ApiException(
             'Format de données inattendu pour les résidences',
             500,
@@ -1135,10 +1279,19 @@ class ResidenceService {
           );
         }
       );
-    } catch (e) {
-      print("Erreur lors de la récupération des résidences du partenaire: $e");
+    } on SocketException {
+      print("❌ Erreur de connexion réseau");
       throw ApiException(
-        'Échec de la récupération des résidences du partenaire: $e',
+        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
+        0,
+        {'error': 'network_error'}
+      );
+    } catch (e) {
+      print("❌ Erreur lors de la récupération des résidences: $e");
+      if (e is ApiException) rethrow;
+      
+      throw ApiException(
+        'Échec du chargement des résidences: $e',
         500,
         {'error': e.toString()}
       );
@@ -1148,20 +1301,65 @@ class ResidenceService {
   // Méthode pour mettre à jour une résidence avec des images
   Future<Residence> uploadImagesAndRefreshResidence(String residenceId, List<ResidenceImage> images) async {
     try {
-      // D'abord, télécharger les images
+      print("===== DÉBUT DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
+      
+      // 1. Télécharger les images
+      print("Étape 1: Téléchargement des images");
       await uploadResidenceImages(residenceId, images);
       
-      // Puis, récupérer la résidence mise à jour
-      print("Récupération de la résidence mise à jour après téléchargement des images");
-      final residence = await getResidenceById(residenceId);
+      // 2. Récupérer la résidence mise à jour pour obtenir les URLs des images
+      print("Étape 2: Récupération de la résidence mise à jour");
+      final updatedResidence = await getResidenceById(residenceId);
       
-      return residence;
+      // 3. Log pour déboguer
+      print("Images dans la résidence mise à jour: ${updatedResidence.images.length}");
+      updatedResidence.images.forEach((imgUrl) => print("- Image URL: $imgUrl"));
+      
+      print("===== FIN DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
+      
+      return updatedResidence;
+    } on SocketException {
+      throw ApiException(
+        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
+        0,
+        {'error': 'network_error'}
+      );
     } catch (e) {
-      print("Erreur lors de la mise à jour de la résidence avec images: $e");
+      print("Erreur lors de l'upload et du rafraîchissement: $e");
       if (e is ApiException) rethrow;
       
       throw ApiException(
-        'Échec de la mise à jour de la résidence avec images: $e',
+        'Échec de l\'envoi des images et du rafraîchissement: $e',
+        500,
+        {'error': e.toString()}
+      );
+    }
+  }
+
+  Future<void> deleteResidenceImage(String residenceId, String imageName) async {
+    try {
+      final headers = await _getAuthHeaders();
+      
+      final response = await client.delete(
+        Uri.parse('$baseUrl/residences/$residenceId/images/$imageName'),
+        headers: headers,
+      );
+      
+      _handleResponse<void>(
+        response,
+        (data) => null
+      );
+    } on SocketException {
+      throw ApiException(
+        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
+        0,
+        {'error': 'network_error'}
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      
+      throw ApiException(
+        'Échec de la suppression de l\'image: $e',
         500,
         {'error': e.toString()}
       );

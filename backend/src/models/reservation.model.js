@@ -49,17 +49,87 @@ const reservationSchema = new mongoose.Schema({
     },
     specialRequests: {
         type: String
-    }
+    },
+    cancellationPolicy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CancellationPolicy',
+        required: true
+    },
+    cancellationDetails: {
+        cancelledAt: Date,
+        cancelledBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reason: String,
+        refundAmount: Number,
+        refundStatus: {
+            type: String,
+            enum: ['pending', 'processing', 'completed', 'failed'],
+            default: 'pending'
+        }
+    },
+    modifications: [{
+        modifiedAt: {
+            type: Date,
+            default: Date.now
+        },
+        modifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        changes: {
+            type: Map,
+            of: mongoose.Schema.Types.Mixed
+        },
+        fee: {
+            type: Number,
+            default: 0
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        }
+    }]
 }, {
     timestamps: true
 });
 
-// Middleware pour vérifier que checkOut est après checkIn
 reservationSchema.pre('save', function(next) {
     if (this.checkOut <= this.checkIn) {
         next(new Error('La date de départ doit être après la date d\'arrivée'));
     }
     next();
 });
+
+reservationSchema.methods.getDurationInDays = function() {
+    return Math.ceil((this.checkOut - this.checkIn) / (1000 * 60 * 60 * 24));
+};
+
+reservationSchema.methods.canBeCancelled = async function() {
+    const policy = await this.populate('cancellationPolicy');
+    const now = new Date();
+    const hoursBeforeCheckIn = (this.checkIn - now) / (1000 * 60 * 60);
+    
+    if (['cancelled', 'completed', 'refunded'].includes(this.status)) {
+        return false;
+    }
+    
+    return policy.rules.some(rule => rule.timeBeforeCheckIn <= hoursBeforeCheckIn);
+};
+
+reservationSchema.methods.canBeModified = async function() {
+    const policy = await this.populate('cancellationPolicy');
+    const now = new Date();
+    const hoursBeforeCheckIn = (this.checkIn - now) / (1000 * 60 * 60);
+    
+    if (['cancelled', 'completed', 'refunded'].includes(this.status)) {
+        return false;
+    }
+    
+    return policy.isModificationAllowed(hoursBeforeCheckIn);
+};
 
 module.exports = mongoose.model('Reservation', reservationSchema);

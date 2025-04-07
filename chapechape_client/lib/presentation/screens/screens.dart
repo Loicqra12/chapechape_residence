@@ -10,7 +10,6 @@ export 'favorites_screen.dart';
 export 'profile_screen.dart';
 export 'settings_screen.dart';
 export 'chat_screen.dart';
-export 'notification_screen.dart';
 export 'notifications_screen.dart';
 export 'booking_history_screen.dart';
 export 'reviews_screen.dart';

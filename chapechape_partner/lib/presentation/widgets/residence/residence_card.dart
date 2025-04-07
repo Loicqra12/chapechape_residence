@@ -4,8 +4,10 @@ import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_extensions.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/constants/app_icons.dart';
+import 'package:logging/logging.dart';
 
 class ResidenceCard extends StatelessWidget {
+  static final _logger = Logger('ResidenceCard');
   final Residence residence;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
@@ -52,6 +54,22 @@ class ResidenceCard extends StatelessWidget {
                           child: Image.network(
                             residence.imageUrl,
                             fit: BoxFit.cover,
+                            
+                            // Désactiver complètement le cache pour forcer le rechargement
+                            cacheHeight: null,
+                            cacheWidth: null,
+                            
+                            // Ajouter des en-têtes pour éviter les problèmes de cache
+                            headers: {
+                              'Cache-Control': 'no-cache, no-store, must-revalidate',
+                              'Pragma': 'no-cache',
+                              'Expires': '0',
+                              'If-Modified-Since': DateTime.now().toUtc().toString(),
+                            },
+                            
+                            // Ajouter un timestamp à l'URL pour forcer le rechargement
+                            key: ValueKey('${residence.imageUrl}_${DateTime.now().millisecondsSinceEpoch}'),
+                            
                             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
                               if (wasSynchronouslyLoaded) return child;
                               return AnimatedOpacity(
@@ -62,6 +80,7 @@ class ResidenceCard extends StatelessWidget {
                               );
                             },
                             errorBuilder: (context, error, stackTrace) {
+                              _logger.warning('Error loading image: $error\nImage URL was: ${residence.imageUrl}');
                               return Image.asset(
                                 AppImages.residencePlaceholder,
                                 fit: BoxFit.cover,

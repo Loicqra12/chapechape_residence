@@ -62,7 +62,16 @@ class ConversationItem extends StatelessWidget {
                 color: unreadCount > 0 ? Colors.black87 : Colors.black54,
               ),
             ),
-          if (conversation.residenceId != null || conversation.reservationId != null)
+          if (conversation.residenceName != null && conversation.residenceName!.isNotEmpty)
+            Text(
+              '🏠 ${conversation.residenceName}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          else if (conversation.residenceId != null || conversation.reservationId != null)
             Text(
               conversation.reservationId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
               style: TextStyle(

@@ -7,8 +7,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
+import '../../../core/models/residence/residence_image.dart';
 import '../../../core/services/api/residence_service.dart';
 import '../../../core/config/app_config.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../core/exceptions/api_exception.dart';
 
 class EditResidenceScreen extends StatelessWidget {
   final Residence? residence;
@@ -58,6 +61,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   late final TextEditingController _halfDayRateController;
   late final TextEditingController _fullDayRateController;
   late final TextEditingController _weekendRateController;
+  late final TextEditingController _maxGuestsController;
   String _selectedType = 'studio_meuble';
   String _selectedCategory = 'residence_meublee';
   String _selectedPricePeriod = 'month'; // Valeurs possibles: hour, day, week, month
@@ -66,6 +70,12 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   bool _isSpecialResidence = false;
   bool _isAvailable = true;
   bool _isLoading = false;
+  bool _isSubmitting = false;
+  bool _hasAlternativePricing = false;
+  String? _submitError;
+  
+  // Service de résidence pour les appels API directs
+  final ResidenceService _residenceService = ResidenceService(baseUrl: AppConfig.apiUrl);
   
   // Options spécifiques pour différents types de résidences
   bool _hasAirConditioning = false;
@@ -94,6 +104,18 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   String _selectedCountry = 'CI'; // Côte d'Ivoire par défaut
   String _selectedRegion = 'AB'; // Abidjan par défaut
   String _selectedCity = 'CO'; // Cocody par défaut
+  
+  // Variables pour les images
+  List<String>? _existingImages;
+  List<ResidenceImage> _newImages = [];
+  
+  // Variables pour les options et règles
+  bool _allowsSmoking = false;
+  bool _allowsPets = false;
+  bool _allowsParties = false;
+  
+  // Ensemble des aménités sélectionnées
+  Set<String> _selectedAmenities = {};
 
   // Données des pays, régions et villes
   final List<LocationItem> _availableCountries = [
@@ -237,21 +259,31 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.residence?.name);
-    _descriptionController = TextEditingController(text: widget.residence?.description);
-    _addressController = TextEditingController(text: widget.residence?.address);
-    _cityController = TextEditingController(text: widget.residence?.city);
-    _priceController = TextEditingController(
-      text: widget.residence?.price.toString() ?? '0',
+    
+    // Initialiser les contrôleurs
+    _nameController = TextEditingController(
+      text: widget.residence?.name ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: widget.residence?.description ?? '',
+    );
+    _addressController = TextEditingController(
+      text: widget.residence?.address ?? '',
+    );
+    _cityController = TextEditingController(
+      text: widget.residence?.city ?? '',
     );
     _bedroomsController = TextEditingController(
-      text: widget.residence?.bedrooms.toString() ?? '0',
+      text: widget.residence?.bedrooms.toString() ?? '1',
     );
     _bathroomsController = TextEditingController(
-      text: widget.residence?.bathrooms.toString() ?? '0',
+      text: widget.residence?.bathrooms.toString() ?? '1',
     );
     _surfaceController = TextEditingController(
-      text: widget.residence?.surface.toString() ?? '0',
+      text: widget.residence?.surface.toString() ?? '',
+    );
+    _priceController = TextEditingController(
+      text: widget.residence?.price.toString() ?? '',
     );
     _hourlyRateController = TextEditingController(
       text: widget.residence?.hourlyRate?.toString() ?? '0',
@@ -265,90 +297,76 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     _weekendRateController = TextEditingController(
       text: widget.residence?.weekendRate?.toString() ?? '0',
     );
+    _maxGuestsController = TextEditingController(
+      text: widget.residence?.maxGuests.toString() ?? '2',
+    );
     
     // Initialiser le type et la catégorie s'il s'agit d'une édition
     if (widget.residence != null) {
-      _selectedType = widget.residence?.type ?? 'studio_meuble';
+      // Afficher le type reçu du backend pour diagnostic
+      print('🔍 Type reçu du backend: ${widget.residence!.type}');
       
-      // Déterminer la catégorie en fonction du type
-      bool categoryFound = false;
-      for (var category in _residenceCategories.keys) {
-        final types = _residenceCategories[category]!['types'] as List<dynamic>;
+      // Convertir le type du backend en type frontend si nécessaire
+      _selectedType = _mapBackendTypeToFrontendType(widget.residence!.type);
+      print('🔍 Type converti pour l\'interface: $_selectedType');
+      
+      _selectedCategory = _getCategoryFromType(_selectedType);
+      print('🔍 Catégorie déterminée: $_selectedCategory');
+      
+      // Vérifier que le type sélectionné est valide dans sa catégorie
+      bool isTypeValid = false;
+      final types = _residenceCategories[_selectedCategory]!['types'] as List<ResidenceType>;
         for (var type in types) {
           if (type.value == _selectedType) {
-            _selectedCategory = category;
-            categoryFound = true;
+          isTypeValid = true;
             break;
           }
-        }
-        if (categoryFound) break;
-      }
-
-      // Si la catégorie n'est pas trouvée, utiliser la première catégorie et son premier type
-      if (!categoryFound) {
-        _selectedCategory = _residenceCategories.keys.first;
-        final firstTypes = _residenceCategories[_selectedCategory]!['types'] as List<dynamic>;
-        if (firstTypes.isNotEmpty) {
-          _selectedType = firstTypes.first.value;
-        }
       }
       
-      // Pour les résidences existantes, mettre à jour le mode de facturation en fonction du type
-      _selectedPricePeriod = widget.residence?.pricePeriod ?? 'month';
-      
-      // Si le mode de facturation n'est pas cohérent avec le type, le mettre à jour
-      if (!_isPricePeriodConsistentWithType()) {
-        _updatePricePeriodBasedOnType();
+      // Si le type n'est pas valide, utiliser le premier type de la catégorie
+      if (!isTypeValid) {
+        print('⚠️ Type invalide dans sa catégorie, utilisation du premier type disponible');
+        _selectedType = types[0].value;
       }
       
-      // Initialiser les options si disponibles
-      Map<String, dynamic>? options = widget.residence?.options;
-      if (options != null) {
-        _hasPool = options['hasPool'] ?? false;
-        _isVacationResidence = options['isVacationResidence'] ?? false;
-        _isSpecialResidence = options['isSpecialResidence'] ?? false;
-        _hasAirConditioning = options['hasAirConditioning'] ?? false;
-        _hasWifi = options['hasWifi'] ?? false;
-        _hasParking = options['hasParking'] ?? false;
-        _hasSecurity = options['hasSecurity'] ?? false;
-        _hasCleaning = options['hasCleaning'] ?? false;
-        _hasHotWater = options['hasHotWater'] ?? false;
-        _hasBalcony = options['hasBalcony'] ?? false;
-        _hasGarden = options['hasGarden'] ?? false;
-        _hasTerrace = options['hasTerrace'] ?? false;
-        _hasKitchen = options['hasKitchen'] ?? false;
-        _hasSharedKitchen = options['hasSharedKitchen'] ?? false;
-        _hasTv = options['hasTv'] ?? false;
-        _hasGenerator = options['hasGenerator'] ?? false;
-        _hasSolarEnergy = options['hasSolarEnergy'] ?? false;
-        _hasGym = options['hasGym'] ?? false;
-        _hasSpa = options['hasSpa'] ?? false;
-        _hasRestaurant = options['hasRestaurant'] ?? false;
-        _hasBar = options['hasBar'] ?? false;
-        _hasRoomService = options['hasRoomService'] ?? false;
-        _hasLaundry = options['hasLaundry'] ?? false;
-        _hasMeetingRoom = options['hasMeetingRoom'] ?? false;
-      }
+      print('🔍 Type final utilisé: $_selectedType');
+      
+      // Initialiser les états des amenities
+      _hasPool = widget.residence!.hasPool;
+      _hasWifi = widget.residence!.hasWifi;
+      _hasParking = widget.residence!.amenities.contains('parking');
+      _hasKitchen = widget.residence!.amenities.contains('kitchen') || true;
+      _hasAirConditioning = widget.residence!.amenities.contains('air_conditioning') || true;
+      _hasTerrace = widget.residence!.amenities.contains('terrace');
+      _hasBalcony = widget.residence!.amenities.contains('balcony');
+      _hasGym = widget.residence!.amenities.contains('gym');
+      _hasSpa = widget.residence!.amenities.contains('spa');
+      _hasMeetingRoom = widget.residence!.amenities.contains('meeting_room');
+      
+      // Initialiser les règles
+      _allowsSmoking = widget.residence!.allowsSmoking;
+      _allowsPets = widget.residence!.allowsPets;
+      _allowsParties = widget.residence!.allowsParties;
+      
+      // Initialiser les autres statuts
+      _isAvailable = widget.residence!.isAvailable;
+      _isVacationResidence = widget.residence!.isVacationResidence;
+      _isSpecialResidence = widget.residence!.isSpecialResidence;
       
       // Initialiser la localisation
-      if (widget.residence?.country != null) {
-        _selectedCountry = widget.residence?.country ?? 'CI';
+      if (widget.residence!.country != null) {
+        _selectedCountry = widget.residence!.country!;
       }
-      if (widget.residence?.region != null) {
-        _selectedRegion = widget.residence?.region ?? 'AB';
+      if (widget.residence!.region != null) {
+        _selectedRegion = widget.residence!.region!;
       }
-      if (widget.residence?.cityCode != null) {
-        _selectedCity = widget.residence?.cityCode ?? 'CO';
+      if (widget.residence!.cityCode != null) {
+        _selectedCity = widget.residence!.cityCode!;
       }
-    } else {
-      // Pour les nouvelles résidences, définir le mode de facturation en fonction du type par défaut
-      _updatePricePeriodBasedOnType();
+      
+      // Initialiser les images existantes
+      _existingImages = widget.residence!.images.map((img) => img.toString()).toList();
     }
-    
-    _hasPool = widget.residence?.hasPool ?? false;
-    _isVacationResidence = widget.residence?.isVacationResidence ?? false;
-    _isSpecialResidence = widget.residence?.isSpecialResidence ?? false;
-    _isAvailable = widget.residence?.isAvailable ?? true;
   }
 
   @override
@@ -365,23 +383,221 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     _halfDayRateController.dispose();
     _fullDayRateController.dispose();
     _weekendRateController.dispose();
+    _maxGuestsController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
+  // Méthode pour mettre à jour la liste des aménités sélectionnées
+  void _updateSelectedAmenities() {
+    _selectedAmenities = {};
+    
+    // Ajouter les commodités en fonction des booléens
+    if (_hasAirConditioning) _selectedAmenities.add('air_conditioning');
+    if (_hasWifi) _selectedAmenities.add('wifi');
+    if (_hasParking) _selectedAmenities.add('parking');
+    if (_hasPool) _selectedAmenities.add('pool');
+    if (_hasSecurity) _selectedAmenities.add('security');
+    if (_hasCleaning) _selectedAmenities.add('cleaning');
+    if (_hasHotWater) _selectedAmenities.add('hot_water');
+    if (_hasBalcony) _selectedAmenities.add('balcony');
+    if (_hasGarden) _selectedAmenities.add('garden');
+    if (_hasTerrace) _selectedAmenities.add('terrace');
+    if (_hasKitchen) _selectedAmenities.add('kitchen');
+    if (_hasSharedKitchen) _selectedAmenities.add('shared_kitchen');
+    if (_hasTv) _selectedAmenities.add('tv');
+    if (_hasGenerator) _selectedAmenities.add('generator');
+    if (_hasSolarEnergy) _selectedAmenities.add('solar_energy');
+    if (_hasGym) _selectedAmenities.add('gym');
+    if (_hasSpa) _selectedAmenities.add('spa');
+    if (_hasRestaurant) _selectedAmenities.add('restaurant');
+    if (_hasBar) _selectedAmenities.add('bar');
+    if (_hasRoomService) _selectedAmenities.add('room_service');
+    if (_hasLaundry) _selectedAmenities.add('laundry');
+    if (_hasMeetingRoom) _selectedAmenities.add('meeting_room');
+  }
+
+  // Méthode pour mettre à jour une aménité spécifique
+  void _updateAmenity(String amenityName, bool value) {
+    setState(() {
+      switch (amenityName) {
+        case 'pool':
+          _hasPool = value;
+          break;
+        case 'air_conditioning':
+          _hasAirConditioning = value;
+          break;
+        case 'wifi':
+          _hasWifi = value;
+          break;
+        case 'parking':
+          _hasParking = value;
+          break;
+        case 'security':
+          _hasSecurity = value;
+          break;
+        case 'cleaning':
+          _hasCleaning = value;
+          break;
+        case 'hot_water':
+          _hasHotWater = value;
+          break;
+        case 'balcony':
+          _hasBalcony = value;
+          break;
+        case 'garden':
+          _hasGarden = value;
+          break;
+        case 'terrace':
+          _hasTerrace = value;
+          break;
+        case 'kitchen':
+          _hasKitchen = value;
+          break;
+        case 'shared_kitchen':
+          _hasSharedKitchen = value;
+          break;
+        case 'tv':
+          _hasTv = value;
+          break;
+        case 'generator':
+          _hasGenerator = value;
+          break;
+        case 'solar_energy':
+          _hasSolarEnergy = value;
+          break;
+        case 'gym':
+          _hasGym = value;
+          break;
+        case 'spa':
+          _hasSpa = value;
+          break;
+        case 'restaurant':
+          _hasRestaurant = value;
+          break;
+        case 'bar':
+          _hasBar = value;
+          break;
+        case 'room_service':
+          _hasRoomService = value;
+          break;
+        case 'laundry':
+          _hasLaundry = value;
+          break;
+        case 'meeting_room':
+          _hasMeetingRoom = value;
+          break;
+        case 'isVacationResidence':
+          _isVacationResidence = value;
+          break;
+        case 'isSpecialResidence':
+          _isSpecialResidence = value;
+          break;
+      }
+      
+      // Mettre à jour l'ensemble des aménités
+      _updateSelectedAmenities();
+    });
+  }
+
+  Future<void> _selectImage() async {
+    // Afficher une boîte de dialogue pour choisir la source
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galerie'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImagesFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Appareil photo'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _takePhoto();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImagesFromGallery() async {
     try {
-      final List<XFile> images = await _imagePicker.pickMultiImage();
-      if (images.isNotEmpty) {
+      final picker = ImagePicker();
+      final pickedFiles = await picker.pickMultiImage();
+      
+      print('Images sélectionnées depuis la galerie: ${pickedFiles.length}');
+      
+      if (pickedFiles.isNotEmpty) {
+        for (final pickedFile in pickedFiles) {
+          if (kIsWeb) {
+            // En environnement web, nous devons lire le contenu du fichier
+            final bytes = await pickedFile.readAsBytes();
+            print('Image web lue: ${bytes.length} octets, nom: ${pickedFile.name}');
         setState(() {
-          _selectedImages.addAll(images);
+              _newImages.add(
+                ResidenceImage.fromWebBytes(bytes, path: pickedFile.name),
+              );
+            });
+          } else {
+            // En environnement mobile, nous pouvons utiliser le chemin du fichier
+            print('Image mobile sélectionnée: ${pickedFile.path}');
+            setState(() {
+              _newImages.add(
+                ResidenceImage.fromFile(File(pickedFile.path)),
+              );
+            });
+          }
+        }
+        
+        print('Total des images dans _newImages après sélection: ${_newImages.length}');
+      }
+    } catch (e) {
+      print('Erreur lors de la sélection des images: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la sélection des images: $e')),
+      );
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+      
+      if (pickedFile != null) {
+        print('Photo prise avec l\'appareil: ${pickedFile.path}');
+        
+        setState(() {
+          if (kIsWeb) {
+            // En environnement web, nous devons lire le contenu du fichier
+            pickedFile.readAsBytes().then((bytes) {
+              print('Photo web lue: ${bytes.length} octets');
+              _newImages.add(
+                ResidenceImage.fromWebBytes(bytes, path: pickedFile.name),
+              );
+            });
+          } else {
+            // En environnement mobile, nous pouvons utiliser le chemin du fichier
+            _newImages.add(
+              ResidenceImage.fromFile(File(pickedFile.path)),
+            );
+          }
         });
       }
     } catch (e) {
+      print('Erreur lors de la prise de photo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la sélection des images: ${e.toString()}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+        SnackBar(content: Text('Erreur lors de la prise de photo: $e')),
       );
     }
   }
@@ -395,186 +611,408 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           'Photos',
           style: Theme.of(context).textTheme.titleMedium,
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Ajoutez au moins une photo de la résidence',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 16),
-        if (_selectedImages.isEmpty)
-          Center(
-            child: TextButton.icon(
-              onPressed: _pickImages,
-              icon: const Icon(Icons.add_photo_alternate),
-              label: const Text('Ajouter des photos'),
-            ),
-          )
-        else
-          Column(
-            children: [
+        
+        // Compteur d'images
+        Text(
+          'Images: ${(_existingImages?.length ?? 0) + _newImages.length}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: ((_existingImages?.length ?? 0) + _newImages.length) > 0
+                ? Colors.green
+                : Colors.red,
+          ),
+        ),
+        const SizedBox(height: 8),
+        
+        // Grille d'images
               SizedBox(
-                height: 120,
-                child: ListView.builder(
+          height: 200,
+          child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == _selectedImages.length) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                // Bouton d'ajout d'image
+                Container(
+                  width: 120,
+                  height: 190,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: InkWell(
+                    onTap: _selectImage,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.add_photo_alternate, size: 40),
+                        SizedBox(height: 8),
+                        Text('Ajouter\nune photo', textAlign: TextAlign.center),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // Images existantes
+                if (_existingImages != null)
+                  ..._existingImages!.map((imageUrl) {
+                    return Container(
+                      width: 120,
+                      height: 190,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(
+                          image: NetworkImage(imageUrl),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: 5,
+                            right: 5,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.7),
+                                shape: BoxShape.circle,
+                              ),
                         child: IconButton(
-                          onPressed: _pickImages,
-                          icon: const Icon(Icons.add_photo_alternate),
-                          style: IconButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  setState(() {
+                                    _existingImages!.remove(imageUrl);
+                                  });
+                                },
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                    }
-
-                    return Stack(
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                
+                // Nouvelles images
+                ..._newImages.map((image) {
+                  return Container(
+                    width: 120,
+                    height: 190,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Stack(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: FutureBuilder<Uint8List>(
-                            future: _selectedImages[index].readAsBytes(),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData) {
-                                return Image.memory(
-                                  snapshot.data!,
-                                  height: 100,
-                                  width: 100,
+                        // Affichage différent selon le type d'image et la plateforme
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: kIsWeb
+                                ? image.webImage != null
+                                    ? Image.memory(
+                                        image.webImage!,
                                   fit: BoxFit.cover,
-                                );
-                              }
-                              return Container(
-                                height: 100,
-                                width: 100,
-                                color: Colors.grey[300],
-                                child: const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            },
+                                      )
+                                    : image.url != null
+                                        ? Image.network(
+                                            image.url!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            color: Colors.grey.shade300,
+                                            child: const Icon(Icons.image, size: 50),
+                                          )
+                                : image.isLocal
+                                    ? Image.file(
+                                        File(image.path!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.network(
+                                        image.url!,
+                                        fit: BoxFit.cover,
+                                      ),
                           ),
                         ),
+                        // Bouton de suppression
                         Positioned(
-                          right: 0,
-                          top: 0,
+                          top: 5,
+                          right: 5,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.7),
+                              shape: BoxShape.circle,
+                            ),
                           child: IconButton(
-                            icon: const Icon(Icons.close),
+                              icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () {
                               setState(() {
-                                _selectedImages.removeAt(index);
+                                  _newImages.remove(image);
                               });
                             },
-                            style: IconButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.error,
-                              foregroundColor: Theme.of(context).colorScheme.onError,
                             ),
                           ),
                         ),
                       ],
+                    ),
                     );
-                  },
+                }).toList(),
+              ],
                 ),
               ),
-            ],
           ),
+        const SizedBox(height: 24),
       ],
     );
   }
 
-  void _submitForm() async {
+  // Méthode appelée lors de la soumission du formulaire
+  Future<void> _submitForm() async {
+    // Vérifier si le formulaire est valide
     if (_formKey.currentState?.validate() ?? false) {
-      // Créer un objet pour les options
-      Map<String, dynamic> options = {
-        'hasPool': _hasPool,
-        'isVacationResidence': _isVacationResidence,
-        'isSpecialResidence': _isSpecialResidence,
-        'hasAirConditioning': _hasAirConditioning,
-        'hasWifi': _hasWifi,
-        'hasParking': _hasParking,
-        'hasSecurity': _hasSecurity,
-        'hasCleaning': _hasCleaning,
-        'hasHotWater': _hasHotWater,
-        'hasBalcony': _hasBalcony,
-        'hasGarden': _hasGarden,
-        'hasTerrace': _hasTerrace,
-        'hasKitchen': _hasKitchen,
-        'hasSharedKitchen': _hasSharedKitchen,
-        'hasTv': _hasTv,
-        'hasGenerator': _hasGenerator,
-        'hasSolarEnergy': _hasSolarEnergy,
-        'hasGym': _hasGym,
-        'hasSpa': _hasSpa,
-        'hasRestaurant': _hasRestaurant,
-        'hasBar': _hasBar,
-        'hasRoomService': _hasRoomService,
-        'hasLaundry': _hasLaundry,
-        'hasMeetingRoom': _hasMeetingRoom,
-      };
-      
-      // Récupérer les noms des localités
-      String countryName = _getCountryName(_selectedCountry);
-      String regionName = _getRegionName(_selectedRegion);
-      String cityName = _getCityName(_selectedCity);
+      _formKey.currentState?.save();
 
-      final data = {
-        'name': _nameController.text,
-        'description': _descriptionController.text,
-        'address': _addressController.text,
-        'city':  _getRegionName(_selectedRegion),
-        'price': double.parse(_priceController.text),
-        'bedrooms': int.parse(_bedroomsController.text),
-        'bathrooms': int.parse(_bathroomsController.text),
-        'surface': double.parse(_surfaceController.text),
-        'type': _selectedType,
-        'category': _selectedCategory,
-        'hasPool': _hasPool,
-        'isVacationResidence': _isVacationResidence,
-        'isSpecialResidence': _isSpecialResidence,
-        'isAvailable': _isAvailable,
-        'hourlyRate': double.parse(_hourlyRateController.text),
-        'halfDayRate': double.parse(_halfDayRateController.text),
-        'fullDayRate': double.parse(_fullDayRateController.text),
-        'weekendRate': double.parse(_weekendRateController.text),
-        'pricePeriod': _selectedPricePeriod,
-        'options': options,
-        'country': _selectedCountry,
-        'countryName': countryName,
-        'region': _selectedRegion,
-        'regionName': regionName,
-        'cityCode': _selectedCity,
-        'cityName': cityName,
-      };
+      print('\n=== DÉBUT SOUMISSION DU FORMULAIRE ===');
+      print('Nombre d\'images existantes: ${_existingImages?.length ?? 0}');
+      print('Nombre de nouvelles images: ${_newImages.length}');
 
-      if (widget.residence != null) {
-        context.read<ResidenceBloc>().add(
-          UpdateResidence(widget.residence!.id, data),
+      // Vérifier qu'au moins une image est sélectionnée
+      if ((_existingImages == null || _existingImages!.isEmpty) && 
+          (_newImages.isEmpty)) {
+        print('❌ Aucune image sélectionnée');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez ajouter au moins une image')),
         );
-
-        if (kIsWeb) {
-          if (_webImages.isNotEmpty) {
-            // Upload images after updating residence
-            context.read<ResidenceBloc>().add(
-              UploadResidenceImages(widget.residence!.id, _webImages),
-            );
-          }
-        } else {
-          if (_selectedImages.isNotEmpty) {
-            // Upload images after updating residence
-            context.read<ResidenceBloc>().add(
-              UploadResidenceImages(widget.residence!.id, _selectedImages),
-            );
-          }
-        }
-      } else {
-        if (kIsWeb) {
-          context.read<ResidenceBloc>().add(
-            CreateResidence(data, _webImages),
-          );
-        } else {
-          context.read<ResidenceBloc>().add(
-            CreateResidence(data, _selectedImages),
-          );
-        }
+        return;
       }
+
+      // Afficher un indicateur de chargement
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Préparer les données de la résidence à partir du formulaire
+        Map<String, dynamic> formData = {
+          'name': _nameController.text,
+        'description': _descriptionController.text,
+        'bedrooms': int.tryParse(_bedroomsController.text) ?? 0,
+        'bathrooms': int.tryParse(_bathroomsController.text) ?? 0,
+          'surface': double.tryParse(_surfaceController.text) ?? 0,
+          'maxGuests': int.tryParse(_maxGuestsController.text) ?? 1,
+          'price': double.tryParse(_priceController.text) ?? 0,
+          'pricePeriod': _selectedPricePeriod,
+          'type': _selectedType,
+          'category': _selectedCategory,
+        'status': _isAvailable ? 'available' : 'unavailable',
+
+          // Information sur la localisation (pays, région, ville, adresse)
+          'country': _selectedCountry,
+          'region': _selectedRegion,
+          'city': _selectedCity,
+          'address': _addressController.text,
+
+          // Règles de la résidence
+          'rules': {
+            'allowsSmoking': _allowsSmoking,
+            'allowsPets': _allowsPets,
+            'allowsParties': _allowsParties,
+          },
+          
+          // Liste des aménités
+          'amenities': _buildAmenitiesList(),
+        };
+
+        // Vérifier pour les tarifs alternatifs
+        if (_hasAlternativePricing) {
+          formData['hourlyRate'] = double.tryParse(_hourlyRateController.text) ?? 0;
+          formData['halfDayRate'] = double.tryParse(_halfDayRateController.text) ?? 0;
+          formData['fullDayRate'] = double.tryParse(_fullDayRateController.text) ?? 0;
+          formData['weekendRate'] = double.tryParse(_weekendRateController.text) ?? 0;
+      } else {
+          formData['hourlyRate'] = 0;
+          formData['halfDayRate'] = 0;
+          formData['fullDayRate'] = 0;
+          formData['weekendRate'] = 0;
+      }
+      
+      // Préparer les images à envoyer
+        List<ResidenceImage> images = [];
+        
+        // Ajouter les images existantes qui n'ont pas été supprimées
+        if (_existingImages != null) {
+          for (var imageUrl in _existingImages!) {
+            print('✅ Ajout d\'une image existante: $imageUrl');
+            images.add(ResidenceImage(url: imageUrl));
+          }
+        }
+        
+        // Ajouter les nouvelles images sélectionnées
+        for (var image in _newImages) {
+          print('⭐ Traitement d\'une nouvelle image:');
+          print('  - Debug info: ${image.getDebugInfo()}');
+          if (image.file != null) {
+            print('  - Image native (fichier): ${image.file!.path}');
+            images.add(image);
+          } else if (image.webImage != null) {
+            print('  - Image web (${image.webImage!.length} octets)');
+            images.add(image);
+          } else if (image.url != null) {
+            print('  - Image URL: ${image.url}');
+            images.add(image);
+            } else {
+            print('  - ⚠️ Type d\'image inconnu');
+          }
+        }
+        
+        print('\n=== RÉCAPITULATIF IMAGES ===');
+        print('Nombre total d\'images à envoyer: ${images.length}');
+        
+        if (images.isEmpty) {
+          print('⚠️ AVERTISSEMENT: Aucune image à envoyer malgré les contrôles!');
+        }
+        
+        for (int i = 0; i < images.length; i++) {
+          final img = images[i];
+          if (img.url != null) {
+            print('Image ${i+1}: URL = ${img.url}');
+          } else if (img.file != null) {
+            print('Image ${i+1}: Fichier local (${img.file!.path})');
+          } else if (img.webImage != null) {
+            print('Image ${i+1}: Image web (${img.webImage!.length} octets)');
+          } else {
+            print('Image ${i+1}: Type inconnu!');
+          }
+        }
+
+        if (widget.residence == null) {
+          // Créer une nouvelle résidence
+          print('\n=== CRÉATION DE RÉSIDENCE ===');
+          final residence = await _residenceService.createResidence(formData, images);
+          print('✅ Résidence créée avec succès! ID: ${residence.id}');
+          
+          // Effacer le formulaire après création réussie
+          _clearForm();
+          
+          // Afficher un message de succès
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Résidence créée avec succès')),
+            );
+            // Naviguer vers la liste des résidences
+            Navigator.of(context).pop(residence);
+          }
+        } else {
+          // Mettre à jour une résidence existante
+          print('\n=== MISE À JOUR DE RÉSIDENCE ===');
+          print('ID de la résidence: ${widget.residence!.id}');
+          final updatedResidence = await _residenceService.updateResidence(
+            widget.residence!.id,
+            formData,
+            images,
+          );
+          print('✅ Résidence mise à jour avec succès!');
+          
+          // Afficher un message de succès
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Résidence mise à jour avec succès')),
+            );
+            // Naviguer vers la liste des résidences avec la résidence mise à jour
+      Navigator.of(context).pop(updatedResidence);
+          }
+        }
+    } catch (e) {
+        print('❌ Erreur lors de la soumission du formulaire: $e');
+        if (mounted) {
+          String errorMessage = 'Une erreur est survenue';
+          if (e is ApiException) {
+            errorMessage = e.message;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage)),
+          );
+        }
+    } finally {
+        if (mounted) {
+      setState(() {
+            _isLoading = false;
+          });
+        }
+        print('=== FIN SOUMISSION DU FORMULAIRE ===\n');
+      }
+    } else {
+      // Formulaire invalide, afficher un message d'erreur
+      print('❌ Formulaire invalide');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez corriger les erreurs dans le formulaire')),
+      );
     }
+  }
+
+  // Construit la liste des aménités en fonction des sélections de l'utilisateur
+  List<String> _buildAmenitiesList() {
+    List<String> amenities = [];
+    if (_hasWifi) amenities.add('wifi');
+    if (_hasPool) amenities.add('pool');
+    if (_hasParking) amenities.add('parking');
+    if (_hasKitchen) amenities.add('kitchen');
+    if (_hasAirConditioning) amenities.add('air_conditioning');
+    if (_hasGym) amenities.add('gym');
+    if (_hasSpa) amenities.add('spa');
+    if (_hasMeetingRoom) amenities.add('meeting_room');
+    if (_hasTerrace) amenities.add('terrace');
+    if (_hasBalcony) amenities.add('balcony');
+    return amenities;
+  }
+
+  void _clearForm() {
+    _nameController.clear();
+    _descriptionController.clear();
+    _bedroomsController.clear();
+    _bathroomsController.clear();
+    _surfaceController.clear();
+    _maxGuestsController.clear();
+    _priceController.clear();
+    _addressController.clear();
+    
+    _hourlyRateController.clear();
+    _halfDayRateController.clear();
+    _fullDayRateController.clear();
+    _weekendRateController.clear();
+    
+    setState(() {
+      _selectedImages = [];
+      _selectedPricePeriod = 'month';
+      _selectedType = 'studio_meuble';
+      _selectedCategory = 'residence_meublee';
+      _selectedCountry = 'CI';
+      _selectedRegion = '';
+      _selectedCity = '';
+      _hasWifi = false;
+      _hasPool = false;
+      _hasParking = false;
+      _hasKitchen = false;
+      _hasAirConditioning = false;
+      _hasGym = false;
+      _hasSpa = false;
+      _hasMeetingRoom = false;
+      _hasTerrace = false;
+      _hasBalcony = false;
+      _isVacationResidence = false;
+      _allowsSmoking = false;
+      _allowsPets = false;
+      _allowsParties = false;
+      _isAvailable = true;
+      _hasAlternativePricing = false;
+    });
   }
 
   @override
@@ -1027,7 +1465,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                           ],
                         ),
                         value: _hasPool,
-                        onChanged: (value) => setState(() => _hasPool = value),
+                        onChanged: (value) => _updateAmenity('pool', value),
                       ),
                       SwitchListTile(
                         title: Row(
@@ -1120,10 +1558,14 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
-                value: _selectedCity,
+                value: _getCitiesForRegion(_selectedRegion).any((city) => city.code == _selectedCity) 
+                      ? _selectedCity 
+                      : _getCitiesForRegion(_selectedRegion).isNotEmpty
+                          ? _getCitiesForRegion(_selectedRegion).first.code
+                          : null,
                 decoration: InputDecoration(
                   labelText: 'Commune / Quartier',
-                  prefixIcon: Icon(Icons.apartment),
+                  prefixIcon: Icon(Icons.location_city),
                   border: OutlineInputBorder(),
                 ),
                 items: _getCitiesForRegion(_selectedRegion).map((city) {
@@ -1247,14 +1689,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         return 'Ce type d\'hébergement est souvent facturé à la semaine';
         
       case 'appartement_meuble':
-      case 'appartement_vide':
-      case 'villa_meublee':
-      case 'villa_vide':
-      case 'chambre_colocation':
-      case 'residence_universitaire':
-      case 'coliving':
-      case 'immeuble':
-      case 'cour_commune':
+      case 'penthouse':
         return 'Les locations longue durée sont généralement facturées au mois';
         
       default:
@@ -1323,7 +1758,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasAirConditioning,
-            onChanged: (value) => setState(() => _hasAirConditioning = value),
+            onChanged: (value) => _updateAmenity('air_conditioning', value),
           )
         );
         options.add(
@@ -1336,7 +1771,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasWifi,
-            onChanged: (value) => setState(() => _hasWifi = value),
+            onChanged: (value) => _updateAmenity('wifi', value),
           )
         );
         options.add(
@@ -1349,7 +1784,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasParking,
-            onChanged: (value) => setState(() => _hasParking = value),
+            onChanged: (value) => _updateAmenity('parking', value),
           )
         );
         options.add(
@@ -1362,7 +1797,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasKitchen,
-            onChanged: (value) => setState(() => _hasKitchen = value),
+            onChanged: (value) => _updateAmenity('kitchen', value),
           )
         );
         break;
@@ -1378,7 +1813,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasRoomService,
-            onChanged: (value) => setState(() => _hasRoomService = value),
+            onChanged: (value) => _updateAmenity('room_service', value),
           )
         );
         options.add(
@@ -1391,7 +1826,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasRestaurant,
-            onChanged: (value) => setState(() => _hasRestaurant = value),
+            onChanged: (value) => _updateAmenity('restaurant', value),
           )
         );
         options.add(
@@ -1404,7 +1839,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasBar,
-            onChanged: (value) => setState(() => _hasBar = value),
+            onChanged: (value) => _updateAmenity('bar', value),
           )
         );
         break;
@@ -1420,7 +1855,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasGarden,
-            onChanged: (value) => setState(() => _hasGarden = value),
+            onChanged: (value) => _updateAmenity('garden', value),
           )
         );
         options.add(
@@ -1433,7 +1868,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasSolarEnergy,
-            onChanged: (value) => setState(() => _hasSolarEnergy = value),
+            onChanged: (value) => _updateAmenity('solar_energy', value),
           )
         );
         break;
@@ -1449,7 +1884,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasSharedKitchen,
-            onChanged: (value) => setState(() => _hasSharedKitchen = value),
+            onChanged: (value) => _updateAmenity('shared_kitchen', value),
           )
         );
         options.add(
@@ -1462,7 +1897,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasLaundry,
-            onChanged: (value) => setState(() => _hasLaundry = value),
+            onChanged: (value) => _updateAmenity('laundry', value),
           )
         );
         break;
@@ -1478,7 +1913,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasSecurity,
-            onChanged: (value) => setState(() => _hasSecurity = value),
+            onChanged: (value) => _updateAmenity('security', value),
           )
         );
         options.add(
@@ -1491,7 +1926,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasGenerator,
-            onChanged: (value) => setState(() => _hasGenerator = value),
+            onChanged: (value) => _updateAmenity('generator', value),
           )
         );
         break;
@@ -1507,7 +1942,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasCleaning,
-            onChanged: (value) => setState(() => _hasCleaning = value),
+            onChanged: (value) => _updateAmenity('cleaning', value),
           )
         );
         options.add(
@@ -1520,7 +1955,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasTv,
-            onChanged: (value) => setState(() => _hasTv = value),
+            onChanged: (value) => _updateAmenity('tv', value),
           )
         );
         break;
@@ -1558,7 +1993,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasSpa,
-            onChanged: (value) => setState(() => _hasSpa = value),
+            onChanged: (value) => _updateAmenity('spa', value),
           )
         );
         options.add(
@@ -1571,7 +2006,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasGym,
-            onChanged: (value) => setState(() => _hasGym = value),
+            onChanged: (value) => _updateAmenity('gym', value),
           )
         );
         break;
@@ -1587,7 +2022,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasMeetingRoom,
-            onChanged: (value) => setState(() => _hasMeetingRoom = value),
+            onChanged: (value) => _updateAmenity('meeting_room', value),
           )
         );
         break;
@@ -1604,7 +2039,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasTerrace,
-            onChanged: (value) => setState(() => _hasTerrace = value),
+            onChanged: (value) => _updateAmenity('terrace', value),
           )
         );
         break;
@@ -1621,7 +2056,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _hasBalcony,
-            onChanged: (value) => setState(() => _hasBalcony = value),
+            onChanged: (value) => _updateAmenity('balcony', value),
           )
         );
         break;
@@ -1637,7 +2072,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ],
             ),
             value: _isVacationResidence,
-            onChanged: (value) => setState(() => _isVacationResidence = value),
+            onChanged: (value) => _updateAmenity('isVacationResidence', value),
           )
         );
         break;
@@ -1717,6 +2152,87 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       }
     }
     return '';
+  }
+
+  // Méthode pour obtenir le nom de la ville sélectionnée
+  String _getSelectedCityName() {
+    return _getCityName(_selectedCity);
+  }
+
+  // Méthode pour construire les données de localisation complètes
+  Map<String, dynamic> _buildLocationData() {
+    return {
+      'country': {
+        'code': _selectedCountry,
+        'name': _getCountryName(_selectedCountry)
+      },
+      'region': {
+        'code': _selectedRegion,
+        'name': _getRegionName(_selectedRegion)
+      },
+      'city': {
+        'code': _selectedCity,
+        'name': _getSelectedCityName()
+      },
+      'address': _addressController.text,
+      'coordinates': {
+        'latitude': 0.0, // À implémenter pour géolocalisation future
+        'longitude': 0.0
+      }
+    };
+  }
+
+  // Méthode pour obtenir la catégorie à partir du type
+  String _getCategoryFromType(String type) {
+    for (var category in _residenceCategories.keys) {
+      final types = _residenceCategories[category]!['types'] as List<ResidenceType>;
+      for (var residenceType in types) {
+        if (residenceType.value == type) {
+          return category;
+        }
+      }
+    }
+    // Si le type n'est pas trouvé, retourner la catégorie par défaut
+    return 'residence_meublee';
+  }
+
+  // Méthode pour convertir un type backend en type frontend lors de l'édition
+  String _mapBackendTypeToFrontendType(String backendType) {
+    // Vérifier si le type est déjà un type frontend
+    for (var category in _residenceCategories.keys) {
+      final types = _residenceCategories[category]!['types'] as List<ResidenceType>;
+      for (var residenceType in types) {
+        if (residenceType.value == backendType) {
+          // C'est déjà un type frontend, pas besoin de conversion
+          return backendType;
+        }
+      }
+    }
+    
+    // Sinon, mapper le type du backend vers le type frontend correspondant
+    switch (backendType.toLowerCase().trim()) {
+      case 'studio':
+        return 'studio_meuble';
+      case 'apartment':
+        return 'appartement_meuble';
+      case 'villa':
+        return 'villa_meublee';
+      case 'hotel':
+        return 'hotel_passage';
+      case 'house':
+        return 'maison_hotes';
+      default:
+        // Utiliser le type tel quel ou un type par défaut selon la première lettre
+        if (backendType.toLowerCase().startsWith('s')) {
+          return 'studio_meuble';
+        } else if (backendType.toLowerCase().startsWith('v')) {
+          return 'villa_meublee';
+        } else if (backendType.toLowerCase().startsWith('h')) {
+          return 'hotel_passage';
+        } else {
+          return 'appartement_meuble';
+        }
+    }
   }
 }
 

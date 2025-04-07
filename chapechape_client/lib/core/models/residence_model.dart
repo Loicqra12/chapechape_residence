@@ -144,7 +144,7 @@ class Residence {
     try {
       // Traiter les champs qui pourraient être null avec des valeurs par défaut
       final String id = json['id']?.toString() ?? 'unknown_id';
-      final String name = json['name']?.toString() ?? 'Résidence sans nom';
+      final String name = json['title']?.toString() ?? json['name']?.toString() ?? 'Résidence sans nom';
       final String description = json['description']?.toString() ?? 'Aucune description disponible';
       final double price = json['price'] != null ? (json['price'] as num).toDouble() : 0.0;
       final String address = json['address']?.toString() ?? 'Adresse non spécifiée';
@@ -158,7 +158,8 @@ class Residence {
       
       final int bedrooms = json['bedrooms'] is int ? json['bedrooms'] as int : 0;
       final int bathrooms = json['bathrooms'] is int ? json['bathrooms'] as int : 0;
-      final double surface = json['surface'] != null ? (json['surface'] as num).toDouble() : 0.0;
+      final double surface = json['area'] != null ? (json['area'] as num).toDouble() : 
+                           json['surface'] != null ? (json['surface'] as num).toDouble() : 0.0;
       final bool isAvailable = json['isAvailable'] is bool ? json['isAvailable'] as bool : true;
       
       Map<String, dynamic> location = {};
@@ -256,7 +257,7 @@ class Residence {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
+      'title': name,
       'description': description,
       'price': price,
       'address': address,
@@ -265,7 +266,7 @@ class Residence {
       'images': images,
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
-      'surface': surface,
+      'area': surface,
       'isAvailable': isAvailable,
       'location': location,
       'amenities': amenities,

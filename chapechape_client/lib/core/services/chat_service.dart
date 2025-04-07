@@ -39,6 +39,7 @@ class ChatService {
             }).toList(),
             'messages': [],
             'residenceId': conversationJson['residenceId']?['_id'] ?? '',
+            'residenceName': conversationJson['residenceId']?['name'] ?? '',
             'reservationId': conversationJson['reservationId']?['_id'] ?? '',
             'isUnread': conversationJson['unreadCount'] > 0,
             'createdAt': conversationJson['createdAt'] ?? DateTime.now().toIso8601String(),

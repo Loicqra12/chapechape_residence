@@ -280,7 +280,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(otherParticipant.name),
-                if (conversation.residenceId != null || conversation.reservationId != null)
+                if (conversation.residenceName != null && conversation.residenceName!.isNotEmpty)
+                  Text(
+                    '🏠 ${conversation.residenceName}',
+                    style: const TextStyle(fontSize: 12),
+                  )
+                else if (conversation.residenceId != null || conversation.reservationId != null)
                   Text(
                     conversation.reservationId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
                     style: const TextStyle(fontSize: 12),

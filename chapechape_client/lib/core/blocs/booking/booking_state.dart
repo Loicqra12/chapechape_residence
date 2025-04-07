@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
+import 'package:chapechape_client/core/models/cancellation_policy_model.dart';
+import 'package:chapechape_client/core/models/modification_fees_model.dart';
 
 abstract class BookingState extends Equatable {
   const BookingState();
@@ -31,11 +33,12 @@ class UserBookingsLoaded extends BookingState {
 // État lorsque les détails d'une réservation sont chargés
 class BookingDetailsLoaded extends BookingState {
   final Booking booking;
+  final CancellationPolicy cancellationPolicy;
 
-  const BookingDetailsLoaded(this.booking);
+  const BookingDetailsLoaded(this.booking, this.cancellationPolicy);
 
   @override
-  List<Object?> get props => [booking];
+  List<Object?> get props => [booking, cancellationPolicy];
 }
 
 // État lorsqu'une réservation est créée avec succès
@@ -50,12 +53,12 @@ class BookingCreated extends BookingState {
 
 // État lorsqu'une réservation est annulée avec succès
 class BookingCancelled extends BookingState {
-  final String bookingId;
+  final Booking booking;
 
-  const BookingCancelled(this.bookingId);
+  const BookingCancelled(this.booking);
 
   @override
-  List<Object?> get props => [bookingId];
+  List<Object?> get props => [booking];
 }
 
 // État lorsqu'une réservation est mise à jour avec succès
@@ -98,6 +101,30 @@ class BookingStatusUpdated extends BookingState {
   List<Object?> get props => [bookingId, status];
 }
 
+// État lorsque les frais de modification sont calculés
+class ModificationFeesCalculated extends BookingState {
+  final ModificationFees fees;
+
+  const ModificationFeesCalculated(this.fees);
+
+  @override
+  List<Object?> get props => [fees];
+}
+
+// État lorsqu'une réservation est mise à jour avec les frais
+class BookingUpdatedWithFees extends BookingState {
+  final Booking booking;
+  final ModificationFees fees;
+
+  const BookingUpdatedWithFees({
+    required this.booking,
+    required this.fees,
+  });
+
+  @override
+  List<Object?> get props => [booking, fees];
+}
+
 // État d'erreur
 class BookingError extends BookingState {
   final String message;
@@ -107,4 +134,3 @@ class BookingError extends BookingState {
   @override
   List<Object?> get props => [message];
 }
-

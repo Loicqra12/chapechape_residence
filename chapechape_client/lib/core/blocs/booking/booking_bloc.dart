@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/services/booking_service.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
+import 'package:chapechape_client/core/models/modification_fees_model.dart';
+import 'package:chapechape_client/core/models/residence_model.dart';
 import 'booking_event.dart';
 import 'booking_state.dart';
 
@@ -17,6 +19,8 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     on<UpdateBooking>(_onUpdateBooking);
     on<CheckResidenceAvailability>(_onCheckResidenceAvailability);
     on<UpdateBookingStatus>(_onUpdateBookingStatus);
+    on<CalculateModificationFees>(_onCalculateModificationFees);
+    on<UpdateBookingWithFees>(_onUpdateBookingWithFees);
   }
 
   // Charger toutes les réservations de l'utilisateur
@@ -26,9 +30,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   ) async {
     try {
       emit(const BookingLoading());
-      final bookings = await _bookingService.getUserBookings(
-        status: event.status,
-      );
+      final bookings = await _bookingService.getUserBookings();
       emit(UserBookingsLoaded(bookings));
     } catch (e) {
       emit(BookingError(e.toString()));
@@ -42,14 +44,9 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   ) async {
     try {
       emit(const BookingLoading());
-      final booking = await _bookingService.getBookingById(event.bookingId);
-      
-      // Vérification pour éviter les erreurs de type
-      if (booking != null) {
-        emit(BookingDetailsLoaded(booking));
-      } else {
-        emit(const BookingError("Impossible de charger les détails de la réservation: réponse invalide"));
-      }
+      final booking = await _bookingService.getBookingDetails(event.bookingId);
+      final policy = await _bookingService.getCancellationPolicy(booking.cancellationPolicyId);
+      emit(BookingDetailsLoaded(booking, policy));
     } catch (e) {
       emit(BookingError(e.toString()));
     }
@@ -63,19 +60,13 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     try {
       emit(const BookingLoading());
       final booking = await _bookingService.createBooking(
-        residenceId: event.residenceId,
-        checkIn: event.checkIn,
-        checkOut: event.checkOut,
-        numberOfGuests: event.numberOfGuests,
-        specialRequests: event.specialRequests,
+        residenceId: event.bookingData['residenceId'],
+        checkIn: event.bookingData['checkIn'],
+        checkOut: event.bookingData['checkOut'],
+        numberOfGuests: event.bookingData['numberOfGuests'],
+        specialRequests: event.bookingData['specialRequests'],
       );
-      
-      // Gestion défensive pour éviter les erreurs de type
-      if (booking != null) {
-        emit(BookingCreated(booking));
-      } else {
-        emit(const BookingError("Impossible de créer la réservation: réponse invalide"));
-      }
+      emit(BookingCreated(booking));
     } catch (e) {
       emit(BookingError(e.toString()));
     }
@@ -92,7 +83,8 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         id: event.bookingId,
         reason: event.reason,
       );
-      emit(BookingCancelled(event.bookingId));
+      final booking = await _bookingService.getBookingDetails(event.bookingId);
+      emit(BookingCancelled(booking));
     } catch (e) {
       emit(BookingError(e.toString()));
     }
@@ -107,9 +99,9 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       emit(const BookingLoading());
       final booking = await _bookingService.updateBooking(
         id: event.bookingId,
-        checkIn: event.checkIn,
-        checkOut: event.checkOut,
-        numberOfGuests: event.numberOfGuests,
+        checkIn: event.updates['checkIn'],
+        checkOut: event.updates['checkOut'],
+        numberOfGuests: event.updates['numberOfGuests'],
       );
       emit(BookingUpdated(booking));
     } catch (e) {
@@ -165,5 +157,55 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       emit(BookingError(e.toString()));
     }
   }
-}
 
+  // Calculer les frais de modification
+  Future<void> _onCalculateModificationFees(
+    CalculateModificationFees event,
+    Emitter<BookingState> emit,
+  ) async {
+    try {
+      emit(const BookingLoading());
+      final fees = await _bookingService.calculateModificationFees(
+        bookingId: event.bookingId,
+        newCheckIn: event.newCheckIn,
+        newCheckOut: event.newCheckOut,
+        newNumberOfGuests: event.newNumberOfGuests,
+      );
+      emit(ModificationFeesCalculated(fees));
+    } catch (e) {
+      emit(BookingError(e.toString()));
+    }
+  }
+
+  // Mettre à jour une réservation avec les frais
+  Future<void> _onUpdateBookingWithFees(
+    UpdateBookingWithFees event,
+    Emitter<BookingState> emit,
+  ) async {
+    try {
+      emit(const BookingLoading());
+      final booking = await _bookingService.updateBookingWithFees(
+        id: event.bookingId,
+        checkIn: event.checkIn,
+        checkOut: event.checkOut,
+        numberOfGuests: event.numberOfGuests,
+        modificationFee: event.modificationFee,
+      );
+
+      // Recalculer les frais pour l'affichage final
+      final fees = await _bookingService.calculateModificationFees(
+        bookingId: event.bookingId,
+        newCheckIn: event.checkIn,
+        newCheckOut: event.checkOut,
+        newNumberOfGuests: event.numberOfGuests,
+      );
+
+      emit(BookingUpdatedWithFees(
+        booking: booking,
+        fees: fees,
+      ));
+    } catch (e) {
+      emit(BookingError(e.toString()));
+    }
+  }
+}

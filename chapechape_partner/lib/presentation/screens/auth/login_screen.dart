@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/constants/app_images.dart';
+import '../../../core/utils/validators/form_validators.dart';
 import '../../widgets/common/buttons/primary_button.dart';
 import '../../widgets/common/inputs/text_input.dart';
 
@@ -105,7 +106,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Ce champ est requis';
                       }
-                      return null;
+                      
+                      // Vérifier si c'est un email ou un téléphone
+                      if (value.contains('@')) {
+                        return FormValidators.validateEmail(value);
+                      } else {
+                        // Si ce n'est pas un email, c'est peut-être un téléphone
+                        return FormValidators.validatePhoneNumber(value);
+                      }
                     },
                   ),
                   const SizedBox(height: 20),
@@ -116,12 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     enabled: !_isLoading,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ce champ est requis';
-                      }
-                      return null;
-                    },
+                    validator: (value) => FormValidators.validateRequired(value),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword

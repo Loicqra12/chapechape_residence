@@ -7,7 +7,10 @@ class DashboardService {
     async getOverview(partnerId) {
         try {
             // Récupérer les résidences du partenaire
-            const residences = await Residence.find({ partner: partnerId });
+            const residences = await Residence.find({ 
+                partner: partnerId,
+                deleted: { $ne: true } 
+            });
             if (!residences.length) {
                 return {
                     occupancy_rate: 0,
@@ -135,7 +138,10 @@ class DashboardService {
     async getFinancialStats(partnerId) {
         try {
             // Récupérer les résidences du partenaire
-            const residences = await Residence.find({ partner: partnerId });
+            const residences = await Residence.find({ 
+                partner: partnerId,
+                deleted: { $ne: true } 
+            });
             const residenceIds = residences.map(r => r._id);
 
             const now = new Date();
@@ -251,7 +257,10 @@ class DashboardService {
     async getRealTimeAnalytics(partnerId) {
         try {
             // Récupérer les résidences du partenaire
-            const residences = await Residence.find({ partner: partnerId });
+            const residences = await Residence.find({ 
+                partner: partnerId,
+                deleted: { $ne: true } 
+            });
             const residenceIds = residences.map(r => r._id);
 
             const now = new Date();

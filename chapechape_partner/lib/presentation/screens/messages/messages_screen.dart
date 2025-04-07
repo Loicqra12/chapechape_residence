@@ -263,8 +263,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               : AppColors.textPrimary,
                         ),
                       ),
-                      subtitle: conversation.lastMessage != null
-                          ? Text(
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (conversation.lastMessage != null)
+                            Text(
                               conversation.lastMessage!.content,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -276,8 +279,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                               ),
-                            )
-                          : null,
+                            ),
+                          if (conversation.residenceName != null && conversation.residenceName!.isNotEmpty)
+                            Text(
+                              '🏠 ${conversation.residenceName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.tiny.copyWith(
+                                color: AppColors.secondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                        ],
+                      ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -369,11 +383,26 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    Text(
-                      _isClientActive() ? 'En ligne' : 'Hors ligne',
-                      style: AppTextStyles.small.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    Row(
+                      children: [
+                        if (_selectedConversation?.residenceName != null && _selectedConversation!.residenceName!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Text(
+                              '🏠 ${_selectedConversation!.residenceName}',
+                              style: AppTextStyles.tiny.copyWith(
+                                color: AppColors.secondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          _isClientActive() ? 'En ligne' : 'Hors ligne',
+                          style: AppTextStyles.small.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

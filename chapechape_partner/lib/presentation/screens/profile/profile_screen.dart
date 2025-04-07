@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../settings/settings_screen.dart';
 import '../payments/payments_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../help/help_screen.dart';
 import 'edit_profile_screen.dart';
+import 'change_password_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -14,8 +17,19 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Déclencher le chargement des statistiques si nécessaire
+    if (context.read<DashboardBloc>().state is! DashboardLoaded) {
+      context.read<DashboardBloc>().add(LoadDashboardData());
+    }
+    
+    // Récupérer les données du partenaire
     final partner = context.select((AuthBloc bloc) =>
         bloc.state is AuthAuthenticated ? (bloc.state as AuthAuthenticated).partner : null);
+    
+    // Récupérer les statistiques
+    final dashboardState = context.select((DashboardBloc bloc) => bloc.state);
+    final dashboardStats = dashboardState is DashboardLoaded ? dashboardState.partnerStats : null;
+    
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -59,13 +73,18 @@ class ProfileScreen extends StatelessWidget {
                               child: CircleAvatar(
                                 radius: 60,
                                 backgroundColor: theme.colorScheme.primaryContainer,
-                                child: Text(
-                                  partner?.fullName?.substring(0, 1).toUpperCase() ?? 'P',
-                                  style: TextStyle(
-                                    fontSize: 48,
-                                    color: theme.colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
+                                backgroundImage: partner?.profilePictureUrl != null
+                                    ? NetworkImage(_getFullImageUrl(partner!.profilePictureUrl!))
+                                    : null,
+                                child: partner?.profilePictureUrl == null
+                                    ? Text(
+                                        partner?.fullName?.substring(0, 1).toUpperCase() ?? 'P',
+                                        style: TextStyle(
+                                          fontSize: 48,
+                                          color: theme.colorScheme.onPrimaryContainer,
+                                        ),
+                                      )
+                                    : null,
                               ),
                             ),
                           ),
@@ -114,34 +133,35 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.verified,
-                                size: 16,
-                                color: Colors.green,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Vérifié',
-                                style: theme.textTheme.bodySmall?.copyWith(
+                        if (partner?.isVerified ?? false)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified,
+                                  size: 16,
                                   color: Colors.green,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Vérifié',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     
@@ -213,7 +233,9 @@ class ProfileScreen extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             icon: Icons.home_outlined,
-                            value: '12',
+                            value: dashboardState is DashboardLoaded 
+                                ? '${dashboardState.dashboardData.performance.totalResidences}'
+                                : '-',
                             label: 'Résidences',
                             theme: theme,
                           ),
@@ -222,8 +244,39 @@ class ProfileScreen extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             icon: Icons.star_outline,
-                            value: '4.8',
+                            value: dashboardState is DashboardLoaded 
+                                ? '${dashboardState.dashboardData.stats.rating}'
+                                : '-',
                             label: 'Note moyenne',
+                            theme: theme,
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn().slideY(),
+
+                    const SizedBox(height: 16),
+
+                    // Deuxième rangée de statistiques
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.calendar_today_outlined,
+                            value: dashboardState is DashboardLoaded 
+                                ? '${dashboardState.dashboardData.performance.totalReservations}'
+                                : '-',
+                            label: 'Réservations',
+                            theme: theme,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.monetization_on_outlined,
+                            value: dashboardState is DashboardLoaded 
+                                ? '${dashboardState.dashboardData.revenue.totalRevenue} FCFA'
+                                : '-',
+                            label: 'Revenus',
                             theme: theme,
                           ),
                         ),
@@ -247,10 +300,19 @@ class ProfileScreen extends StatelessWidget {
                             icon: Icons.settings_outlined,
                             title: 'Paramètres',
                             onTap: () {
+                              context.go('/settings');
+                            },
+                            theme: theme,
+                          ),
+                          const Divider(height: 1),
+                          _buildMenuTile(
+                            icon: Icons.lock_outline,
+                            title: 'Changer le mot de passe',
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const SettingsScreen(),
+                                  builder: (context) => const ChangePasswordScreen(),
                                 ),
                               );
                             },
@@ -430,5 +492,24 @@ class ProfileScreen extends StatelessWidget {
       ),
       onTap: onTap,
     );
+  }
+
+  String _getFullImageUrl(String url) {
+    if (url.startsWith('http')) {
+      // L'URL est déjà complète
+      return url;
+    }
+    
+    // Vérifier si l'URL commence par /uploads/
+    if (url.startsWith('/uploads/')) {
+      // C'est un chemin relatif correct, ajouter juste le domaine
+      return 'http://localhost:4000${url}';
+    } else if (url.startsWith('/')) {
+      // URL relative mais sans uploads, ajouter le chemin complet
+      return 'http://localhost:4000/uploads/profiles${url}';
+    } else {
+      // URL sans slash initial, ajouter le chemin complet avec slash
+      return 'http://localhost:4000/uploads/profiles/${url}';
+    }
   }
 }

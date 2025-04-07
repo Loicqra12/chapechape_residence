@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
+import 'package:chapechape_client/core/models/cancellation_policy_model.dart';
+import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -322,6 +324,130 @@ class BookingService {
     }
     
     return false; // Pas de conflit
+  }
+
+  // Vérifier la disponibilité pour les nouvelles dates
+  Future<bool> checkAvailabilityForModification({
+    required String bookingId,
+    DateTime? newCheckIn,
+    DateTime? newCheckOut,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        'reservations/$bookingId/check-availability',
+        queryParameters: {
+          if (newCheckIn != null) 'checkIn': newCheckIn.toIso8601String(),
+          if (newCheckOut != null) 'checkOut': newCheckOut.toIso8601String(),
+        },
+      );
+
+      if (response.data == null) {
+        throw Exception('Réponse vide du serveur');
+      }
+
+      final responseData = response.data as Map<String, dynamic>;
+      return responseData['data']['isAvailable'] as bool;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // Calculer les frais de modification
+  Future<ModificationFees> calculateModificationFees({
+    required String bookingId,
+    DateTime? newCheckIn,
+    DateTime? newCheckOut,
+    int? newNumberOfGuests,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        'reservations/$bookingId/modification-fees',
+        data: {
+          if (newCheckIn != null) 'newCheckIn': newCheckIn.toIso8601String(),
+          if (newCheckOut != null) 'newCheckOut': newCheckOut.toIso8601String(),
+          if (newNumberOfGuests != null) 'newNumberOfGuests': newNumberOfGuests,
+        },
+      );
+
+      if (response.data == null) {
+        throw Exception('Réponse vide du serveur');
+      }
+
+      if (response.data is! Map) {
+        throw Exception('Format de réponse inattendu: ${response.data}');
+      }
+
+      final responseData = response.data as Map<String, dynamic>;
+      final data = responseData['data'];
+
+      if (data == null) {
+        throw Exception('Données des frais manquantes dans la réponse');
+      }
+
+      return ModificationFees.fromJson(data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // Modifier une réservation avec frais
+  Future<Booking> updateBookingWithFees({
+    required String id,
+    required DateTime checkIn,
+    required DateTime checkOut,
+    required int numberOfGuests,
+    required double modificationFee,
+  }) async {
+    try {
+      final response = await _apiService.put(
+        'reservations/$id',
+        data: {
+          'checkIn': checkIn.toIso8601String(),
+          'checkOut': checkOut.toIso8601String(),
+          'numberOfGuests': numberOfGuests,
+          'modificationFee': modificationFee,
+        },
+      );
+
+      if (response.data == null) {
+        throw Exception('Réponse vide du serveur');
+      }
+
+      if (response.data is! Map) {
+        throw Exception('Format de réponse inattendu: ${response.data}');
+      }
+
+      final responseData = response.data as Map<String, dynamic>;
+      final data = responseData['data'];
+
+      if (data == null) {
+        throw Exception('Données de réservation manquantes dans la réponse');
+      }
+
+      return Booking.fromJson(data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // Récupérer les détails d'une réservation
+  Future<Booking> getBookingDetails(String bookingId) async {
+    try {
+      final response = await _apiService.get('reservations/$bookingId');
+      return Booking.fromJson(response.data['data']);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // Récupérer une politique d'annulation
+  Future<CancellationPolicy> getCancellationPolicy(String policyId) async {
+    try {
+      final response = await _apiService.get('cancellation-policies/$policyId');
+      return CancellationPolicy.fromJson(response.data['data']);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
 
   // Gestionnaire d'erreurs Dio

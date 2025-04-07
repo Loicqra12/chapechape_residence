@@ -96,6 +96,19 @@ const residenceSchema = mongoose.Schema({
     pets: { type: Boolean, default: false },
     parties: { type: Boolean, default: false },
     maxGuests: { type: Number, default: 2 }
+  },
+  cancellationPolicy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CancellationPolicy'
+  },
+  // Champs pour la suppression douce
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -109,6 +122,7 @@ residenceSchema.index({
   description: 'text',
   city: 'text'
 });
+residenceSchema.index({ cancellationPolicy: 1 });
 
 // Virtual pour la rétrocompatibilité avec le frontend
 residenceSchema.virtual('location').get(function() {
@@ -118,6 +132,17 @@ residenceSchema.virtual('location').get(function() {
     coordinates: [this.longitude, this.latitude]
   };
 });
+
+// Méthodes d'instance
+residenceSchema.methods.isAvailableForDates = async function(startDate, endDate) {
+  const Availability = mongoose.model('Availability');
+  return Availability.checkAvailability(this._id, startDate, endDate);
+};
+
+residenceSchema.methods.calculateTotalPrice = async function(startDate, endDate) {
+  const Availability = mongoose.model('Availability');
+  return Availability.calculateTotalPrice(this._id, startDate, endDate);
+};
 
 const Residence = mongoose.model('Residence', residenceSchema);
 module.exports = Residence;

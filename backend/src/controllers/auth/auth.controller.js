@@ -1,6 +1,6 @@
 const User = require('../../models/user.model');
 const Partner = require('../../models/partner.model');
-const jwt = require('jsonwebtoken');
+const jwt = require('../../utils/jwt');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const asyncHandler = require('../../middlewares/async.middleware');
@@ -29,16 +29,16 @@ exports.register = asyncHandler(async (req, res) => {
             role: role || 'client' // Par défaut, c'est un client
         });
 
-        // Générer le token
-        const token = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
-        );
+        // Générer le token d'accès avec la nouvelle fonction
+        const accessToken = jwt.generateAccessToken(user._id, user.role);
+        
+        // Générer le token de rafraîchissement
+        const refreshToken = jwt.generateRefreshToken(user._id);
 
         res.status(201).json({
             success: true,
-            token,
+            token: accessToken,
+            refreshToken,
             user: {
                 id: user._id,
                 email: user.email,
@@ -80,16 +80,16 @@ exports.login = asyncHandler(async (req, res) => {
         user.lastLogin = Date.now();
         await user.save();
 
-        // Générer le token
-        const token = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
-        );
+        // Générer le token d'accès avec la nouvelle fonction
+        const accessToken = jwt.generateAccessToken(user._id, user.role);
+        
+        // Générer le token de rafraîchissement
+        const refreshToken = jwt.generateRefreshToken(user._id);
 
         res.status(200).json({
             success: true,
-            token,
+            token: accessToken,
+            refreshToken,
             user: {
                 id: user._id.toString(),  // Convertir l'ObjectId en string
                 email: user.email,
@@ -149,13 +149,23 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
         const resetToken = user.getResetPasswordToken();
         await user.save();
 
-        // TODO: Envoyer l'email avec le token
-        // Pour l'instant, on renvoie juste le token
-        res.json({
-            success: true,
-            message: 'Instructions envoyées par email',
-            resetToken // À supprimer en production
-        });
+        // Envoyer l'email avec le token
+        try {
+            const emailService = require('../../services/email.service');
+            await emailService.sendPasswordReset(email, resetToken);
+            
+            res.json({
+                success: true,
+                message: 'Instructions envoyées par email'
+            });
+        } catch (emailError) {
+            // En cas d'erreur d'envoi, réinitialiser le token
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpire = undefined;
+            await user.save();
+            
+            throw new ApiError('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.', 500);
+        }
     } catch (error) {
         throw new ApiError('Erreur lors de la réinitialisation du mot de passe', 500);
     }
@@ -193,6 +203,82 @@ exports.resetPassword = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         throw new ApiError('Erreur lors de la réinitialisation du mot de passe', 500);
+    }
+});
+
+// @desc    Refresh JWT token
+// @route   POST /api/auth/refresh-token
+// @access  Public
+exports.refreshToken = asyncHandler(async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            throw new ApiError('Token de rafraîchissement non fourni', 400);
+        }
+
+        // Vérifier le refresh token
+        let decoded;
+        try {
+            decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        } catch (error) {
+            throw new ApiError('Token de rafraîchissement invalide ou expiré', 401);
+        }
+
+        // Vérifier si l'utilisateur existe toujours
+        const user = await User.findById(decoded.id);
+        if (!user) {
+            throw new ApiError('Utilisateur non trouvé', 404);
+        }
+
+        // Générer un nouveau token d'accès
+        const accessToken = jwt.sign(
+            { id: user._id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
+        );
+
+        // Générer un nouveau token de rafraîchissement 
+        const newRefreshToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: parseInt(process.env.JWT_REFRESH_EXPIRE) * 24 * 3600 } // Convert days to seconds
+        );
+
+        res.status(200).json({
+            success: true,
+            accessToken,
+            refreshToken: newRefreshToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        throw new ApiError('Erreur lors du rafraîchissement du token', 500);
+    }
+});
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = asyncHandler(async (req, res) => {
+    try {
+        // Optionnel: on pourrait ajouter le token à une liste noire
+        // mais cela nécessiterait une infrastructure Redis ou similaire
+        // pour une gestion efficace des tokens invalidés
+        
+        // Pour l'instant, nous retournons simplement un succès
+        // La déconnexion réelle se fait côté client en supprimant le token
+        res.status(200).json({
+            success: true,
+            message: 'Déconnexion réussie'
+        });
+    } catch (error) {
+        throw new ApiError('Erreur lors de la déconnexion', 500);
     }
 });
 

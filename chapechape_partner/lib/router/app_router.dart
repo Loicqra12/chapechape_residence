@@ -5,14 +5,19 @@ import 'package:go_router/go_router.dart';
 import '../core/blocs/auth/auth_bloc.dart';
 import '../core/blocs/reservation/reservation_bloc.dart';
 import '../core/services/api/reservation_service.dart';
+import '../core/models/residence/residence.dart';
 import '../presentation/screens/auth/forgot_password_screen.dart';
 import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/auth/register_screen.dart';
 import '../presentation/screens/main/main_screen.dart';
 import '../presentation/screens/onboarding/onboarding_screen.dart';
 import '../presentation/screens/residences/edit_residence_screen.dart';
+import '../presentation/screens/residences/residence_details_screen.dart';
 import '../presentation/screens/reservations/reservation_details_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
+import '../presentation/screens/settings/settings_screen.dart';
+import '../presentation/screens/notifications/notification_settings_screen.dart';
+import '../presentation/screens/notifications/notification_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppRouter {
@@ -78,11 +83,30 @@ class AppRouter {
         builder: (context, state) => EditResidenceScreen(),
       ),
       GoRoute(
+        path: '/residences/details',
+        builder: (context, state) {
+          final residence = state.extra as Residence;
+          return ResidenceDetailsScreen(residence: residence);
+        },
+      ),
+      GoRoute(
         path: '/reservations/:id',
         builder: (context, state) {
           final reservationId = state.pathParameters['id'] ?? '';
           return ReservationDetailsScreen(reservationId: reservationId);
         },
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications/preferences',
+        builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationListScreen(),
       ),
     ],
     redirect: (context, state) async {

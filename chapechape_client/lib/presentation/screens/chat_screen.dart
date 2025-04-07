@@ -69,7 +69,7 @@ class ChatScreen extends StatelessWidget {
                         child: Icon(Icons.home),
                       ),
                       title: Text(
-                        'Conversation ${conversation.id}',
+                        _getConversationTitle(conversation),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
@@ -145,5 +145,26 @@ class ChatScreen extends StatelessWidget {
     } else {
       return DateFormat('dd/MM/yyyy').format(time);
     }
+  }
+
+  String _getConversationTitle(ChatConversation conversation) {
+    // Si nous avons un nom de résidence, utilisons-le en priorité
+    if (conversation.residenceName != null && conversation.residenceName!.isNotEmpty) {
+      return "Conversation - ${conversation.residenceName}";
+    }
+    
+    // Sinon, essayons de trouver un participant qui n'est pas l'utilisateur courant
+    // En supposant que l'utilisateur est généralement celui qui n'a pas le rôle "partner"
+    final partner = conversation.participants.firstWhere(
+      (p) => p.role == 'partner',
+      orElse: () => conversation.participants.firstWhere(
+        (p) => p.role != 'user' && p.role != 'client',
+        orElse: () => conversation.participants.isNotEmpty 
+          ? conversation.participants[0] 
+          : ChatParticipant(id: '', name: 'Inconnu', role: 'unknown'),
+      ),
+    );
+    
+    return "Conversation avec ${partner.name}";
   }
 }

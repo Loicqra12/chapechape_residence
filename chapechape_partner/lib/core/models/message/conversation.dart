@@ -32,6 +32,8 @@ class Conversation {
   final Message? lastMessage;
   final int unreadCount;
   final Booking? booking;
+  final String? residenceId;
+  final String? residenceName;
   final DateTime createdAt;
   final DateTime updatedAt;
   final Map<String, dynamic>? metadata;
@@ -43,6 +45,8 @@ class Conversation {
     this.lastMessage,
     required this.unreadCount,
     this.booking,
+    this.residenceId,
+    this.residenceName,
     required this.createdAt,
     required this.updatedAt,
     this.metadata,
@@ -58,6 +62,8 @@ class Conversation {
     Message? lastMessage,
     int? unreadCount,
     Booking? booking,
+    String? residenceId,
+    String? residenceName,
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, dynamic>? metadata,
@@ -69,6 +75,8 @@ class Conversation {
       lastMessage: lastMessage ?? this.lastMessage,
       unreadCount: unreadCount ?? this.unreadCount,
       booking: booking ?? this.booking,
+      residenceId: residenceId ?? this.residenceId,
+      residenceName: residenceName ?? this.residenceName,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       metadata: metadata ?? this.metadata,

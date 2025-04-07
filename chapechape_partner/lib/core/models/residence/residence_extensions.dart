@@ -1,19 +1,42 @@
 import 'residence.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_images.dart';
+import '../../../core/config/app_config.dart';
 
 extension ResidenceProperties on Residence {
+  // Utiliser l'URL de base depuis la configuration
+  static String get baseUrl => AppConfig.apiUrl;
+  
+  // Méthode utilitaire améliorée pour construire les URLs d'images complètes
+  String _getCompleteImageUrl(String imagePath) {
+    // Si déjà une URL complète, la retourner telle quelle
+    if (imagePath.toString().startsWith('http')) return imagePath.toString();
+    
+    // Si c'est une image locale (assets), la retourner telle quelle
+    if (imagePath.toString().startsWith('assets')) return imagePath.toString();
+    
+    // Si le chemin commence déjà par un slash, ne pas en ajouter un autre
+    if (imagePath.startsWith('/')) {
+      return '$baseUrl$imagePath';
+    }
+    
+    // Ajouter le slash si nécessaire
+    return '$baseUrl/$imagePath';
+  }
+  
   String get imageUrl {
-    final imagePath = mainImage ?? (images.isNotEmpty ? images.first : AppImages.defaultResidence);
-    return imagePath;
+    final imagePath = mainImage ?? (images.isNotEmpty ? images.first : AppImages.residencePlaceholder);
+    print('Original image path: $imagePath');  // Debug: afficher le chemin original
+    final fullUrl = _getCompleteImageUrl(imagePath);
+    print('Full image URL: $fullUrl');  // Debug: afficher l'URL complète
+    return fullUrl;
   }
   
   List<String> get imageUrls {
-    const baseUrl = 'http://localhost:4000';  // TODO: à configurer via les variables d'environnement
     return images.map((image) {
-      if (image.toString().startsWith('http')) return image.toString();
-      if (image.toString().startsWith('assets')) return image.toString();
-      return '$baseUrl/$image';
+      final fullUrl = _getCompleteImageUrl(image);
+      print('Image in list: $fullUrl');  // Debug: afficher chaque URL
+      return fullUrl;
     }).toList();
   }
   

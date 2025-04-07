@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/sync/sync_bloc.dart';
+import '../../widgets/sync/sync_status_widget.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -14,6 +16,13 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('ChapeChape Partner'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: SyncStatusWidget(
+              showDetails: false,
+              showForceButton: false,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -32,15 +41,48 @@ class HomeScreen extends StatelessWidget {
                 'Bienvenue, ${partner?.fullName ?? ''}',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
+              const SizedBox(height: 16),
+              SyncStatusWidget(
+                showDetails: true,
+                showForceButton: true,
+              ),
               const SizedBox(height: 24),
-              // TODO: Ajouter les fonctionnalités du tableau de bord
-              const Center(
-                child: Text('Tableau de bord en construction...'),
+              Expanded(
+                child: _buildDashboardPlaceholder(context),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+  
+  Widget _buildDashboardPlaceholder(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Icon(
+          Icons.dashboard_customize,
+          size: 64,
+          color: Colors.grey,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Tableau de bord en construction...',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.grey.shade700,
+              ),
+        ),
+        const SizedBox(height: 24),
+        FilledButton.icon(
+          onPressed: () {
+            Navigator.of(context).pushNamed('/dashboard');
+          },
+          icon: const Icon(Icons.dashboard),
+          label: const Text('Aller au tableau de bord provisoire'),
+        ),
+      ],
     );
   }
 }

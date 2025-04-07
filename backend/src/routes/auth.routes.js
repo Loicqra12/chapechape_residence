@@ -6,11 +6,13 @@ const authValidation = require('../validations/auth.validation');
 const {
     register,
     login,
+    logout,
     getMe,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    refreshToken
 } = require('../controllers/auth/auth.controller');
-const { protect } = require('../middlewares/auth.middleware');
+const { protect, authorize, validateRefreshToken } = require('../middlewares/auth.middleware');
 
 /**
  * @swagger
@@ -88,6 +90,22 @@ router.post('/login', validate(authValidation.login), login);
 
 /**
  * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Not authorized
+ */
+router.post('/logout', protect, logout);
+
+/**
+ * @swagger
  * /api/auth/forgot-password:
  *   post:
  *     summary: Request password reset
@@ -137,6 +155,34 @@ router.post('/forgot-password', validate(authValidation.forgotPassword), forgotP
  *         description: Invalid or expired token
  */
 router.put('/reset-password/:resetToken', validate(authValidation.resetPassword), resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Refresh token received during login
+ *     responses:
+ *       200:
+ *         description: New access token generated successfully
+ *       400:
+ *         description: No refresh token provided
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post('/refresh-token', validateRefreshToken, refreshToken);
 
 // Routes protégées
 router.get('/me', protect, getMe);

@@ -13,19 +13,40 @@ import 'core/services/api/availability_service.dart';
 import 'core/services/api/dashboard_service.dart';
 import 'core/services/api/message_service.dart';
 import 'core/services/api/reservation_service.dart';
+import 'core/services/api/notification_service.dart';
 import 'core/blocs/auth/auth_bloc.dart';
 import 'core/blocs/residence/residence_bloc.dart';
 import 'core/blocs/dashboard/dashboard_bloc.dart';
 import 'core/blocs/message/message_bloc.dart';
 import 'core/blocs/reservation/reservation_bloc.dart';
+import 'core/blocs/sync/sync_bloc.dart';
+import 'core/blocs/notification/notification_bloc.dart';
+import 'core/blocs/notification/notification_event.dart';
+import 'core/repositories/notification_repository.dart';
 import 'router/app_router.dart';
+import 'core/services/connectivity_service.dart';
+import 'core/services/cache_service.dart';
+import 'core/services/sync_service.dart';
+import 'package:logging/logging.dart';
+import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
+import 'core/services/notification/twilio_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Configurer le système de logging
+  _setupLogging();
+
   // Initialiser les données de localisation française
   await initializeDateFormatting('fr_FR', null);
   Intl.defaultLocale = 'fr_FR';
+  
+  // Initialiser les services de base
+  final connectivityService = ConnectivityService();
+  final cacheService = CacheService();
+  await connectivityService.initialize();
+  await cacheService.initialize();
 
   // Services
   final storage = const FlutterSecureStorage();
@@ -33,9 +54,17 @@ void main() async {
   
   // Ajouter des logs pour le token d'authentification
   storage.read(key: 'token').then((token) {
-    print('Token d\'authentification: ${token?.substring(0, 20)}...');
+    if (token != null && token.isNotEmpty) {
+      // Masquer le token dans les logs pour sécurité
+      final maskedToken = token.length > 20 
+          ? '${token.substring(0, 10)}...${token.substring(token.length - 5)}'
+          : '****';
+      Logger.root.info('Token d\'authentification trouvé: $maskedToken');
+    } else {
+      Logger.root.info('Aucun token d\'authentification trouvé');
+    }
   }).catchError((error) {
-    print('Erreur lors de la lecture du token: $error');
+    Logger.root.severe('Erreur lors de la lecture du token: $error');
   });
   
   final dio = Dio(BaseOptions(
@@ -44,7 +73,15 @@ void main() async {
     receiveTimeout: const Duration(seconds: 3),
   ));
 
-  final apiService = ApiService();
+  // Create AuthBloc first since it's needed for the router
+  final authBloc = AuthBloc(
+    authService: AuthService(dio),
+    storage: storage,
+  )..add(AuthCheckRequested());
+
+  // Initialize API service with authBloc for automatic logout on token expiration
+  final apiService = ApiService(authBloc: authBloc);
+  
   final authService = AuthService(dio);
   final residenceService = ResidenceService(baseUrl: apiConfig.baseUrl, storage: storage);
   final availabilityService = AvailabilityService(dio);
@@ -52,15 +89,34 @@ void main() async {
   final messageService = MessageService(dio);
   final reservationService = ReservationService(dio);
 
-  // Create AuthBloc first since it's needed for the router
-  final authBloc = AuthBloc(
-    authService: authService,
-    storage: storage,
-  )..add(AuthCheckRequested());
-
   // Create the router with authBloc
   final appRouter = AppRouter(authBloc);
 
+  // Initialiser le service de synchronisation
+  final syncService = SyncService();
+  syncService.initialize(
+    apiService: apiService, 
+    residenceService: residenceService,
+    reservationService: reservationService,
+    messageService: messageService,
+  );
+
+  // Créer le bloc de synchronisation
+  final syncBloc = SyncBloc(
+    syncService: syncService,
+    connectivityService: connectivityService,
+    cacheService: cacheService,
+  );
+
+  // Créer le repository de notification et le service
+  final twilioService = TwilioService();
+  await twilioService.initialize();
+  final notificationRepository = NotificationRepository(twilioService);
+
+  // Initialiser le bus d'événements pour les résidences
+  final eventBus = event_bus.ResidenceEventBus();
+  debugPrint('🔔 Bus d\'événements pour les résidences initialisé');
+  
   runApp(
     MultiProvider(
       providers: [
@@ -73,6 +129,26 @@ void main() async {
         Provider<ReservationService>(
           create: (_) => reservationService,
         ),
+        Provider<ConnectivityService>(
+          create: (_) => connectivityService,
+        ),
+        Provider<CacheService>(
+          create: (_) => cacheService,
+        ),
+        Provider<SyncService>(
+          create: (_) => syncService,
+        ),
+        Provider<TwilioService>(
+          create: (_) => twilioService,
+          dispose: (_, service) => service.dispose(),
+        ),
+        Provider<NotificationRepository>(
+          create: (context) => notificationRepository,
+        ),
+        // Ajouter le bus d'événements comme un provider
+        Provider<event_bus.ResidenceEventBus>(
+          create: (_) => eventBus,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -80,16 +156,30 @@ void main() async {
             value: authBloc,
           ),
           BlocProvider<ResidenceBloc>(
-            create: (context) => ResidenceBloc(residenceService)..add(LoadMyResidences()),
+            create: (context) => ResidenceBloc(
+              context.read<ResidenceService>(),
+              eventBus: context.read<event_bus.ResidenceEventBus>(),
+              notificationRepository: context.read<NotificationRepository>(),
+            )..add(LoadMyResidences()),
           ),
           BlocProvider<DashboardBloc>(
-            create: (context) => DashboardBloc(dashboardService)..add(LoadDashboardData()),
+            create: (context) => DashboardBloc(
+              dashboardService,
+            )..add(LoadDashboardData()),
           ),
           BlocProvider<MessageBloc>(
             create: (context) => MessageBloc(context.read<MessageService>()),
           ),
           BlocProvider<ReservationBloc>(
             create: (context) => ReservationBloc(context.read<ReservationService>())..add(LoadMyReservations()),
+          ),
+          BlocProvider<SyncBloc>.value(
+            value: syncBloc,
+          ),
+          BlocProvider<NotificationBloc>(
+            create: (context) => NotificationBloc(
+              repository: context.read<NotificationRepository>(),
+            )..add(const LoadNotifications(page: 1)),
           ),
         ],
         child: MaterialApp.router(
@@ -117,4 +207,33 @@ void main() async {
       ),
     ),
   );
+}
+
+/// Configure le système de logging
+void _setupLogging() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    // Format: [LEVEL] LOGGER_NAME: MESSAGE
+    final emoji = _getLogLevelEmoji(record.level);
+    debugPrint('$emoji [${record.level.name}] ${record.loggerName}: ${record.message}');
+    
+    // Si une exception est présente, l'afficher aussi
+    if (record.error != null) {
+      debugPrint('╰─ ERROR: ${record.error}');
+      if (record.stackTrace != null) {
+        debugPrint('╰─ STACK: ${record.stackTrace}');
+      }
+    }
+  });
+}
+
+/// Retourne un emoji approprié selon le niveau de log
+String _getLogLevelEmoji(Level level) {
+  if (level == Level.SEVERE) return '🔥'; // Erreur grave
+  if (level == Level.WARNING) return '⚠️'; // Avertissement
+  if (level == Level.INFO) return '📝'; // Information
+  if (level == Level.CONFIG) return '⚙️'; // Configuration
+  if (level == Level.FINE) return '🔍'; // Détail fin
+  if (level == Level.FINER || level == Level.FINEST) return '🔬'; // Détail très fin
+  return '��'; // Par défaut
 }

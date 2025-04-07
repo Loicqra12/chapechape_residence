@@ -1,232 +1,275 @@
+const { ApiError } = require('../../utils/apiError');
+const reservationService = require('../../services/reservation.service');
+const SocketService = require('../../services/socket.service');
+const asyncHandler = require('../../middlewares/async');
 const Reservation = require('../../models/reservation.model');
 const Residence = require('../../models/residence.model');
-const SocketService = require('../../services/socket.service');
 
-// Créer une nouvelle réservation
-exports.createReservation = async (req, res) => {
-    try {
-        const { residenceId, checkIn, checkOut, numberOfGuests, specialRequests } = req.body;
+/**
+ * Créer une nouvelle réservation
+ * @route POST /api/reservations
+ */
+exports.createReservation = asyncHandler(async (req, res) => {
+    const reservation = await reservationService.createReservation({
+        ...req.body,
+        user: req.user._id
+    });
 
-        // Vérifier si la résidence existe
-        const residence = await Residence.findById(residenceId);
-        if (!residence) {
-            return res.status(404).json({
-                success: false,
-                message: "Résidence non trouvée"
-            });
-        }
+    // Notifier via websocket
+    await SocketService.notifyBlockedDatesUpdate(reservation.residence);
+    await SocketService.notifyNewReservation(reservation);
 
-        // Récupérer le partenaire associé à la résidence
-        const partnerId = residence.partner;
-        
-        // Vérifier si les dates sont disponibles
-        const conflictingReservation = await Reservation.findOne({
-            residence: residenceId,
-            status: { $nin: ['cancelled'] },
-            $or: [
-                {
-                    checkIn: { $lte: new Date(checkOut) },
-                    checkOut: { $gte: new Date(checkIn) }
-                }
-            ]
-        });
+    res.status(201).json({
+        success: true,
+        data: reservation
+    });
+});
 
-        if (conflictingReservation) {
-            return res.status(400).json({
-                success: false,
-                message: "Ces dates ne sont pas disponibles"
-            });
-        }
+/**
+ * Obtenir toutes les réservations d'un utilisateur
+ * @route GET /api/reservations/my-reservations
+ */
+exports.getUserReservations = asyncHandler(async (req, res) => {
+    const reservations = await Reservation.find({ user: req.user._id })
+        .populate({
+            path: 'residence',
+            select: 'title images location address city',
+            populate: { path: 'cancellationPolicy' }
+        })
+        .sort('-createdAt');
 
-        // Calculer le prix total
-        const numberOfDays = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
-        const totalPrice = residence.price * numberOfDays;
+    res.status(200).json({
+        success: true,
+        data: reservations
+    });
+});
 
-        // Créer la réservation
-        const reservation = new Reservation({
-            residence: residenceId,
-            user: req.user._id,
-            partner: partnerId,
-            checkIn: new Date(checkIn),
-            checkOut: new Date(checkOut),
-            numberOfGuests,
-            totalPrice,
-            specialRequests,
-            status: 'pending'
-        });
+/**
+ * Obtenir toutes les réservations d'une résidence
+ * @route GET /api/reservations/residence/:residenceId
+ */
+exports.getResidenceReservations = asyncHandler(async (req, res) => {
+    const residence = await Residence.findOne({
+        _id: req.params.residenceId,
+        partner: req.user._id
+    });
 
-        await reservation.save();
-
-        // Notifier les clients connectés
-        await SocketService.notifyBlockedDatesUpdate(residenceId);
-        await SocketService.notifyNewReservation(reservation);
-
-        res.status(201).json({
-            success: true,
-            data: reservation
-        });
-
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée ou vous n\'êtes pas autorisé', 404);
     }
-};
 
-// Obtenir toutes les réservations d'un utilisateur
-exports.getUserReservations = async (req, res) => {
-    try {
-        const reservations = await Reservation.find({ user: req.user._id })
-            .populate('residence')
-            .sort('-createdAt');
+    const reservations = await Reservation.find({ 
+        residence: req.params.residenceId,
+        partner: req.user._id 
+    })
+        .populate('user', 'firstName lastName phoneNumber email')
+        .populate('cancellationPolicy')
+        .sort('-createdAt');
 
-        res.status(200).json({
-            success: true,
-            data: reservations
-        });
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+    res.status(200).json({
+        success: true,
+        data: reservations
+    });
+});
+
+/**
+ * Obtenir une réservation par son ID
+ * @route GET /api/reservations/:id
+ */
+exports.getReservationById = asyncHandler(async (req, res) => {
+    const reservation = await Reservation.findById(req.params.id)
+        .populate({
+            path: 'residence',
+            select: 'title images location address city',
+            populate: { path: 'cancellationPolicy' }
+        })
+        .populate('user', 'firstName lastName phoneNumber email');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
     }
-};
 
-// Obtenir toutes les réservations d'une résidence (pour le propriétaire)
-exports.getResidenceReservations = async (req, res) => {
-    try {
-        const residence = await Residence.findOne({
-            _id: req.params.residenceId,
-            partner: req.user._id
-        });
-
-        if (!residence) {
-            return res.status(404).json({
-                success: false,
-                message: "Résidence non trouvée ou vous n'êtes pas autorisé"
-            });
-        }
-
-        const reservations = await Reservation.find({ residence: req.params.residenceId })
-            .populate('user', 'name email')
-            .sort('-createdAt');
-
-        res.status(200).json({
-            success: true,
-            data: reservations
-        });
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+    // Vérifier les permissions
+    if (
+        reservation.user.toString() !== req.user._id.toString() &&
+        reservation.partner.toString() !== req.user._id.toString()
+    ) {
+        throw new ApiError('Non autorisé', 403);
     }
-};
 
-// Mettre à jour le statut d'une réservation
-exports.updateReservationStatus = async (req, res) => {
-    try {
-        const { status } = req.body;
-        const reservation = await Reservation.findById(req.params.id);
+    res.status(200).json({
+        success: true,
+        data: reservation
+    });
+});
 
-        if (!reservation) {
-            return res.status(404).json({
-                success: false,
-                message: "Réservation non trouvée"
-            });
-        }
+/**
+ * Annuler une réservation
+ * @route PATCH /api/reservations/:id/cancel
+ */
+exports.cancelReservation = asyncHandler(async (req, res) => {
+    const { reason } = req.body;
+    const reservation = await reservationService.cancelReservation(
+        req.params.id,
+        req.user._id,
+        reason
+    );
 
-        // Vérifier que c'est bien le propriétaire de la résidence
-        const residence = await Residence.findOne({
-            _id: reservation.residence,
-            partner: req.user._id
-        });
+    // Notifier via websocket
+    await SocketService.notifyBlockedDatesUpdate(reservation.residence);
+    await SocketService.notifyReservationCancellation(reservation);
 
-        if (!residence) {
-            return res.status(403).json({
-                success: false,
-                message: "Vous n'êtes pas autorisé à modifier cette réservation"
-            });
-        }
+    res.status(200).json({
+        success: true,
+        data: reservation
+    });
+});
 
-        // Mettre à jour le statut
-        reservation.status = status;
-        await reservation.save();
+/**
+ * Modifier une réservation
+ * @route PATCH /api/reservations/:id
+ */
+exports.modifyReservation = asyncHandler(async (req, res) => {
+    const reservation = await reservationService.modifyReservation(
+        req.params.id,
+        req.body,
+        req.user._id
+    );
 
-        // Notifier les clients connectés
-        await SocketService.notifyBlockedDatesUpdate(reservation.residence);
+    // Notifier via websocket
+    await SocketService.notifyBlockedDatesUpdate(reservation.residence);
+    await SocketService.notifyReservationModification(reservation);
 
-        res.status(200).json({
-            success: true,
-            data: reservation
-        });
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+    res.status(200).json({
+        success: true,
+        data: reservation
+    });
+});
+
+/**
+ * Mettre à jour le statut d'une réservation
+ * @route PATCH /api/reservations/:id/status
+ */
+exports.updateReservationStatus = asyncHandler(async (req, res) => {
+    const { status } = req.body;
+    const reservation = await Reservation.findById(req.params.id);
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
     }
-};
 
-// Annuler une réservation
-exports.cancelReservation = async (req, res) => {
-    try {
-        const reservation = await Reservation.findById(req.params.id);
+    // Vérifier que c'est bien le propriétaire de la résidence
+    const residence = await Residence.findOne({
+        _id: reservation.residence,
+        partner: req.user._id
+    });
 
-        if (!reservation) {
-            return res.status(404).json({
-                success: false,
-                message: "Réservation non trouvée"
-            });
-        }
-
-        // Vérifier que c'est bien l'utilisateur qui a fait la réservation
-        if (reservation.user.toString() !== req.user._id.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: "Vous n'êtes pas autorisé à annuler cette réservation"
-            });
-        }
-
-        // Vérifier si l'annulation est possible (par exemple, pas trop proche de la date)
-        const today = new Date();
-        const checkIn = new Date(reservation.checkIn);
-        
-        // Calculer la différence en millisecondes et prendre la valeur absolue
-        const differenceInTime = Math.abs(checkIn.getTime() - today.getTime());
-        
-        // Convertir en heures
-        const differenceInHours = differenceInTime / (1000 * 3600);
-        
-        console.log('Différence en heures (absolue):', differenceInHours);
-        
-        // Si moins de 48h avant le check-in
-        if (differenceInHours < 48) {
-            return res.status(400).json({
-                success: false,
-                message: "Impossible d'annuler une réservation moins de 48h avant"
-            });
-        }
-
-        // Annuler la réservation
-        reservation.status = 'cancelled';
-        reservation.cancellationReason = 'Utilisateur';
-        reservation.cancelledAt = new Date();
-        await reservation.save();
-
-        // Notifier les clients connectés
-        await SocketService.notifyBlockedDatesUpdate(reservation.residence);
-        await SocketService.notifyReservationCancellation(reservation);
-
-        res.status(200).json({
-            success: true,
-            data: reservation
-        });
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+    if (!residence) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette réservation', 403);
     }
-};
+
+    // Mettre à jour le statut
+    reservation.status = status;
+    await reservation.save();
+
+    // Notifier les clients connectés
+    await SocketService.notifyBlockedDatesUpdate(reservation.residence);
+
+    res.status(200).json({
+        success: true,
+        data: reservation
+    });
+});
+
+/**
+ * Calculer les frais de modification d'une réservation
+ * @route POST /api/reservations/:id/modification-fees
+ */
+exports.calculateModificationFees = asyncHandler(async (req, res) => {
+    const { newCheckIn, newCheckOut, newNumberOfGuests } = req.body;
+    const reservation = await Reservation.findById(req.params.id)
+        .populate({
+            path: 'residence',
+            populate: { path: 'cancellationPolicy' }
+        });
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier les permissions
+    if (reservation.user.toString() !== req.user._id.toString()) {
+        throw new ApiError('Non autorisé', 403);
+    }
+
+    // Vérifier que la réservation est modifiable
+    const canModify = await reservation.canBeModified();
+    if (!canModify) {
+        throw new ApiError('Cette réservation ne peut plus être modifiée', 400);
+    }
+
+    // Calculer le nouveau prix total si les dates changent
+    let newTotalPrice = reservation.totalPrice;
+    if (newCheckIn || newCheckOut) {
+        newTotalPrice = await reservation.residence.calculateTotalPrice(
+            newCheckIn || reservation.checkIn,
+            newCheckOut || reservation.checkOut
+        );
+    }
+
+    // Calculer les frais de modification basés sur la politique d'annulation
+    const modificationFee = reservation.residence.cancellationPolicy
+        .calculateModificationFee(newTotalPrice, reservation.totalPrice);
+
+    // Calculer la différence de prix
+    const priceDifference = newTotalPrice - reservation.totalPrice;
+
+    res.status(200).json({
+        success: true,
+        data: {
+            baseFee: modificationFee,
+            priceDifference: priceDifference,
+            totalFee: modificationFee + (priceDifference > 0 ? priceDifference : 0),
+            currency: 'FCFA'
+        }
+    });
+});
+
+/**
+ * Vérifier la disponibilité pour une modification de réservation
+ * @route GET /api/reservations/:id/check-availability
+ */
+exports.checkAvailability = asyncHandler(async (req, res) => {
+    const { checkIn, checkOut } = req.query;
+    const reservation = await Reservation.findById(req.params.id)
+        .populate('residence');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier les permissions
+    if (reservation.user.toString() !== req.user._id.toString()) {
+        throw new ApiError('Non autorisé', 403);
+    }
+
+    // Vérifier que la réservation est modifiable
+    const canModify = await reservation.canBeModified();
+    if (!canModify) {
+        throw new ApiError('Cette réservation ne peut plus être modifiée', 400);
+    }
+
+    // Vérifier la disponibilité
+    const isAvailable = await reservation.residence.isAvailableForDates(
+        new Date(checkIn),
+        new Date(checkOut),
+        reservation._id // Exclure la réservation actuelle
+    );
+
+    res.status(200).json({
+        success: true,
+        data: {
+            isAvailable
+        }
+    });
+});

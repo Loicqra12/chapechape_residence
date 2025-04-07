@@ -9,29 +9,78 @@ const path = require('path');
 // @access  Private (Partner only)
 exports.createResidence = asyncHandler(async (req, res) => {
     let residenceData;
+    
+    console.log('==== CRÉATION DE RÉSIDENCE ====');
+    console.log('Headers:', req.headers);
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Request body raw:', req.body);
+    console.log('Files:', req.files?.length || 'None');
 
     // Vérifier si les données sont envoyées via le champ residenceData (approche JSON)
     if (req.body.residenceData) {
         try {
+            console.log('Données reçues (format JSON):');
+            console.log('residenceData (raw):', req.body.residenceData);
+            
             residenceData = JSON.parse(req.body.residenceData);
+            console.log('Données JSON parsées:', Object.keys(residenceData));
+            console.log('Contenu complet:', residenceData);
+            
             // Assigner l'id du partenaire
             residenceData.partner = req.user.id;
+            console.log(`Partenaire assigné: ${req.user.id}`);
         } catch (error) {
-            throw new ApiError('Format de données invalide', 400);
+            console.error('Erreur de parsing JSON:', error);
+            throw new ApiError('Format de données invalide: ' + error.message, 400);
         }
     } else {
         // Approche traditionnelle (champs individuels)
         residenceData = req.body;
         residenceData.partner = req.user.id;
+        console.log('Données reçues (format direct):', Object.keys(residenceData));
+        console.log('Contenu complet:', residenceData);
+    }
+    
+    // Validation manuelle des champs requis
+    const requiredFields = ['title', 'description', 'price', 'type', 'address', 'city', 'bedrooms', 'bathrooms', 'area'];
+    const missingFields = requiredFields.filter(field => residenceData[field] === undefined || residenceData[field] === null);
+    
+    if (missingFields.length > 0) {
+        console.error('Champs manquants:', missingFields);
+        throw new ApiError(`Champs requis manquants: ${missingFields.join(', ')}`, 400);
     }
 
-    // Créer la résidence
-    const residence = await Residence.create(residenceData);
+    try {
+        // Créer la résidence de base
+        console.log('Création de la résidence avec les données:', residenceData);
+        const residence = await Residence.create(residenceData);
+        console.log(`Résidence créée avec succès: ${residence._id}`);
+        
+        // Si des fichiers sont présents, traiter les images
+        if (req.files && req.files.length > 0) {
+            console.log(`Traitement de ${req.files.length} images`);
+            
+            const images = req.files.map(file => `/uploads/${file.filename}`);
+            
+            console.log('Images avant sauvegarde:', images);
+            console.log('Images existantes:', residence.images);
+            
+            residence.images = [...residence.images, ...images];
+            await residence.save();
 
-    res.status(201).json({
-        success: true,
-        data: residence.toObject()
-    });
+            console.log('Images après sauvegarde:', residence.images);
+        } else {
+            console.log('Aucune image reçue avec la requête');
+        }
+
+        res.status(201).json({
+            success: true,
+            data: residence.toObject()
+        });
+    } catch (error) {
+        console.error('Erreur lors de la création de la résidence:', error);
+        throw new ApiError(`Échec de la création de la résidence: ${error.message}`, 500);
+    }
 });
 
 // @desc    Obtenir toutes les résidences
@@ -80,6 +129,9 @@ exports.getResidence = asyncHandler(async (req, res) => {
     if (!residence) {
         throw new ApiError('Résidence non trouvée', 404);
     }
+
+    console.log('Résidence récupérée - ID:', req.params.id);
+    console.log('Images dans la résidence:', residence.images);
 
     res.json({
         success: true,
@@ -132,7 +184,13 @@ exports.deleteResidence = asyncHandler(async (req, res) => {
         throw new ApiError('Non autorisé à supprimer cette résidence', 403);
     }
 
-    await residence.deleteOne();
+    // Faire une suppression douce au lieu d'une suppression réelle
+    // Mettre à jour la résidence avec le flag 'deleted' à true
+    residence.deleted = true;
+    residence.deletedAt = new Date();
+    await residence.save();
+
+    console.log(`Résidence ${req.params.id} marquée comme supprimée (soft delete)`);
 
     res.status(200).json({
         success: true,
@@ -159,7 +217,9 @@ exports.searchResidences = asyncHandler(async (req, res) => {
         order = 'desc'
     } = req.query;
 
-    const searchQuery = {};
+    const searchQuery = {
+        deleted: { $ne: true } // Exclure les résidences supprimées
+    };
 
     if (query) {
         searchQuery.$or = [
@@ -252,10 +312,7 @@ exports.uploadImages = asyncHandler(async (req, res) => {
         throw new ApiError('Veuillez télécharger des images', 400);
     }
 
-    const images = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
-        caption: file.originalname
-    }));
+    const images = req.files.map(file => `/uploads/${file.filename}`);
 
     residence.images = [...residence.images, ...images];
     await residence.save();

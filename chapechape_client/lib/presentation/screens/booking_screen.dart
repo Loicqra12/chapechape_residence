@@ -82,20 +82,18 @@ class _BookingScreenState extends State<BookingScreen> {
   }
   
   // Créer une réservation
-  void _createBooking() {
-    if (_formKey.currentState!.validate() && _isAvailable) {
-      final numberOfGuests = int.tryParse(_guestsController.text) ?? 1;
-      
-      context.read<BookingBloc>().add(
-        booking_events.CreateBooking(
-          residenceId: widget.residenceId,
-          checkIn: _checkInDate!,
-          checkOut: _checkOutDate!,
-          numberOfGuests: numberOfGuests,
-          totalPrice: _estimatedPrice,
-        )
-      );
-    }
+  void _handleSubmit() {
+    context.read<BookingBloc>().add(
+      booking_events.CreateBooking(
+        bookingData: {
+          'residenceId': widget.residenceId,
+          'checkIn': _checkInDate,
+          'checkOut': _checkOutDate,
+          'numberOfGuests': _guestsController.text,
+          'specialRequests': '',
+        },
+      ),
+    );
   }
 
   @override
@@ -386,7 +384,7 @@ class _BookingScreenState extends State<BookingScreen> {
         }
       },
       child: ElevatedButton(
-        onPressed: _isAvailable ? _createBooking : null,
+        onPressed: _isAvailable ? _handleSubmit : null,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
