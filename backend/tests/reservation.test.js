@@ -15,7 +15,7 @@ describe('Reservation Routes', () => {
         lastName: 'User',
         email: 'user@test.com',
         password: 'Test123!',
-        role: 'user'
+        role: 'client'
     };
 
     const testResidence = {

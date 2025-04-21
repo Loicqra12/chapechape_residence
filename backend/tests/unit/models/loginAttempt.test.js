@@ -17,8 +17,8 @@ describe('LoginAttempt Model Test', () => {
     it('should create & save login attempt successfully', async () => {
         const validLoginAttempt = new LoginAttempt({
             email: 'test@example.com',
-            ipAddress: '192.168.1.1',
-            successful: false,
+            ip: '192.168.1.1',
+            success: false,
             attempts: 1
         });
 
@@ -26,8 +26,8 @@ describe('LoginAttempt Model Test', () => {
         
         expect(savedLoginAttempt._id).toBeDefined();
         expect(savedLoginAttempt.email).toBe('test@example.com');
-        expect(savedLoginAttempt.ipAddress).toBe('192.168.1.1');
-        expect(savedLoginAttempt.successful).toBe(false);
+        expect(savedLoginAttempt.ip).toBe('192.168.1.1');
+        expect(savedLoginAttempt.success).toBe(false);
         expect(savedLoginAttempt.attempts).toBe(1);
     });
 
@@ -43,14 +43,14 @@ describe('LoginAttempt Model Test', () => {
 
         expect(err).toBeDefined();
         expect(err.errors.email).toBeDefined();
-        expect(err.errors.ipAddress).toBeDefined();
+        expect(err.errors.ip).toBeDefined();
     });
 
     it('should convert email to lowercase', async () => {
         const loginAttemptWithUppercase = new LoginAttempt({
             email: 'TEST@EXAMPLE.COM',
-            ipAddress: '192.168.1.1',
-            successful: false,
+            ip: '192.168.1.1',
+            success: false,
             attempts: 1
         });
 
@@ -61,8 +61,8 @@ describe('LoginAttempt Model Test', () => {
     it('should increment attempts counter', async () => {
         const loginAttempt = await LoginAttempt.create({
             email: 'test@example.com',
-            ipAddress: '192.168.1.1',
-            successful: false,
+            ip: '192.168.1.1',
+            success: false,
             attempts: 1
         });
 
@@ -78,8 +78,8 @@ describe('LoginAttempt Model Test', () => {
 
         const loginAttempt = await LoginAttempt.create({
             email: 'test@example.com',
-            ipAddress: '192.168.1.1',
-            successful: false,
+            ip: '192.168.1.1',
+            success: false,
             attempts: 5,
             blockedUntil: blockDate
         });

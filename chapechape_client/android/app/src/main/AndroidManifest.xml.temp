@@ -1,0 +1,13 @@
+<!--
+Fichier temporaire pour sauvegarder les modifications à faire à AndroidManifest.xml:
+
+1. Ajouter cette permission au début du fichier, à l'intérieur de la balise <manifest>:
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+2. Forcer l'utilisation d'une version spécifique de Java:
+Ajouter au fichier build.gradle: compileOptions { sourceCompatibility JavaVersion.VERSION_11; targetCompatibility JavaVersion.VERSION_11 }
+
+3. Désactiver les transformations:
+Ajouter cette ligne dans gradle.properties: android.jetifier.skipIfPossible=true
+-->

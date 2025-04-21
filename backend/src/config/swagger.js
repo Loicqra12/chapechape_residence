@@ -16,6 +16,10 @@ const options = {
             {
                 url: 'http://localhost:4000',
                 description: 'Development server'
+            },
+            {
+                url: 'https://api.chapechape.com',
+                description: 'Production server'
             }
         ],
         components: {
@@ -24,6 +28,11 @@ const options = {
                     type: 'http',
                     scheme: 'bearer',
                     bearerFormat: 'JWT'
+                },
+                csrfToken: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'X-CSRF-Token'
                 }
             }
         },
@@ -33,7 +42,10 @@ const options = {
     },
     apis: [
         './src/routes/*.js',
-        './src/models/*.js'
+        './src/models/*.js',
+        './src/swagger/schemas.js',
+        './src/swagger/schemas/*.js',
+        './src/swagger/routes/*.js'
     ]
 };
 

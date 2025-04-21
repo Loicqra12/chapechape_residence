@@ -83,6 +83,7 @@ describe('Security Tests', () => {
             const attempts = await LoginAttempt.find({});
             expect(attempts.length).toBe(1);
             expect(attempts[0].email).toBe(testUser.email);
+            expect(attempts[0].success).toBe(false);
         });
 
         it('should reset failed attempts after successful login', async () => {

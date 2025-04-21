@@ -27,7 +27,7 @@ describe('Residence Controller Tests', () => {
             password: 'Password123!',
             firstName: 'Test',
             lastName: 'User',
-            role: 'user'
+            role: 'client'
         });
 
         ownerToken = generateToken(testOwner._id);

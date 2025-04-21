@@ -21,7 +21,7 @@ describe('Reservation Controller Tests', () => {
             password: 'Password123!',
             firstName: 'Test',
             lastName: 'User',
-            role: 'user'
+            role: 'client'
         });
 
         testOwner = await User.create({
@@ -29,7 +29,7 @@ describe('Reservation Controller Tests', () => {
             password: 'Password123!',
             firstName: 'Test',
             lastName: 'Owner',
-            role: 'owner'
+            role: 'partner'
         });
 
         userToken = generateToken(testUser._id);

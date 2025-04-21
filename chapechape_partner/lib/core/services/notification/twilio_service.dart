@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// Temporairement désactivé pour résoudre les problèmes de build
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../config/twilio_config.dart';
 import '../../models/notification/notification_model.dart';
 import '../../models/residence/residence.dart';
@@ -9,7 +10,7 @@ import '../../models/residence/residence.dart';
 /// Service pour gérer les notifications via Twilio (version simplifiée)
 class TwilioService {
   final Dio _dio = Dio();
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  // final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
   
   /// Initialise le service de notification
@@ -18,17 +19,17 @@ class TwilioService {
     
     try {
       // Initialisation des notifications locales
-      const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const initializationSettingsIOS = DarwinInitializationSettings();
-      const initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: initializationSettingsIOS,
-      );
+      // const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+      // const initializationSettingsIOS = DarwinInitializationSettings();
+      // const initializationSettings = InitializationSettings(
+      //   android: initializationSettingsAndroid,
+      //   iOS: initializationSettingsIOS,
+      // );
       
-      await _localNotifications.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse: _onNotificationTapped,
-      );
+      // await _localNotifications.initialize(
+      //   initializationSettings,
+      //   onDidReceiveNotificationResponse: _onNotificationTapped,
+      // );
       
       _isInitialized = true;
       debugPrint('💬 Service de notification initialisé');
@@ -37,10 +38,10 @@ class TwilioService {
     }
   }
   
-  /// Gère les taps sur les notifications
-  void _onNotificationTapped(NotificationResponse response) {
+  /// Gère les taps sur les notifications (méthode simplifiée temporaire)
+  void _onNotificationTapped(String payload) {
     // Implémentez ici la navigation vers l'écran approprié
-    debugPrint('🔔 Notification tappée: ${response.payload}');
+    debugPrint('🔔 Notification tappée: $payload');
   }
   
   /// Enregistre un appareil pour les notifications push
@@ -100,32 +101,32 @@ class TwilioService {
     if (!_isInitialized) await initialize();
     
     try {
-      const androidDetails = AndroidNotificationDetails(
-        'chapechape_channel',
-        'ChapeChape Notifications',
-        channelDescription: 'Notifications pour l\'application ChapeChape',
-        importance: Importance.high,
-        priority: Priority.high,
-      );
+      // const androidDetails = AndroidNotificationDetails(
+      //   'chapechape_channel',
+      //   'ChapeChape Notifications',
+      //   channelDescription: 'Notifications pour l\'application ChapeChape',
+      //   importance: Importance.high,
+      //   priority: Priority.high,
+      // );
       
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
+      // const iosDetails = DarwinNotificationDetails(
+      //   presentAlert: true,
+      //   presentBadge: true,
+      //   presentSound: true,
+      // );
       
-      const notificationDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
+      // const notificationDetails = NotificationDetails(
+      //   android: androidDetails,
+      //   iOS: iosDetails,
+      // );
       
-      await _localNotifications.show(
-        DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        title,
-        body,
-        notificationDetails,
-        payload: payload,
-      );
+      // await _localNotifications.show(
+      //   DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      //   title,
+      //   body,
+      //   notificationDetails,
+      //   payload: payload,
+      // );
       
       debugPrint('🔔 Notification locale créée: $title');
     } catch (e) {

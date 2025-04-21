@@ -70,7 +70,7 @@ describe('Middleware Tests', () => {
                 password: 'password123',
                 firstName: 'Test',
                 lastName: 'User',
-                role: 'user'
+                role: 'client'
             });
 
             token = jwt.sign(

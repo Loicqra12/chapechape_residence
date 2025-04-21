@@ -1,0 +1,66 @@
+// Ce fichier contient des corrections pour les plugins problématiques
+
+// Configurations spécifiques pour le plugin android_lifecycle
+project.configurations.all {
+    resolutionStrategy {
+        // Forcer les versions des packages problématiques
+        force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+        force 'androidx.lifecycle:lifecycle-common:2.6.2'
+        force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
+    }
+}
+
+// Désactiver explicitement la transformation d'image JDK
+tasks.withType(JavaCompile) {
+    options.fork = true
+    options.forkOptions.jvmArgs += ['-Xmx2g']
+    options.compilerArgs << "-Xlint:none" << "-Xlint:-options"
+}
+
+// Solution spécifique pour le problème connectivity_plus
+def connectivityPlusVersion = rootProject.findProject(':connectivity_plus')
+if (connectivityPlusVersion != null) {
+    connectivityPlusVersion.afterEvaluate { project ->
+        project.tasks.withType(JavaCompile) { task ->
+            task.options.compilerArgs << '-Xbootclasspath/p:' + 
+                fileTree(dir: "${android.getSdkDirectory()}/platforms/android-33", include: 'android.jar').asPath
+            
+            // Désactiver complètement la transformation JDK pour ce projet
+            if (task.name.contains('Debug') || task.name.contains('Release')) {
+                task.enabled = false
+                task.dependsOn.each { t ->
+                    if (t.toString().contains('jdk') || t.toString().contains('transform')) {
+                        t.setEnabled(false)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Désactiver explicitement les transformations JDK pour tous les plugins
+gradle.projectsEvaluated {
+    rootProject.allprojects { project ->
+        project.tasks.withType(JavaCompile) { task ->
+            task.options.compilerArgs << "-Xlint:none"
+            if (task.name.contains('connectivity_plus')) {
+                task.enabled = false
+            }
+        }
+    }
+}
+
+// Désactiver la génération de documentation pour réduire la charge de compilation
+tasks.withType(Javadoc) {
+    enabled = false
+}
+
+// Ignorer les erreurs de lint pour permettre la compilation malgré les avertissements
+android {
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}

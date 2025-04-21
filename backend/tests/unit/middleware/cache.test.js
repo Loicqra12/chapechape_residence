@@ -1,4 +1,4 @@
-const { cacheMiddleware, invalidateCache } = require('../../../src/middleware/cache');
+const { cacheMiddleware, invalidateCache } = require('../../../src/middlewares/cache');
 const redis = require('../../../src/config/redis');
 const logger = require('../../../src/utils/logger');
 

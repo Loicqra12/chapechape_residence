@@ -11,11 +11,11 @@ describe('Payment Routes', () => {
     let reservationId;
 
     const testUser = {
-        firstName: 'Test',
-        lastName: 'User',
-        email: 'user@test.com',
+        firstName: 'Payment',
+        lastName: 'Test',
+        email: 'payment@test.com',
         password: 'Test123!',
-        role: 'user'
+        role: 'client'
     };
 
     beforeEach(async () => {

@@ -402,7 +402,7 @@ class DashboardService extends ApiService {
     try {
       // Au lieu d'utiliser import dynamique qui ne fonctionne pas ici,
       // importer le service au niveau de la classe et l'instancier directement
-      final baseUrl = 'http://localhost:4000/api';
+      final baseUrl = 'http://192.168.1.77:4000/api';
       // Utiliser le constructeur directement depuis l'import au niveau du fichier
       // import 'residence_service.dart'; est nécessaire en haut du fichier
       return ResidenceService(baseUrl: baseUrl);

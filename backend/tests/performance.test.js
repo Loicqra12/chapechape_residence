@@ -7,11 +7,11 @@ const { generateToken } = require('../src/utils/jwt');
 describe('Performance Tests', () => {
     let userToken;
     const testUser = {
-        firstName: 'Test',
-        lastName: 'User',
-        email: 'user@test.com',
+        firstName: 'Performance',
+        lastName: 'Test',
+        email: 'performance@test.com',
         password: 'Test123!',
-        role: 'user'
+        role: 'client'
     };
 
     beforeAll(async () => {

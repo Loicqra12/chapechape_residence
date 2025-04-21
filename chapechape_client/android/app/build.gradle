@@ -5,18 +5,21 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Appliquer le fichier de correction des plugins
+apply from: 'fix_plugin.gradle'
+
 android {
     namespace = "com.chapechape.chapechape_client"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34 // Revenir à la version 34 car les plugins en dépendent
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = JavaVersion.VERSION_11
     }
 
     defaultConfig {
@@ -24,8 +27,8 @@ android {
         applicationId = "com.chapechape.chapechape_client"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21 // Version minimale pour être compatible avec les nouvelles APIs
+        targetSdk = 34 // Cibler une version récente mais stable d'Android
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -37,6 +40,34 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+    
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.annotation:annotation:1.7.0'
+            force 'androidx.core:core:1.12.0'
+            force 'com.google.android.gms:play-services-base:18.2.0'
+            force 'com.google.android.gms:play-services-tasks:18.0.2'
+            force 'com.google.android.gms:play-services-basement:18.2.0'
+            // Ajouter cette ligne pour résoudre les problèmes avec JDK Image Transform
+            force 'androidx.lifecycle:lifecycle-common:2.6.2'
+            force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
+            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+            // Force la version du plugin Flutter Android Lifecycle
+            force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17' 
+            // Exclure les transformations pour connectivity_plus
+            exclude group: 'io.flutter.plugins.connectivity', module: 'connectivity_plus'
+            // Forcer les versions pour éviter les conflits
+            force 'com.google.android.gms:play-services-basement:18.1.0'
+            force 'com.google.android.gms:play-services-base:18.1.0'
+            force 'com.google.android.gms:play-services-location:21.0.1'
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.annotation:annotation:1.7.0'
+    implementation 'androidx.core:core:1.12.0'
 }
 
 flutter {

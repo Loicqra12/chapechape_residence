@@ -1,4 +1,4 @@
-const { securityMiddleware, fileSecurityMiddleware } = require('../../../src/middleware/security');
+const { securityMiddleware, fileSecurityMiddleware } = require('../../../src/middlewares/security');
 const logger = require('../../../src/utils/logger');
 
 jest.mock('../../../src/utils/logger', () => ({

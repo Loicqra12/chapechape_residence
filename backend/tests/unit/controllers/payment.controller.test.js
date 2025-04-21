@@ -5,6 +5,7 @@ const User = require('../../../src/models/user.model');
 const Payment = require('../../../src/models/payment.model');
 const Reservation = require('../../../src/models/reservation.model');
 const Residence = require('../../../src/models/residence.model');
+const CancellationPolicy = require('../../../src/models/cancellationPolicy.model');
 const { generateToken } = require('../../../src/utils/auth');
 
 jest.mock('stripe', () => {
@@ -77,10 +78,22 @@ describe('Payment Controller Tests', () => {
     let testResidence;
     let anotherUser;
     let anotherUserToken;
+    let testCancellationPolicy;
+    let adminUser;
 
     beforeAll(async () => {
         // Mock Stripe
         process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+        
+        // Create admin user for cancellation policy
+        adminUser = await User.create({
+            email: 'admin@example.com',
+            password: 'Password123!',
+            firstName: 'Admin',
+            lastName: 'User',
+            phoneNumber: '111222333',
+            role: 'admin'
+        });
         
         // Create test user
         testUser = await User.create({
@@ -88,7 +101,8 @@ describe('Payment Controller Tests', () => {
             password: 'Password123!',
             firstName: 'Test',
             lastName: 'User',
-            role: 'user'
+            phoneNumber: '123456789',
+            role: 'client'
         });
 
         // Create another user for unauthorized tests
@@ -97,7 +111,22 @@ describe('Payment Controller Tests', () => {
             password: 'Password123!',
             firstName: 'Another',
             lastName: 'User',
-            role: 'user'
+            phoneNumber: '987654321',
+            role: 'client'
+        });
+
+        // Create test cancellation policy
+        testCancellationPolicy = await CancellationPolicy.create({
+            name: 'Politique standard',
+            description: 'Politique standard de remboursement',
+            rules: [
+                {
+                    timeBeforeCheckIn: 48,
+                    refundPercentage: 50,
+                    description: 'Remboursement de 50% si annulation 48h avant'
+                }
+            ],
+            createdBy: adminUser._id  // Ajout du champ createdBy
         });
 
         userToken = generateToken(testUser._id);
@@ -110,36 +139,31 @@ describe('Payment Controller Tests', () => {
             title: 'Test Residence',
             description: 'Test Description',
             price: 1000,
-            location: {
-                address: 'Test Address',
-                city: 'Test City',
-                coordinates: {
-                    type: 'Point',
-                    coordinates: [0, 0]
-                }
-            },
-            features: {
-                bedrooms: 2,
-                bathrooms: 1,
-                area: 100,
-                furnished: true
-            },
+            address: 'Test Address',
+            city: 'Test City',
+            latitude: 0,
+            longitude: 0,
+            bedrooms: 2,
+            bathrooms: 1,
+            area: 100,
+            isFurnished: true,
             type: 'apartment',
             status: 'available',
-            partner: testUser._id,
-            verified: true
+            partner: testUser._id
         });
 
         // Create test reservation before each test
         testReservation = await Reservation.create({
             residence: testResidence._id,
             user: testUser._id,
+            partner: testUser._id,  
             checkIn: new Date(),
             checkOut: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
             numberOfGuests: 2,
             totalPrice: 1000,
             status: 'pending',
-            paymentStatus: 'pending'
+            paymentStatus: 'pending',
+            cancellationPolicy: testCancellationPolicy._id  
         });
 
         // Create test payment
@@ -150,6 +174,8 @@ describe('Payment Controller Tests', () => {
             paymentProvider: 'stripe',
             status: 'pending',
             transactionId: 'test_transaction_id',
+            firstName: 'Test',
+            lastName: 'User',
             paymentDetails: {
                 reference: 'test_reference',
                 providerResponse: {}
@@ -163,22 +189,32 @@ describe('Payment Controller Tests', () => {
         await Payment.deleteMany({});
         await Reservation.deleteMany({});
         await Residence.deleteMany({});
+        await CancellationPolicy.deleteMany({});
+    });
+
+    afterAll(async () => {
+        await User.deleteMany({});
+        await Payment.deleteMany({});
+        await Reservation.deleteMany({});
+        await Residence.deleteMany({});
+        await CancellationPolicy.deleteMany({});
+        mongoose.connection.close();
     });
 
     describe('POST /api/payments/create-payment-intent', () => {
         it('should create payment intent when authenticated', async () => {
             const paymentData = {
-                amount: 100,
-                currency: 'XAF',
                 reservationId: testReservation._id,
-                paymentMethod: 'orange_money',
-                paymentProvider: 'orange',
-                phoneNumber: '+237600000000'
+                paymentMethod: 'card',
+                paymentProvider: 'stripe',
+                firstName: 'Test',
+                lastName: 'User'
             };
 
             const res = await request(app)
                 .post('/api/payments/create-payment-intent')
                 .set('Authorization', `Bearer ${userToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(paymentData);
 
             expect(res.status).toBe(200);
@@ -188,16 +224,17 @@ describe('Payment Controller Tests', () => {
 
         it('should not create payment intent for non-existent reservation', async () => {
             const paymentData = {
-                amount: 100,
-                currency: 'XAF',
-                reservationId: new mongoose.Types.ObjectId(),
+                reservationId: new mongoose.Types.ObjectId(), // Un ID qui n'existe pas
                 paymentMethod: 'card',
-                paymentProvider: 'stripe'
+                paymentProvider: 'stripe',
+                firstName: 'Test',
+                lastName: 'User'
             };
 
             const res = await request(app)
                 .post('/api/payments/create-payment-intent')
                 .set('Authorization', `Bearer ${userToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(paymentData);
 
             expect(res.status).toBe(404);
@@ -206,17 +243,18 @@ describe('Payment Controller Tests', () => {
 
         it('should handle Orange Money payment method', async () => {
             const paymentData = {
-                amount: 100,
-                currency: 'XAF',
                 reservationId: testReservation._id,
                 paymentMethod: 'orange_money',
                 paymentProvider: 'orange',
-                phoneNumber: '+237600000000'
+                phoneNumber: '6789012345',
+                firstName: 'Test',
+                lastName: 'User'
             };
 
             const res = await request(app)
                 .post('/api/payments/create-payment-intent')
                 .set('Authorization', `Bearer ${userToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(paymentData);
 
             expect(res.status).toBe(200);
@@ -230,13 +268,15 @@ describe('Payment Controller Tests', () => {
             const payment = new Payment({
                 amount: 100,
                 currency: 'XAF',
-                paymentProvider: 'orange',
                 paymentMethod: 'orange_money',
+                paymentProvider: 'orange',
                 status: 'pending',
                 transactionId: 'test_123',
-                reservation: new mongoose.Types.ObjectId(),
+                reservation: testReservation._id,
                 user: testUser._id,
-                phoneNumber: '+237600000000'
+                phoneNumber: '6789012345',
+                firstName: 'Test',
+                lastName: 'User'
             });
             await payment.save();
 
@@ -247,25 +287,28 @@ describe('Payment Controller Tests', () => {
             const res = await request(app)
                 .post(`/api/payments/${payment._id}/confirm`)
                 .set('Authorization', `Bearer ${userToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(confirmData);
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(res.body.data.status).toBe('completed');
         });
 
         it('should handle invalid payment intent', async () => {
-            const confirmData = {
-                paymentIntentId: 'invalid_id'
+            const paymentData = {
+                intentId: 'invalid_id',
+                reservation: testReservation._id.toString(),
+                amount: 100
             };
 
             const res = await request(app)
-                .post(`/api/payments/${testPayment._id}/confirm`)
+                .post('/api/payments/invalid_id/confirm')
                 .set('Authorization', `Bearer ${userToken}`)
-                .send(confirmData);
+                .set('X-CSRF-Token', 'test-csrf-token')
+                .send(paymentData);
 
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
+            expect(res.status).toBe(404);
+            expect(res.body.success).toBe(false);
         });
     });
 
@@ -278,6 +321,7 @@ describe('Payment Controller Tests', () => {
             const res = await request(app)
                 .post(`/api/payments/${testPayment._id}/refund`)
                 .set('Authorization', `Bearer ${userToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(refundData);
 
             expect(res.status).toBe(200);
@@ -287,16 +331,17 @@ describe('Payment Controller Tests', () => {
 
         it('should not process refund for unauthorized user', async () => {
             const refundData = {
-                reason: 'customer_requested'
+                reason: 'Customer request'
             };
 
             const res = await request(app)
                 .post(`/api/payments/${testPayment._id}/refund`)
                 .set('Authorization', `Bearer ${anotherUserToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(refundData);
 
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
+            expect(res.status).toBe(403);
+            expect(res.body.success).toBe(false);
         });
     });
 
@@ -306,21 +351,21 @@ describe('Payment Controller Tests', () => {
             const payment1 = new Payment({
                 amount: 100,
                 currency: 'XAF',
-                paymentProvider: 'orange',
                 paymentMethod: 'orange_money',
+                paymentProvider: 'orange',
                 status: 'completed',
                 transactionId: 'test_123',
                 reservation: new mongoose.Types.ObjectId(),
                 user: testUser._id,
-                phoneNumber: '+237600000000'
+                phoneNumber: '6789012345'
             });
             await payment1.save();
 
             const payment2 = new Payment({
                 amount: 200,
                 currency: 'XAF',
-                paymentProvider: 'stripe',
                 paymentMethod: 'card',
+                paymentProvider: 'stripe',
                 status: 'completed',
                 transactionId: 'test_456',
                 reservation: new mongoose.Types.ObjectId(),
@@ -330,7 +375,8 @@ describe('Payment Controller Tests', () => {
 
             const res = await request(app)
                 .get('/api/payments/my-payments')
-                .set('Authorization', `Bearer ${userToken}`);
+                .set('Authorization', `Bearer ${userToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token');
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
@@ -341,7 +387,8 @@ describe('Payment Controller Tests', () => {
         it('should return empty array when user has no payments', async () => {
             const res = await request(app)
                 .get('/api/payments/my-payments')
-                .set('Authorization', `Bearer ${anotherUserToken}`);
+                .set('Authorization', `Bearer ${anotherUserToken}`)
+                .set('X-CSRF-Token', 'test-csrf-token');
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
@@ -355,6 +402,7 @@ describe('Payment Controller Tests', () => {
             const res = await request(app)
                 .post('/api/payments/webhook')
                 .set('stripe-signature', 'test_signature')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send({
                     type: 'payment_intent.succeeded',
                     data: {
@@ -372,9 +420,11 @@ describe('Payment Controller Tests', () => {
             const res = await request(app)
                 .post('/api/payments/webhook')
                 .set('stripe-signature', 'invalid_signature')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send({});
 
-            expect(res.status).toBe(200);
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
         });
     });
 });

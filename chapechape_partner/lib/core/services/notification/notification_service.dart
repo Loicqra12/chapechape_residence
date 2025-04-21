@@ -1,12 +1,16 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// Temporairement désactivé pour résoudre les problèmes de build
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  // Temporairement désactivé pour résoudre les problèmes de build
+  // final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   NotificationService();
 
   Future<void> initialize() async {
+    // Temporairement désactivé pour résoudre les problèmes de build
+    /*
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -26,6 +30,8 @@ class NotificationService {
         debugPrint('Notification tapped: ${response.payload}');
       },
     );
+    */
+    debugPrint('⚠️ Service de notification désactivé temporairement');
   }
 
   Future<void> showNotification({
@@ -33,6 +39,8 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    // Temporairement désactivé pour résoudre les problèmes de build
+    /*
     const androidDetails = AndroidNotificationDetails(
       'chapechape_partner_channel',
       'ChapeChape Partner Notifications',
@@ -59,13 +67,21 @@ class NotificationService {
       details,
       payload: payload,
     );
+    */
+    
+    // Utiliser un print de débogage en attendant la réactivation des notifications
+    debugPrint('📱 Notification simulée: $title - $body');
   }
 
   Future<void> cancelAllNotifications() async {
-    await _notificationsPlugin.cancelAll();
+    // Temporairement désactivé pour résoudre les problèmes de build
+    // await _notificationsPlugin.cancelAll();
+    debugPrint('⚠️ Service de notification désactivé temporairement');
   }
 
   Future<void> cancelNotification(int id) async {
-    await _notificationsPlugin.cancel(id);
+    // Temporairement désactivé pour résoudre les problèmes de build
+    // await _notificationsPlugin.cancel(id);
+    debugPrint('⚠️ Service de notification désactivé temporairement');
   }
 }

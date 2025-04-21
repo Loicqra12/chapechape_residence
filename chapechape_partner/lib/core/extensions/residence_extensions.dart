@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/residence/residence.dart';
 import '../constants/app_images.dart';
+import '../config/app_config_manager.dart';
 
 extension ResidenceProperties on Residence {
   String get title => name;
@@ -50,11 +51,11 @@ extension ResidenceProperties on Residence {
     
     // Si l'URL est relative (commence par /)
     if (url.startsWith('/')) {
-      return 'http://localhost:4000$url';
+      return AppConfigManager.getMediaUrl(url);
     }
     
     // Si l'URL ne commence ni par '/' ni par 'http'
-    return 'http://localhost:4000/$url';
+    return AppConfigManager.getMediaUrl('/$url');
   }
 
   String get formattedPrice {

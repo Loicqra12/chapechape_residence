@@ -33,6 +33,7 @@ describe('Auth Controller Tests', () => {
 
             const res = await request(app)
                 .post('/api/auth/register')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(userData);
 
             expect(res.status).toBe(201);
@@ -50,6 +51,7 @@ describe('Auth Controller Tests', () => {
 
             const res = await request(app)
                 .post('/api/auth/register')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(userData);
 
             expect(res.status).toBe(400);
@@ -66,6 +68,7 @@ describe('Auth Controller Tests', () => {
 
             const res = await request(app)
                 .post('/api/auth/register')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(userData);
 
             expect(res.status).toBe(400);
@@ -82,6 +85,7 @@ describe('Auth Controller Tests', () => {
 
             const res = await request(app)
                 .post('/api/auth/login')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(loginData);
 
             expect(res.status).toBe(200);
@@ -97,6 +101,7 @@ describe('Auth Controller Tests', () => {
 
             const res = await request(app)
                 .post('/api/auth/login')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send(loginData);
 
             expect(res.status).toBe(401);
@@ -113,6 +118,7 @@ describe('Auth Controller Tests', () => {
             for (let i = 0; i < 3; i++) {
                 await request(app)
                     .post('/api/auth/login')
+                    .set('X-CSRF-Token', 'test-csrf-token')
                     .send(loginData);
             }
 
@@ -126,6 +132,7 @@ describe('Auth Controller Tests', () => {
         it('should send reset password email for valid user', async () => {
             const res = await request(app)
                 .post('/api/auth/forgot-password')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send({ email: 'test@example.com' });
 
             expect(res.status).toBe(200);
@@ -135,6 +142,7 @@ describe('Auth Controller Tests', () => {
         it('should handle non-existent email gracefully', async () => {
             const res = await request(app)
                 .post('/api/auth/forgot-password')
+                .set('X-CSRF-Token', 'test-csrf-token')
                 .send({ email: 'nonexistent@example.com' });
 
             expect(res.status).toBe(404);

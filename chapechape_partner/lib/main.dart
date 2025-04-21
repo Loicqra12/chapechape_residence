@@ -30,7 +30,8 @@ import 'core/services/sync_service.dart';
 import 'package:logging/logging.dart';
 import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
 import 'core/services/notification/twilio_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// Temporairement désactivé pour résoudre les problèmes de build
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,7 +111,8 @@ void main() async {
 
   // Créer le repository de notification et le service
   final twilioService = TwilioService();
-  await twilioService.initialize();
+  // Temporairement désactivé pour résoudre les problèmes de build
+  // await twilioService.initialize();
   final notificationRepository = NotificationRepository(twilioService);
 
   // Initialiser le bus d'événements pour les résidences

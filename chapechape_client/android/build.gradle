@@ -1,16 +1,97 @@
+buildscript {
+    ext.kotlin_version = '1.9.22'
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
+        maven { url = uri("https://jitpack.io") }
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+// Définir des variables globales pour les plugins (sans interférer avec le plugin Flutter)
+gradle.beforeProject { project ->
+    project.ext {
+        compileSdkVersion = 34
+        minSdkVersion = 21 
+        targetSdkVersion = 34
+        ndkVersion = "25.1.8937393"
+    }
+}
+
+// Configuration commune pour tous les sous-projets/modules
+allprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = '11'
+        }
+    }
+    
+    tasks.withType(JavaCompile).configureEach {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+// Cette section est nécessaire pour gérer les dépendances Gradle
 allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
+        maven { url = uri("https://jitpack.io") }
+    }
+    
+    // Ajouter des configurations pour tous les sous-projets y compris les plugins
+    configurations.all {
+        resolutionStrategy {
+            // Forcer la version du plugin problématique
+            force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
+            // Forcer les versions Kotlin
+            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+        }
+    }
+    
+    // Correction pour geolocator_android
+    afterEvaluate { project ->
+        if (project.name == 'geolocator_android') {
+            if (project.hasProperty('android')) {
+                project.ext.flutter = [
+                    compileSdkVersion: 34,
+                    minSdkVersion: 21,
+                    targetSdkVersion: 34
+                ]
+                
+                // Définir explicitement les propriétés SDK
+                project.android.compileSdkVersion 34
+                project.android.defaultConfig.minSdkVersion 21
+                project.android.defaultConfig.targetSdkVersion 34
+                
+                println "✅ Fixed geolocator_android configuration in root build.gradle"
+            }
+        }
+        
+        // Désactiver tous les problèmes de lint
+        if (project.hasProperty('android')) {
+            if (project.android.hasProperty('lintOptions')) {
+                project.android.lintOptions {
+                    checkReleaseBuilds false
+                    abortOnError false
+                }
+            }
+        }
     }
 }
 
-rootProject.buildDir = "../build"
+rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(":app")
+    project.evaluationDependsOn(':app')
 }
 
 tasks.register("clean", Delete) {

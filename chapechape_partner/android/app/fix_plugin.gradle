@@ -1,0 +1,28 @@
+// Ce fichier contient des corrections pour les plugins problématiques
+
+// Configurations spécifiques pour le plugin android_lifecycle
+project.configurations.all {
+    resolutionStrategy {
+        // Forcer les versions des packages problématiques
+        force 'io.flutter:flutter_plugin_android_lifecycle:2.0.15' // Utiliser une version compatible avec SDK 34
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+        force 'androidx.lifecycle:lifecycle-common:2.6.2'
+        force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
+    }
+}
+
+// Désactiver explicitement la transformation d'image JDK
+tasks.withType(JavaCompile) {
+    options.fork = true
+    options.forkOptions.jvmArgs += ['-Xmx2g']
+    options.compilerArgs << "-Xlint:none" << "-Xlint:-options"
+}
+
+// Désactiver certaines validations problématiques
+subprojects {
+    project.tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs.add("-Xlint:none")
+        options.compilerArgs.add("-Xlint:-options")
+    }
+}

@@ -205,7 +205,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
       children: [
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
@@ -214,6 +214,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
               child: DropdownButton<String>(
                 value: _filterStatus,
                 isDense: true,
+                isExpanded: true,
                 items: [
                   DropdownMenuItem(
                     value: 'all',
@@ -240,7 +241,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
         const SizedBox(width: 8),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
@@ -249,6 +250,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
               child: DropdownButton<String>(
                 value: _sortBy,
                 isDense: true,
+                isExpanded: true,
                 items: const [
                   DropdownMenuItem(
                     value: 'date',

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../models/api/api_error.dart';
 
 abstract class ApiService {
   final Dio dio;
@@ -7,15 +8,10 @@ abstract class ApiService {
 
   Exception handleError(dynamic error) {
     if (error is DioException) {
-      final response = error.response;
-      if (response != null) {
-        final data = response.data;
-        if (data != null && data['message'] != null) {
-          return Exception(data['message']);
-        }
-      }
-      return Exception(error.message);
+      return ApiError.fromDioError(error);
+    } else if (error is ApiError) {
+      return error;
     }
-    return Exception('Une erreur est survenue');
+    return ApiError.generic(message: error?.toString() ?? 'Une erreur inconnue est survenue');
   }
 }
