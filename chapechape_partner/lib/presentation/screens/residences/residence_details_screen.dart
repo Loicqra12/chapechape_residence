@@ -10,6 +10,9 @@ import '../../../core/config/app_config.dart';
 import '../../../core/constants/app_images.dart';
 import 'edit_residence_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
+import '../../../core/services/currency_service.dart';
+import '../../../core/utils/formatters.dart';
+import '../../widgets/currency_selector_widget.dart';
 
 class ResidenceDetailsScreen extends StatelessWidget {
   final Residence residence;
@@ -63,7 +66,9 @@ class ResidenceDetailsScreen extends StatelessWidget {
           if (state is ResidenceLoading) {
             return Scaffold(
               appBar: AppBar(title: Text(residence.name)),
-              body: const Center(child: CircularProgressIndicator()),
+              body: const Center(
+                child: CircularProgressIndicator(),
+              ),
             );
           }
           
@@ -77,32 +82,47 @@ class ResidenceDetailsScreen extends StatelessWidget {
                       expandedHeight: 240.0,
                       floating: false,
                       pinned: true,
-                title: Text(residence.name),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditResidenceScreen(
-                                residence: residence,
+                      elevation: 0,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      title: Text(
+                        residence.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
+                        ),
+                      ),
+                      actions: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.edit,
+                            color: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditResidenceScreen(
+                                  residence: residence,
+                                ),
                               ),
-                            ),
-                          ).then((_) {
-                            // Rafraîchir les données après l'édition
-                              context.read<ResidenceBloc>().add(CheckResidenceExists(
-                                residence.id, 
-                                onSuccess: (exists) {
-                                  if (exists) {
-                                    context.read<ResidenceBloc>().add(LoadResidenceDetails(residence.id));
+                            ).then((_) {
+                              // Rafraîchir les données après l'édition
+                                context.read<ResidenceBloc>().add(CheckResidenceExists(
+                                  residence.id, 
+                                  onSuccess: (exists) {
+                                    if (exists) {
+                                      context.read<ResidenceBloc>().add(LoadResidenceDetails(residence.id));
+                                    }
                                   }
-                                }
-                              ));
-                          });
-                        },
+                                ));
+                            });
+                          },
                         ),
                         PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
+                          ),
                           onSelected: (value) {
                             if (value == 'delete') {
                               _showDeleteConfirmation(context);
@@ -157,18 +177,21 @@ class ResidenceDetailsScreen extends StatelessWidget {
                     ),
                   ];
                 },
-              body: TabBarView(
-                children: [
-                  // Onglet Aperçu
-                    _EnhancedOverviewTab(residence: residence),
-                  // Onglet Disponibilités
-                    _EnhancedAvailabilityTab(residence: residence),
-                  // Onglet Galerie
-                    _EnhancedGalleryTab(residence: residence),
-                  // Onglet Avis
-                    _EnhancedReviewsTab(residence: residence),
-                ],
+              body: Container(
+                color: Theme.of(context).colorScheme.background.withOpacity(0.05),
+                child: TabBarView(
+                  children: [
+                    // Onglet Aperçu
+                      _EnhancedOverviewTab(residence: residence),
+                    // Onglet Disponibilités
+                      _EnhancedAvailabilityTab(residence: residence),
+                    // Onglet Galerie
+                      _EnhancedGalleryTab(residence: residence),
+                    // Onglet Avis
+                      _EnhancedReviewsTab(residence: residence),
+                  ],
                 ),
+              ),
               ),
               floatingActionButton: FloatingActionButton.extended(
                 onPressed: () {
@@ -183,6 +206,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                 },
                 icon: const Icon(Icons.edit),
                 label: const Text('Modifier'),
+                elevation: 4,
               ),
             ),
           );
@@ -262,25 +286,6 @@ class ResidenceDetailsScreen extends StatelessWidget {
       ),
     );
   }
-
-  String _getFullImageUrl(String url) {
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
-    
-    // Vérifier si l'URL commence par /uploads
-    if (url.startsWith('/uploads/')) {
-      // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://localhost:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://localhost:4000${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://localhost:4000/uploads/residences/${url}';
-    }
-  }
 }
 
 class _ImageGalleryHeader extends StatefulWidget {
@@ -295,8 +300,25 @@ class _ImageGalleryHeader extends StatefulWidget {
 class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
+  double _scale = 1.0;
+  Offset _position = Offset.zero;
+  bool _isZooming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // S'assurer que PageController est initialisé correctement
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   String _getFullImageUrl(String url) {
+    // Si l'URL contient déjà le domaine mais pas /residences/
+    if (url.startsWith('http') && url.contains('/uploads/') && !url.contains('/uploads/residences/')) {
+      return url.replaceAll('/uploads/', '/uploads/residences/');
+    }
+    
     if (url.startsWith('http')) {
       // L'URL est déjà complète
       return url;
@@ -304,15 +326,33 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
     
     // Vérifier si l'URL commence par /uploads
     if (url.startsWith('/uploads/')) {
-      // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://localhost:4000${url}';
+      // Ajouter 'residences/' après '/uploads/' si elle n'y est pas déjà
+      if (!url.startsWith('/uploads/residences/')) {
+        String modifiedUrl = url.replaceAll('/uploads/', '/uploads/residences/');
+        return 'http://192.168.1.68:4000${modifiedUrl}';
+      }
+      return 'http://192.168.1.68:4000${url}';
     } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://localhost:4000${url}';
+      // URL relative mais sans uploads, ajouter le chemin complet avec residences
+      return 'http://192.168.1.68:4000/uploads/residences${url}';
     } else {
       // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://localhost:4000/uploads/residences/${url}';
+      return 'http://192.168.1.68:4000/uploads/residences/${url}';
     }
+  }
+  
+  void _resetZoom() {
+    setState(() {
+      _scale = 1.0;
+      _position = Offset.zero;
+      _isZooming = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -338,31 +378,152 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
     return Stack(
       children: [
         // Images carousel
-        PageView.builder(
-          controller: _pageController,
-          itemCount: images.length,
-          onPageChanged: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          itemBuilder: (context, index) {
-            final imageUrl = images[index];
-            print("Chargement de l'image $index: $imageUrl");
-            return Image.network(
-              _getFullImageUrl(imageUrl.toString()),
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                print("Erreur de chargement d'image: $error pour URL $imageUrl");
-                return Container(
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                  ),
+        GestureDetector(
+          // Ajouter GestureDetector pour améliorer la réactivité aux gestes
+          onHorizontalDragEnd: (details) {
+            if (_isZooming) return;
+            
+            if (details.primaryVelocity! > 0) {
+              // Swipe de droite à gauche (précédent)
+              if (_currentIndex > 0) {
+                _pageController.animateToPage(
+                  _currentIndex - 1,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
                 );
-              },
-            );
+              }
+            } else if (details.primaryVelocity! < 0) {
+              // Swipe de gauche à droite (suivant)
+              if (_currentIndex < images.length - 1) {
+                _pageController.animateToPage(
+                  _currentIndex + 1,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            }
           },
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: images.length,
+            physics: _isZooming ? NeverScrollableScrollPhysics() : null,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+                _resetZoom();
+              });
+            },
+            itemBuilder: (context, index) {
+              final imageUrl = images[index];
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                child: Hero(
+                  key: ValueKey<int>(index),
+                  tag: 'residence_image_$index',
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: GestureDetector(
+                      onScaleStart: (_) {
+                        setState(() {
+                          _isZooming = true;
+                        });
+                      },
+                      onScaleUpdate: (details) {
+                        setState(() {
+                          // Limiter le zoom entre 1.0 et 3.0
+                          _scale = (_scale * details.scale).clamp(1.0, 3.0);
+                          
+                          // Calculer la nouvelle position
+                          if (_scale > 1.0) {
+                            _position += details.focalPointDelta;
+                            
+                            // Limiter le panoramique
+                            final width = context.size!.width;
+                            final height = context.size!.height;
+                            final maxDx = width * (_scale - 1) / 2;
+                            final maxDy = height * (_scale - 1) / 2;
+                            
+                            _position = Offset(
+                              _position.dx.clamp(-maxDx, maxDx),
+                              _position.dy.clamp(-maxDy, maxDy),
+                            );
+                          }
+                        });
+                      },
+                      onScaleEnd: (_) {
+                        if (_scale == 1.0) {
+                          setState(() {
+                            _isZooming = false;
+                          });
+                        }
+                      },
+                      onTap: () {
+                        if (_scale > 1.0) {
+                          _resetZoom();
+                        }
+                      },
+                      onDoubleTap: () {
+                        setState(() {
+                          if (_scale > 1.0) {
+                            _resetZoom();
+                          } else {
+                            _scale = 2.0;
+                            _isZooming = true;
+                          }
+                        });
+                      },
+                      child: Transform.scale(
+                        scale: _scale,
+                        origin: _position,
+                        child: Transform.translate(
+                          offset: _position,
+                          child: ClipRRect(
+                            child: Image.network(
+                              _getFullImageUrl(imageUrl.toString()),
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                print("Erreur de chargement d'image: $error pour URL $imageUrl");
+                                return Container(
+                                  color: Colors.grey[300],
+                                  child: const Center(
+                                    child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
         // Overlay gradient for better text visibility
         Container(
@@ -373,14 +534,61 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
               colors: [
                 Colors.black.withOpacity(0.7),
                 Colors.transparent,
+                Colors.transparent,
                 Colors.black.withOpacity(0.7),
               ],
-              stops: const [0.0, 0.5, 1.0],
+              stops: const [0.0, 0.3, 0.7, 1.0],
             ),
           ),
         ),
+        // Navigation arrows
+        if (images.length > 1 && !_isZooming)
+          Positioned.fill(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Flèche gauche (précédent)
+                if (_currentIndex > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                      onPressed: () {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                    ),
+                  ),
+                const Spacer(),
+                // Flèche droite (suivant)
+                if (_currentIndex < images.length - 1)
+                  Container(
+                    margin: const EdgeInsets.only(right: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
+                      onPressed: () {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
         // Indicators
-        if (images.length > 1)
+        if (images.length > 1 && !_isZooming)
           Positioned(
             bottom: 16,
             left: 0,
@@ -389,13 +597,47 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 images.length,
-                (index) => Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentIndex == index ? Colors.white : Colors.white.withOpacity(0.5),
+                (index) => GestureDetector(
+                  onTap: () {
+                    _pageController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: _currentIndex == index ? 20 : 8,
+                    height: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      color: _currentIndex == index ? Colors.white : Colors.white.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        // Aide au zoom
+        if (_isZooming)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Touchez pour réinitialiser le zoom',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -476,11 +718,19 @@ class _ResidenceStatsBar extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.surface,
+            Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+          ],
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 1,
-            offset: const Offset(0, 1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -490,17 +740,29 @@ class _ResidenceStatsBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                      '$formattedPrice FCFA$pricePeriod',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                ),
-                    const SizedBox(height: 4),
+                      child: Text(
+                        '$formattedPrice FCFA$pricePeriod',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(Icons.location_on, size: 16, color: Colors.grey),
@@ -510,7 +772,7 @@ class _ResidenceStatsBar extends StatelessWidget {
                             '${residence.address}, ${residence.city}',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.grey[700],
-                ),
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -528,7 +790,7 @@ class _ResidenceStatsBar extends StatelessWidget {
                   const SizedBox(width: 16),
                   _buildStatItem(context, '${residence.surface.toInt()}', 'm²'),
                 ],
-                ),
+              ),
             ],
           ),
         ],
@@ -537,30 +799,46 @@ class _ResidenceStatsBar extends StatelessWidget {
   }
   
   Widget _buildStatItem(BuildContext context, String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _EnhancedOverviewTab extends StatelessWidget {
+class _EnhancedOverviewTab extends StatefulWidget {
   final Residence residence;
 
   const _EnhancedOverviewTab({required this.residence});
 
   @override
+  State<_EnhancedOverviewTab> createState() => _EnhancedOverviewTabState();
+}
+
+class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
+  @override
   Widget build(BuildContext context) {
+    final residence = widget.residence;
+    final theme = Theme.of(context);
+
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
@@ -586,6 +864,8 @@ class _EnhancedOverviewTab extends StatelessWidget {
         
         // Tarification
         Card(
+          clipBehavior: Clip.antiAlias,
+          elevation: 1,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -593,18 +873,87 @@ class _EnhancedOverviewTab extends StatelessWidget {
               children: [
                 Text(
                   'Tarification',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _buildPriceRow(context, 'Prix standard', '${NumberFormat('#,###', 'fr').format(residence.price.toInt())} FCFA/${_getPeriodLabel(residence.pricePeriod)}'),
-                if (residence.hourlyRate > 0)
-                  _buildPriceRow(context, 'Tarif horaire', '${NumberFormat('#,###', 'fr').format(residence.hourlyRate.toInt())} FCFA/heure'),
-                if (residence.halfDayRate > 0)
-                  _buildPriceRow(context, 'Tarif demi-journée', '${NumberFormat('#,###', 'fr').format(residence.halfDayRate.toInt())} FCFA'),
-                if (residence.fullDayRate > 0)
-                  _buildPriceRow(context, 'Tarif journée', '${NumberFormat('#,###', 'fr').format(residence.fullDayRate.toInt())} FCFA/jour'),
-                if (residence.weekendRate > 0)
-                  _buildPriceRow(context, 'Tarif weekend', '${NumberFormat('#,###', 'fr').format(residence.weekendRate.toInt())} FCFA/weekend'),
+                
+                // Prix avec sélecteur de devise
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Prix standard:',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          widget.residence.formattedPrice,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        CurrencySelectorIcon(
+                          onCurrencyChanged: (String newCurrency) {
+                            // Forcer la mise à jour de l'interface
+                            setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                
+                // Affichage des conversions
+                FutureBuilder<void>(
+                  future: Future.delayed(Duration.zero), // Pour déclencher un chargement asynchrone
+                  builder: (context, snapshot) {
+                    final currencyService = CurrencyService();
+                    
+                    // N'afficher les conversions que si la devise sélectionnée est différente de la devise d'origine
+                    if (currencyService.currentCurrency != widget.residence.currency) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Prix converti: ${currencyService.convertAndFormat(widget.residence.price, widget.residence.currency)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return SizedBox.shrink(); // Ne rien afficher si la devise est la même
+                  },
+                ),
+                
+                // Autres informations de prix
+                if (widget.residence.pricePeriod.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Période:',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        Text(
+                          _getPeriodLabel(widget.residence.pricePeriod),
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -663,14 +1012,15 @@ class _EnhancedOverviewTab extends StatelessWidget {
   String _getPeriodLabel(String period) {
     switch (period) {
       case 'hour':
-        return 'heure';
+        return 'Heure';
       case 'day':
-        return 'jour';
+        return 'Jour';
       case 'week':
-        return 'semaine';
+        return 'Semaine';
       case 'month':
+        return 'Mois';
       default:
-        return 'mois';
+        return period;
     }
   }
   
@@ -705,12 +1055,12 @@ class _EnhancedOverviewTab extends StatelessWidget {
     final features = <_Feature>[];
     
     // Ajouter les équipements standards si présents
-    if (residence.hasPool) features.add(_Feature(Icons.pool, 'Piscine'));
-    if (residence.hasWifi) features.add(_Feature(Icons.wifi, 'Wi-Fi'));
-    if (residence.hasRestaurant) features.add(_Feature(Icons.restaurant, 'Restaurant'));
+    if (widget.residence.hasPool) features.add(_Feature(Icons.pool, 'Piscine'));
+    if (widget.residence.hasWifi) features.add(_Feature(Icons.wifi, 'Wi-Fi'));
+    if (widget.residence.hasRestaurant) features.add(_Feature(Icons.restaurant, 'Restaurant'));
     
     // Ajouter d'autres équipements depuis les options (si disponibles)
-    final options = residence.options;
+    final options = widget.residence.options;
     if (options != null) {
       if (options['hasAirConditioning'] == true) features.add(_Feature(Icons.ac_unit, 'Climatisation'));
       if (options['hasParking'] == true) features.add(_Feature(Icons.local_parking, 'Parking'));
@@ -724,7 +1074,7 @@ class _EnhancedOverviewTab extends StatelessWidget {
     }
     
     // Si la résidence est meublée
-    if (residence.isFurnished) features.add(_Feature(Icons.chair, 'Meublé'));
+    if (widget.residence.isFurnished) features.add(_Feature(Icons.chair, 'Meublé'));
     
     // Si aucun équipement n'est spécifié
     if (features.isEmpty) {
@@ -743,21 +1093,43 @@ class _EnhancedOverviewTab extends StatelessWidget {
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         childAspectRatio: 2.5,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
       itemCount: features.length,
       itemBuilder: (context, index) {
         final feature = features[index];
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              width: 1.5,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-              Icon(feature.icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  feature.icon,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -985,10 +1357,14 @@ class _EnhancedAvailabilityTab extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Réservations à venir',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Flexible(
+                      child: Text(
+                        'Réservations à venir',
+                        style: Theme.of(context).textTheme.titleLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8), // Espacement pour éviter le débordement
                     Text(
                       '0 réservations',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -1038,25 +1414,6 @@ class _EnhancedGalleryTab extends StatelessWidget {
   final Residence residence;
 
   const _EnhancedGalleryTab({required this.residence});
-
-  String _getFullImageUrl(String url) {
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
-    
-    // Vérifier si l'URL commence par /uploads
-    if (url.startsWith('/uploads/')) {
-      // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://localhost:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://localhost:4000${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://localhost:4000/uploads/residences/${url}';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1220,6 +1577,34 @@ class _EnhancedGalleryTab extends StatelessWidget {
       ),
     );
   }
+
+  String _getFullImageUrl(String url) {
+    // Si l'URL contient déjà le domaine mais pas /residences/
+    if (url.startsWith('http') && url.contains('/uploads/') && !url.contains('/uploads/residences/')) {
+      return url.replaceAll('/uploads/', '/uploads/residences/');
+    }
+    
+    if (url.startsWith('http')) {
+      // L'URL est déjà complète
+      return url;
+    }
+    
+    // Vérifier si l'URL commence par /uploads
+    if (url.startsWith('/uploads/')) {
+      // Ajouter 'residences/' après '/uploads/' si elle n'y est pas déjà
+      if (!url.startsWith('/uploads/residences/')) {
+        String modifiedUrl = url.replaceAll('/uploads/', '/uploads/residences/');
+        return 'http://192.168.1.68:4000${modifiedUrl}';
+      }
+      return 'http://192.168.1.68:4000${url}';
+    } else if (url.startsWith('/')) {
+      // URL relative mais sans uploads, ajouter le chemin complet avec residences
+      return 'http://192.168.1.68:4000/uploads/residences${url}';
+    } else {
+      // URL sans slash initial, ajouter le chemin complet avec slash
+      return 'http://192.168.1.68:4000/uploads/residences/${url}';
+    }
+  }
 }
 
 class _EnhancedReviewsTab extends StatelessWidget {
@@ -1231,107 +1616,112 @@ class _EnhancedReviewsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                  Text(
-                    'Note globale',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                Row(
-                  children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _getRatingColor(residence.rating),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          residence.rating.toStringAsFixed(1),
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                    ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                              children: [
-                                ...List.generate(5, (index) {
-                                  return Icon(
-                                    index < residence.rating.floor() ? Icons.star : Icons.star_border,
-                                    color: Colors.amber,
-                                    size: 24,
-                                  );
-                                }),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                        Text(
-                              'Basé sur ${residence.reviewCount} avis',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                        ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-          
-        const SizedBox(height: 16),
-          
-          if (residence.reviewCount > 0)
-            Text(
-              'Avis récents',
-              style: Theme.of(context).textTheme.titleLarge,
-            )
-          else
-            Expanded(
-              child: Center(
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.rate_review_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
+                    Text(
+                      'Note globale',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Aucun avis pour le moment',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _getRatingColor(residence.rating),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            residence.rating.toStringAsFixed(1),
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  ...List.generate(5, (index) {
+                                    return Icon(
+                                      index < residence.rating.floor() ? Icons.star : Icons.star_border,
+                                      color: Colors.amber,
+                                      size: 24,
+                                    );
+                                  }),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Basé sur ${residence.reviewCount} avis',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Les avis de vos clients apparaîtront ici',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-        ),
-      ],
+                  ],
                 ),
               ),
             ),
             
-          const SizedBox(height: 80), // Espace pour le floating action button
-        ],
+            const SizedBox(height: 16),
+            
+            if (residence.reviewCount > 0)
+              Text(
+                'Avis récents',
+                style: Theme.of(context).textTheme.titleLarge,
+              )
+            else
+              Container(
+                height: 200, // Hauteur fixe raisonnable
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.rate_review_outlined,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun avis pour le moment',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Les avis de vos clients apparaîtront ici',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            const SizedBox(height: 80), // Espace pour le floating action button
+          ],
+        ),
       ),
     );
   }
@@ -1359,7 +1749,16 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Theme.of(context).colorScheme.surface,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: tabBar,
     );
   }

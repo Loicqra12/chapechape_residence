@@ -1,384 +1,442 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'dart:convert';
+import 'residence_type_enum.dart';
+import '../utils/formatters.dart';
 import '../constants/app_assets.dart' as assets;
 
-// Classe simplifiée sans freezed pour éviter les erreurs de génération
 class Residence {
   final String id;
-  final String name;
+  final String title;
   final String description;
-  final double price;
-  final String address;
-  final String city;
-  final String country;
+  final String shortDescription;
   final List<String> images;
+  final double price;
+  final Map<String, dynamic> location;
   final int bedrooms;
   final int bathrooms;
-  final double surface;
-  final bool isAvailable;
-  final Map<String, dynamic> location;
+  final double squareMeters;
   final List<String> amenities;
-  final List<String> rules;
-  final bool isFavorite;
+  final bool hasPool;
+  final bool hasWifi;
+  final bool isVacationResidence;
+  final bool isSpecialResidence;
+  final bool isAvailable;
+  final bool isFeatured;
+  final bool isPopular;
+  final bool isVerified;
+  final bool isNew;
+  final double rating;
+  final int reviewCount;
+  final String currency;
   final ResidenceType type;
+  final int maxOccupancy;
+  final String owner;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final bool allowsPets;
+  final bool allowsSmoking;
+  final bool allowsParties;
+  final Map<String, dynamic>? priceDetails;
+  final Map<String, dynamic>? contactInfo;
+  final String? videoUrl;
+  final String? virtualTourUrl;
+  final List<String>? nearbyAttractions;
+  final List<String>? rules;
   final String pricePeriod;
   final double hourlyRate;
   final double halfDayRate;
   final double fullDayRate;
   final double weekendRate;
-  final double? rating;
-  final int? reviewCount;
-  final String? ownerId;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
   
-  // Ajout de la propriété imageUrls pour compatibilité avec le code existant
-  List<String> get imageUrls => images;
+  bool get hasDiscount => discountPrice != null && discountPrice! < price;
+  double? get discountPrice => priceDetails != null && priceDetails!.containsKey('discountPrice') ? priceDetails!['discountPrice'] as double : null;
+  double get discountPercentage => hasDiscount ? ((price - discountPrice!) / price) * 100 : 0;
+  String get discountBadge => hasDiscount ? '${discountPercentage.round()}% OFF' : '';
+  
+  // Formatage des prix
+  String get formattedPrice => PriceFormatter.formatPrice(price, withCurrency: true, currency: currency);
+  String get formattedDiscountPrice => hasDiscount ? PriceFormatter.formatPrice(discountPrice!, withCurrency: true, currency: currency) : formattedPrice;
+  
+  // Conversion de devises
+  double convertPrice(String targetCurrency) => CurrencyConverter.convert(price, currency, targetCurrency);
+  String getFormattedPriceIn(String targetCurrency) => PriceFormatter.formatPriceWithCurrency(
+      CurrencyConverter.convert(price, currency, targetCurrency),
+      targetCurrency
+  );
 
-  // Récupérer le premier URL d'image ou une image par défaut
-  String get imageUrl => images.isNotEmpty ? images.first : getDefaultImageByType();
-
-  // Vérifier si la résidence a une piscine
-  bool get hasPool => amenities.contains('pool');
-
-  // Vérifier si la résidence a un parking
-  bool get hasParking => amenities.contains('parking');
-
-  // Vérifier si c'est une résidence de vacances
-  bool get isVacationResidence => 
-      type == ResidenceType.villa || 
-      type == ResidenceType.bungalow || 
-      type == ResidenceType.hotel;
-
-  // Méthode pour créer une copie de Residence avec des modifications
-  Residence copyWith({
-    String? id,
-    String? name,
-    String? description,
-    double? price,
-    String? address,
-    String? city,
-    String? country,
-    List<String>? images,
-    int? bedrooms,
-    int? bathrooms,
-    double? surface,
-    bool? isAvailable,
-    Map<String, dynamic>? location,
-    List<String>? amenities,
-    List<String>? rules,
-    bool? isFavorite,
-    ResidenceType? type,
-    String? pricePeriod,
-    double? hourlyRate,
-    double? halfDayRate,
-    double? fullDayRate,
-    double? weekendRate,
-    double? rating,
-    int? reviewCount,
-    String? ownerId,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return Residence(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      price: price ?? this.price,
-      address: address ?? this.address,
-      city: city ?? this.city,
-      country: country ?? this.country,
-      images: images ?? this.images,
-      bedrooms: bedrooms ?? this.bedrooms,
-      bathrooms: bathrooms ?? this.bathrooms,
-      surface: surface ?? this.surface,
-      isAvailable: isAvailable ?? this.isAvailable,
-      location: location ?? this.location,
-      amenities: amenities ?? this.amenities,
-      rules: rules ?? this.rules,
-      isFavorite: isFavorite ?? this.isFavorite,
-      type: type ?? this.type,
-      pricePeriod: pricePeriod ?? this.pricePeriod,
-      hourlyRate: hourlyRate ?? this.hourlyRate,
-      halfDayRate: halfDayRate ?? this.halfDayRate,
-      fullDayRate: fullDayRate ?? this.fullDayRate,
-      weekendRate: weekendRate ?? this.weekendRate,
-      rating: rating ?? this.rating,
-      reviewCount: reviewCount ?? this.reviewCount,
-      ownerId: ownerId ?? this.ownerId,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+  // Si un prix réduit existe, le convertir aussi
+  String getFormattedDiscountPriceIn(String targetCurrency) {
+    if (!hasDiscount) return getFormattedPriceIn(targetCurrency);
+    
+    final convertedDiscountPrice = CurrencyConverter.convert(
+      discountPrice!, 
+      currency,
+      targetCurrency
+    );
+    
+    return PriceFormatter.formatPriceWithCurrency(
+      convertedDiscountPrice,
+      targetCurrency
     );
   }
+  
+  // Informations sur la location
+  String get city => location.containsKey('city') ? location['city'] as String : 'Ville non précisée';
+  String get country => location.containsKey('country') ? location['country'] as String : '';
+  String get neighborhood => location.containsKey('neighborhood') ? location['neighborhood'] as String : '';
+  String get address => location.containsKey('address') ? location['address'] as String : '';
+  String get formattedAddress => location.displayAddress;
+  bool get isFavorite => priceDetails != null && priceDetails!.containsKey('isFavorite') ? priceDetails!['isFavorite'] as bool : false;
+  List<double> get coordinates => 
+      location.containsKey('coordinates') ? 
+      (location['coordinates'] as List).map((e) => double.parse(e.toString())).toList() :
+      [0.0, 0.0];
+  
+  // Méthodes d'accès rapide pour les commodités
+  bool get hasParking => amenities.contains('parking');
+  bool get hasAirConditioning => amenities.contains('air_conditioning');
+  bool get hasGym => amenities.contains('gym');
+  bool get hasSecuritySystem => amenities.contains('security_system');
+  bool get hasTerrace => amenities.contains('terrace');
+  
+  // Propriétés pour compatibilité avec l'ancien code
+  String get name => title;
+  double get surface => squareMeters;
+  String get imageUrl => images.isNotEmpty ? images.first : 'assets/images/placeholders/placeholder.jpg';
+  List<String> get imageUrls => images;
+  String get status => isAvailable ? 'available' : 'unavailable';
+  String get pricePerNight => '${price.toStringAsFixed(0)} FCFA/nuit';
+  bool get isNewListing => createdAt != null && DateTime.now().difference(createdAt!).inDays < 30;
+  List<String> get photos => images;
 
-  const Residence({
+  Residence({
     required this.id,
-    required this.name,
+    required this.title,
     required this.description,
-    required this.price,
-    required this.address,
-    required this.city,
-    required this.country,
+    this.shortDescription = '',
     required this.images,
+    required this.price,
+    required this.location,
     required this.bedrooms,
     required this.bathrooms,
-    required this.surface,
+    required this.squareMeters,
+    required this.amenities,
+    required this.hasPool,
+    required this.hasWifi,
+    required this.isVacationResidence,
+    required this.isSpecialResidence,
     required this.isAvailable,
-    required this.location,
-    this.amenities = const [],
-    this.rules = const [],
-    this.isFavorite = false,
-    this.type = ResidenceType.apartment,
-    this.pricePeriod = 'month',
-    this.hourlyRate = 0,
-    this.halfDayRate = 0,
-    this.fullDayRate = 0,
-    this.weekendRate = 0,
-    this.rating,
-    this.reviewCount,
-    this.ownerId,
+    this.isFeatured = false,
+    this.isPopular = false,
+    this.isVerified = false,
+    this.isNew = false,
+    this.rating = 0.0,
+    this.reviewCount = 0,
+    this.currency = 'XOF',
+    required this.type,
+    this.maxOccupancy = 2,
+    this.owner = '',
     this.createdAt,
     this.updatedAt,
+    this.allowsPets = false,
+    this.allowsSmoking = false,
+    this.allowsParties = false,
+    this.priceDetails,
+    this.contactInfo,
+    this.videoUrl,
+    this.virtualTourUrl,
+    this.nearbyAttractions,
+    this.rules,
+    this.pricePeriod = 'month',
+    this.hourlyRate = 0.0,
+    this.halfDayRate = 0.0,
+    this.fullDayRate = 0.0,
+    this.weekendRate = 0.0,
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
+    // Parsing des dates
+    DateTime? createdAt;
+    if (json['createdAt'] != null) {
+      try {
+        createdAt = DateTime.parse(json['createdAt'] as String);
+      } catch (e) {
+        print('Erreur de parsing de la date de création: $e');
+      }
+    }
+    
+    DateTime? updatedAt;
+    if (json['updatedAt'] != null) {
+      try {
+        updatedAt = DateTime.parse(json['updatedAt'] as String);
+      } catch (e) {
+        print('Erreur de parsing de la date de mise à jour: $e');
+      }
+    }
+    
+    // Parsing du type de résidence
+    ResidenceType residenceType;
     try {
-      // Traiter les champs qui pourraient être null avec des valeurs par défaut
-      final String id = json['id']?.toString() ?? 'unknown_id';
-      final String name = json['title']?.toString() ?? json['name']?.toString() ?? 'Résidence sans nom';
-      final String description = json['description']?.toString() ?? 'Aucune description disponible';
-      final double price = json['price'] != null ? (json['price'] as num).toDouble() : 0.0;
-      final String address = json['address']?.toString() ?? 'Adresse non spécifiée';
-      final String city = json['city']?.toString() ?? 'Ville non spécifiée';
-      final String country = json['country']?.toString() ?? 'Pays non spécifié';
-      
-      List<String> images = [];
-      if (json['images'] != null && json['images'] is List) {
-        images = (json['images'] as List).map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+      if (json['type'] is String) {
+        String typeStr = (json['type'] as String).toLowerCase();
+        if (typeStr.contains('_')) {
+          // Format snake_case, probablement du backend
+          residenceType = ResidenceTypeExtension.fromSnakeCase(typeStr);
+        } else {
+          // Essayer de mapper directement
+          residenceType = _parseResidenceTypeString(typeStr);
+        }
+      } else {
+        residenceType = ResidenceType.other;
       }
-      
-      final int bedrooms = json['bedrooms'] is int ? json['bedrooms'] as int : 0;
-      final int bathrooms = json['bathrooms'] is int ? json['bathrooms'] as int : 0;
-      final double surface = json['area'] != null ? (json['area'] as num).toDouble() : 
-                           json['surface'] != null ? (json['surface'] as num).toDouble() : 0.0;
-      final bool isAvailable = json['isAvailable'] is bool ? json['isAvailable'] as bool : true;
-      
-      Map<String, dynamic> location = {};
-      if (json['location'] is Map) {
-        location = json['location'] as Map<String, dynamic>;
+    } catch (e) {
+      print('Erreur lors du parsing du type de résidence: $e');
+      residenceType = ResidenceType.other;
+    }
+    
+    // Extraction des détails de prix
+    String pricePeriod = json['pricePeriod'] as String? ?? 'month';
+    double hourlyRate = 0.0;
+    double halfDayRate = 0.0;
+    double fullDayRate = 0.0;
+    double weekendRate = 0.0;
+    
+    // Extraction des tarifs horaires s'ils existent
+    if (json['hourlyRates'] is Map) {
+      hourlyRate = (json['hourlyRates']['oneHour'] as num?)?.toDouble() ?? 0.0;
+    } else if (json['hourlyRate'] != null) {
+      hourlyRate = double.tryParse(json['hourlyRate'].toString()) ?? 0.0;
+    }
+    
+    // Extraction des tarifs journaliers s'ils existent
+    if (json['dailyRates'] is Map) {
+      halfDayRate = (json['dailyRates']['halfDay'] as num?)?.toDouble() ?? 0.0;
+      fullDayRate = (json['dailyRates']['fullDay'] as num?)?.toDouble() ?? 0.0;
+      weekendRate = (json['dailyRates']['weekend'] as num?)?.toDouble() ?? 0.0;
+    } else {
+      // Extraction directe depuis les propriétés racines si elles existent
+      if (json['halfDayRate'] != null) {
+        halfDayRate = double.tryParse(json['halfDayRate'].toString()) ?? 0.0;
       }
-      
-      List<String> amenities = [];
-      if (json.containsKey('amenities') && json['amenities'] is List) {
-        amenities = (json['amenities'] as List).map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+      if (json['fullDayRate'] != null) {
+        fullDayRate = double.tryParse(json['fullDayRate'].toString()) ?? 0.0;
       }
-      
-      List<String> rules = [];
-      if (json.containsKey('rules') && json['rules'] is List) {
-        rules = (json['rules'] as List).map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+      if (json['weekendRate'] != null) {
+        weekendRate = double.tryParse(json['weekendRate'].toString()) ?? 0.0;
       }
-      
-      final bool isFavorite = json['isFavorite'] is bool ? json['isFavorite'] as bool : false;
-      final ResidenceType type = _parseResidenceType(json['type']?.toString() ?? 'apartment');
-      final String pricePeriod = json['pricePeriod']?.toString() ?? 'month';
-      
-      final double hourlyRate = json['hourlyRate'] != null ? (json['hourlyRate'] as num).toDouble() : 0.0;
-      final double halfDayRate = json['halfDayRate'] != null ? (json['halfDayRate'] as num).toDouble() : 0.0;
-      final double fullDayRate = json['fullDayRate'] != null ? (json['fullDayRate'] as num).toDouble() : 0.0;
-      final double weekendRate = json['weekendRate'] != null ? (json['weekendRate'] as num).toDouble() : 0.0;
-      
-      double? rating;
-      if (json['rating'] != null) {
-        rating = (json['rating'] as num).toDouble();
-      }
-      
-      int? reviewCount;
-      if (json['reviewCount'] is int) {
-        reviewCount = json['reviewCount'] as int;
-      }
-      
-      String? ownerId;
-      if (json['ownerId'] is String) {
-        ownerId = json['ownerId'] as String;
-      }
-      
-      DateTime? createdAt;
-      if (json['createdAt'] is String && json['createdAt'].toString().isNotEmpty) {
-        try {
-          createdAt = DateTime.parse(json['createdAt'] as String);
-        } catch (_) {}
-      }
-      
-      DateTime? updatedAt;
-      if (json['updatedAt'] is String && json['updatedAt'].toString().isNotEmpty) {
-        try {
-          updatedAt = DateTime.parse(json['updatedAt'] as String);
-        } catch (_) {}
       }
       
       return Residence(
-        id: id,
-        name: name,
-        description: description,
-        price: price,
-        address: address,
-        city: city,
-        country: country,
-        images: images,
-        bedrooms: bedrooms,
-        bathrooms: bathrooms,
-        surface: surface,
-        isAvailable: isAvailable,
-        location: location,
-        amenities: amenities,
-        rules: rules,
-        isFavorite: isFavorite,
-        type: type,
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? json['name'] as String? ?? 'Titre non disponible',
+      description: json['description'] as String? ?? 'Description non disponible',
+      shortDescription: json['shortDescription'] as String? ?? '',
+      images: json['images'] != null
+          ? List<String>.from(json['images'] as List)
+          : ['assets/images/placeholders/placeholder.jpg'],
+      price: json['price'] != null
+          ? double.parse(json['price'].toString())
+          : 0.0,
+      location: json['location'] as Map<String, dynamic>? ?? {},
+      bedrooms: json['bedrooms'] != null
+          ? int.parse(json['bedrooms'].toString())
+          : 1,
+      bathrooms: json['bathrooms'] != null
+          ? int.parse(json['bathrooms'].toString())
+          : 1,
+      squareMeters: json['squareMeters'] != null 
+          ? double.parse(json['squareMeters'].toString())
+          : json['surface'] != null
+              ? double.parse(json['surface'].toString())
+              : 0.0,
+      amenities: json['amenities'] != null
+          ? List<String>.from(json['amenities'] as List)
+          : [],
+      hasPool: json['hasPool'] as bool? ?? false,
+      hasWifi: json['hasWifi'] as bool? ?? false,
+      isVacationResidence: json['isVacationResidence'] as bool? ?? false,
+      isSpecialResidence: json['isSpecialResidence'] as bool? ?? false,
+      isAvailable: json['isAvailable'] as bool? ?? true,
+      isFeatured: json['isFeatured'] as bool? ?? false,
+      isPopular: json['isPopular'] as bool? ?? false,
+      isVerified: json['isVerified'] as bool? ?? false,
+      isNew: json['isNew'] as bool? ?? false,
+      rating: json['rating'] != null
+          ? double.parse(json['rating'].toString())
+          : 0.0,
+      reviewCount: json['reviewCount'] as int? ?? 0,
+      currency: json['currency'] as String? ?? 'XOF',
+      type: residenceType,
+      maxOccupancy: json['maxOccupancy'] as int? ?? 2,
+      owner: json['owner'] as String? ?? json['ownerId'] as String? ?? '',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      allowsPets: json['allowsPets'] as bool? ?? false,
+      allowsSmoking: json['allowsSmoking'] as bool? ?? false,
+      allowsParties: json['allowsParties'] as bool? ?? false,
+      priceDetails: json['priceDetails'] as Map<String, dynamic>?,
+      contactInfo: json['contactInfo'] as Map<String, dynamic>?,
+      videoUrl: json['videoUrl'] as String?,
+      virtualTourUrl: json['virtualTourUrl'] as String?,
+      nearbyAttractions: json['nearbyAttractions'] != null
+          ? List<String>.from(json['nearbyAttractions'] as List)
+          : null,
+      rules: json['rules'] != null
+          ? List<String>.from(json['rules'] as List)
+          : null,
         pricePeriod: pricePeriod,
         hourlyRate: hourlyRate,
         halfDayRate: halfDayRate,
         fullDayRate: fullDayRate,
         weekendRate: weekendRate,
-        rating: rating,
-        reviewCount: reviewCount,
-        ownerId: ownerId,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-    } catch (e, stackTrace) {
-      // En cas d'erreur, logger l'erreur et créer une résidence par défaut pour éviter les crashs
-      print('Erreur lors de la conversion de residence: $e');
-      print('JSON: $json');
-      print('Stack trace: $stackTrace');
-      
-      return Residence.defaultResidence();
-    }
+    );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'title': name,
+      'title': title,
       'description': description,
-      'price': price,
-      'address': address,
-      'city': city,
-      'country': country,
+      'shortDescription': shortDescription,
       'images': images,
+      'price': price,
+      'location': location,
       'bedrooms': bedrooms,
       'bathrooms': bathrooms,
-      'area': surface,
-      'isAvailable': isAvailable,
-      'location': location,
+      'squareMeters': squareMeters,
       'amenities': amenities,
-      'rules': rules,
-      'isFavorite': isFavorite,
+      'hasPool': hasPool,
+      'hasWifi': hasWifi,
+      'isVacationResidence': isVacationResidence,
+      'isSpecialResidence': isSpecialResidence,
+      'isAvailable': isAvailable,
+      'isFeatured': isFeatured,
+      'isPopular': isPopular,
+      'isVerified': isVerified,
+      'isNew': isNew,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'currency': currency,
       'type': type.toString().split('.').last,
+      'maxOccupancy': maxOccupancy,
+      'owner': owner,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'allowsPets': allowsPets,
+      'allowsSmoking': allowsSmoking,
+      'allowsParties': allowsParties,
+      'priceDetails': priceDetails,
+      'contactInfo': contactInfo,
+      'videoUrl': videoUrl,
+      'virtualTourUrl': virtualTourUrl,
+      'nearbyAttractions': nearbyAttractions,
+      'rules': rules,
       'pricePeriod': pricePeriod,
-      'hourlyRate': hourlyRate,
-      'halfDayRate': halfDayRate,
-      'fullDayRate': fullDayRate,
-      'weekendRate': weekendRate,
-      if (rating != null) 'rating': rating,
-      if (reviewCount != null) 'reviewCount': reviewCount,
-      if (ownerId != null) 'ownerId': ownerId,
-      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      'hourlyRates': {
+        'oneHour': hourlyRate,
+      },
+      'dailyRates': {
+        'halfDay': halfDayRate,
+        'fullDay': fullDayRate,
+        'weekend': weekendRate,
+      },
     };
   }
-  
-  // Fonction pour obtenir une image par défaut basée sur le type
-  String getDefaultImageByType() {
-    switch (type) {
-      case ResidenceType.apartment:
-        return 'assets/images/residences/apartments/seen-hotel-abidjan-plateau.jpg';
-      case ResidenceType.villa:
-        return 'assets/images/residences/villas/Villa-Santorini-Abidjan-1.jpg';
-      case ResidenceType.studio:
-        return 'assets/images/residences/studios/304661255.jpg';
-      case ResidenceType.bungalow:
-        return 'assets/images/residences/apartments/IMG_0668.jpg';
-      case ResidenceType.hotel:
-        return 'assets/images/residences/apartments/450667738.jpg';
-      case ResidenceType.luxury:
-        return 'assets/images/residences/luxury/Waterfront_view-5B-e1670065708270.webp';
-      default:
-        return 'assets/images/residences/apartments/seen-hotel-abidjan-plateau.jpg';
-    }
-  }
-  
-  // Méthode pour convertir le type en assets.ResidenceType pour la compatibilité avec les extensions
-  assets.ResidenceType toAssetResidenceType() {
-    switch (type) {
-      case ResidenceType.apartment:
-        return assets.ResidenceType.apartment;
-      case ResidenceType.villa:
-        return assets.ResidenceType.villa;
-      case ResidenceType.studio:
-        return assets.ResidenceType.studio;
-      case ResidenceType.bungalow:
-        return assets.ResidenceType.bungalow;
-      case ResidenceType.hotel:
-        return assets.ResidenceType.hotel;
-      case ResidenceType.luxury:
-        return assets.ResidenceType.luxury;
-      default:
-        return assets.ResidenceType.apartment;
-    }
-  }
-  
-  // Fonction pour obtenir l'icône du type de résidence
-  String get typeIconPath {
-    return toAssetResidenceType().iconPath;
-  }
 
-  // Méthode pour créer une résidence par défaut en cas d'erreur
-  factory Residence.defaultResidence() {
-    return const Residence(
-      id: 'error_id',
-      name: 'Résidence (Erreur de chargement)',
-      description: 'Les détails de cette résidence n\'ont pas pu être chargés correctement.',
-      price: 0,
-      address: 'Adresse inconnue',
-      city: 'Ville inconnue',
-      country: 'Pays inconnu',
-      images: [],
-      bedrooms: 0,
-      bathrooms: 0,
-      surface: 0,
-      isAvailable: false,
-      location: {},
+  // Copie avec modifications
+  Residence copyWith({
+    String? id,
+    String? title,
+    String? description,
+    String? shortDescription,
+    List<String>? images,
+    double? price,
+    Map<String, dynamic>? location,
+    int? bedrooms,
+    int? bathrooms,
+    double? squareMeters,
+    List<String>? amenities,
+    bool? hasPool,
+    bool? hasWifi,
+    bool? isVacationResidence,
+    bool? isSpecialResidence,
+    bool? isAvailable,
+    bool? isFeatured,
+    bool? isPopular,
+    bool? isVerified,
+    bool? isNew,
+    double? rating,
+    int? reviewCount,
+    String? currency,
+    ResidenceType? type,
+    int? maxOccupancy,
+    String? owner,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? allowsPets,
+    bool? allowsSmoking,
+    bool? allowsParties,
+    Map<String, dynamic>? priceDetails,
+    Map<String, dynamic>? contactInfo,
+    String? videoUrl,
+    String? virtualTourUrl,
+    List<String>? nearbyAttractions,
+    List<String>? rules,
+    String? pricePeriod,
+    double? hourlyRate,
+    double? halfDayRate,
+    double? fullDayRate,
+    double? weekendRate,
+  }) {
+    return Residence(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      shortDescription: shortDescription ?? this.shortDescription,
+      images: images ?? this.images,
+      price: price ?? this.price,
+      location: location ?? this.location,
+      bedrooms: bedrooms ?? this.bedrooms,
+      bathrooms: bathrooms ?? this.bathrooms,
+      squareMeters: squareMeters ?? this.squareMeters,
+      amenities: amenities ?? this.amenities,
+      hasPool: hasPool ?? this.hasPool,
+      hasWifi: hasWifi ?? this.hasWifi,
+      isVacationResidence: isVacationResidence ?? this.isVacationResidence,
+      isSpecialResidence: isSpecialResidence ?? this.isSpecialResidence,
+      isAvailable: isAvailable ?? this.isAvailable,
+      isFeatured: isFeatured ?? this.isFeatured,
+      isPopular: isPopular ?? this.isPopular,
+      isVerified: isVerified ?? this.isVerified,
+      isNew: isNew ?? this.isNew,
+      rating: rating ?? this.rating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      currency: currency ?? this.currency,
+      type: type ?? this.type,
+      maxOccupancy: maxOccupancy ?? this.maxOccupancy,
+      owner: owner ?? this.owner,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      allowsPets: allowsPets ?? this.allowsPets,
+      allowsSmoking: allowsSmoking ?? this.allowsSmoking,
+      allowsParties: allowsParties ?? this.allowsParties,
+      priceDetails: priceDetails ?? this.priceDetails,
+      contactInfo: contactInfo ?? this.contactInfo,
+      videoUrl: videoUrl ?? this.videoUrl,
+      virtualTourUrl: virtualTourUrl ?? this.virtualTourUrl,
+      nearbyAttractions: nearbyAttractions ?? this.nearbyAttractions,
+      rules: rules ?? this.rules,
+      pricePeriod: pricePeriod ?? this.pricePeriod,
+      hourlyRate: hourlyRate ?? this.hourlyRate,
+      halfDayRate: halfDayRate ?? this.halfDayRate,
+      fullDayRate: fullDayRate ?? this.fullDayRate,
+      weekendRate: weekendRate ?? this.weekendRate,
     );
   }
-}
 
-// Extensions pour ajouter des propriétés calculées
-extension ResidenceProperties on Residence {
-  bool get isSpecialResidence => 
-      type == ResidenceType.hotel || 
-      type == ResidenceType.luxury;
-      
-  bool get isStudentResidence => 
-      type == ResidenceType.studio;
-
-  // Propriétés supplémentaires pour les cartes de résidence
-  bool get isBeachfront => 
-      amenities.contains('beachfront') || 
-      description.toLowerCase().contains('plage') ||
-      description.toLowerCase().contains('océan');
-      
-  bool get isMountainView => 
-      amenities.contains('mountain_view') || 
-      description.toLowerCase().contains('montagne') ||
-      description.toLowerCase().contains('vue panoramique');
-      
-  bool get isNewListing => 
-      createdAt != null && 
-      DateTime.now().difference(createdAt!).inDays < 30;  // Listings de moins de 30 jours
-
-  // Getters pour la compatibilité avec le code existant
-  String get title => name.isNotEmpty ? name : "Résidence";
-  String get status => isAvailable ? 'available' : 'unavailable';
-  String get pricePerNight => '${price.toStringAsFixed(0)} FCFA/nuit';
+  // Méthode pour convertir ResidenceType en assets.ResidenceType
+  assets.ResidenceType toAssetResidenceType() {
+    return assets.convertModelTypeToAssetType(type);
+  }
 }
 
 extension LocationExtension on Map<String, dynamic> {
@@ -387,68 +445,27 @@ extension LocationExtension on Map<String, dynamic> {
       return this['formattedAddress'] as String;
     } else if (containsKey('address')) {
       return this['address'] as String;
-    } else if (this.isEmpty) {
-      return 'Adresse non disponible';
+    } else {
+      // Construction d'une adresse à partir des différentes parties
+      final String street = this['street'] ?? '';
+      final String city = this['city'] ?? '';
+      final String country = this['country'] ?? '';
+      
+      if (street.isNotEmpty && city.isNotEmpty) {
+        return '$street, $city${country.isNotEmpty ? ', $country' : ''}';
+      } else if (city.isNotEmpty) {
+        return city + (country.isNotEmpty ? ', $country' : '');
+      } else if (country.isNotEmpty) {
+        return country;
+      }
+      
+      return this['formatted'] ?? this['display'] ?? 'Adresse non disponible';
     }
-    return 'Adresse non disponible';
   }
 }
 
-// Types de résidences dans notre modèle
-enum ResidenceType {
-  // 🏠 Résidences meublées
-  studioMeuble,
-  appartementMeuble,
-  villaMeublee,
-  penthouse,
-  grenier,
-  
-  // 🏨 Hôtels & Hébergements classiques
-  hotelDePassage,
-  motel,
-  boutiqueHotel,
-  hotelDeLuxe,
-  aubergeEtMaisonDHotes,
-  residenceHoteliere,
-  
-  // 🌍 Hébergements insolites & nature
-  bungalow,
-  lodgeEtEcolodge,
-  caseTraditionnelle,
-  maisonFlottante,
-  campementTouristique,
-  
-  // 🏘️ Colocation & résidences partagées
-  chambreEnColocation,
-  cohabitation,
-  residenceUniversitaire,
-  citeDortoir,
-  
-  // 🏡 Résidences longue durée
-  appartementNonMeuble,
-  villaNonMeublee,
-  immeuble,
-  courCommune,
-  
-  // ⛺ Hébergements économiques et populaires
-  maisonDHotesEconomique,
-  residenceFamilialeEnLocation,
-  chambresDePassage,
-  
-  // Types génériques de base (pour compatibilité)
-  apartment,
-  studio,
-  villa,
-  house,
-  hotel,
-  luxury,
-  
-  // Valeur par défaut
-  other
-}
-
-// Fonction utilitaire pour parser le type de résidence
-ResidenceType _parseResidenceType(String value) {
+// Fonction utilitaire pour parser le type de résidence à partir d'une chaîne
+ResidenceType _parseResidenceTypeString(String value) {
   switch (value.toLowerCase()) {
     case 'apartment':
       return ResidenceType.apartment;
@@ -466,168 +483,5 @@ ResidenceType _parseResidenceType(String value) {
       return ResidenceType.luxury;
     default:
       return ResidenceType.other;
-  }
-}
-
-// Extension pour obtenir le nom d'affichage en français de chaque type de résidence
-extension ResidenceTypeExtension on ResidenceType {
-  String get displayName {
-    switch (this) {
-      // 🏠 Résidences meublées
-      case ResidenceType.studioMeuble:
-        return 'Studio meublé';
-      case ResidenceType.appartementMeuble:
-        return 'Appartement meublé';
-      case ResidenceType.villaMeublee:
-        return 'Villa meublée';
-      case ResidenceType.penthouse:
-        return 'Penthouse';
-      case ResidenceType.grenier:
-        return 'Grenier';
-
-      // 🏨 Hôtels & Hébergements classiques
-      case ResidenceType.hotelDePassage:
-        return 'Hôtel de passage';
-      case ResidenceType.motel:
-        return 'Motel';
-      case ResidenceType.boutiqueHotel:
-        return 'Boutique-Hôtel';
-      case ResidenceType.hotelDeLuxe:
-        return 'Hôtel de luxe';
-      case ResidenceType.aubergeEtMaisonDHotes:
-        return 'Auberge et maison d\'hôtes';
-      case ResidenceType.residenceHoteliere:
-        return 'Résidence hôtelière';
-
-      // 🌍 Hébergements insolites & nature
-      case ResidenceType.bungalow:
-        return 'Bungalow';
-      case ResidenceType.lodgeEtEcolodge:
-        return 'Lodge & Écolodge';
-      case ResidenceType.caseTraditionnelle:
-        return 'Case traditionnelle';
-      case ResidenceType.maisonFlottante:
-        return 'Maison flottante';
-      case ResidenceType.campementTouristique:
-        return 'Campement touristique';
-
-      // 🏘️ Colocation & résidences partagées
-      case ResidenceType.chambreEnColocation:
-        return 'Chambre en colocation';
-      case ResidenceType.cohabitation:
-        return 'Cohabitation';
-      case ResidenceType.residenceUniversitaire:
-        return 'Résidence universitaire';
-      case ResidenceType.citeDortoir:
-        return 'Cité dortoir';
-
-      // 🏡 Résidences longue durée
-      case ResidenceType.appartementNonMeuble:
-        return 'Appartement non meublé';
-      case ResidenceType.villaNonMeublee:
-        return 'Villa non meublée';
-      case ResidenceType.immeuble:
-        return 'Immeuble';
-      case ResidenceType.courCommune:
-        return 'Cour commune';
-
-      // ⛺ Hébergements économiques et populaires
-      case ResidenceType.maisonDHotesEconomique:
-        return 'Maison d\'hôtes économique';
-      case ResidenceType.residenceFamilialeEnLocation:
-        return 'Résidence familiale en location';
-      case ResidenceType.chambresDePassage:
-        return 'Chambres de passage';
-
-      // Types génériques de base
-      case ResidenceType.apartment:
-        return 'Appartement';
-      case ResidenceType.studio:
-        return 'Studio';
-      case ResidenceType.villa:
-        return 'Villa';
-      case ResidenceType.house:
-        return 'Maison';
-      case ResidenceType.hotel:
-        return 'Hôtel';
-      case ResidenceType.luxury:
-        return 'Résidence de luxe';
-      case ResidenceType.other:
-        return 'Autre';
-    }
-  }
-
-  // Récupérer l'icône appropriée pour chaque type de résidence
-  String get icon {
-    switch (this) {
-      // 🏠 Résidences meublées
-      case ResidenceType.studioMeuble:
-      case ResidenceType.appartementMeuble:
-        return '🏠';
-      case ResidenceType.villaMeublee:
-      case ResidenceType.penthouse:
-        return '🏘️';
-      case ResidenceType.grenier:
-        return '🏠';
-
-      // 🏨 Hôtels & Hébergements classiques
-      case ResidenceType.hotelDePassage:
-      case ResidenceType.motel:
-      case ResidenceType.boutiqueHotel:
-      case ResidenceType.hotelDeLuxe:
-      case ResidenceType.residenceHoteliere:
-        return '🏨';
-      case ResidenceType.aubergeEtMaisonDHotes:
-        return '🏡';
-
-      // 🌍 Hébergements insolites & nature
-      case ResidenceType.bungalow:
-      case ResidenceType.lodgeEtEcolodge:
-      case ResidenceType.caseTraditionnelle:
-        return '🌴';
-      case ResidenceType.maisonFlottante:
-        return '🚣';
-      case ResidenceType.campementTouristique:
-        return '⛺';
-
-      // 🏘️ Colocation & résidences partagées
-      case ResidenceType.chambreEnColocation:
-      case ResidenceType.cohabitation:
-      case ResidenceType.residenceUniversitaire:
-      case ResidenceType.citeDortoir:
-        return '🏘️';
-
-      // 🏡 Résidences longue durée
-      case ResidenceType.appartementNonMeuble:
-        return '🏢';
-      case ResidenceType.villaNonMeublee:
-        return '🏡';
-      case ResidenceType.immeuble:
-        return '🏢';
-      case ResidenceType.courCommune:
-        return '🏘️';
-
-      // ⛺ Hébergements économiques et populaires
-      case ResidenceType.maisonDHotesEconomique:
-      case ResidenceType.residenceFamilialeEnLocation:
-      case ResidenceType.chambresDePassage:
-        return '⛺';
-
-      // Types génériques de base
-      case ResidenceType.apartment:
-        return '🏢';
-      case ResidenceType.studio:
-        return '🏠';
-      case ResidenceType.villa:
-        return '🏡';
-      case ResidenceType.house:
-        return '🏠';
-      case ResidenceType.hotel:
-        return '🏨';
-      case ResidenceType.luxury:
-        return '🏰';
-      case ResidenceType.other:
-        return '🏠';
-    }
   }
 }

@@ -6,88 +6,40 @@ import '../../models/partner/partner_model.dart';
 import '../../services/api/auth_service.dart';
 import '../../services/api/media_service.dart';
 import 'package:dio/dio.dart';
+import 'auth_event.dart';
 
-// Events
-abstract class AuthEvent extends Equatable {
-  const AuthEvent();
+// Note: Les événements sont maintenant définis dans auth_event.dart
 
-  @override
-  List<Object?> get props => [];
-}
-
-class AuthCheckRequested extends AuthEvent {}
-
-class AuthLoginRequested extends AuthEvent {
-  final String email;
-  final String password;
-
-  const AuthLoginRequested({
-    required this.email,
-    required this.password,
+// État d'authentification
+class AuthState extends Equatable {
+  final bool isAuthenticated;
+  final bool isLoading;
+  final String? errorMessage;
+  final String? userId;
+  
+  const AuthState({
+    this.isAuthenticated = false,
+    this.isLoading = false,
+    this.errorMessage,
+    this.userId,
   });
-
+  
+  AuthState copyWith({
+    bool? isAuthenticated,
+    bool? isLoading,
+    String? errorMessage,
+    String? userId,
+  }) {
+    return AuthState(
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+      userId: userId ?? this.userId,
+    );
+  }
+  
   @override
-  List<Object?> get props => [email, password];
-}
-
-class AuthRegisterRequested extends AuthEvent {
-  final String firstName;
-  final String lastName;
-  final String email;
-  final String phoneNumber;
-  final String password;
-
-  const AuthRegisterRequested({
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-    required this.phoneNumber,
-    required this.password,
-  });
-
-  @override
-  List<Object?> get props => [firstName, lastName, email, phoneNumber, password];
-}
-
-class AuthLogoutRequested extends AuthEvent {}
-
-class UpdateProfileRequested extends AuthEvent {
-  final Map<String, dynamic> userData;
-
-  const UpdateProfileRequested({required this.userData});
-
-  @override
-  List<Object?> get props => [userData];
-}
-
-class UploadProfilePictureRequested extends AuthEvent {
-  final dynamic imageFile;
-
-  const UploadProfilePictureRequested(this.imageFile);
-
-  @override
-  List<Object?> get props => [imageFile];
-}
-
-class UploadDocumentRequested extends AuthEvent {
-  final String documentType;
-  final dynamic documentFile;
-
-  const UploadDocumentRequested({
-    required this.documentType,
-    required this.documentFile,
-  });
-
-  @override
-  List<Object?> get props => [documentType, documentFile];
-}
-
-// States
-abstract class AuthState extends Equatable {
-  const AuthState();
-
-  @override
-  List<Object?> get props => [];
+  List<Object?> get props => [isAuthenticated, isLoading, errorMessage, userId];
 }
 
 class AuthInitial extends AuthState {}
@@ -118,6 +70,7 @@ class AuthFailure extends AuthState {
   List<Object?> get props => [message];
 }
 
+// Bloc d'authentification
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService;
   final MediaService _mediaService;
@@ -137,6 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
     on<UploadProfilePictureRequested>(_onUploadProfilePictureRequested);
     on<UploadDocumentRequested>(_onUploadDocumentRequested);
+    on<AuthDeleteAccountRequested>(_onDeleteAccount);
 
     // Vérifier l'état d'authentification au démarrage
     add(AuthCheckRequested());
@@ -411,6 +365,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       emit(AuthFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteAccount(AuthDeleteAccountRequested event, Emitter<AuthState> emit) async {
+    if (state is AuthAuthenticated) {
+      final currentState = state as AuthAuthenticated;
+      emit(AuthLoading());
+      
+      try {
+        // Implémentation de la suppression du compte
+        // TODO: Ajouter la logique de suppression du compte avec vérification du mot de passe
+        
+        // Simuler la suppression du compte - nettoyer le stockage
+        await storage.delete(key: 'token');
+        await storage.delete(key: 'refresh_token');
+        await storage.delete(key: 'token_expiry');
+        await storage.delete(key: 'userId');
+        
+        emit(AuthUnauthenticated());
+      } catch (e) {
+        emit(AuthFailure(e.toString()));
+      }
     }
   }
 }

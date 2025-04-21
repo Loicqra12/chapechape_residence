@@ -4,6 +4,7 @@
 project.configurations.all {
     resolutionStrategy {
         // Forcer les versions des packages problématiques
+        // Utiliser la même version que celle du projet partenaire
         force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
         force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
         force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
@@ -35,6 +36,42 @@ if (connectivityPlusVersion != null) {
                         t.setEnabled(false)
                     }
                 }
+            }
+        }
+    }
+}
+
+// Solution pour le problème spécifique de geolocator_android
+// Définir tôt une extension pour être sûr qu'elle est disponible au moment de l'évaluation
+allprojects {
+    afterEvaluate { project ->
+        if (project.name == 'geolocator_android') {
+            // S'assurer que le projet est bien un plugin Android
+            if (project.hasProperty('android')) {
+                // Méthode 1: Ajouter une extension flutter directement
+                if (!project.ext.has('flutter')) {
+                    project.ext.flutter = [
+                        compileSdkVersion: 34,
+                        minSdkVersion: 21,
+                        targetSdkVersion: 34
+                    ]
+                }
+                
+                // Méthode 2: Définir explicitement les propriétés SDK
+                if (!project.android.hasProperty('compileSdkVersion')) {
+                    project.android.compileSdkVersion = 34
+                }
+                if (!project.android.defaultConfig.hasProperty('minSdkVersion')) {
+                    project.android.defaultConfig.minSdkVersion = 21
+                }
+                
+                // Contourner les éventuels problèmes de compatibilité
+                project.repositories {
+                    google()
+                    mavenCentral()
+                }
+                
+                println "✅ Fixed geolocator_android configuration"
             }
         }
     }

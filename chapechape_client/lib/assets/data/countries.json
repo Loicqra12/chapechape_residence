@@ -1,0 +1,202 @@
+[
+  {
+    "code": "ci",
+    "name": "Côte d'Ivoire",
+    "phoneCode": "+225"
+  },
+  {
+    "code": "sn",
+    "name": "Sénégal",
+    "phoneCode": "+221"
+  },
+  {
+    "code": "gh",
+    "name": "Ghana",
+    "phoneCode": "+233"
+  },
+  {
+    "code": "ng",
+    "name": "Nigeria",
+    "phoneCode": "+234"
+  },
+  {
+    "code": "bj",
+    "name": "Bénin",
+    "phoneCode": "+229"
+  },
+  {
+    "code": "bf",
+    "name": "Burkina Faso",
+    "phoneCode": "+226"
+  },
+  {
+    "code": "cv",
+    "name": "Cap-Vert",
+    "phoneCode": "+238"
+  },
+  {
+    "code": "gm",
+    "name": "Gambie",
+    "phoneCode": "+220"
+  },
+  {
+    "code": "gn",
+    "name": "Guinée",
+    "phoneCode": "+224"
+  },
+  {
+    "code": "lr",
+    "name": "Liberia",
+    "phoneCode": "+231"
+  },
+  {
+    "code": "ml",
+    "name": "Mali",
+    "phoneCode": "+223"
+  },
+  {
+    "code": "ne",
+    "name": "Niger",
+    "phoneCode": "+227"
+  },
+  {
+    "code": "sl",
+    "name": "Sierra Leone",
+    "phoneCode": "+232"
+  },
+  {
+    "code": "tg",
+    "name": "Togo",
+    "phoneCode": "+228"
+  },
+  {
+    "code": "cm",
+    "name": "Cameroun",
+    "phoneCode": "+237"
+  },
+  {
+    "code": "cd",
+    "name": "RD Congo",
+    "phoneCode": "+243"
+  },
+  {
+    "code": "cg",
+    "name": "Congo-Brazzaville",
+    "phoneCode": "+242"
+  },
+  {
+    "code": "ga",
+    "name": "Gabon",
+    "phoneCode": "+241"
+  },
+  {
+    "code": "gq",
+    "name": "Guinée Équatoriale",
+    "phoneCode": "+240"
+  },
+  {
+    "code": "rw",
+    "name": "Rwanda",
+    "phoneCode": "+250"
+  },
+  {
+    "code": "za",
+    "name": "Afrique du Sud",
+    "phoneCode": "+27"
+  },
+  {
+    "code": "dz",
+    "name": "Algérie",
+    "phoneCode": "+213"
+  },
+  {
+    "code": "ao",
+    "name": "Angola",
+    "phoneCode": "+244"
+  },
+  {
+    "code": "eg",
+    "name": "Égypte",
+    "phoneCode": "+20"
+  },
+  {
+    "code": "et",
+    "name": "Éthiopie",
+    "phoneCode": "+251"
+  },
+  {
+    "code": "ke",
+    "name": "Kenya",
+    "phoneCode": "+254"
+  },
+  {
+    "code": "ma",
+    "name": "Maroc",
+    "phoneCode": "+212"
+  },
+  {
+    "code": "mu",
+    "name": "Maurice",
+    "phoneCode": "+230"
+  },
+  {
+    "code": "mz",
+    "name": "Mozambique",
+    "phoneCode": "+258"
+  },
+  {
+    "code": "na",
+    "name": "Namibie",
+    "phoneCode": "+264"
+  },
+  {
+    "code": "sc",
+    "name": "Seychelles",
+    "phoneCode": "+248"
+  },
+  {
+    "code": "tn",
+    "name": "Tunisie",
+    "phoneCode": "+216"
+  },
+  {
+    "code": "ug",
+    "name": "Ouganda",
+    "phoneCode": "+256"
+  },
+  {
+    "code": "tz",
+    "name": "Tanzanie",
+    "phoneCode": "+255"
+  },
+  {
+    "code": "zm",
+    "name": "Zambie",
+    "phoneCode": "+260"
+  },
+  {
+    "code": "zw",
+    "name": "Zimbabwe",
+    "phoneCode": "+263"
+  },
+  {
+    "code": "fr",
+    "name": "France",
+    "phoneCode": "+33"
+  },
+  {
+    "code": "us",
+    "name": "États-Unis",
+    "phoneCode": "+1"
+  },
+  {
+    "code": "ca",
+    "name": "Canada",
+    "phoneCode": "+1"
+  },
+  {
+    "code": "gb",
+    "name": "Royaume-Uni",
+    "phoneCode": "+44"
+  }
+]

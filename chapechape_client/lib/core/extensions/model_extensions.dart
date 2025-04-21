@@ -1,90 +1,29 @@
 import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/constants/app_assets.dart' as assets;
+import '../models/residence_type_enum.dart';
 
-/// Extensions pour le modèle Residence
-extension ResidenceProperties on Residence {
-  /// Retourne l'URL de la première image ou une image par défaut
-  String get imageUrl {
-    if (images != null && images!.isNotEmpty && images!.first.isNotEmpty) {
-      return images!.first;
-    }
-    return getDefaultImageByType();
-  }
+/// NOTE IMPORTANTE: 
+/// La plupart des extensions sur Residence ont été déplacées directement dans la classe Residence
+/// ou dans residence_model_alias.dart pour rationaliser le code et éviter les doublons.
+/// 
+/// Voir:
+/// - lib/core/models/residence_model.dart: Pour les méthodes principales
+/// - lib/core/models/residence_model_alias.dart: Pour la compatibilité
+/// - lib/core/models/residence_type_enum.dart: Pour les extensions de types
 
-  /// Alias pour le nom de la résidence
-  String get title => name ?? 'Résidence sans nom';
+// Ces extensions ont été conservées temporairement pour référence
 
-  /// Retourne "available" ou "unavailable" selon l'état isAvailable
-  String get status => isAvailable ? 'available' : 'unavailable';
+// SUPPRIMÉ: Cette extension est déjà définie dans residence_model.dart
+// Garder cette note pour la documentation
 
-  /// Indique si la résidence a une piscine
-  bool get hasPool {
-    return amenities != null && amenities!.contains('pool');
-  }
-
-  /// Indique si c'est une résidence de vacances
-  bool get isVacationResidence {
-    return type == ResidenceType.villa || type == ResidenceType.bungalow || 
-           (amenities != null && amenities!.contains('vacation'));
-  }
-
-  /// Indique si c'est une résidence spéciale
-  bool get isSpecialResidence {
-    return type == ResidenceType.luxury || type == ResidenceType.hotel ||
-           (amenities != null && amenities!.contains('special'));
-  }
-}
-
-/// Extension pour extraire l'adresse formatée d'un dictionnaire de localisation
-extension LocationExtension on Map<String, dynamic> {
-  /// Extrait l'adresse formatée du dictionnaire de localisation
-  String get displayAddress {
-    final String street = this['street'] ?? '';
-    final String city = this['city'] ?? '';
-    final String country = this['country'] ?? '';
-    
-    if (street.isNotEmpty && city.isNotEmpty) {
-      return '$street, $city${country.isNotEmpty ? ', $country' : ''}';
-    } else if (city.isNotEmpty) {
-      return city + (country.isNotEmpty ? ', $country' : '');
-    } else if (country.isNotEmpty) {
-      return country;
-    }
-    
-    return this['formatted'] ?? this['display'] ?? 'Adresse non disponible';
-  }
-}
-
-/// Extensions supplémentaires pour le modèle Residence
-/// Note: La plupart des extensions ont été déplacées directement dans la classe Residence
-extension ResidenceExtensions on Residence {
-  /// Retourne le nom d'affichage pour le type de résidence
-  String get typeDisplayName {
-    final assetType = toAssetResidenceType();
-    switch (assetType) {
-      case assets.ResidenceType.apartment:
-        return 'Appartement';
-      case assets.ResidenceType.studio:
-        return 'Studio';
-      case assets.ResidenceType.villa:
-        return 'Villa';
-      case assets.ResidenceType.bungalow:
-        return 'Bungalow';
-      case assets.ResidenceType.luxury:
-        return 'Résidence de Luxe';
-      case assets.ResidenceType.hotel:
-        return 'Hôtel';
-      default:
-        return 'Résidence';
-    }
-  }
-  
-  /// Retourne une description courte
-  String get shortDescription {
+/// Extensions supplémentaires pour le modèle Residence qui ne sont pas déjà présentes ailleurs
+extension ResidenceFormatting on Residence {
+  /// Retourne une description courte formatée
+  String get shortDescriptionText {
     final buffer = StringBuffer();
     buffer.write('$bedrooms chambre${bedrooms > 1 ? 's' : ''} • ');
     buffer.write('$bathrooms salle${bathrooms > 1 ? 's' : ''} de bain • ');
-    buffer.write('${surface.toStringAsFixed(0)} m²');
+    buffer.write('${squareMeters.toStringAsFixed(0)} m²');
     return buffer.toString();
   }
   
@@ -92,6 +31,11 @@ extension ResidenceExtensions on Residence {
   String get capacityDescription {
     final baseGuests = bedrooms * 2;
     return 'Jusqu\'à $baseGuests personnes';
+  }
+  
+  /// Conversion entre le ResidenceType du modèle et le type d'assets
+  assets.ResidenceType toAssetResidenceType() {
+    return assets.convertModelTypeToAssetType(type);
   }
   
   /// Retourne une estimation du prix total pour un séjour donné
@@ -139,5 +83,28 @@ extension AddressExtension on String {
       return parts[1].trim();
     }
     return this;
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
+  
+  String toTitleCase() {
+    return split(' ').map((word) => word.capitalize()).join(' ');
+  }
+  
+  ResidenceType toResidenceType() {
+    return ResidenceTypeExtension.fromString(this);
+  }
+}
+
+extension ListExtension<T> on List<T> {
+  T? firstWhereOrNull(bool Function(T element) test) {
+    for (var element in this) {
+      if (test(element)) return element;
+    }
+    return null;
   }
 }

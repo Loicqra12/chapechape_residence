@@ -1,0 +1,380 @@
+[
+  {
+    "id": "abidjan",
+    "name": "Abidjan",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3599517,
+    "longitude": -4.0082563,
+    "isPopular": true
+  },
+  {
+    "id": "yamoussoukro",
+    "name": "Yamoussoukro",
+    "region": "District Autonome de Yamoussoukro",
+    "countryCode": "ci",
+    "latitude": 6.8276228,
+    "longitude": -5.2893433,
+    "isPopular": true
+  },
+  {
+    "id": "bouake",
+    "name": "Bouaké",
+    "region": "Vallée du Bandama",
+    "countryCode": "ci",
+    "latitude": 7.6898329,
+    "longitude": -5.0309311,
+    "isPopular": true
+  },
+  {
+    "id": "daloa",
+    "name": "Daloa",
+    "region": "Haut-Sassandra",
+    "countryCode": "ci",
+    "latitude": 6.8908537,
+    "longitude": -6.4386073,
+    "isPopular": true
+  },
+  {
+    "id": "korhogo",
+    "name": "Korhogo",
+    "region": "Savanes",
+    "countryCode": "ci",
+    "latitude": 9.4621045,
+    "longitude": -5.6392565,
+    "isPopular": true
+  },
+  {
+    "id": "sanpedro",
+    "name": "San Pedro",
+    "region": "Bas-Sassandra",
+    "countryCode": "ci",
+    "latitude": 4.7441923,
+    "longitude": -6.6418018,
+    "isPopular": true
+  },
+  {
+    "id": "gagnoa",
+    "name": "Gagnoa",
+    "region": "Gôh",
+    "countryCode": "ci",
+    "latitude": 6.1311884,
+    "longitude": -5.9471247,
+    "isPopular": false
+  },
+  {
+    "id": "man",
+    "name": "Man",
+    "region": "Tonkpi",
+    "countryCode": "ci",
+    "latitude": 7.4125357,
+    "longitude": -7.5556551,
+    "isPopular": false
+  },
+  {
+    "id": "abobo",
+    "name": "Abobo",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.4347276,
+    "longitude": -4.0164577,
+    "isPopular": true
+  },
+  {
+    "id": "cocody",
+    "name": "Cocody",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3601774,
+    "longitude": -3.9812076,
+    "isPopular": true
+  },
+  {
+    "id": "yopougon",
+    "name": "Yopougon",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3226287,
+    "longitude": -4.0916266,
+    "isPopular": true
+  },
+  {
+    "id": "plateau",
+    "name": "Plateau",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3241081,
+    "longitude": -4.0211811,
+    "isPopular": true
+  },
+  {
+    "id": "adjame",
+    "name": "Adjamé",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3602634,
+    "longitude": -4.0261391,
+    "isPopular": true
+  },
+  {
+    "id": "marcory",
+    "name": "Marcory",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3013318,
+    "longitude": -3.9993224,
+    "isPopular": true
+  },
+  {
+    "id": "koumassi",
+    "name": "Koumassi",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.2892287,
+    "longitude": -3.9771433,
+    "isPopular": true
+  },
+  {
+    "id": "portbouet",
+    "name": "Port-Bouët",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.2569467,
+    "longitude": -3.9465189,
+    "isPopular": true
+  },
+  {
+    "id": "treichville",
+    "name": "Treichville",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.2876316,
+    "longitude": -4.0100265,
+    "isPopular": true
+  },
+  {
+    "id": "comoe",
+    "name": "Comoé",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3123423,
+    "longitude": -3.9688724,
+    "isPopular": false
+  },
+  {
+    "id": "attecoube",
+    "name": "Attécoubé",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3353212,
+    "longitude": -4.0425467,
+    "isPopular": false
+  },
+  {
+    "id": "bingerville",
+    "name": "Bingerville",
+    "region": "District Autonome d'Abidjan",
+    "countryCode": "ci",
+    "latitude": 5.3520067,
+    "longitude": -3.8979132,
+    "isPopular": false
+  },
+  {
+    "id": "grandBassam",
+    "name": "Grand-Bassam",
+    "region": "Sud-Comoé",
+    "countryCode": "ci",
+    "latitude": 5.2064542,
+    "longitude": -3.7385097,
+    "isPopular": true
+  },
+  {
+    "id": "dabou",
+    "name": "Dabou",
+    "region": "Grands-Ponts",
+    "countryCode": "ci",
+    "latitude": 5.3251413,
+    "longitude": -4.3839294,
+    "isPopular": false
+  },
+  {
+    "id": "divo",
+    "name": "Divo",
+    "region": "Lôh-Djiboua",
+    "countryCode": "ci",
+    "latitude": 5.8460947,
+    "longitude": -5.3540443,
+    "isPopular": false
+  },
+  {
+    "id": "abengourou",
+    "name": "Abengourou",
+    "region": "Indénié-Djuablin",
+    "countryCode": "ci",
+    "latitude": 6.7274679,
+    "longitude": -3.4927202,
+    "isPopular": false
+  },
+  {
+    "id": "adzope",
+    "name": "Adzopé",
+    "region": "La Mé",
+    "countryCode": "ci",
+    "latitude": 6.1076909,
+    "longitude": -3.8561713,
+    "isPopular": false
+  },
+  {
+    "id": "agboville",
+    "name": "Agboville",
+    "region": "Agnéby-Tiassa",
+    "countryCode": "ci",
+    "latitude": 5.9342475,
+    "longitude": -4.2157021,
+    "isPopular": false
+  },
+  {
+    "id": "lakota",
+    "name": "Lakota",
+    "region": "Lôh-Djiboua",
+    "countryCode": "ci",
+    "latitude": 5.8526341,
+    "longitude": -5.6794561,
+    "isPopular": false
+  },
+  {
+    "id": "issia",
+    "name": "Issia",
+    "region": "Haut-Sassandra",
+    "countryCode": "ci",
+    "latitude": 6.4869034,
+    "longitude": -6.5807682,
+    "isPopular": false
+  },
+  {
+    "id": "dimbokro",
+    "name": "Dimbokro",
+    "region": "N'Zi",
+    "countryCode": "ci",
+    "latitude": 6.6563257,
+    "longitude": -4.7055684,
+    "isPopular": false
+  },
+  {
+    "id": "seguela",
+    "name": "Séguéla",
+    "region": "Worodougou",
+    "countryCode": "ci",
+    "latitude": 7.9568342,
+    "longitude": -6.6763032,
+    "isPopular": false
+  },
+  {
+    "id": "odienne",
+    "name": "Odiénné",
+    "region": "Kabadougou",
+    "countryCode": "ci",
+    "latitude": 9.5012293,
+    "longitude": -7.5658072,
+    "isPopular": false
+  },
+  {
+    "id": "bouna",
+    "name": "Bouna",
+    "region": "Bounkani",
+    "countryCode": "ci",
+    "latitude": 9.2748037,
+    "longitude": -3.0013683,
+    "isPopular": false
+  },
+  {
+    "id": "mankono",
+    "name": "Mankono",
+    "region": "Béré",
+    "countryCode": "ci",
+    "latitude": 8.058032,
+    "longitude": -6.1891813,
+    "isPopular": false
+  },
+  {
+    "id": "soubre",
+    "name": "Soubré",
+    "region": "Nawa",
+    "countryCode": "ci",
+    "latitude": 5.7847632,
+    "longitude": -6.6083398,
+    "isPopular": false
+  },
+  {
+    "id": "ferkessedougou",
+    "name": "Ferkessédougou",
+    "region": "Tchologo",
+    "countryCode": "ci",
+    "latitude": 9.5917649,
+    "longitude": -5.1972547,
+    "isPopular": false
+  },
+  {
+    "id": "bouafle",
+    "name": "Bouaflé",
+    "region": "Marahoué",
+    "countryCode": "ci",
+    "latitude": 6.9897213,
+    "longitude": -5.7459842,
+    "isPopular": false
+  },
+  {
+    "id": "katiola",
+    "name": "Katiola",
+    "region": "Hambol",
+    "countryCode": "ci",
+    "latitude": 8.1341936,
+    "longitude": -5.1044726,
+    "isPopular": false
+  },
+  {
+    "id": "toumodi",
+    "name": "Toumodi",
+    "region": "Bélier",
+    "countryCode": "ci",
+    "latitude": 6.5534361,
+    "longitude": -5.0183784,
+    "isPopular": false
+  },
+  {
+    "id": "boundiali",
+    "name": "Boundiali",
+    "region": "Bagoué",
+    "countryCode": "ci",
+    "latitude": 9.5208443,
+    "longitude": -6.4837694,
+    "isPopular": false
+  },
+  {
+    "id": "sakassou",
+    "name": "Sakassou",
+    "region": "Gbêkê",
+    "countryCode": "ci",
+    "latitude": 7.4545641,
+    "longitude": -5.2927918,
+    "isPopular": false
+  },
+  {
+    "id": "duekoue",
+    "name": "Duékoué",
+    "region": "Guémon",
+    "countryCode": "ci",
+    "latitude": 6.7420649,
+    "longitude": -7.3407575,
+    "isPopular": false
+  },
+  {
+    "id": "zuenoula",
+    "name": "Zuénoula",
+    "region": "Marahoué",
+    "countryCode": "ci",
+    "latitude": 7.4359276,
+    "longitude": -6.0520349,
+    "isPopular": false
+  }
+]

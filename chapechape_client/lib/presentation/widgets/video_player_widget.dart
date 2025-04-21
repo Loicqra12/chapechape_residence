@@ -33,16 +33,23 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       // comme youtube_player_flutter, mais pour l'instant, affichons un message
       _showYoutubeNotSupportedMessage();
     } else {
-      _controller = VideoPlayerController.network(widget.videoUrl)
-        ..initialize().then((_) {
-          setState(() {
-            _isInitialized = true;
-          });
+      // Utiliser HttpHeaders pour optimiser les performances de chargement vidéo
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+        httpHeaders: const {'Accept-Encoding': 'gzip'},
+      )..initialize().then((_) {
+          if (mounted) {
+            setState(() {
+              _isInitialized = true;
+            });
+          }
         }).catchError((error) {
           debugPrint('Erreur lors de l\'initialisation du lecteur vidéo: $error');
-          setState(() {
-            _isInitialized = false;
-          });
+          if (mounted) {
+            setState(() {
+              _isInitialized = false;
+            });
+          }
         });
     }
   }
@@ -57,7 +64,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   void dispose() {
-    if (_controller.value.isInitialized) {
+    // Vérifier si le contrôleur existe et est initialisé avant de le libérer
+    if (this._isInitialized) {
       _controller.dispose();
     }
     super.dispose();

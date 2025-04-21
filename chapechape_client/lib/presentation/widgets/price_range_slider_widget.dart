@@ -1,121 +1,125 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import 'dart:math' as math;
 
-class PriceRangeSliderWidget extends StatefulWidget {
+class PriceRangeSliderWidget extends StatelessWidget {
   final double min;
   final double max;
-  final Function(RangeValues)? onChanged;
-  final RangeValues? initialRange;
-  final String currency;
+  final RangeValues values;
+  final ValueChanged<RangeValues> onChanged;
+  final int? divisions;
+  final bool useLogarithmicScale;
 
   const PriceRangeSliderWidget({
     Key? key,
-    this.min = 0,
-    this.max = 1000000,
-    this.onChanged,
-    this.initialRange,
-    this.currency = 'FCFA',
+    required this.min,
+    required this.max,
+    required this.values,
+    required this.onChanged,
+    this.divisions,
+    this.useLogarithmicScale = true,
   }) : super(key: key);
 
   @override
-  State<PriceRangeSliderWidget> createState() => _PriceRangeSliderWidgetState();
-}
+  Widget build(BuildContext context) {
+    // Utilise une échelle logarithmique si demandé et si l'écart entre min et max est grand
+    if (useLogarithmicScale && max / min > 100) {
+      return _buildLogarithmicSlider(context);
+    } else {
+      return _buildLinearSlider(context);
+    }
+  }
 
-class _PriceRangeSliderWidgetState extends State<PriceRangeSliderWidget> {
-  late RangeValues _currentRangeValues;
+  Widget _buildLinearSlider(BuildContext context) {
+    return RangeSlider(
+      min: min,
+      max: max,
+      values: values,
+      divisions: divisions ?? (max ~/ 1000).toInt(),
+      activeColor: AppTheme.primaryColor,
+      inactiveColor: Colors.grey[300],
+      labels: RangeLabels(
+        _formatPrice(values.start),
+        _formatPrice(values.end),
+      ),
+      onChanged: onChanged,
+    );
+  }
 
-  @override
-  void initState() {
-    super.initState();
-    _currentRangeValues = widget.initialRange ??
-        RangeValues(widget.min, widget.max);
+  Widget _buildLogarithmicSlider(BuildContext context) {
+    // Convertir les valeurs réelles en pourcentage logarithmique pour l'affichage
+    final double logMin = min > 0 ? min.log() : 0;
+    final double logMax = max > 0 ? max.log() : 1;
+    final double logRange = logMax - logMin;
+
+    // Convertir les valeurs actuelles en position logarithmique (0-1)
+    final double startLog = values.start > 0 ? values.start.log() : logMin;
+    final double endLog = values.end > 0 ? values.end.log() : logMax;
+    
+    // Normaliser à un pourcentage (0-1) pour le slider
+    final double startPercent = (startLog - logMin) / logRange;
+    final double endPercent = (endLog - logMin) / logRange;
+    
+    // Créer les valeurs du RangeSlider (0-1)
+    final normalizedValues = RangeValues(startPercent, endPercent);
+
+    return RangeSlider(
+      min: 0.0,
+      max: 1.0,
+      values: normalizedValues,
+      divisions: 100, // Plus de divisions pour plus de précision
+      activeColor: AppTheme.primaryColor,
+      inactiveColor: Colors.grey[300],
+      labels: RangeLabels(
+        _formatPrice(values.start),
+        _formatPrice(values.end),
+      ),
+      onChanged: (RangeValues newNormalizedValues) {
+        // Convertir les pourcentages normalisés en valeurs logarithmiques
+        final newStartLog = logMin + (newNormalizedValues.start * logRange);
+        final newEndLog = logMin + (newNormalizedValues.end * logRange);
+        
+        // Convertir de l'échelle logarithmique à l'échelle réelle
+        final newStart = newStartLog.exp();
+        final newEnd = newEndLog.exp();
+        
+        // Arrondir aux 1000 FCFA les plus proches pour faciliter la lecture
+        final roundedStart = (newStart / 1000).round() * 1000.0;
+        final roundedEnd = (newEnd / 1000).round() * 1000.0;
+        
+        onChanged(RangeValues(roundedStart, roundedEnd));
+      },
+    );
   }
 
   String _formatPrice(double value) {
-    return '${value.round().toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]} ',
-        )} ${widget.currency}';
+    // Formater avec séparateurs de milliers
+    return '${value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} FCFA';
+  }
+}
+
+// Extension pour faciliter les calculs logarithmiques
+extension LogarithmicExtension on double {
+  double log() {
+    return this <= 0 ? 0 : math.log(this) / math.log(10);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _formatPrice(_currentRangeValues.start),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                _formatPrice(_currentRangeValues.end),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          RangeSlider(
-            values: _currentRangeValues,
-            min: widget.min,
-            max: widget.max,
-            divisions: 100,
-            activeColor: AppTheme.primaryColor,
-            inactiveColor: Colors.grey[300],
-            labels: RangeLabels(
-              _formatPrice(_currentRangeValues.start),
-              _formatPrice(_currentRangeValues.end),
-            ),
-            onChanged: (RangeValues values) {
-              setState(() {
-                _currentRangeValues = values;
-              });
-              if (widget.onChanged != null) {
-                widget.onChanged!(values);
-              }
-            },
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Min: ${_formatPrice(widget.min)}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                'Max: ${_formatPrice(widget.max)}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  double exp() {
+    return this <= 0 ? 0 : math.exp(this);
   }
+
+  double logBase(double base) {
+    return this <= 0 ? 0 : math.log(this) / math.log(base);
+  }
+
+  double pow10() {
+    return math.pow(10, this).toDouble();
+  }
+
+  double ln() {
+    return this <= 0 ? 0 : math.log(this);
+  }
+
+  // Constante e
+  static const double e = 2.718281828459045;
 }

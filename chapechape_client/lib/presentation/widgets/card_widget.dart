@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart' hide Amenity;
 import '../../core/models/residence_model_alias.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/models/amenity.dart' as amenity;
@@ -151,7 +150,7 @@ class StandardResidenceCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (residence.rating != null && residence.rating! > 0)
+                      if (residence.rating > 0)
                         Row(
                           children: [
                             Icon(
@@ -161,7 +160,7 @@ class StandardResidenceCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              residence.rating!.toStringAsFixed(1),
+                              residence.rating.toStringAsFixed(1),
                               style: theme.textTheme.bodySmall,
                             ),
                           ],

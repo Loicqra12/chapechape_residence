@@ -5,12 +5,18 @@ import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../settings/settings_screen.dart';
-import '../payments/payments_screen.dart';
+import '../payments/payments_screen.dart' hide PaymentBloc;
 import '../notifications/notifications_screen.dart';
-import '../help/help_screen.dart';
+import '../help/help_screen.dart' hide HelpBloc;
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
+import '../../../core/blocs/payment/payment_bloc.dart';
+import '../../../core/blocs/help/help_bloc.dart';
+import '../residences/residences_screen.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:io' show Platform;
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -187,6 +193,98 @@ class ProfileScreen extends StatelessWidget {
                     
                     const SizedBox(height: 24),
                     
+                    // Informations sur les résidences
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: theme.colorScheme.outline.withOpacity(0.1),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.home_work_outlined,
+                                  size: 20,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Vos résidences',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            BlocBuilder<DashboardBloc, DashboardState>(
+                              builder: (context, state) {
+                                final int totalResidences = state is DashboardLoaded 
+                                    ? state.dashboardData.performance.totalResidences
+                                    : 0;
+                                
+                                final int availableResidences = state is DashboardLoaded
+                                    ? state.residenceStats.where((r) => r.status == 'available').length
+                                    : 0;
+                                
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildResidenceIndicator(
+                                      context,
+                                      count: totalResidences,
+                                      label: 'Résidences',
+                                      icon: Icons.home,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    _buildResidenceIndicator(
+                                      context,
+                                      count: availableResidences,
+                                      label: 'Disponibles',
+                                      icon: Icons.check_circle_outline,
+                                      color: Colors.green,
+                                    ),
+                                    _buildResidenceIndicator(
+                                      context,
+                                      count: totalResidences - availableResidences,
+                                      label: 'Occupées',
+                                      icon: Icons.timer,
+                                      color: Colors.orange,
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  // Naviguer vers la liste des résidences
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ResidencesScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.arrow_forward),
+                                label: const Text('Gérer mes résidences'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
                     // Informations de contact
                     Card(
                       elevation: 0,
@@ -300,7 +398,12 @@ class ProfileScreen extends StatelessWidget {
                             icon: Icons.settings_outlined,
                             title: 'Paramètres',
                             onTap: () {
-                              context.go('/settings');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SettingsScreen.withBloc(context),
+                                ),
+                              );
                             },
                             theme: theme,
                           ),
@@ -326,7 +429,7 @@ class ProfileScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const PaymentsScreen(),
+                                  builder: (context) => PaymentsScreen.withBloc(context),
                                 ),
                               );
                             },
@@ -354,7 +457,7 @@ class ProfileScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const HelpScreen(),
+                                  builder: (context) => HelpScreen.withBloc(context),
                                 ),
                               );
                             },
@@ -503,13 +606,50 @@ class ProfileScreen extends StatelessWidget {
     // Vérifier si l'URL commence par /uploads/
     if (url.startsWith('/uploads/')) {
       // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://localhost:4000${url}';
+      return 'http://192.168.1.68:4000${url}';
     } else if (url.startsWith('/')) {
       // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://localhost:4000/uploads/profiles${url}';
+      return 'http://192.168.1.68:4000/uploads/profiles${url}';
     } else {
       // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://localhost:4000/uploads/profiles/${url}';
+      return 'http://192.168.1.68:4000/uploads/profiles/${url}';
     }
+  }
+
+  Widget _buildResidenceIndicator(
+    BuildContext context, {
+    required int count,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 24,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          count.toString(),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
   }
 }

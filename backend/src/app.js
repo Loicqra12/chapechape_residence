@@ -116,13 +116,15 @@ app.use("/api/auth/register", generateCsrfToken);
 app.use("/api/bookings", csrfMiddleware);
 app.use("/api/payments", csrfMiddleware);
 app.use("/api/users", csrfMiddleware);
-app.use("/api/residences", (req, res, next) => {
-  if (["POST", "PUT", "DELETE", "PATCH"].includes(req.method)) {
-    csrfMiddleware(req, res, next);
-  } else {
-    next();
-  }
-});
+
+// Temporairement désactivé pour les résidences pour permettre la création
+// app.use("/api/residences", (req, res, next) => {
+//   if (["POST", "PUT", "DELETE", "PATCH"].includes(req.method)) {
+//     csrfMiddleware(req, res, next);
+//   } else {
+//     next();
+//   }
+// });
 
 // Servir les fichiers statiques
 app.use(

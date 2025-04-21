@@ -3,7 +3,7 @@ import '../../models/reservation/reservation.dart';
 
 class ReservationService {
   final Dio _dio;
-  static const String baseUrl = 'http://192.168.1.77:4000';
+  static const String baseUrl = 'http://localhost:4000';
 
   ReservationService(this._dio);
 
@@ -156,10 +156,11 @@ class ReservationService {
     }
   }
 
-  Future<void> cancelReservation(String id) async {
+  Future<void> cancelReservation(String id, String reason) async {
     try {
       await _dio.post(
         '$baseUrl/api/reservations/$id/cancel',
+        data: {'reason': reason},
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -284,6 +285,52 @@ class ReservationService {
     } catch (e) {
       print("Exception dans getPartnerReservationsDirect: ${e.toString()}");
       return [];
+    }
+  }
+
+  /// Crée une nouvelle réservation
+  Future<Reservation?> createReservation(Map<String, dynamic> reservationData) async {
+    try {
+      final response = await _dio.post(
+        '$baseUrl/api/reservations',
+        data: reservationData,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 201 && response.data != null) {
+        return Reservation.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors de la création de la réservation: ${e.toString()}');
+    }
+  }
+
+  /// Met à jour une réservation existante
+  Future<Reservation?> updateReservation(String id, Map<String, dynamic> reservationData) async {
+    try {
+      final response = await _dio.put(
+        '$baseUrl/api/reservations/$id',
+        data: reservationData,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        return Reservation.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors de la mise à jour de la réservation: ${e.toString()}');
     }
   }
 }

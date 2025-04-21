@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../core/constants/app_assets.dart';
 
 class FooterWidget extends StatelessWidget {
   const FooterWidget({Key? key}) : super(key: key);

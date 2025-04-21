@@ -28,11 +28,14 @@ class ResidenceService {
     FlutterSecureStorage? storage,
   }) : client = client ?? http.Client(),
        storage = storage ?? const FlutterSecureStorage() {
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 3),
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 30), // Augmenté de 5 à 30 secondes
+        receiveTimeout: const Duration(seconds: 30), // Augmenté de 3 à 30 secondes
+        sendTimeout: const Duration(seconds: 30),    // Ajouté explicitement
+      ),
+    );
 
     // Interceptor pour ajouter le token aux requêtes
     _dio.interceptors.add(
@@ -830,7 +833,9 @@ class ResidenceService {
       
       // Traiter la réponse
       print('Réponse du serveur: ${response.statusCode}');
-      print('Corps de la réponse: ${response.body}');
+      if (kDebugMode) {
+        print('Corps de la réponse: ${response.body}');
+      }
       
       if (response.statusCode != 200) {
         final errorResponse = jsonDecode(response.body);
@@ -845,7 +850,11 @@ class ResidenceService {
       print('Exception complète lors de la mise à jour de la résidence: $e');
       if (e is ApiException) rethrow;
       
-      throw ApiException('Erreur lors de la mise à jour de la résidence: $e', 500, {});
+      throw ApiException(
+        'Erreur lors de la mise à jour de la résidence: $e',
+        500,
+        {}
+      );
     }
   }
 
@@ -1073,34 +1082,74 @@ class ResidenceService {
   // Méthode spécifique pour obtenir les résidences d'un partenaire
   Future<List<Residence>> getPartnerResidences() async {
     try {
-      final headers = await _getAuthHeaders();
-      final response = await client.get(
-        Uri.parse('$baseUrl/residences/partner'),
-        headers: headers,
-      );
+      // 1. Essayer d'abord l'endpoint standard
+      try {
+        final headers = await _getAuthHeaders();
+        final response = await client.get(
+          Uri.parse('$baseUrl/residences/partner'),
+          headers: headers,
+        );
 
-      return _handleResponse<List<Residence>>(
-        response,
-        (data) {
-          if (data is Map<String, dynamic> && data.containsKey('data')) {
-            var dataList = data['data'];
-            if (dataList is List) {
-              List<Residence> result = [];
-              for (var item in dataList) {
-                if (item is Map<String, dynamic>) {
-                  result.add(_adaptBackendResidenceToFrontend(item));
+        return _handleResponse<List<Residence>>(
+          response,
+          (data) {
+            if (data is Map<String, dynamic> && data.containsKey('data')) {
+              var dataList = data['data'];
+              if (dataList is List) {
+                List<Residence> result = [];
+                for (var item in dataList) {
+                  if (item is Map<String, dynamic>) {
+                    result.add(_adaptBackendResidenceToFrontend(item));
+                  }
                 }
+                return result;
               }
-              return result;
             }
+            throw ApiException(
+              'Format de données inattendu pour les résidences du partenaire',
+              500,
+              {'error': 'unexpected_data_format'}
+            );
           }
-          throw ApiException(
-            'Format de données inattendu pour les résidences du partenaire',
-            500,
-            {'error': 'unexpected_data_format'}
-          );
-        }
-      );
+        );
+      } catch (e) {
+        // Si la première tentative échoue, essayons une méthode alternative
+        debugPrint('⚠️ Erreur lors de la récupération des résidences via /residences/partner: $e');
+        debugPrint('🔄 Tentative via endpoint alternatif /partners/stats/residences...');
+        
+        // 2. Essayer l'endpoint alternatif
+        final headers = await _getAuthHeaders();
+        final response = await client.get(
+          Uri.parse('$baseUrl/partners/stats/residences'),
+          headers: headers,
+        );
+
+        return _handleResponse<List<Residence>>(
+          response,
+          (data) {
+            if (data is Map<String, dynamic> && data.containsKey('data')) {
+              var dataList = data['data'];
+              if (dataList is List) {
+                List<Residence> result = [];
+                for (var item in dataList) {
+                  if (item is Map<String, dynamic>) {
+                    result.add(_adaptBackendResidenceToFrontend(item));
+                  }
+                }
+                
+                // Log du succès de la récupération via l'endpoint alternatif
+                debugPrint('✅ Récupéré ${result.length} résidences via endpoint alternatif');
+                return result;
+              }
+            }
+            throw ApiException(
+              'Format de données inattendu pour les résidences du partenaire (endpoint alternatif)',
+              500,
+              {'error': 'unexpected_data_format'}
+            );
+          }
+        );
+      }
     } on SocketException {
       throw ApiException(
         'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
@@ -1119,45 +1168,45 @@ class ResidenceService {
   }
 
   List<String> _extractImages(Map<String, dynamic> json) {
-    if (json['images'] == null) return [];
+    List<String> imageUrls = [];
     
-    if (json['images'] is List) {
-      List<String> imageUrls = [];
-      
-      for (var img in json['images']) {
-        String imageUrl = '';
-        
-        if (img is String) {
-          // Cas où l'image est une simple chaîne (URL)
-          imageUrl = img;
-        } else if (img is Map && img['url'] != null) {
-          // Cas où l'image est un objet avec une propriété URL
-          imageUrl = img['url'].toString();
-        }
-        
-        // Ajouter le domaine si c'est un chemin relatif
-        if (imageUrl.isNotEmpty) {
-          if (!imageUrl.startsWith('http')) {
-            if (imageUrl.startsWith('/')) {
-              // baseUrl contient déjà "/api", mais les chemins d'images ne doivent pas l'avoir
-              // Remplacer "http://localhost:4000/api" par "http://localhost:4000" pour les images
-              String serverUrl = baseUrl.replaceAll('/api', '');
-              imageUrl = serverUrl + imageUrl;
-            } else {
-              // Même correction pour les chemins sans slash initial
-              String serverUrl = baseUrl.replaceAll('/api', '');
-              imageUrl = '$serverUrl/$imageUrl';
-            }
+    if (json.containsKey('images') && json['images'] != null) {
+      var images = json['images'];
+      if (images is List) {
+        for (var image in images) {
+          String imageUrl = '';
+          
+          if (image is String) {
+            imageUrl = image;
+          } else if (image is Map) {
+            imageUrl = image['url'] ?? '';
           }
-          print("URL d'image extraite: $imageUrl");
-          imageUrls.add(imageUrl);
+          
+          // Ajouter le domaine si c'est un chemin relatif
+          if (imageUrl.isNotEmpty) {
+            if (!imageUrl.startsWith('http')) {
+              // Supprimer les doubles slashes potentiels
+              while (imageUrl.startsWith('/')) {
+                imageUrl = imageUrl.substring(1);
+              }
+              
+              // Construire l'URL complète
+              String serverUrl = baseUrl.replaceAll('/api', '');
+              // S'assurer que serverUrl se termine par un slash
+              if (!serverUrl.endsWith('/')) {
+                serverUrl = '$serverUrl/';
+              }
+              
+              imageUrl = '$serverUrl$imageUrl';
+            }
+            print("URL d'image extraite: $imageUrl");
+            imageUrls.add(imageUrl);
+          }
         }
       }
-      
-      return imageUrls;
     }
     
-    return [];
+    return imageUrls;
   }
 
   // Méthode pour extraire les informations du partenaire de manière robuste

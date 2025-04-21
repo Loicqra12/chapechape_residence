@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/locale/locale_cubit.dart';
@@ -20,23 +21,35 @@ import 'package:chapechape_client/core/services/user_service.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:chapechape_client/core/services/notification_service.dart';
 import 'package:chapechape_client/core/services/favorite_service.dart';
+import 'package:chapechape_client/core/services/currency_service.dart';
+import 'package:chapechape_client/core/services/exchange_rate_service.dart';
 import 'package:chapechape_client/core/services/booking_service.dart';
+import 'package:chapechape_client/core/services/payment_service.dart';
+import 'package:chapechape_client/core/services/type_sync_service.dart';
 import 'package:chapechape_client/core/repositories/notification_repository.dart';
 import 'package:chapechape_client/core/repositories/favorite_repository.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui' as ui;
 import 'package:chapechape_client/core/config/app_config.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/router/app_router.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
-import 'package:chapechape_client/core/services/payment_service.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_bloc.dart';
+import 'core/service_locator.dart';
 
-Future<void> main() async {
+void main() async {
+  // Assurer que les liaisons Flutter sont initialisées
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialiser les configurations
   await AppConfig.initialize();
+  debugPrint('✅ Configuration de l\'application initialisée avec succès');
+  
+  // Configurer le service locator (GetIt)
+  await setupServiceLocator();
+  debugPrint('✅ Service locator initialisé avec succès');
+  
+  // Initialiser les services
+  await _initializeServices();
   
   // Initialiser Hive
   await Hive.initFlutter();
@@ -44,9 +57,7 @@ Future<void> main() async {
   await Hive.openBox('cache');
 
   // Initialiser le service de cache
-  final cacheService = await CacheService.initialize(
-    defaultCacheDuration: const Duration(minutes: 10),
-  );
+  await CacheService.initialize();
   debugPrint('✅ Service de cache initialisé avec succès');
 
   // Initialiser tous les services et repositories
@@ -59,6 +70,7 @@ Future<void> main() async {
   final residenceService = await ResidenceService.initialize();
   final bookingService = await BookingService.initialize();
   final paymentService = await PaymentService.initialize();
+  final typeSyncService = await TypeSyncService.initialize();
 
   // Initialiser le router avec les services nécessaires
   await AppRouter.initialize(
@@ -71,7 +83,7 @@ Future<void> main() async {
       providers: [
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc(
-      authService: authService,
+            authService: authService,
           )..add(AuthCheckRequested()),
         ),
         BlocProvider<LocaleCubit>(
@@ -83,11 +95,12 @@ Future<void> main() async {
           create: (context) => ResidenceBloc(
             residenceService: residenceService,
             favoriteService: favoriteRepository.favoriteService,
+            typeSyncService: typeSyncService,
           ),
         ),
         BlocProvider<ChatBloc>(
           create: (context) => ChatBloc(
-      chatService: chatService,
+            chatService: chatService,
           ),
         ),
         BlocProvider<UserBloc>(
@@ -97,12 +110,12 @@ Future<void> main() async {
         ),
         BlocProvider<NotificationBloc>(
           create: (context) => NotificationBloc(
-      notificationRepository: notificationRepository,
+            notificationRepository: notificationRepository,
           ),
         ),
         BlocProvider<FavoriteBloc>(
           create: (context) => FavoriteBloc(
-      favoriteRepository: favoriteRepository,
+            favoriteRepository: favoriteRepository,
           ),
         ),
         BlocProvider<BookingBloc>(
@@ -118,28 +131,69 @@ Future<void> main() async {
       ],
       child: BlocBuilder<LocaleCubit, LocaleState>(
         builder: (context, localeState) {
-          return MaterialApp.router(
-            title: AppConfig.appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.system,
-            locale: localeState?.locale ?? const Locale('fr'),
-            routerConfig: AppRouter.router,
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('fr', ''),
-              Locale('en', ''),
-            ],
+          return FlutterEasyLoading(
+            child: MaterialApp.router(
+              title: AppConfig.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeMode.system,
+              locale: localeState?.locale ?? const Locale('fr'),
+              routerConfig: AppRouter.router,
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('fr', ''),
+                Locale('en', ''),
+              ],
+              builder: EasyLoading.init(), // Initialiser EasyLoading
+            ),
           );
         }
       ),
     ),
   );
+  
+  // Configurer EasyLoading avec un style moderne
+  _configureEasyLoading();
+}
+
+/// Initialise tous les services nécessaires au démarrage de l'application
+Future<void> _initializeServices() async {
+  try {
+    // Initialiser le service de taux de change
+    final exchangeService = ExchangeRateService();
+    await exchangeService.initialize();
+    
+    // Initialiser le service de devises
+    final currencyService = CurrencyService();
+    await currencyService.initialize();
+    
+    print('Services de devises initialisés avec succès');
+  } catch (e) {
+    print('Erreur lors de l\'initialisation des services de devises: $e');
+  }
+}
+
+/// Configure l'apparence et le comportement de Flutter EasyLoading
+void _configureEasyLoading() {
+  EasyLoading.instance
+    ..displayDuration = const Duration(milliseconds: 2000)
+    ..indicatorType = EasyLoadingIndicatorType.fadingCircle
+    ..loadingStyle = EasyLoadingStyle.custom
+    ..indicatorSize = 45.0
+    ..radius = 10.0
+    ..progressColor = const Color(0xFFFFD700) // Gold
+    ..backgroundColor = Colors.white
+    ..indicatorColor = const Color(0xFFFFD700) // Gold
+    ..textColor = Colors.black
+    ..maskColor = Colors.black.withOpacity(0.5)
+    ..userInteractions = false
+    ..dismissOnTap = false
+    ..toastPosition = EasyLoadingToastPosition.bottom;
 }
 
 // Classe pour regrouper tous les services
@@ -150,6 +204,7 @@ class AppServices {
   final FavoriteRepository favoriteRepository;
   final UserService userService;
   final ResidenceService residenceService;
+  final TypeSyncService typeSyncService;
 
   const AppServices({
     required this.authService,
@@ -158,6 +213,7 @@ class AppServices {
     required this.favoriteRepository,
     required this.userService,
     required this.residenceService,
+    required this.typeSyncService,
   });
 }
 
@@ -187,6 +243,7 @@ class MyApp extends StatelessWidget {
           create: (context) => ResidenceBloc(
             residenceService: services.residenceService,
             favoriteService: services.favoriteRepository.favoriteService,
+            typeSyncService: services.typeSyncService,
           ),
         ),
         BlocProvider<ChatBloc>(

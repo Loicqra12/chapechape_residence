@@ -8,6 +8,8 @@ import 'package:chapechape_client/presentation/screens/auth/login_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/register_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/chat_conversation_screen.dart';
+import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment_methods_screen.dart';
 import '../core/models/chat_model.dart';
 import '../core/services/chat_service.dart';
 import '../core/services/api_service.dart';
@@ -20,6 +22,10 @@ import 'package:chapechape_client/presentation/screens/booking/booking_modify_sc
 import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart' as payment;
 import 'package:chapechape_client/presentation/screens/payment/payment_redirect_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_success_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings/temperature_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings/display_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings/about_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
 
 class AppRouter {
   static late final ApiService _apiService;
@@ -192,19 +198,102 @@ class AppRouter {
                 return const SizedBox();
               }
             },
-          ),
-          GoRoute(
-            path: '/settings',
-            name: 'settings',
-            builder: (context, state) {
-              // Vérifier l'authentification pour les paramètres
-              if (_isAuthenticated(context)) {
-                return const SettingsScreen();
-              } else {
-                _redirectToLogin(context);
-                return const SizedBox();
-              }
-            },
+            routes: [
+              GoRoute(
+                path: 'settings',
+                name: 'settings',
+                builder: (context, state) {
+                  // Vérifier l'authentification pour les paramètres
+                  if (_isAuthenticated(context)) {
+                    return const SettingsScreen();
+                  } else {
+                    _redirectToLogin(context);
+                    return const SizedBox();
+                  }
+                },
+                routes: [
+                  GoRoute(
+                    path: 'temperature',
+                    name: 'temperature',
+                    builder: (context, state) {
+                      if (_isAuthenticated(context)) {
+                        return const TemperatureScreen();
+                      } else {
+                        _redirectToLogin(context);
+                        return const SizedBox();
+                      }
+                    },
+                  ),
+                  GoRoute(
+                    path: 'display',
+                    name: 'display',
+                    builder: (context, state) {
+                      if (_isAuthenticated(context)) {
+                        return const DisplayScreen();
+                      } else {
+                        _redirectToLogin(context);
+                        return const SizedBox();
+                      }
+                    },
+                  ),
+                  GoRoute(
+                    path: 'about',
+                    name: 'about',
+                    builder: (context, state) {
+                      if (_isAuthenticated(context)) {
+                        return const AboutScreen();
+                      } else {
+                        _redirectToLogin(context);
+                        return const SizedBox();
+                      }
+                    },
+                  ),
+                  GoRoute(
+                    path: 'storage',
+                    name: 'storage',
+                    builder: (context, state) {
+                      if (_isAuthenticated(context)) {
+                        return const StorageScreen();
+                      } else {
+                        _redirectToLogin(context);
+                        return const SizedBox();
+                      }
+                    },
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'wallet',
+                name: 'wallet',
+                builder: (context, state) {
+                  // Vérifier l'authentification pour le portefeuille
+                  if (_isAuthenticated(context)) {
+                    return const WalletScreen();
+                  } else {
+                    _redirectToLogin(context);
+                    return const SizedBox();
+                  }
+                },
+              ),
+              GoRoute(
+                path: 'payment-methods',
+                name: 'payment_methods',
+                builder: (context, state) {
+                  // Vérifier l'authentification pour les moyens de paiement
+                  if (_isAuthenticated(context)) {
+                    return const PaymentMethodsScreen();
+                  } else {
+                    _redirectToLogin(context);
+                    return const SizedBox();
+                  }
+                },
+              ),
+              GoRoute(
+                path: 'help',
+                name: 'help',
+                builder: (context, state) => const HelpSupportScreen(), // Accessible à tous
+              ),
+            ],
           ),
           GoRoute(
             path: '/bookings',
@@ -220,11 +309,6 @@ class AppRouter {
               residenceId: state.pathParameters['residenceId']!,
               );
             },
-          ),
-          GoRoute(
-            path: '/help',
-            name: 'help',
-            builder: (context, state) => const HelpSupportScreen(), // Accessible à tous
           ),
           GoRoute(
             path: '/faq',

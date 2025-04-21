@@ -3,6 +3,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:chapechape_partner/core/blocs/auth/auth_bloc.dart';
+import 'package:chapechape_partner/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_partner/core/services/api/auth_service.dart';
 import 'package:chapechape_partner/core/models/partner/partner_model.dart';
 

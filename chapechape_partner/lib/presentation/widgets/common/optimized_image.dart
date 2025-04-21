@@ -59,14 +59,25 @@ class OptimizedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug: afficher l'URL
+    print('OptimizedImage: URL reçue = $imageUrl');
+    
     if (imageUrl.isEmpty) {
+      print('OptimizedImage: URL vide, affichage de l\'image par défaut');
       return _buildEmptyImage();
     }
+    
+    // Ajouter un paramètre aléatoire à l'URL pour éviter le cache
+    final String urlWithCacheBuster = imageUrl.contains('?') 
+        ? '$imageUrl&cache=${DateTime.now().millisecondsSinceEpoch}' 
+        : '$imageUrl?cache=${DateTime.now().millisecondsSinceEpoch}';
+    
+    print('OptimizedImage: URL modifiée avec cache buster = $urlWithCacheBuster');
     
     return ClipRRect(
       borderRadius: borderRadius ?? BorderRadius.zero,
       child: CachedNetworkImage(
-        imageUrl: imageUrl,
+        imageUrl: urlWithCacheBuster,
         width: width,
         height: height,
         fit: fit,
@@ -75,8 +86,23 @@ class OptimizedImage extends StatelessWidget {
         placeholderFadeInDuration: const Duration(milliseconds: 300),
         memCacheWidth: width?.toInt(),
         memCacheHeight: height?.toInt(),
+        // Désactiver complètement le cache
+        maxHeightDiskCache: 0,
+        maxWidthDiskCache: 0,
+        // Forcer un rechargement en désactivant le cache HTTP
+        cacheManager: null,
+        useOldImageOnUrlChange: false,
         placeholder: (context, url) => _buildLoadingWidget(),
-        errorWidget: (context, url, error) => _buildErrorWidget(),
+        errorWidget: (context, url, error) {
+          print('OptimizedImage: ERREUR chargement de $url - Erreur: $error');
+          return _buildErrorWidget();
+        },
+        httpHeaders: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'If-Modified-Since': DateTime.now().toUtc().toString(),
+        },
       ),
     );
   }

@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart';
+part of 'residence_bloc.dart';
 
 abstract class ResidenceEvent extends Equatable {
   const ResidenceEvent();
@@ -7,15 +7,26 @@ abstract class ResidenceEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadResidences extends ResidenceEvent {
-  final Map<String, dynamic>? filters;
+class LoadResidencesEvent extends ResidenceEvent {
+  final bool forceRefresh;
+
+  const LoadResidencesEvent({this.forceRefresh = false});
+
+  @override
+  List<Object?> get props => [forceRefresh];
+}
+
+class LoadMoreResidencesEvent extends ResidenceEvent {}
+
+class SearchResidencesEvent extends ResidenceEvent {
+  final Map<String, dynamic> filters;
   final int page;
   final int limit;
 
-  const LoadResidences({
-    this.filters,
+  const SearchResidencesEvent({
+    required this.filters,
     this.page = 1,
-    this.limit = 10,
+    this.limit = 20,
   });
 
   @override
@@ -31,54 +42,31 @@ class LoadResidenceDetails extends ResidenceEvent {
   List<Object?> get props => [residenceId];
 }
 
-class SearchResidences extends ResidenceEvent {
-  final String? query;
-  final String? city;
-  final double? minPrice;
-  final double? maxPrice;
-  final int? bedrooms;
-  final int? bathrooms;
-  final List<String>? amenities;
-  final DateTime? checkIn;
-  final DateTime? checkOut;
-
-  const SearchResidences({
-    this.query,
-    this.city,
-    this.minPrice,
-    this.maxPrice,
-    this.bedrooms,
-    this.bathrooms,
-    this.amenities,
-    this.checkIn,
-    this.checkOut,
-  });
-
-  @override
-  List<Object?> get props => [
-        query,
-        city,
-        minPrice,
-        maxPrice,
-        bedrooms,
-        bathrooms,
-        amenities,
-        checkIn,
-        checkOut,
-      ];
-}
-
 class ToggleFavorite extends ResidenceEvent {
   final String residenceId;
-  final bool isFavorite;
 
-  const ToggleFavorite({
-    required this.residenceId,
-    required this.isFavorite,
-  });
+  const ToggleFavorite({required this.residenceId});
 
   @override
-  List<Object?> get props => [residenceId, isFavorite];
+  List<Object?> get props => [residenceId];
+}
+
+class AddToFavorites extends ResidenceEvent {
+  final String residenceId;
+
+  const AddToFavorites({required this.residenceId});
+
+  @override
+  List<Object?> get props => [residenceId];
+}
+
+class RemoveFromFavorites extends ResidenceEvent {
+  final String residenceId;
+
+  const RemoveFromFavorites({required this.residenceId});
+
+  @override
+  List<Object?> get props => [residenceId];
 }
 
 class LoadFavoriteResidences extends ResidenceEvent {
@@ -98,4 +86,78 @@ class CheckResidenceAvailability extends ResidenceEvent {
 
   @override
   List<Object?> get props => [residenceId, checkIn, checkOut];
+}
+
+class LoadResidencesByType extends ResidenceEvent {
+  final String type;
+  
+  const LoadResidencesByType(this.type);
+  
+  @override
+  List<Object?> get props => [type];
+}
+
+class LoadFeaturedResidences extends ResidenceEvent {
+  const LoadFeaturedResidences();
+}
+
+class LoadSpecialResidences extends ResidenceEvent {
+  const LoadSpecialResidences();
+}
+
+class LoadPopularResidences extends ResidenceEvent {
+  const LoadPopularResidences();
+}
+
+class SearchResidences extends ResidenceEvent {
+  final String query;
+  final Map<String, dynamic>? filters;
+  
+  const SearchResidences({
+    required this.query,
+    this.filters,
+  });
+  
+  @override
+  List<Object?> get props => [query, filters];
+}
+
+class FilterResidences extends ResidenceEvent {
+  final Map<String, dynamic> filters;
+  
+  const FilterResidences({
+    required this.filters,
+  });
+  
+  @override
+  List<Object?> get props => [filters];
+}
+
+class FilterResidencesByTypeEvent extends ResidenceEvent {
+  final ResidenceType type;
+  final String? categoryLabel;
+
+  const FilterResidencesByTypeEvent(this.type, {this.categoryLabel});
+
+  @override
+  List<Object?> get props => [type, categoryLabel];
+}
+
+class ClearFiltersEvent extends ResidenceEvent {}
+
+class RefreshResidencesEvent extends ResidenceEvent {}
+
+class LoadResidences extends ResidenceEvent {
+  final Map<String, dynamic>? filters;
+  final int page;
+  final int limit;
+
+  const LoadResidences({
+    this.filters,
+    this.page = 1,
+    this.limit = 10,
+  });
+
+  @override
+  List<Object?> get props => [filters, page, limit];
 }

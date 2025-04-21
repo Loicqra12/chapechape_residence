@@ -36,9 +36,9 @@ class AppConfigManager {
         case Environment.development:
           _config = {
             'appName': 'ChapeChape Partner (Dev)',
-            'apiUrl': 'http://192.168.1.77:4000/api',
-            'apiBaseUrl': 'http://192.168.1.77:4000',
-            'wsUrl': 'ws://192.168.1.77:4000/ws',
+            'apiUrl': 'http://192.168.1.68:4000/api',
+            'apiBaseUrl': 'http://192.168.1.68:4000',
+            'wsUrl': 'ws://192.168.1.68:4000/ws',
             'apiVersion': 'v1',
             'apiTimeout': 30000,
             'wsReconnectInterval': 5000,
@@ -80,9 +80,9 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Partner (Fallback)',
-        'apiUrl': 'http://192.168.1.77:4000/api',
-        'apiBaseUrl': 'http://192.168.1.77:4000',
-        'wsUrl': 'ws://192.168.1.77:4000/ws',
+        'apiUrl': 'http://192.168.1.68:4000/api',
+        'apiBaseUrl': 'http://192.168.1.68:4000',
+        'wsUrl': 'ws://192.168.1.68:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -92,16 +92,16 @@ class AppConfigManager {
     }
   }
 
-  // Accesseurs de la configuration
-  static String get appName => _config['appName'] as String;
-  static String get apiUrl => _config['apiUrl'] as String;
-  static String get apiBaseUrl => _config['apiBaseUrl'] as String;
-  static String get wsUrl => _config['wsUrl'] as String;
-  static String get apiVersion => _config['apiVersion'] as String;
-  static int get apiTimeout => _config['apiTimeout'] as int;
-  static int get wsReconnectInterval => _config['wsReconnectInterval'] as int;
-  static String get appVersion => _config['appVersion'] as String;
-  static String get environment => _config['environment'] as String;
+  // Accesseurs de la configuration avec sécurité pour null
+  static String get appName => _config['appName'] as String? ?? 'ChapeChape Partner';
+  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.68:4000/api';
+  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.68:4000';
+  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.68:4000/ws';
+  static String get apiVersion => _config['apiVersion'] as String? ?? 'v1';
+  static int get apiTimeout => _config['apiTimeout'] as int? ?? 30000;
+  static int get wsReconnectInterval => _config['wsReconnectInterval'] as int? ?? 5000;
+  static String get appVersion => _config['appVersion'] as String? ?? '1.0.0';
+  static String get environment => _config['environment'] as String? ?? 'development';
 
   // Méthode utilitaire pour obtenir l'URL complète d'un endpoint
   static String getApiEndpoint(String path) {
@@ -119,7 +119,7 @@ class AppConfigManager {
   
   // Méthode utilitaire pour obtenir l'URL complète d'une ressource média (image, etc.)
   static String getMediaUrl(String path) {
-    final mediaBaseUrl = _config['mediaBaseUrl'] ?? 'https://api.chapechape.com/media';
+    final mediaBaseUrl = _config['mediaBaseUrl'] ?? apiBaseUrl + '/media';
     
     // Nettoie le chemin d'accès pour éviter les doubles slashes
     final cleanPath = path.startsWith('/') ? path.substring(1) : path;

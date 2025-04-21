@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/blocs/residence/residence_state.dart';
-import '../../core/blocs/residence/residence_event.dart';
 import '../../core/models/residence_model.dart';
+import '../../core/utils/residence_adapters.dart';
 import 'residence_card_alias.dart';
 import 'shimmer_residence_card.dart';
-import '../../core/theme/app_theme.dart';
 
 class NewListingsWidget extends StatefulWidget {
   const NewListingsWidget({super.key});
@@ -57,8 +55,15 @@ class _NewListingsWidgetState extends State<NewListingsWidget> {
         if (state is ResidenceLoading) {
           return _buildShimmerLoading();
         } else if (state is ResidencesLoaded) {
-          // Filtrer pour obtenir les nouvelles résidences
-          final newResidences = state.residences.where((residence) => residence.isNewListing).take(5).toList();
+          // Filtrer pour obtenir les nouvelles résidences (moins de 15 jours)
+          final now = DateTime.now();
+          final newResidences = state.residences.where((residence) {
+            // Vérifier si la résidence a été créée il y a moins de 15 jours
+            if (residence.createdAt != null) {
+              return now.difference(residence.createdAt!).inDays <= 15;
+            }
+            return false;
+          }).take(5).toList();
           
           if (newResidences.isEmpty) {
             return _buildMockNewResidences(context);
@@ -118,11 +123,13 @@ class _NewListingsWidgetState extends State<NewListingsWidget> {
                   residence: residence,
                   onTap: () => context.go('/residence/${residence.id}'),
                   onFavoritePressed: () {
+                    final isFav = residence.priceDetails != null && 
+                              residence.priceDetails!.containsKey('isFavorite') ? 
+                              residence.priceDetails!['isFavorite'] == true : false;
                     context.read<ResidenceBloc>().add(
-                      ToggleFavorite(
-                        residenceId: residence.id,
-                        isFavorite: !residence.isFavorite,
-                      ),
+                      !isFav
+                        ? AddToFavorites(residenceId: residence.id)
+                        : RemoveFromFavorites(residenceId: residence.id),
                     );
                   },
                 ),
@@ -188,31 +195,31 @@ class _NewListingsWidgetState extends State<NewListingsWidget> {
   }
 
   Widget _buildMockNewResidences(BuildContext context) {
-    // Utiliser des résidences de test
+    // Utiliser des résidences de test avec ResidenceAdapters
     final mockResidences = List.generate(
       4,
-      (index) => Residence(
+      (index) => ResidenceAdapters.createResidence(
         id: 'mock_new_$index',
-        name: 'Nouvelle Résidence ${index + 1}',
-        description: 'Une nouvelle résidence disponible à la location',
+        title: 'Nouvelle Résidence ${index + 1}',
         price: 15000 + (index * 5000),
+        imageUrl: 'assets/images/residences/apartments/seen-hotel-abidjan-plateau.jpg',
         address: 'Adresse de test ${index + 1}',
         city: 'Abidjan',
         country: 'Côte d\'Ivoire',
-        images: ['assets/images/residences/apartments/seen-hotel-abidjan-plateau.jpg'],
         bedrooms: index == 0 ? 0 : 1,  // Studio ou 1 chambre
         bathrooms: 1,
-        surface: 25 + (index * 10),
+        squareMeters: (25 + (index * 10)).toDouble(),
+        hasPool: false,
+        hasWifi: true,
         isAvailable: true,
-        createdAt: DateTime.now().subtract(Duration(days: index + 1)),  // Résidence créée récemment
-        location: {
-          'displayAddress': 'Cocody, Abidjan',
-          'city': 'Abidjan',
-          'coordinates': [5.359952, -4.008256],
-        },
-        amenities: ['wifi', 'parking'],
-        type: ResidenceType.studio,
+        type: 'studio',
         rating: 0.0,  // Pas encore de notation
+        reviewCount: 0,
+        isVacationResidence: false,
+        isSpecialResidence: false,
+        isFeatured: false,
+        isPopular: index < 2,
+        isNew: true,  // Marquer comme nouvelle résidence
       ),
     );
 

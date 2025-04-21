@@ -7,7 +7,6 @@ import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart';
 import 'package:chapechape_client/presentation/widgets/modification_history_widget.dart';
-import 'package:chapechape_client/presentation/widgets/cancellation_policy_widget.dart';
 import 'package:chapechape_client/presentation/widgets/booking_cancellation_dialog.dart';
 import 'package:chapechape_client/config/theme.dart';
 import 'package:intl/intl.dart';
@@ -147,12 +146,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   const SizedBox(height: 24),
 
                   // Politique d'annulation
-                  if (policy != null)
-                    CancellationPolicyDetailsWidget(
-                      policy: policy,
-                      checkInDate: booking.checkIn,
-                      totalPrice: booking.totalPrice,
-                    ),
+                  CancellationPolicyDetailsWidget(
+                    policy: policy,
+                    checkInDate: booking.checkIn,
+                    totalPrice: booking.totalPrice,
+                  ),
 
                   const SizedBox(height: 24),
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_assets.dart';
 import './carousel_widget.dart';
 
 class PartnerLogosWidget extends StatelessWidget {
@@ -7,7 +6,16 @@ class PartnerLogosWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logoWidgets = PartnerAssets.logos.map((logo) {
+    // Utiliser une liste locale de logos partenaires en attendant la définition de PartnerAssets
+    final partnerLogos = [
+      'assets/images/partners/partner1.png',
+      'assets/images/partners/partner2.png',
+      'assets/images/partners/partner3.png',
+      'assets/images/partners/partner4.png',
+      'assets/images/partners/partner5.png',
+    ];
+    
+    final logoWidgets = partnerLogos.map((logo) {
       return Container(
         width: 120,
         margin: const EdgeInsets.symmetric(horizontal: 8.0),

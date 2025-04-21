@@ -13,6 +13,7 @@ import '../presentation/screens/main/main_screen.dart';
 import '../presentation/screens/onboarding/onboarding_screen.dart';
 import '../presentation/screens/residences/edit_residence_screen.dart';
 import '../presentation/screens/residences/residence_details_screen.dart';
+import '../presentation/screens/residences/residences_screen.dart';
 import '../presentation/screens/reservations/reservation_details_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
 import '../presentation/screens/settings/settings_screen.dart';
@@ -22,7 +23,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AppRouter {
   final AuthBloc authBloc;
-  final _prefs = SharedPreferences.getInstance();
 
   AppRouter(this.authBloc) {
     // Essayer de restaurer la session lors des hot reloads
@@ -90,6 +90,10 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: '/residences',
+        builder: (context, state) => const ResidencesScreen(),
+      ),
+      GoRoute(
         path: '/reservations/:id',
         builder: (context, state) {
           final reservationId = state.pathParameters['id'] ?? '';
@@ -133,7 +137,7 @@ class AppRouter {
       }
 
       // Vérifier si l'onboarding a déjà été vu
-      final prefs = await _prefs;
+      final prefs = await SharedPreferences.getInstance();
       final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
       // Si authentifié, rediriger vers main sauf si déjà sur main

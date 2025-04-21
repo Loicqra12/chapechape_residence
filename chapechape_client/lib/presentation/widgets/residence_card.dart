@@ -1,34 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/models/residence_model_alias.dart';
+import 'package:intl/intl.dart';
+
+// Import des modèles
 import '../../core/models/residence_model.dart';
+
+// Import des blocs
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
-import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/blocs/residence/residence_event.dart';
+import '../../core/blocs/residence/residence_bloc.dart'; // Contient déjà l'export de residence_event.dart
 
 class ResidenceCard extends StatelessWidget {
-  final ResidenceModel residence;
-  final VoidCallback? onFavoritePressed;
+  final Residence residence;
+  final double? width;
+  final bool showSpecialBadge;
   final VoidCallback? onTap;
+  final VoidCallback? onFavoritePressed;
   final bool showBeachBadge;
   final bool showMountainBadge;
 
   const ResidenceCard({
-    super.key,
+    Key? key,
     required this.residence,
-    this.onFavoritePressed,
+    this.width,
+    this.showSpecialBadge = false,
     this.onTap,
+    this.onFavoritePressed,
     this.showBeachBadge = false,
     this.showMountainBadge = false,
-  });
+  }) : super(key: key);
 
   static const Color goldColor = Color(0xFFFFD700);
   static const Color darkGold = Color(0xFFCCAC00);
   static const Color blackColor = Color(0xFF1A1A1A);
+  
+  // Utilitaire de formatage de devise
+  String _formatCurrency(double value) {
+    return NumberFormat.currency(
+      symbol: 'FCFA',
+      decimalDigits: 0,
+      locale: 'fr_FR',
+    ).format(value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,370 +53,281 @@ class ResidenceCard extends StatelessWidget {
     );
 
     // Logique pour déterminer un nom de résidence approprié
-    String displayName = residence.name.trim();
+    String displayName = residence.title.trim();
     if (displayName.isEmpty || displayName.length < 5) {
       displayName = "Résidence Premium ${residence.id.substring(0, 4)}";
     }
 
     // Logique pour l'adresse par défaut
     String displayAddress = "Adresse non disponible";
-    if (residence.location.displayAddress.isNotEmpty && 
-        residence.location.displayAddress != "Adresse non disponible") {
-      displayAddress = residence.location.displayAddress;
+    if (residence.location.containsKey('address') && 
+        residence.location['address'] != null &&
+        residence.location['address'].toString().isNotEmpty) {
+      displayAddress = residence.location['address'].toString();
+    } else if (residence.location.containsKey('city') && 
+               residence.location['city'] != null &&
+               residence.location['city'].toString().isNotEmpty) {
+      displayAddress = residence.location['city'].toString();
+    } else if (residence.location.containsKey('formattedAddress')) {
+      displayAddress = residence.location['formattedAddress'].toString();
     }
 
-    return Container(
-      width: 280,
-      constraints: const BoxConstraints(
-        minWidth: 280,
-        maxWidth: 280,
-        minHeight: 300,
-      ),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 3,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: InkWell(
-          onTap: () {
-            final authState = context.read<AuthBloc>().state;
-            if (authState is Authenticated) {
-              if (onTap != null) {
-                onTap!();
-              }
-            } else {
-              // Afficher une boîte de dialogue pour inciter à s'authentifier
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text('Authentification requise'),
-                    content: const Text(
-                      'Connectez-vous ou créez un compte pour voir les détails de cette résidence.',
-                    ),
-                    actions: <Widget>[
-                      TextButton(
-                        child: const Text('Annuler'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      TextButton(
-                        child: const Text('Se connecter'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          context.go('/login');
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            }
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: 160,
-                  maxHeight: 160,
+    return GestureDetector(
+      onTap: () {
+        final authState = context.read<AuthBloc>().state;
+        if (authState is Authenticated) {
+          if (onTap != null) {
+            onTap!();
+          }
+        } else {
+          // Afficher une boîte de dialogue pour inciter à s'authentifier
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Authentification requise'),
+                content: const Text(
+                  'Connectez-vous ou créez un compte pour voir les détails de cette résidence.',
                 ),
-                child: Stack(
-                  children: [
-                    // Image principale
-                    Container(
-                      height: 160,
-                      width: double.infinity,
-                      child: _buildResidenceImage(),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('Annuler'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Se connecter'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.go('/login');
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      },
+      child: Container(
+        width: width,
+        constraints: const BoxConstraints(
+          minWidth: 280,
+          maxWidth: 280,
+          minHeight: 300,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                // Image de la résidence
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    topRight: Radius.circular(15),
+                  ),
+                  child: Image.network(
+                    residence.images.isNotEmpty
+                        ? residence.images.first
+                        : 'https://via.placeholder.com/300x200/CCCCCC/808080?text=Pas+d%27image',
+                    width: double.infinity,
+                    height: 150,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/images/placeholders/no_image.jpg',
+                        width: double.infinity,
+                        height: 150,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  ),
+                ),
+                
+                // Badge prix
+                Positioned(
+                  bottom: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      borderRadius: BorderRadius.circular(15),
                     ),
-
-                    // Badge de disponibilité
-                    if (residence.status == 'available')
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                    child: Text(
+                      '${_formatCurrency(residence.price)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Badge hébergement spécial
+                if (showSpecialBadge && residence.isSpecialResidence)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.orangeAccent,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.star,
+                            color: Colors.white,
+                            size: 14,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: const Text(
-                            'Disponible',
+                          SizedBox(width: 4),
+                          Text(
+                            'Spécial',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
                               fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                
+                // Bouton favori
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: GestureDetector(
+                    onTap: onFavoritePressed,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        residence.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: residence.isFavorite ? Colors.red : Colors.grey,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        color: Colors.grey,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          displayAddress,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    
-                    // Badge de type (Vacances, Plage, Montagne)
-                    if (residence.isVacationResidence || showBeachBadge || showMountainBadge)
-                      Positioned(
-                        bottom: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: residence.isVacationResidence 
-                                ? const Color(0xFF3F51B5) 
-                                : showBeachBadge 
-                                    ? const Color(0xFF00BCD4)
-                                    : const Color(0xFF795548),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          _buildFeature(Icons.king_bed, '${residence.bedrooms}'),
+                          const SizedBox(width: 15),
+                          _buildFeature(Icons.bathtub, '${residence.bathrooms}'),
+                          const SizedBox(width: 15),
+                          _buildFeature(Icons.square_foot, '${residence.squareMeters.toInt()} m²'),
+                        ],
+                      ),
+                      if (residence.rating > 0)
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              residence.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                            ],
-                          ),
-                          child: Text(
-                            residence.isVacationResidence 
-                                ? 'Vacances'
-                                : showBeachBadge 
-                                    ? 'Plage'
-                                    : 'Montagne',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Badge de favoris
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: IconButton(
-                          icon: Icon(
-                            residence.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: residence.isFavorite ? Colors.red : Colors.grey,
-                            size: 20,
-                          ),
-                          onPressed: onFavoritePressed ?? () {},
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
-
-              // Informations de la résidence
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Titre de la résidence
-                    Text(
-                      displayName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    
-                    // Adresse
-                    Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            displayAddress,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    // Caractéristiques (lits, salles de bain)
-                    Row(
-                      children: [
-                        Icon(Icons.bed_outlined, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          residence.bedrooms > 0 
-                              ? "${residence.bedrooms} chambre${residence.bedrooms > 1 ? 's' : ''}" 
-                              : "Studio",
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.bathtub_outlined, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          residence.bathrooms > 0 
-                              ? "${residence.bathrooms} SDB" 
-                              : "1 SDB",
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    // Prix
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            currencyFormat.format(residence.price),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (residence.rating != null)
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: goldColor,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                residence.rating!.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildResidenceImage() {
-    // Vérifier si des images sont disponibles dans la liste
-    if (residence.images.isEmpty) {
-      return _buildPlaceholderImage();
-    }
-
-    // Prendre la première image de la liste
-    final String imageUrl = residence.images.first;
-
-    // Si l'URL est vide ou null, afficher l'image par défaut
-    if (imageUrl.isEmpty) {
-      return _buildPlaceholderImage();
-    }
-
-    // Si l'URL commence par 'assets/', c'est un asset local
-    if (imageUrl.startsWith('assets/')) {
-      try {
-        return Image.asset(
-          imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            debugPrint("Erreur de chargement d'asset: $error pour $imageUrl");
-            return _buildPlaceholderImage();
-          },
-        );
-      } catch (e) {
-        debugPrint("Exception lors du chargement d'asset: $e");
-        return _buildPlaceholderImage();
-      }
-    }
-    
-    // Si l'URL commence par 'http', c'est une image distante
-    if (imageUrl.startsWith('http')) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint("Erreur de chargement réseau: $error pour $imageUrl");
-          return _buildPlaceholderImage();
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            color: Colors.grey[200],
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        },
-      );
-    }
-
-    // Si l'URL n'est ni un asset ni une URL HTTP, afficher l'image par défaut
-    return _buildPlaceholderImage();
-  }
-
-  Widget _buildPlaceholderImage() {
-    return Container(
-      color: Colors.grey[200],
-      child: Center(
-        child: Icon(
-          Icons.home,
-          size: 60,
-          color: Colors.grey[400],
+  Widget _buildFeature(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: Colors.grey,
+          size: 16,
         ),
-      ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+      ],
     );
   }
 }

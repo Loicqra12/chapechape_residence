@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
 import '../../../core/blocs/sync/sync_bloc.dart';
 import '../../widgets/sync/sync_status_widget.dart';
 

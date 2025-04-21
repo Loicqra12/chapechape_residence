@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_partner/core/constants/app_icons.dart';
 import 'package:chapechape_partner/core/blocs/auth/auth_bloc.dart';
+import 'package:chapechape_partner/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_partner/core/blocs/dashboard/dashboard_bloc.dart';
 import 'package:chapechape_partner/core/blocs/residence/residence_bloc.dart';
 import 'package:chapechape_partner/core/blocs/message/message_bloc.dart';

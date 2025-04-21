@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/loading_overlay.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/blocs/residence/residence_state.dart';
 import '../../core/models/residence_model.dart';
 import '../../config/theme.dart';
 

@@ -55,11 +55,43 @@ const isFutureDate = (date) => {
 };
 
 // Fonction pour formater le prix
-const formatPrice = (price, currency = 'EUR') => {
-    return new Intl.NumberFormat('fr-FR', {
+const formatPrice = (price, currency = 'FCFA') => {
+    const locale = currency === 'USD' ? 'en-US' : 'fr-FR';
+    
+    // Ajuster les décimales selon la devise
+    let decimalPlaces = 0;
+    if (currency !== 'FCFA') {
+        decimalPlaces = 2;
+    }
+    
+    return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency
+        currency,
+        minimumFractionDigits: decimalPlaces,
+        maximumFractionDigits: decimalPlaces
     }).format(price);
+};
+
+// Conversion de prix entre différentes devises
+const convertPrice = (amount, fromCurrency, toCurrency) => {
+    // Table de conversion (devrait idéalement venir d'une API)
+    const rates = {
+        'EUR': 1.0,      // Base: Euro
+        'FCFA': 655.957, // 1 EUR = 655.957 FCFA (taux fixe)
+        'USD': 1.09,     // Exemple: 1 EUR = 1.09 USD
+        'GBP': 0.85,     // Exemple: 1 EUR = 0.85 GBP
+    };
+    
+    // Si les devises sont identiques ou non supportées
+    if (fromCurrency === toCurrency ||
+        !rates[fromCurrency] ||
+        !rates[toCurrency]) {
+        return amount;
+    }
+    
+    // Convertir par rapport à l'euro
+    const amountInEUR = amount / rates[fromCurrency];
+    return amountInEUR * rates[toCurrency];
 };
 
 // Fonction pour générer un slug
@@ -119,6 +151,7 @@ module.exports = {
     formatError,
     isFutureDate,
     formatPrice,
+    convertPrice,
     generateSlug,
     truncateText,
     isValidPhoneNumber,

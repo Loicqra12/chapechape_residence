@@ -6,6 +6,7 @@ import '../../config/app_config.dart';
 import './interceptors/auth_interceptor.dart';
 import '../../utils/error_handler.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/auth/auth_event.dart';
 import 'dart:async';
 
 class ApiService {
@@ -60,7 +61,7 @@ class ApiService {
             } else {
               // Échec du rafraîchissement, déconnexion
               if (authBloc != null) {
-                authBloc!.add(AuthLogoutRequested());
+                authBloc?.add(AuthLogoutRequested());
               }
             }
           } else {
@@ -104,7 +105,7 @@ class ApiService {
               } else {
                 // Si le rafraîchissement a échoué, déconnexion
                 if (authBloc != null) {
-                  authBloc!.add(AuthLogoutRequested());
+                  authBloc?.add(AuthLogoutRequested());
                 }
               }
             } else {

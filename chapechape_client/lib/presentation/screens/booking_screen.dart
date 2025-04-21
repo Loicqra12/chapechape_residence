@@ -6,10 +6,7 @@ import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart' as booking_events;
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as booking_states;
 import 'package:chapechape_client/core/blocs/residence/residence_bloc.dart';
-import 'package:chapechape_client/core/blocs/residence/residence_event.dart' as residence_events;
-import 'package:chapechape_client/core/blocs/residence/residence_state.dart' as residence_states;
 import 'package:chapechape_client/core/models/residence_model.dart';
-import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/extensions/model_extensions.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/config/theme.dart';
@@ -49,7 +46,7 @@ class _BookingScreenState extends State<BookingScreen> {
     
     // Charger les détails de la résidence
     context.read<ResidenceBloc>().add(
-      residence_events.LoadResidenceDetails(residenceId: widget.residenceId)
+      LoadResidenceDetails(residenceId: widget.residenceId)
     );
     
     // Initialiser les dates par défaut
@@ -144,14 +141,14 @@ class _BookingScreenState extends State<BookingScreen> {
     final residenceState = context.watch<ResidenceBloc>().state;
     
     return bookingState is booking_states.BookingLoading || 
-           residenceState is residence_states.ResidenceLoading;
+           residenceState is ResidenceLoading;
   }
   
   // Construire les informations sur la résidence
   Widget _buildResidenceInfo() {
-    return BlocBuilder<ResidenceBloc, residence_states.ResidenceState>(
+    return BlocBuilder<ResidenceBloc, ResidenceState>(
       builder: (context, state) {
-        if (state is residence_states.ResidenceDetailsLoaded) {
+        if (state is ResidenceDetailsLoaded) {
           _residence = state.residence;
           
           // Mettre à jour le prix estimé

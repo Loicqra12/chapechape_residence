@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/config/api_config.dart';
+import 'core/config/app_config_manager.dart';
+import 'core/config/environment.dart';
 import 'core/services/api/api_service.dart';
 import 'core/services/api/auth_service.dart';
 import 'core/services/api/residence_service.dart';
@@ -30,10 +32,18 @@ import 'core/services/sync_service.dart';
 import 'package:logging/logging.dart';
 import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
 import 'core/services/notification/twilio_service.dart';
+import 'core/services/currency_service.dart';
+import 'core/blocs/auth/auth_event.dart';
+import 'core/services/api/payment_service.dart';
+import 'core/services/api/help_service.dart';
+import 'core/blocs/payment/payment_bloc.dart';
+import 'core/blocs/help/help_bloc.dart';
+import 'core/blocs/theme/theme_bloc.dart';
+import 'core/blocs/settings/settings_bloc.dart';
 // Temporairement désactivé pour résoudre les problèmes de build
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Configurer le système de logging
@@ -52,6 +62,8 @@ void main() async {
   // Services
   final storage = const FlutterSecureStorage();
   final apiConfig = ApiConfig.development();
+  
+  await AppConfigManager.initialize(environment: Environment.development);
   
   // Ajouter des logs pour le token d'authentification
   storage.read(key: 'token').then((token) {
@@ -119,6 +131,12 @@ void main() async {
   final eventBus = event_bus.ResidenceEventBus();
   debugPrint('🔔 Bus d\'événements pour les résidences initialisé');
   
+  // Initialiser le service de devises
+  final currencyService = CurrencyService();
+  await currencyService.initialize();
+  
+  print('Services de devises initialisés avec succès');
+  
   runApp(
     MultiProvider(
       providers: [
@@ -151,6 +169,10 @@ void main() async {
         Provider<event_bus.ResidenceEventBus>(
           create: (_) => eventBus,
         ),
+        Provider<ResidenceService>(
+          create: (_) => residenceService,
+          lazy: false, // Charger immédiatement pour éviter les problèmes de chargement paresseux
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -182,6 +204,24 @@ void main() async {
             create: (context) => NotificationBloc(
               repository: context.read<NotificationRepository>(),
             )..add(const LoadNotifications(page: 1)),
+          ),
+          // Ajouter le PaymentBloc
+          BlocProvider<PaymentBloc>(
+            create: (context) => PaymentBloc(
+              paymentService: PaymentService(dio),
+            ),
+          ),
+          // Ajouter le HelpBloc
+          BlocProvider<HelpBloc>(
+            create: (context) => HelpBloc(
+              helpService: HelpService(dio),
+            ),
+          ),
+          BlocProvider<ThemeBloc>(
+            create: (context) => ThemeBloc(),
+          ),
+          BlocProvider<SettingsBloc>(
+            create: (context) => SettingsBloc(),
           ),
         ],
         child: MaterialApp.router(
@@ -238,4 +278,19 @@ String _getLogLevelEmoji(Level level) {
   if (level == Level.FINE) return '🔍'; // Détail fin
   if (level == Level.FINER || level == Level.FINEST) return '🔬'; // Détail très fin
   return '��'; // Par défaut
+}
+
+/// Initialise tous les services nécessaires au démarrage de l'application
+Future<void> _initializeServices() async {
+  try {
+    // Initialiser le service de devises
+    final currencyService = CurrencyService();
+    await currencyService.initialize();
+    
+    print('Services de devises initialisés avec succès');
+    
+    // ... autres initialisations de services ...
+  } catch (e) {
+    print('Erreur lors de l\'initialisation des services: $e');
+  }
 }

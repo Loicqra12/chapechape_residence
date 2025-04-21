@@ -62,7 +62,7 @@ class Amenity {
       ),
       Amenity(
         name: 'Meublé',
-        icon: AppAssets.iconFurnished,
+        icon: AppAssets.iconKitchen,
         description: 'Entièrement équipé et meublé',
       ),
     ];

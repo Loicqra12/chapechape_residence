@@ -49,13 +49,6 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
     super.dispose();
   }
 
-  void _handleDateRangeSelected(DateTimeRange range) {
-    setState(() {
-      _checkIn = range.start;
-      _checkOut = range.end;
-    });
-  }
-
   String? _validateModification() {
     final now = DateTime.now();
     
@@ -224,14 +217,13 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
                       start: _checkIn,
                       end: _checkOut,
                     ),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                    minimumNights: 1,
-                    onDateRangeSelected: (DateTimeRange range) {
-                      setState(() {
-                        _checkIn = range.start;
-                        _checkOut = range.end;
-                      });
+                    onDateRangeSelected: (dateRange) {
+                      if (dateRange != null) {
+                        setState(() {
+                          _checkIn = dateRange.start;
+                          _checkOut = dateRange.end;
+                        });
+                      }
                     },
                   ),
                   const SizedBox(height: 24),

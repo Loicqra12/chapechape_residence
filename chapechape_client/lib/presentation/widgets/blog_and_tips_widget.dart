@@ -29,7 +29,6 @@ class BlogAndTipsWidget extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      constraints: const BoxConstraints(maxWidth: double.infinity),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -67,7 +66,7 @@ class BlogAndTipsWidget extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 320,
+            height: 300,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: articles.length,
@@ -84,7 +83,7 @@ class BlogAndTipsWidget extends StatelessWidget {
 
   Widget _buildBlogCard(BuildContext context, dynamic post) {
     return Container(
-      width: 280,
+      width: 260,
       margin: const EdgeInsets.only(right: 16),
       child: Card(
         elevation: 3,
@@ -95,7 +94,6 @@ class BlogAndTipsWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Image
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
@@ -103,88 +101,87 @@ class BlogAndTipsWidget extends StatelessWidget {
               ),
               child: _buildBlogImage(post),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+            Container(
+              padding: const EdgeInsets.all(16),
+              constraints: const BoxConstraints(maxHeight: 140),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD700).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          post['category']!,
+                          style: const TextStyle(
+                            color: Color(0xFFFFD700),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFD700).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            post['category']!,
-                            style: const TextStyle(
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        post['readTime']!,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    post['title']!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        // TODO: Naviguer vers l'article
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Lire l\'article',
+                            style: TextStyle(
                               color: Color(0xFFFFD700),
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          post['readTime']!,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward,
+                            color: Color(0xFFFFD700),
+                            size: 16,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      post['title']!,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton(
-                        onPressed: () {
-                          // TODO: Naviguer vers l'article
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Lire l\'article',
-                              style: TextStyle(
-                                color: Color(0xFFFFD700),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward,
-                              color: Color(0xFFFFD700),
-                              size: 16,
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

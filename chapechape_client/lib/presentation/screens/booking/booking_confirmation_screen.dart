@@ -173,6 +173,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       );
     }
     
+    // Utiliser une variable locale pour éviter les accès répétés avec non-null assertion
+    final booking = _booking!;
     final dateFormat = DateFormat('dd/MM/yyyy');
     
     return Card(
@@ -187,20 +189,20 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            _buildDetailRow('Résidence', _booking!.residenceName ?? 'Non spécifiée'),
-            _buildDetailRow('Date d\'arrivée', dateFormat.format(_booking!.checkIn)),
-            _buildDetailRow('Date de départ', dateFormat.format(_booking!.checkOut)),
-            _buildDetailRow('Nombre de nuits', '${_booking!.nights}'),
-            _buildDetailRow('Nombre de personnes', '${_booking!.numberOfGuests}'),
-            _buildDetailRow('Statut', _getStatusText(_booking!.status)),
-            _buildDetailRow('Prix total', '${_booking!.totalPrice.toStringAsFixed(0)} FCFA'),
+            _buildDetailRow('Résidence', booking.residenceName),
+            _buildDetailRow('Date d\'arrivée', dateFormat.format(booking.checkIn)),
+            _buildDetailRow('Date de départ', dateFormat.format(booking.checkOut)),
+            _buildDetailRow('Nombre de nuits', '${booking.nights}'),
+            _buildDetailRow('Nombre de personnes', '${booking.numberOfGuests}'),
+            _buildDetailRow('Statut', _getStatusText(booking.status)),
+            _buildDetailRow('Prix total', '${booking.totalPrice.toStringAsFixed(0)} FCFA'),
             const SizedBox(height: 8),
             Text(
               'Détails de paiement',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const Divider(),
-            _buildDetailRow('Statut du paiement', _getPaymentStatusText(_booking!.isPaid)),
+            _buildDetailRow('Statut du paiement', _getPaymentStatusText(booking.isPaid)),
           ],
         ),
       ),

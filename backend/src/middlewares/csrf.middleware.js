@@ -6,7 +6,8 @@
 const csrf = require("csurf");
 const ApiError = require("../utils/apiError");
 const errorCodes = require("../utils/errorCodes");
-const { logger } = require("../utils/logger");
+// Commenté temporairement car il pourrait ne pas être correctement initialisé
+// const { logger } = require("../utils/logger");
 
 // Configuration de base de csurf
 const csrfProtection = csrf({
@@ -37,7 +38,8 @@ const csrfMiddleware = (req, res, next) => {
 
   csrfProtection(req, res, (err) => {
     if (err) {
-      logger.warn(
+      // Utiliser console.warn au lieu de logger.warn pour éviter l'erreur
+      console.warn(
         `CSRF Attack Detected: ${req.ip} - ${req.method} ${req.path}`,
         {
           headers: req.headers,

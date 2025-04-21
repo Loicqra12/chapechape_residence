@@ -14,7 +14,7 @@ class HeroWidget extends StatelessWidget {
       height: context.screenHeight * 0.6,
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: const AssetImage(AppAssets.heroBg),
+          image: AssetImage(AppAssets.heroBg),
           fit: BoxFit.cover,
           colorFilter: ColorFilter.mode(
             Colors.black.withOpacity(0.5),

@@ -4,16 +4,15 @@ import 'package:go_router/go_router.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/blocs/residence/residence_state.dart';
-import '../../core/blocs/residence/residence_event.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_assets.dart';
 import '../widgets/amenities_widget.dart';
 import 'package:intl/intl.dart';
 import '../screens/booking_screen.dart';  // Import de BookingScreen pour la navigation directe
-import '../../core/services/api_service.dart';
 import '../../core/blocs/booking/booking_bloc.dart';
 import '../../core/services/booking_service.dart';
+import '../../core/utils/formatters.dart';
+import '../../core/services/currency_service.dart';
+import '../widgets/currency_selector_widget.dart';
 
 class ResidenceDetailsScreen extends StatefulWidget {
   final String residenceId;
@@ -101,7 +100,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                                 context.read<ResidenceBloc>().add(
                                   ToggleFavorite(
                                     residenceId: residence.id,
-                                    isFavorite: !residence.isFavorite,
                                   ),
                                 );
                               } else {
@@ -151,20 +149,79 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                                 ),
                               ),
                             ),
-                            Text(
-                              NumberFormat.currency(
-                                symbol: 'FCFA ',
-                                decimalDigits: 0,
-                                locale: 'fr_FR',
-                              ).format(residence.price),
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryColor,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  residence.formattedPrice,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Ajouter un bouton pour changer la devise
+                                GestureDetector(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      builder: (context) => CurrencySelectorBottomSheet(
+                                        onCurrencyChanged: (newCurrency) {
+                                          // Forcer la mise à jour de l'UI
+                                          setState(() {});
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  child: const Icon(Icons.currency_exchange, size: 20),
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                        
+                        // Si un prix avec remise existe, ajouter:
+                        if (residence.hasDiscount)
+                          Row(
+                            children: [
+                              Text(
+                                residence.formattedDiscountPrice,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                residence.formattedPrice,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  residence.discountBadge,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         
                         // Adresse
                         const SizedBox(height: 8),
@@ -257,7 +314,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                             : const Text('Aucun équipement spécifié'),
                         
                         // Règles
-                        if (residence.rules.isNotEmpty) ...[
+                        if (residence.rules != null && residence.rules!.isNotEmpty) ...[
                           const SizedBox(height: 24),
                           const Text(
                             'Règles',
@@ -267,7 +324,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          ...residence.rules.map((rule) => Padding(
+                          ...?residence.rules?.map((rule) => Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,6 +336,44 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                             ),
                           )),
                         ],
+                        
+                        // Si nécessaire, ajouter des champs pour afficher le prix dans différentes devises
+                        FutureBuilder<String>(
+                          future: () async {
+                            final currencyService = CurrencyService();
+                            await currencyService.initialize();
+                            
+                            // Afficher le prix dans EUR si la devise actuelle n'est pas déjà EUR
+                            if (currencyService.currentCurrency != 'EUR' && residence.currency != 'EUR') {
+                              return residence.getFormattedPriceIn('EUR');
+                            }
+                            
+                            // Afficher le prix dans USD si la devise actuelle n'est pas déjà USD
+                            if (currencyService.currentCurrency != 'USD' && residence.currency != 'USD') {
+                              return residence.getFormattedPriceIn('USD');
+                            }
+                            
+                            return '';
+                          }(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.done && 
+                                snapshot.hasData && 
+                                snapshot.data!.isNotEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Soit environ ${snapshot.data}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
                         
                         const SizedBox(height: 100), // Espace pour le bouton flottant
                       ],

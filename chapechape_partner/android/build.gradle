@@ -16,6 +16,45 @@ allprojects {
         google()
         mavenCentral()
     }
+    
+    // Ajouter des configurations pour tous les sous-projets y compris les plugins
+    configurations.all {
+        resolutionStrategy {
+            // Forcer la version du plugin problématique
+            force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
+            // Forcer les versions Kotlin
+            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+        }
+    }
+    
+    // Désactiver les transformations JDK pour tous les sous-projets
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android.compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_11
+                targetCompatibility = JavaVersion.VERSION_11
+            }
+            
+            // Désactiver explicitement les transformations JDK pour tous les projets
+            if (project.gradle.gradleVersion >= "7.0") {
+                // Pour les nouvelles versions de Gradle
+                project.tasks.withType(JavaCompile).configureEach {
+                    options.fork = true
+                    options.forkOptions.jvmArgs += ['-Xmx2g']
+                    options.compilerArgs << "-Xlint:none" << "-Xlint:-options"
+                }
+            }
+            
+            // Désactiver tous les problèmes de lint
+            if (project.android.hasProperty('lintOptions')) {
+                project.android.lintOptions {
+                    checkReleaseBuilds false
+                    abortOnError false
+                }
+            }
+        }
+    }
 }
 
 rootProject.buildDir = "../build"

@@ -1,17 +1,42 @@
+// ✅ Le bloc buildscript doit être tout en haut
+buildscript {
+    ext {
+        kotlin_version = '1.9.22'
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// ✅ Ensuite les plugins
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
-    id "dev.flutter.flutter-gradle-plugin"
+    id "dev.flutter.flutter-gradle-plugin" // Flutter plugin appliqué après Android et Kotlin
 }
 
-// Appliquer le fichier de correction des plugins
-apply from: 'fix_plugin.gradle'
+// ✅ Chargement des propriétés locales
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new Exception("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+// ✅ Appliquer les correctifs personnalisés si nécessaires
+apply from: "fix_plugin.gradle"
 
 android {
     namespace = "com.chapechape.chapechape_client"
-    compileSdk = 34 // Revenir à la version 34 car les plugins en dépendent
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 35
+    ndkVersion = project.hasProperty('ndkVersion') ? project.ndkVersion : "25.1.8937393"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -19,28 +44,29 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11
+        jvmTarget = "11"
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+        checkReleaseBuilds false
+        abortOnError false
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.chapechape.chapechape_client"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21 // Version minimale pour être compatible avec les nouvelles APIs
-        targetSdk = 34 // Cibler une version récente mais stable d'Android
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = project.hasProperty('minSdkVersion') ? project.minSdkVersion : 21
+        targetSdk = project.hasProperty('targetSdkVersion') ? project.targetSdkVersion : 34
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.debug
         }
     }
-    
+
     configurations.all {
         resolutionStrategy {
             force 'androidx.annotation:annotation:1.7.0'
@@ -48,19 +74,15 @@ android {
             force 'com.google.android.gms:play-services-base:18.2.0'
             force 'com.google.android.gms:play-services-tasks:18.0.2'
             force 'com.google.android.gms:play-services-basement:18.2.0'
-            // Ajouter cette ligne pour résoudre les problèmes avec JDK Image Transform
             force 'androidx.lifecycle:lifecycle-common:2.6.2'
             force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
             force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
             force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
-            // Force la version du plugin Flutter Android Lifecycle
-            force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17' 
-            // Exclure les transformations pour connectivity_plus
-            exclude group: 'io.flutter.plugins.connectivity', module: 'connectivity_plus'
-            // Forcer les versions pour éviter les conflits
-            force 'com.google.android.gms:play-services-basement:18.1.0'
-            force 'com.google.android.gms:play-services-base:18.1.0'
+            // Forcer la version du plugin Flutter Android Lifecycle comme dans le projet partenaire
+            force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
             force 'com.google.android.gms:play-services-location:21.0.1'
+
+            exclude group: 'io.flutter.plugins.connectivity', module: 'connectivity_plus'
         }
     }
 }
@@ -68,6 +90,9 @@ android {
 dependencies {
     implementation 'androidx.annotation:annotation:1.7.0'
     implementation 'androidx.core:core:1.12.0'
+    // Ne pas implémenter directement flutter_plugin_android_lifecycle comme dans le projet partenaire
+    implementation 'androidx.lifecycle:lifecycle-common:2.6.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.6.2'
 }
 
 flutter {

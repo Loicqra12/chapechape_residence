@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Structure pour stocker une entrée de cache avec sa date d'expiration
 class CacheEntry {
@@ -27,136 +26,189 @@ class CacheEntry {
 /// Service de mise en cache des réponses API pour améliorer la performance
 /// et la résilience aux problèmes de connectivité.
 class CacheService {
-  static const String _boxName = 'api_cache';
-  late final Box<String> _cacheBox;
+  static SharedPreferences? _prefs;
+  static const String _cachePrefix = 'api_cache_';
+  static const String _timestampPrefix = 'api_timestamp_';
+  static const String _authTokenKey = 'auth_token';
+  
   static CacheService? _instance;
 
-  // Durée par défaut de la mise en cache (5 minutes)
-  final Duration defaultCacheDuration;
-
-  // Constructeur privé
-  CacheService._({this.defaultCacheDuration = const Duration(minutes: 5)});
-
-  /// Initialiser et récupérer l'instance singleton du service de cache
-  static Future<CacheService> initialize({
-    Duration defaultCacheDuration = const Duration(minutes: 5),
-  }) async {
-    if (_instance != null) return _instance!;
-
-    final instance = CacheService._(defaultCacheDuration: defaultCacheDuration);
-    await instance._initialize();
-    _instance = instance;
-    return instance;
+  /// Obtenir l'instance singleton de CacheService
+  static CacheService getInstance() {
+    _instance ??= CacheService();
+    return _instance!;
+  }
+  
+  static Future<void> initialize() async {
+    _prefs = await SharedPreferences.getInstance();
   }
 
-  /// Initialiser la boîte Hive pour le stockage du cache
-  Future<void> _initialize() async {
-    try {
-      _cacheBox = await Hive.openBox<String>(_boxName);
-      debugPrint('Cache service initialized successfully');
-    } catch (e) {
-      debugPrint('Error initializing cache service: $e');
-      // En cas d'erreur d'ouverture, on tente de supprimer et recréer la boîte
-      try {
-        await Hive.deleteBoxFromDisk(_boxName);
-        _cacheBox = await Hive.openBox<String>(_boxName);
-        debugPrint('Cache box recreated successfully after error');
-      } catch (e) {
-        debugPrint('Fatal error initializing cache box: $e');
-        rethrow;
-      }
+  /// Vérifie si le service est initialisé
+  bool get isInitialized => _prefs != null;
+
+  /// Initialise le service si ce n'est pas déjà fait
+  Future<void> ensureInitialized() async {
+    if (_prefs == null) {
+      await initialize();
     }
   }
 
-  /// Récupérer une valeur du cache.
-  /// Si la valeur n'existe pas ou est expirée, utilise la fonction fetcher pour la récupérer.
-  Future<T> get<T>(
+  /// Vérifie si l'utilisateur est authentifié
+  Future<bool> isAuthenticated() async {
+    await ensureInitialized();
+    if (_prefs == null) return false;
+    
+    final token = _prefs!.getString(_authTokenKey);
+    return token != null && token.isNotEmpty;
+  }
+
+  /// Enregistre une réponse en cache
+  Future<bool> put(String key, dynamic data, {int? expiryInMinutes}) async {
+    await ensureInitialized();
+    if (_prefs == null) return false;
+    
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final jsonData = json.encode(data);
+    
+    await _prefs!.setString('$_cachePrefix$key', jsonData);
+    await _prefs!.setInt('$_timestampPrefix$key', timestamp);
+    
+    if (expiryInMinutes != null) {
+      await _prefs!.setInt('${_timestampPrefix}expiry_$key', expiryInMinutes);
+    }
+    
+    return true;
+  }
+
+  /// Récupère une réponse du cache
+  Future<dynamic> get(String key, {bool checkExpiry = true}) async {
+    await ensureInitialized();
+    if (_prefs == null) return null;
+    
+    final jsonData = _prefs!.getString('$_cachePrefix$key');
+    if (jsonData == null) return null;
+    
+    if (checkExpiry && await isExpired(key)) {
+      return null;
+    }
+    
+    return json.decode(jsonData);
+  }
+
+  /// Pour compatibilité avec l'ancienne API
+  Future<T> getWithFetcher<T>(
     String key,
     Future<T> Function() fetcher, {
     Duration? duration,
     bool forceRefresh = false,
   }) async {
-    // Utiliser la durée spécifiée ou la durée par défaut
-    final cacheDuration = duration ?? defaultCacheDuration;
-    final cacheKey = _generateCacheKey(key);
+    await ensureInitialized();
+    
+    // Utiliser l'API simple pour vérifier si on a une valeur en cache
+    final cachedData = await get(key);
+    
+    // Si on a des données en cache et qu'on ne force pas le refresh
+    if (cachedData != null && !forceRefresh) {
+      return cachedData as T;
+    }
+    
+    // Sinon, on récupère les données via le fetcher
+      final data = await fetcher();
+      
+    // On met en cache avec la durée spécifiée
+    int? expiryInMinutes;
+    if (duration != null) {
+      expiryInMinutes = duration.inMinutes;
+    }
+    
+    await put(key, data, expiryInMinutes: expiryInMinutes);
+      
+      return data;
+  }
 
-    // Si le forceRefresh est activé, on ignore le cache
-    if (!forceRefresh) {
-      // Vérifier si la clé existe dans le cache
-      final cachedValue = _cacheBox.get(cacheKey);
-      if (cachedValue != null) {
-        try {
-          // Décoder la valeur du cache
-          final cacheEntry = CacheEntry.fromJson(jsonDecode(cachedValue));
-          
-          // Vérifier si la valeur n'est pas expirée
-          if (!cacheEntry.isExpired) {
-            debugPrint('Cache hit for key: $key');
-            return cacheEntry.data as T;
-          }
-          debugPrint('Cache expired for key: $key');
-        } catch (e) {
-          debugPrint('Error decoding cache for key $key: $e');
-          // Supprimer l'entrée invalide
-          await _cacheBox.delete(cacheKey);
+  /// Vérifie si une entrée de cache a expiré
+  Future<bool> isExpired(String key) async {
+    await ensureInitialized();
+    if (_prefs == null) return true;
+    
+    final timestamp = _prefs!.getInt('$_timestampPrefix$key');
+    final expiryMinutes = _prefs!.getInt('${_timestampPrefix}expiry_$key');
+    
+    if (timestamp == null || expiryMinutes == null) return false;
+    
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final expiryTime = timestamp + (expiryMinutes * 60 * 1000);
+    
+    return now > expiryTime;
+  }
+
+  /// Supprime une entrée du cache
+  Future<bool> remove(String key) async {
+    await ensureInitialized();
+    if (_prefs == null) return false;
+    
+    await _prefs!.remove('$_cachePrefix$key');
+    await _prefs!.remove('$_timestampPrefix$key');
+    await _prefs!.remove('${_timestampPrefix}expiry_$key');
+    return true;
+  }
+
+  /// Vide tout le cache
+  Future<bool> clear() async {
+    await ensureInitialized();
+    if (_prefs == null) return false;
+    
+    final keys = _prefs!.getKeys();
+    for (final key in keys) {
+      if (key.startsWith(_cachePrefix) || key.startsWith(_timestampPrefix)) {
+        await _prefs!.remove(key);
+      }
+    }
+    return true;
+  }
+  
+  /// Calcule la taille approximative du cache en octets
+  Future<int> getCacheSize() async {
+    await ensureInitialized();
+    if (_prefs == null) return 0;
+    
+    int totalSize = 0;
+    final keys = _prefs!.getKeys();
+    
+    for (final key in keys) {
+      if (key.startsWith(_cachePrefix)) {
+        final value = _prefs!.getString(key);
+        if (value != null) {
+          totalSize += key.length * 2; // Approximation pour les caractères UTF-16
+          totalSize += value.length * 2;
         }
       }
     }
-
-    // Cache miss ou forceRefresh, récupérer les données via fetcher
-    debugPrint('Cache miss for key: $key, fetching fresh data');
-    try {
-      final data = await fetcher();
-      
-      // Sauvegarder dans le cache avec la durée spécifiée
-      final cacheEntry = CacheEntry(
-        data: data,
-        expiryTime: DateTime.now().add(cacheDuration),
-      );
-
-      // Sérialiser et stocker l'entrée
-      await _cacheBox.put(cacheKey, jsonEncode(cacheEntry.toJson()));
-      
-      return data;
-    } catch (e) {
-      debugPrint('Error fetching data for key $key: $e');
-      rethrow;
-    }
-  }
-
-  /// Générer une clé de cache unique pour une clé donnée
-  String _generateCacheKey(String key) {
-    // Normaliser la clé pour éviter les doublons
-    return key.trim().toLowerCase();
-  }
-
-  /// Invalider une entrée spécifique du cache
-  Future<void> invalidate(String key) async {
-    final cacheKey = _generateCacheKey(key);
-    await _cacheBox.delete(cacheKey);
-    debugPrint('Cache invalidated for key: $key');
-  }
-
-  /// Invalider toutes les entrées du cache
-  Future<void> invalidateAll() async {
-    await _cacheBox.clear();
-    debugPrint('All cache entries invalidated');
-  }
-
-  /// Invalider toutes les entrées qui correspondent à un préfixe
-  Future<void> invalidateByPrefix(String prefix) async {
-    final normalizedPrefix = prefix.trim().toLowerCase();
     
-    // Récupérer toutes les clés qui commencent par le préfixe
-    final keysToDelete = _cacheBox.keys
-        .where((key) => (key as String).startsWith(normalizedPrefix))
-        .toList();
+    return totalSize;
+  }
+  
+  /// Méthode alternative pour vider le cache (alias pour clear)
+  Future<bool> clearCache() async {
+    return await clear();
+  }
+  
+  /// Invalide toutes les entrées qui correspondent à un préfixe
+  Future<bool> invalidateByPrefix(String prefix) async {
+    await ensureInitialized();
+    if (_prefs == null) return false;
     
-    // Supprimer chaque clé
-    for (final key in keysToDelete) {
-      await _cacheBox.delete(key);
+    final keys = _prefs!.getKeys();
+    int count = 0;
+    
+    for (final key in keys) {
+      if (key.startsWith('$_cachePrefix$prefix')) {
+        final cacheKey = key.substring(_cachePrefix.length);
+        await remove(cacheKey);
+        count++;
+      }
     }
     
-    debugPrint('Invalidated ${keysToDelete.length} cache entries with prefix: $prefix');
+    return count > 0;
   }
 } 

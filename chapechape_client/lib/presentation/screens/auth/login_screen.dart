@@ -165,40 +165,49 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: Checkbox(
-                                  value: _rememberMe,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _rememberMe = value ?? false;
-                                    });
-                                  },
-                                  activeColor: AppTheme.primaryColor,
+                          Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: Checkbox(
+                                    value: _rememberMe,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _rememberMe = value ?? false;
+                                      });
+                                    },
+                                    activeColor: AppTheme.primaryColor,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('Se souvenir de moi'),
-                            ],
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              // Naviguer vers la page de récupération de mot de passe
-                              context.go('/forgot-password');
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                              minimumSize: const Size(0, 36),
+                                const SizedBox(width: 8),
+                                const Flexible(
+                                  child: Text(
+                                    'Se souvenir de moi',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: Text(
-                              'Mot de passe oublié?',
-                              style: TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.bold,
+                          ),
+                          Flexible(
+                            child: TextButton(
+                              onPressed: () {
+                                // Naviguer vers la page de récupération de mot de passe
+                                context.go('/forgot-password');
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                minimumSize: const Size(0, 36),
+                              ),
+                              child: Text(
+                                'Mot de passe oublié?',
+                                style: TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),

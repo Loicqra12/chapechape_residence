@@ -196,7 +196,10 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     Emitter<ReservationState> emit,
   ) async {
     try {
-      await _reservationService.cancelReservation(event.reservationId);
+      await _reservationService.cancelReservation(
+        event.reservationId,
+        'Annulée depuis l\'application partenaire'
+      );
       
       // Recharger selon l'état actuel
       final currentState = state;

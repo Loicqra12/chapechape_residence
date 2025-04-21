@@ -33,6 +33,11 @@ class SyncService {
   final int _syncIntervalMinutes = 15; // Intervalle de synchronisation en minutes
   DateTime? _lastSyncTime;
   
+  // Suivi des opérations de synchronisation
+  final Map<String, _SyncOperation> _pendingOperations = {};
+  final Map<String, int> _failedOperationAttempts = {};
+  static const int _maxSyncAttempts = 5;
+  
   // Écouteur de changement de connectivité
   StreamSubscription<NetworkStatus>? _connectivitySubscription;
   
@@ -136,9 +141,9 @@ class SyncService {
       // D'abord synchroniser les opérations en attente
       await syncPendingOperations();
       
-      // Puis charger les nouvelles données du serveur
-      await syncResidences();
-      await syncReservations();
+      // Puis synchroniser bidirectionnellement les données
+      await _bidirectionalSyncResidences();
+      await _bidirectionalSyncReservations();
       if (_messageService != null) {
         await syncMessages();
       }
@@ -154,72 +159,152 @@ class SyncService {
     }
   }
   
-  /// Synchronise les résidences avec le serveur
-  Future<void> syncResidences() async {
+  /// Synchronise les résidences bidirectionnellement
+  Future<void> _bidirectionalSyncResidences() async {
     if (!_connectivityService.isOnline) {
       _logger.warning('Appareil hors-ligne, impossible de synchroniser les résidences');
       return;
     }
     
     try {
-      _logger.info('Synchronisation des résidences...');
-      _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'residences', message: 'Synchronisation des résidences'));
+      _logger.info('Synchronisation bidirectionnelle des résidences...');
+      _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'residences', message: 'Synchronisation bidirectionnelle des résidences'));
       
-      // Récupérer les résidences du serveur
-      final residences = await _residenceService.getMyResidences();
+      // 1. Envoyer d'abord les modifications locales au serveur
+      final locallyModifiedResidences = await _cacheService.getLocallyModifiedResidences();
       
-      // Récupérer les résidences du cache
+      if (locallyModifiedResidences.isNotEmpty) {
+        _logger.info('Envoi de ${locallyModifiedResidences.length} résidences modifiées localement vers le serveur');
+        
+        for (var residence in locallyModifiedResidences) {
+          try {
+            final id = residence['id'] ?? residence['_id'];
+            if (id == null) continue;
+            
+            // Déterminer le type d'opération selon les flags
+            if (residence['isDeleted'] == true) {
+              // Supprimer la résidence sur le serveur
+              await _residenceService.deleteResidence(id.toString());
+              _logger.info('Résidence supprimée sur le serveur: $id');
+            } else if (residence['isNew'] == true) {
+              // Créer la résidence sur le serveur
+              await _residenceService.createResidence(
+                residence, 
+                residence['images'] ?? []
+              );
+              _logger.info('Nouvelle résidence créée sur le serveur: $id');
+            } else {
+              // Mettre à jour la résidence sur le serveur
+              await _residenceService.updateResidence(
+                id.toString(), 
+                residence,
+                residence['images'] ?? []
+              );
+              _logger.info('Résidence mise à jour sur le serveur: $id');
+            }
+            
+            // Marquer comme synchronisée
+            await _cacheService.markResidenceAsSynced(id.toString());
+          } catch (e) {
+            _logger.warning('Erreur lors de la synchronisation de la résidence vers le serveur: $e');
+            // Continuer avec les autres résidences
+          }
+        }
+      }
+      
+      // 2. Récupérer les résidences du serveur
+      final serverResidences = await _residenceService.getMyResidences();
+      
+      // 3. Récupérer toutes les résidences du cache (y compris celles qu'on vient de synchroniser)
       final cachedResidences = await _cacheService.getCachedResidences();
       
-      // Vérifier les conflits et les résoudre
+      // 4. Résoudre les conflits
       final resolvedResidences = await SyncConflictResolver.resolveResidenceConflicts(
         cachedResidences, 
-        residences
+        serverResidences,
+        preferServer: true
       );
       
-      // Mettre à jour le cache local avec les données résolues
+      // 5. Mettre à jour le cache local avec les données résolues
       await _cacheService.cacheResidences(resolvedResidences);
       
-      _logger.info('Résidences synchronisées avec succès (${resolvedResidences.length} résidences)');
+      _logger.info('Résidences synchronisées bidirectionnellement (${resolvedResidences.length} résidences)');
       _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'residences', message: '${resolvedResidences.length} résidences synchronisées'));
     } catch (e) {
-      _logger.severe('Erreur lors de la synchronisation des résidences: $e');
+      _logger.severe('Erreur lors de la synchronisation bidirectionnelle des résidences: $e');
       _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'residences', message: 'Erreur: $e', isError: true));
       // Ne pas propager l'exception pour permettre aux autres synchronisations de continuer
     }
   }
   
-  /// Synchronise les réservations avec le serveur
-  Future<void> syncReservations() async {
+  /// Synchronise les réservations bidirectionnellement
+  Future<void> _bidirectionalSyncReservations() async {
     if (!_connectivityService.isOnline) {
       _logger.warning('Appareil hors-ligne, impossible de synchroniser les réservations');
       return;
     }
     
     try {
-      _logger.info('Synchronisation des réservations...');
-      _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'reservations', message: 'Synchronisation des réservations'));
+      _logger.info('Synchronisation bidirectionnelle des réservations...');
+      _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'reservations', message: 'Synchronisation bidirectionnelle des réservations'));
       
-      // Récupérer les réservations du serveur (utiliser la méthode directe si disponible)
-      final reservations = await _reservationService.getPartnerReservationsDirect();
+      // 1. Envoyer d'abord les modifications locales au serveur
+      final locallyModifiedReservations = await _cacheService.getLocallyModifiedReservations();
       
-      // Récupérer les réservations du cache
+      if (locallyModifiedReservations.isNotEmpty) {
+        _logger.info('Envoi de ${locallyModifiedReservations.length} réservations modifiées localement vers le serveur');
+        
+        for (var reservation in locallyModifiedReservations) {
+          try {
+            final id = reservation['id'] ?? reservation['_id'];
+            if (id == null) continue;
+            
+            // Déterminer le type d'opération selon les flags
+            if (reservation['isDeleted'] == true) {
+              // Annuler la réservation sur le serveur
+              await _reservationService.cancelReservation(id.toString(), reservation['cancelReason'] ?? 'Annulée depuis l\'application');
+              _logger.info('Réservation annulée sur le serveur: $id');
+            } else if (reservation['isNew'] == true) {
+              // Créer la réservation sur le serveur
+              await _reservationService.createReservation(reservation);
+              _logger.info('Nouvelle réservation créée sur le serveur: $id');
+            } else {
+              // Mettre à jour la réservation sur le serveur
+              await _reservationService.updateReservation(id.toString(), reservation);
+              _logger.info('Réservation mise à jour sur le serveur: $id');
+            }
+            
+            // Marquer comme synchronisée
+            await _cacheService.markReservationAsSynced(id.toString());
+          } catch (e) {
+            _logger.warning('Erreur lors de la synchronisation de la réservation vers le serveur: $e');
+            // Continuer avec les autres réservations
+          }
+        }
+      }
+      
+      // 2. Récupérer les réservations du serveur
+      final serverReservations = await _reservationService.getMyReservations();
+      
+      // 3. Récupérer toutes les réservations du cache (y compris celles qu'on vient de synchroniser)
       final cachedReservations = await _cacheService.getCachedReservations();
       
-      // Vérifier les conflits et les résoudre
+      // 4. Résoudre les conflits
       final resolvedReservations = await SyncConflictResolver.resolveReservationConflicts(
         cachedReservations, 
-        reservations
+        serverReservations,
+        preferServer: true
       );
       
-      // Mettre à jour le cache local
+      // 5. Mettre à jour le cache local avec les données résolues
       await _cacheService.cacheReservations(resolvedReservations);
       
-      _logger.info('Réservations synchronisées avec succès (${resolvedReservations.length} réservations)');
+      _logger.info('Réservations synchronisées bidirectionnellement (${resolvedReservations.length} réservations)');
       _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'reservations', message: '${resolvedReservations.length} réservations synchronisées'));
     } catch (e) {
-      _logger.severe('Erreur lors de la synchronisation des réservations: $e');
+      _logger.severe('Erreur lors de la synchronisation bidirectionnelle des réservations: $e');
       _syncController.add(SyncEvent(SyncEventType.syncProgress, entity: 'reservations', message: 'Erreur: $e', isError: true));
+      // Ne pas propager l'exception pour permettre aux autres synchronisations de continuer
     }
   }
 
@@ -386,8 +471,11 @@ class SyncService {
     }
   }
   
-  /// Enregistre une opération à effectuer plus tard si hors-ligne
+  /// Enregistre et suit une opération en attente avec un ID unique
   Future<void> addOfflineOperation(String operation, Map<String, dynamic> data) async {
+    final operationId = '${operation}_${DateTime.now().millisecondsSinceEpoch}';
+    final syncOp = _SyncOperation(operationId, operation, data, DateTime.now());
+    
     // Si en ligne, exécuter directement
     if (_connectivityService.isOnline) {
       try {
@@ -400,14 +488,82 @@ class SyncService {
       }
     }
     
+    // Stocker l'opération en attente dans notre suivi
+    _pendingOperations[operationId] = syncOp;
+    
     // Enregistrer l'opération pour plus tard
-    await _cacheService.addPendingOperation(operation, data);
-    _logger.info('Opération $operation mise en attente pour synchronisation ultérieure');
+    await _cacheService.addPendingOperation(operation, data, operationId: operationId);
+    _logger.info('Opération $operation mise en attente (ID: $operationId) pour synchronisation ultérieure');
     _syncController.add(SyncEvent(
       SyncEventType.operationQueued, 
       entity: operation, 
-      message: 'Opération mise en attente pour synchronisation ultérieure'
+      message: 'Opération mise en attente pour synchronisation ultérieure',
+      operationId: operationId
     ));
+  }
+
+  /// Force la synchronisation d'une résidence spécifique
+  Future<bool> forceSyncResidence(String residenceId) async {
+    if (!_connectivityService.isOnline) {
+      _logger.warning('Impossible de forcer la synchronisation: appareil hors-ligne');
+      return false;
+    }
+    
+    try {
+      _logger.info('Forçage de la synchronisation de la résidence: $residenceId');
+      
+      // Récupérer la résidence depuis le cache
+      final cachedResidence = await _cacheService.getResidenceById(residenceId);
+      if (cachedResidence == null) {
+        _logger.warning('Résidence non trouvée dans le cache: $residenceId');
+        return false;
+      }
+      
+      // Si modifiée localement, envoyer au serveur
+      if (cachedResidence['needsSync'] == true || 
+          cachedResidence['isLocal'] == true || 
+          cachedResidence['modifiedLocally'] == true) {
+        
+        if (cachedResidence['isDeleted'] == true) {
+          // Supprimer la résidence sur le serveur
+          await _residenceService.deleteResidence(residenceId);
+        } else if (cachedResidence['isNew'] == true) {
+          // Créer la résidence sur le serveur
+          await _residenceService.createResidence(
+            cachedResidence, 
+            cachedResidence['images'] ?? []
+          );
+        } else {
+          // Mettre à jour la résidence sur le serveur
+          await _residenceService.updateResidence(
+            residenceId, 
+            cachedResidence,
+            cachedResidence['images'] ?? []
+          );
+        }
+        
+        // Marquer comme synchronisée
+        await _cacheService.markResidenceAsSynced(residenceId);
+        _logger.info('Résidence synchronisée avec succès: $residenceId');
+      } else {
+        // Si non modifiée, récupérer la version serveur
+        final serverResidence = await _residenceService.getResidenceById(residenceId);
+        
+        // Mettre à jour le cache
+        if (serverResidence != null) {
+          await _cacheService.cacheResidence(serverResidence);
+          _logger.info('Résidence récupérée depuis le serveur: $residenceId');
+        } else {
+          _logger.warning('Résidence non trouvée sur le serveur: $residenceId');
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (e) {
+      _logger.severe('Erreur lors de la synchronisation forcée de la résidence: $e');
+      return false;
+    }
   }
   
   /// Renvoie la date de dernière synchronisation réussie
@@ -426,6 +582,25 @@ class SyncService {
   }
 }
 
+/// Classe interne pour suivre les opérations en attente
+class _SyncOperation {
+  final String id;
+  final String operation;
+  final Map<String, dynamic> data;
+  final DateTime createdAt;
+  int attempts = 0;
+  DateTime? lastAttempt;
+  
+  _SyncOperation(this.id, this.operation, this.data, this.createdAt);
+  
+  bool get canRetry => attempts < SyncService._maxSyncAttempts;
+  
+  void incrementAttempts() {
+    attempts++;
+    lastAttempt = DateTime.now();
+  }
+}
+
 /// Événements de synchronisation pour informer l'interface utilisateur
 class SyncEvent {
   final SyncEventType type;
@@ -434,6 +609,7 @@ class SyncEvent {
   final bool? success;
   final String? error;
   final bool isError;
+  final String? operationId;
   
   SyncEvent(
     this.type, {
@@ -442,6 +618,7 @@ class SyncEvent {
     this.success,
     this.error,
     this.isError = false,
+    this.operationId,
   });
 }
 
@@ -454,4 +631,6 @@ enum SyncEventType {
   syncProgress,
   syncCompleted,
   operationQueued,
+  operationFailed,
+  operationSucceeded,
 } 

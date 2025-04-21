@@ -352,6 +352,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   
                   _buildOptionTile(
+                    icon: Icons.account_balance_wallet,
+                    title: 'Portefeuille et récompenses',
+                    onTap: () {
+                      context.push('/profile/wallet');
+                    },
+                  ),
+                  
+                  _buildOptionTile(
+                    icon: Icons.payment,
+                    title: 'Moyens de paiement',
+                    onTap: () {
+                      context.push('/profile/payment-methods');
+                    },
+                  ),
+                  
+                  _buildOptionTile(
                     icon: Icons.history,
                     title: 'Historique des réservations',
                     onTap: () {
@@ -373,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.settings,
                     title: 'Paramètres',
                     onTap: () {
-                      context.go('/settings');
+                      context.push('/profile/settings');
                     },
                   ),
                   
@@ -381,7 +397,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.help,
                     title: 'Aide et support',
                     onTap: () {
-                      context.go('/help');
+                      context.push('/profile/help');
+                    },
+                  ),
+                  
+                  _buildOptionTile(
+                    icon: Icons.home_work,
+                    title: 'Inscrire votre résidence',
+                    onTap: () {
+                      // À compléter avec le lien vers l'application partenaire
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fonctionnalité en cours de développement. Disponible prochainement!'),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
                     },
                   ),
                   

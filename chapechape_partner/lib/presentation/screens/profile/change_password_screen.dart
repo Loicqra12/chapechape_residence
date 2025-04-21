@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
 import '../../../core/utils/validators/form_validators.dart';
 import '../../widgets/common/buttons/primary_button.dart';
 import '../../widgets/common/inputs/text_input.dart';

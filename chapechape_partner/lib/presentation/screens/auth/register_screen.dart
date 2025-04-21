@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/utils/validators/form_validators.dart';
 import '../../widgets/common/buttons/primary_button.dart';

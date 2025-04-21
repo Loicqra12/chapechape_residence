@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -104,13 +105,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // Vérifier si l'URL commence par /uploads/
     if (url.startsWith('/uploads/')) {
       // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://localhost:4000${url}';
+      return 'http://192.168.1.68:4000${url}';
     } else if (url.startsWith('/')) {
       // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://localhost:4000/uploads/profiles${url}';
+      return 'http://192.168.1.68:4000/uploads/profiles${url}';
     } else {
       // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://localhost:4000/uploads/profiles/${url}';
+      return 'http://192.168.1.68:4000/uploads/profiles/${url}';
     }
   }
 

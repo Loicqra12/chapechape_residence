@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'app_config_manager.dart';
+import 'environment.dart';
 
 class AppConfig {
   // Singleton
@@ -11,16 +13,15 @@ class AppConfig {
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    // Charger les variables d'environnement si nécessaire
-    await _loadEnvironmentVariables();
+    // Initialiser le gestionnaire de configuration avec l'environnement de développement par défaut
+    await AppConfigManager.initialize(environment: Environment.dev);
     
     _initialized = true;
   }
 
   static Future<void> _loadEnvironmentVariables() async {
     try {
-      // Ici vous pouvez charger des variables d'environnement depuis un fichier .env
-      // ou d'autres sources si nécessaire
+      // Nous utilisons maintenant AppConfigManager pour gérer les environnements
       debugPrint('Configuration chargée avec succès');
     } catch (e) {
       debugPrint('Erreur lors du chargement de la configuration: $e');
@@ -28,46 +29,21 @@ class AppConfig {
     }
   }
 
-  // Valeurs par défaut
-  static const String appName = 'ChapeChape Résidences';
-  static const String apiUrl = 'http://localhost:4000/api';
-  static const String apiVersion = 'v1';
-  static const String defaultLocale = 'fr';
-  static const int apiTimeout = 30000;
-  static const String wsUrl = 'ws://localhost:4000';
-  static const int wsReconnectInterval = 5000;
-  static const String appVersion = '1.0.0';
-  static const String appBundleId = 'com.chapechape.residences';
-  static const String environment = 'development';
-  static const String? proxyUrl = null;
-
-  // Variables d'environnement
-  final Map<String, String> _env = {
-    'API_URL': apiUrl,
-    'API_VERSION': apiVersion,
-    'APP_NAME': appName,
-    'DEFAULT_LOCALE': defaultLocale,
-    'API_TIMEOUT': apiTimeout.toString(),
-    'WS_URL': wsUrl,
-    'WS_RECONNECT_INTERVAL': wsReconnectInterval.toString(),
-    'FLUTTER_APP_VERSION': appVersion,
-    'FLUTTER_APP_BUNDLE_ID': appBundleId,
-    'ENVIRONMENT': environment,
-  };
-
-  // Accesseur pour les variables d'environnement
-  String get(String key, {String? defaultValue}) {
-    return _env[key] ?? defaultValue ?? '';
-  }
-
-  // Mutateur pour les variables d'environnement
-  void set(String key, String value) {
-    _env[key] = value;
-    debugPrint('AppConfig: $key = $value');
-  }
-
-  // Initialisation
-  void init() {
-    debugPrint('AppConfig initialisé avec API_URL: ${get('API_URL')}');
-  }
+  // Accesseurs - Tous redirigés vers AppConfigManager
+  static String get appName => AppConfigManager.appName;
+  static String get apiUrl => AppConfigManager.apiUrl;
+  static String get apiBaseUrl => AppConfigManager.apiBaseUrl;
+  static String get wsUrl => AppConfigManager.wsUrl;
+  static String get apiVersion => AppConfigManager.apiVersion;
+  static int get apiTimeout => AppConfigManager.apiTimeout;
+  static int get appEnvironment => AppConfigManager.environment.index;
+  static String? get proxyUrl => AppConfigManager.proxyUrl;
+  
+  // Méthodes utilitaires
+  static String getApiEndpoint(String path) => AppConfigManager.getApiEndpoint(path);
+  static String getMediaUrl(String path) => AppConfigManager.getMediaUrl(path);
+  
+  // Helpers pour vérification environnement
+  static bool get isProduction => AppConfigManager.environment == Environment.prod;
+  static bool get isDebug => AppConfigManager.isDebug;
 }

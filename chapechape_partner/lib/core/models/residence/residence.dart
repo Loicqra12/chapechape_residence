@@ -51,6 +51,9 @@ class Residence {
   final String? regionName;
   final String? cityCode;
   final String? cityName;
+  
+  // Devise du prix
+  final String currency;
 
   Residence({
     required this.id,
@@ -95,6 +98,7 @@ class Residence {
     this.regionName,
     this.cityCode,
     this.cityName,
+    this.currency = 'FCFA',
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -161,6 +165,9 @@ class Residence {
     String? cityCode = json['cityCode']?.toString();
     String? cityName = json['cityName']?.toString();
     
+    // Extraire la devise du prix (avec FCFA comme valeur par défaut)
+    final currency = json['currency']?.toString() ?? 'FCFA';
+    
     return Residence(
       id: json['_id']?.toString() ?? '',
       name: json['title']?.toString() ?? json['name']?.toString() ?? '',
@@ -208,6 +215,7 @@ class Residence {
       regionName: regionName,
       cityCode: cityCode,
       cityName: cityName,
+      currency: currency,
     );
   }
 
@@ -221,6 +229,7 @@ class Residence {
       'address': address,
       'city': city,
       'price': price,
+      'currency': currency,
       'area': surface,
       'features': {
         'bedrooms': bedrooms,

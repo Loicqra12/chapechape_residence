@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../blocs/auth/auth_bloc.dart';
+import '../../../blocs/auth/auth_event.dart';
 
 /// Intercepteur pour gérer les tokens d'authentification et leur expiration
 class AuthInterceptor extends Interceptor {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/config/theme.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart';

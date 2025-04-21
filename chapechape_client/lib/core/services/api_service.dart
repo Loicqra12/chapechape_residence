@@ -1,66 +1,80 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:chapechape_client/core/config/app_config.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:chapechape_client/core/errors/api_error.dart';
+import 'package:chapechape_client/core/models/api_response.dart';
+import 'package:chapechape_client/core/services/api/interceptors/auth_interceptor.dart';
+import 'package:chapechape_client/core/services/api/interceptors/csrf_interceptor.dart';
+import 'package:chapechape_client/core/services/api/interceptors/logging_interceptor.dart';
+import 'package:chapechape_client/core/services/cache_service.dart';
+import 'package:chapechape_client/core/services/connectivity_service.dart';
 
+/// Service d'accès à l'API
 class ApiService {
-  late final Dio _dio;
   static ApiService? _instance;
-
-  // Ajouter un getter pour accéder à l'URL de base
+  late final Dio _dio;
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final CacheService _cacheService = CacheService();
+  final ConnectivityService _connectivityService = ConnectivityService();
+  
+  bool _isConnected = true;
+  
+  /// URL de base de l'API
   String get baseUrl => _dio.options.baseUrl;
-
+  
   ApiService._();
-
+  
   static Future<ApiService> initialize() async {
-    if (_instance != null) return _instance!;
-
+    if (_instance != null) {
+      return _instance!;
+    }
+    
     final instance = ApiService._();
     await instance._initialize();
     _instance = instance;
     return instance;
   }
-
+  
   Future<void> _initialize() async {
-    final apiUrl = AppConfig.apiUrl;
-    final apiTimeout = 30000;
+    // Initialisation de Dio
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConfig.apiUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    ));
     
-    debugPrint('Initialisation ApiService avec URL: $apiUrl');
+    // Ajouter les intercepteurs
+    // L'intercepteur de logging pour déboguer les requêtes/réponses
+    _dio.interceptors.add(LoggingInterceptor.create(isProduction: AppConfig.isProduction));
     
-    _dio = Dio(
-      BaseOptions(
-        baseUrl: apiUrl,
-        connectTimeout: Duration(milliseconds: apiTimeout),
-        receiveTimeout: Duration(milliseconds: apiTimeout ~/ 2),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        validateStatus: (status) {
-          return status != null && status < 500;
-        },
-      ),
-    );
-
-    // Configuration des intercepteurs
-    _setupInterceptors();
-
-    // Ajouter le logger pour le débogage
-    if (!kIsWeb && (kDebugMode || kProfileMode)) {
-      _dio.interceptors.add(PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseBody: true,
-        responseHeader: true,
-        error: true,
-        compact: true,
-      ));
+    // Ajouter l'intercepteur d'authentification
+    _dio.interceptors.add(AuthInterceptor(
+      dio: _dio,
+      storage: _storage,
+    ));
+    
+    // Ajouter l'intercepteur CSRF pour la protection contre les attaques CSRF
+    _dio.interceptors.add(CsrfInterceptor());
+    
+    // Configurer les certificats pour les environnements de développement
+    if (!kIsWeb && !AppConfig.isProduction) {
+      (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+        final client = HttpClient();
+        // Désactiver la vérification des certificats en développement uniquement
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+        return client;
+      };
     }
-
+    
     // Configuration du proxy si spécifié
     final String? proxyUrl = AppConfig.proxyUrl;
     if (!kIsWeb && proxyUrl != null && proxyUrl.isNotEmpty) {
@@ -72,136 +86,523 @@ class ApiService {
         },
       );
     }
+    
+    // Vérifier l'état de la connectivité initial et s'abonner aux changements
+    _connectivityService.connectivityStream.listen((isConnected) {
+      _isConnected = isConnected;
+      debugPrint('État de connexion changé: ${_isConnected ? 'Connecté' : 'Déconnecté'}');
+      
+      // Si la connexion est rétablie, traiter la file d'attente hors ligne
+      if (_isConnected) {
+        _processOfflineQueue();
+      }
+    });
+    
+    // Vérifier l'état de connectivité initial
+    _isConnected = await _connectivityService.checkConnectivity();
+    debugPrint('🌍 État de connexion initial: ${_isConnected ? 'Connecté' : 'Déconnecté'}');
   }
-
-  // Configuration des intercepteurs
-  void _setupInterceptors() {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          // Ajouter le token d'authentification à chaque requête si disponible
-          const storage = FlutterSecureStorage();
-          final token = await storage.read(key: 'token');
-          
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-            debugPrint('Token d\'authentification ajouté à la requête: ${options.path}');
-          } else {
-            debugPrint('⚠️ ATTENTION: Pas de token d\'authentification pour la requête: ${options.path}');
-          }
-          
-          return handler.next(options);
-        },
-        onError: (DioException error, handler) async {
-          // Si l'erreur est liée à une expiration de token, essayer de rafraîchir
-          if (error.response?.statusCode == 401) {
-            await _handleTokenExpiration();
-          }
-          
-          // Pour certaines erreurs, mettre en place une tentative de retry
-          if (_isRetryable(error)) {
-            try {
-              // Utiliser des options modifiées pour le retry
-              final options = error.requestOptions;
-              final response = await _dio.request(
-                options.path,
-                data: options.data,
-                queryParameters: options.queryParameters,
-                options: Options(
-                  method: options.method,
-                  headers: options.headers,
-                ),
-              );
-              return handler.resolve(response);
-            } catch (e) {
-              return handler.next(error);
-            }
-          }
-          
-          return handler.next(error);
-        },
-      ),
-    );
+  
+  // File d'attente pour les requêtes en mode hors ligne
+  final List<Map<String, dynamic>> _offlineQueue = [];
+  
+  // Gérer une requête en mode hors ligne
+  Future<void> _handleOfflineRequest(
+    String method,
+    String path,
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
+  ) async {
+    debugPrint('📱 Mode hors ligne: Mise en file d\'attente de la requête $method $path');
+    
+    // Ajouter la requête à la file d'attente
+    _offlineQueue.add({
+      'method': method,
+      'path': path,
+      'data': data,
+      'queryParameters': queryParameters,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+    
+    // Sauvegarder la file d'attente pour la persistance
+    await _cacheService.put('offline_queue', _offlineQueue);
+    
+    // Afficher une notification à l'utilisateur
+    // Vous pouvez utiliser un service de notification ici
+    debugPrint('�� Requête enregistrée pour synchronisation future');
   }
-
-  // Vérifier si une erreur peut être réessayée
-  bool _isRetryable(DioException e) {
-    return e.type == DioExceptionType.connectionTimeout ||
-           e.type == DioExceptionType.sendTimeout ||
-           e.type == DioExceptionType.receiveTimeout ||
-           (e.response?.statusCode != null && 
-            (e.response!.statusCode == 429 || 
-             (e.response!.statusCode! >= 500 && e.response!.statusCode! < 600)));
-  }
-
-  Future<String?> _getToken() async {
-    try {
-      const storage = FlutterSecureStorage();
-      return await storage.read(key: 'token');
-    } catch (e) {
-      debugPrint('Erreur lors de la récupération du token: $e');
-      return null;
-    }
-  }
-
-  Future<void> _handleTokenExpiration() async {
-    // Implémenter la logique de rafraîchissement du token
-    try {
-      const storage = FlutterSecureStorage();
-      await storage.delete(key: 'token');
-      debugPrint('Token expiré supprimé');
-    } catch (e) {
-      debugPrint('Erreur lors de la suppression du token: $e');
-    }
-  }
-
-  // Méthode générique pour les requêtes avec retry
-  Future<Response> _retryRequest(
-    Future<Response> Function() request, {
-    int maxRetries = 3,
-  }) async {
-    int retryCount = 0;
-    while (retryCount < maxRetries) {
-      try {
-        return await request();
-      } on DioException catch (e) {
-        if (_isRetryable(e)) {
-          retryCount++;
-          if (retryCount == maxRetries) rethrow;
-          
-          // Backoff exponentiel: 500ms, 1s, 2s, 4s, etc.
-          final delay = Duration(milliseconds: (math.pow(2, retryCount) * 500).toInt());
-          debugPrint('Retry ${retryCount}/${maxRetries} pour la requête après ${delay.inMilliseconds}ms');
-          await Future.delayed(delay);
-          continue;
+  
+  // Traiter la file d'attente des requêtes hors ligne lorsque la connexion est rétablie
+  Future<void> _processOfflineQueue() async {
+    debugPrint('🔄 Traitement de la file d\'attente hors ligne (${_offlineQueue.length} requêtes)');
+    
+    // Récupérer les requêtes sauvegardées si la file d'attente est vide
+    if (_offlineQueue.isEmpty) {
+      final savedQueue = await _cacheService.get('offline_queue');
+      if (savedQueue != null && savedQueue is List) {
+        for (final item in savedQueue) {
+          _offlineQueue.add(Map<String, dynamic>.from(item));
         }
-        rethrow;
       }
     }
-    throw Exception('Failed after $maxRetries retries');
+    
+    if (_offlineQueue.isEmpty) {
+      debugPrint('✅ Aucune requête en attente à synchroniser');
+      return;
+    }
+    
+    // Traiter les requêtes par ordre chronologique
+    _offlineQueue.sort((a, b) => 
+      (a['timestamp'] as int).compareTo(b['timestamp'] as int));
+    
+    // Créer une copie de la file d'attente pour itération
+    final queueCopy = List<Map<String, dynamic>>.from(_offlineQueue);
+    
+    for (final request in queueCopy) {
+      try {
+        final method = request['method'] as String;
+        final path = request['path'] as String;
+        final data = request['data'] as Map<String, dynamic>?;
+        final queryParameters = request['queryParameters'] as Map<String, dynamic>?;
+        
+        debugPrint('🔄 Synchronisation de la requête $method $path');
+        
+        // Exécuter la requête
+        switch (method.toUpperCase()) {
+          case 'GET':
+            await _dio.get(path, queryParameters: queryParameters);
+            break;
+          case 'POST':
+            await _dio.post(path, data: data, queryParameters: queryParameters);
+            break;
+          case 'PUT':
+            await _dio.put(path, data: data, queryParameters: queryParameters);
+            break;
+          case 'DELETE':
+            await _dio.delete(path, data: data, queryParameters: queryParameters);
+            break;
+          default:
+            debugPrint('⚠️ Méthode HTTP non prise en charge: $method');
+        }
+        
+        // Si la requête réussit, la retirer de la file d'attente
+        _offlineQueue.remove(request);
+        debugPrint('✅ Requête $method $path synchronisée avec succès');
+      } catch (e) {
+        debugPrint('❌ Échec de la synchronisation: $e');
+        // Laisser la requête dans la file d'attente pour une tentative ultérieure
+      }
+    }
+    
+    // Mettre à jour la file d'attente persistante
+    await _cacheService.put('offline_queue', _offlineQueue);
+    
+    if (_offlineQueue.isEmpty) {
+      debugPrint('✅ Toutes les requêtes ont été synchronisées');
+    } else {
+      debugPrint('⚠️ ${_offlineQueue.length} requêtes restent à synchroniser');
+    }
+  }
+  
+  /// Synchronise les données mises en cache pendant que l'appareil était hors ligne
+  /// Cette méthode publique peut être appelée lorsque la connexion est rétablie
+  Future<bool> synchronizeOfflineData() async {
+    try {
+      // Vérifier si nous sommes connectés
+      if (!_isConnected) {
+        debugPrint('❌ Impossible de synchroniser: appareil toujours hors ligne');
+        return false;
+      }
+      
+      // Traiter la file d'attente des requêtes hors ligne
+      await _processOfflineQueue();
+      
+      // Marquer comme synchronisé
+      debugPrint('✅ Synchronisation terminée avec succès');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la synchronisation: $e');
+      return false;
+    }
+  }
+  
+  /// Gestion standardisée des erreurs
+  Exception handleError(dynamic error) {
+    if (error is DioException) {
+      // Vérifier s'il s'agit d'une erreur de connectivité
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout) {
+        debugPrint('🔌 Erreur de connectivité détectée');
+        
+        // Si nous avons déjà détecté que nous sommes hors ligne, utiliser le cache
+        if (!_isConnected) {
+          return ApiError(
+            message: 'Vous êtes actuellement hors ligne. L\'application fonctionne en mode limité.',
+            statusCode: 0,
+            errorCode: 'OFFLINE_MODE',
+          );
+        }
+      }
+      return ApiError.fromDioError(error);
+    } else if (error is ApiError) {
+      return error;
+    }
+    return ApiError.generic(message: error?.toString() ?? 'Une erreur inconnue est survenue');
   }
 
-  // Méthodes HTTP génériques
-  Future<Response> get(String path, {
+  /// Tente de rafraîchir le token d'accès
+  /// Cette méthode est désormais une façade qui délègue à l'AuthInterceptor pour maintenir la compatibilité
+  Future<bool> _refreshToken() async {
+    try {
+      // Cette opération est désormais gérée par l'intercepteur
+      // Cette méthode est conservée pour maintenir la compatibilité
+      debugPrint('_refreshToken est déprécié, utilisez plutôt l\'AuthInterceptor');
+      
+      // On obtient l'intercepteur depuis les intercepteurs enregistrés
+      final authInterceptor = _dio.interceptors.whereType<AuthInterceptor>().firstOrNull;
+      if (authInterceptor != null) {
+        return await authInterceptor.refreshToken();
+      }
+      
+      // Si l'intercepteur n'est pas trouvé, retourner false
+      return false;
+    } catch (e) {
+      debugPrint('Erreur lors du rafraîchissement du token: $e');
+      return false;
+    }
+  }
+  
+  /// Méthode privée pour la logique de retry
+  Future<Response> _retryRequest(Future<Response> Function() requestFunction) async {
+    const maxRetries = 3;
+    const initialDelayMs = 1000;
+    
+    int attempts = 0;
+    
+    while (true) {
+      try {
+        // Tentative d'exécution de la requête
+        return await requestFunction();
+      } catch (e) {
+        attempts++;
+        
+        if (attempts >= maxRetries) {
+          // Si le nombre maximum de tentatives est atteint, propager l'erreur
+          rethrow;
+        }
+        
+        // Délai exponentiel avec un peu d'aléatoire (jitter)
+        final delay = initialDelayMs * math.pow(2, attempts - 1);
+        final jitter = math.Random().nextInt((delay * 0.1).toInt());
+        final totalDelay = delay + jitter;
+        
+        debugPrint('Tentative $attempts a échoué, nouvel essai dans ${totalDelay}ms');
+        await Future.delayed(Duration(milliseconds: totalDelay.toInt()));
+      }
+    }
+  }
+
+  // Méthodes HTTP avec gestion standardisée
+  Future<ApiResponse<T>> getData<T>(
+    String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
+    ProgressCallback? onReceiveProgress,
+    T Function(dynamic)? fromJson,
+    bool useCacheIfOffline = true,
   }) async {
     try {
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
-      return await _retryRequest(() => _dio.get(
-        sanitizedPath, 
+      
+      // Vérifier si nous sommes hors ligne et utiliser le cache si demandé
+      if (!_isConnected && useCacheIfOffline) {
+        final cachedData = await _cacheService.get('GET_$sanitizedPath');
+        if (cachedData != null) {
+          debugPrint('📦 Utilisation des données en cache pour $sanitizedPath');
+          
+          if (fromJson != null) {
+            final data = fromJson(cachedData);
+            return ApiResponse.success(data, isFromCache: true);
+          }
+          return ApiResponse.success(cachedData as T, isFromCache: true);
+        }
+      }
+      
+      final response = await _retryRequest(() => _dio.get(
+        sanitizedPath,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        onReceiveProgress: onReceiveProgress,
+      ));
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Mise en cache des données pour utilisation hors ligne
+        if (useCacheIfOffline) {
+          await _cacheService.put('GET_$sanitizedPath', response.data);
+        }
+        
+        if (fromJson != null) {
+          final data = fromJson(response.data);
+          return ApiResponse.success(data);
+        }
+        return ApiResponse.success(response.data as T);
+      }
+      
+      return ApiResponse.error(
+        'Erreur avec le code: ${response.statusCode}',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      debugPrint('Erreur dans la requête GET: $e');
+      final error = handleError(e);
+      if (error is ApiError) {
+        return ApiResponse.error(
+          error.message,
+          statusCode: error.statusCode,
+          isNetworkError: error.errorCode == 'NETWORK_ERROR' || error.errorCode == 'OFFLINE_MODE',
+          isAuthError: error.statusCode == 401,
+        );
+      }
+      return ApiResponse.error(error.toString());
+    }
+  }
+
+  Future<ApiResponse<T>> postData<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
+      // Si hors ligne, mettre en file d'attente la requête
+      if (!_isConnected) {
+        await _handleOfflineRequest('POST', sanitizedPath, data as Map<String, dynamic>?, queryParameters);
+        return ApiResponse.error(
+          'Vous êtes hors ligne. La requête sera exécutée lorsque la connexion sera rétablie.',
+          statusCode: 0,
+          isNetworkError: true,
+          isQueuedForSync: true,
+        );
+      }
+      
+      final response = await _retryRequest(() => _dio.post(
+        sanitizedPath,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+      ));
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (fromJson != null) {
+          final responseData = fromJson(response.data);
+          return ApiResponse.success(responseData);
+        }
+        return ApiResponse.success(response.data as T);
+      }
+      
+      return ApiResponse.error(
+        'Erreur avec le code: ${response.statusCode}',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      debugPrint('Erreur dans la requête POST: $e');
+      final error = handleError(e);
+      if (error is ApiError) {
+        return ApiResponse.error(
+          error.message,
+          statusCode: error.statusCode,
+          isNetworkError: error.errorCode == 'NETWORK_ERROR' || error.errorCode == 'OFFLINE_MODE',
+          isAuthError: error.statusCode == 401,
+        );
+      }
+      return ApiResponse.error(error.toString());
+    }
+  }
+
+  Future<ApiResponse<T>> putData<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
+      final response = await _retryRequest(() => _dio.put(
+        sanitizedPath,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+      ));
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (fromJson != null && response.data != null) {
+          final parsedData = fromJson(response.data);
+          return ApiResponse.success(parsedData);
+        }
+        return ApiResponse.success(response.data as T);
+      }
+      
+      return ApiResponse.error(
+        'Erreur avec le code: ${response.statusCode}',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      debugPrint('Erreur dans la requête PUT: $e');
+      final error = handleError(e);
+      if (error is ApiError) {
+        return ApiResponse.error(
+          error.message,
+          statusCode: error.statusCode,
+          isNetworkError: error.errorCode == 'NETWORK_ERROR',
+          isAuthError: error.statusCode == 401,
+        );
+      }
+      return ApiResponse.error(e.toString());
+    }
+  }
+
+  Future<ApiResponse<T>> deleteData<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
+      final response = await _retryRequest(() => _dio.delete(
+        sanitizedPath,
+        data: data,
         queryParameters: queryParameters,
         options: options,
         cancelToken: cancelToken,
       ));
+      
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (fromJson != null && response.data != null) {
+          final parsedData = fromJson(response.data);
+          return ApiResponse.success(parsedData);
+        }
+        return ApiResponse.success(response.data as T);
+      }
+      
+      return ApiResponse.error(
+        'Erreur avec le code: ${response.statusCode}',
+        statusCode: response.statusCode,
+      );
     } catch (e) {
-      debugPrint('Erreur dans la requête GET: $e');
-      rethrow;
+      debugPrint('Erreur dans la requête DELETE: $e');
+      final error = handleError(e);
+      if (error is ApiError) {
+        return ApiResponse.error(
+          error.message,
+          statusCode: error.statusCode,
+          isNetworkError: error.errorCode == 'NETWORK_ERROR',
+          isAuthError: error.statusCode == 401,
+        );
+      }
+      return ApiResponse.error(e.toString());
     }
   }
 
-  Future<Response> post(String path, {
+  Future<ApiResponse<T>> patchData<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
+      final response = await _retryRequest(() => _dio.patch(
+        sanitizedPath,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+      ));
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (fromJson != null && response.data != null) {
+          final parsedData = fromJson(response.data);
+          return ApiResponse.success(parsedData);
+        }
+        return ApiResponse.success(response.data as T);
+      }
+      
+      return ApiResponse.error(
+        'Erreur avec le code: ${response.statusCode}',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      debugPrint('Erreur dans la requête PATCH: $e');
+      final error = handleError(e);
+      if (error is ApiError) {
+        return ApiResponse.error(
+          error.message,
+          statusCode: error.statusCode,
+          isNetworkError: error.errorCode == 'NETWORK_ERROR',
+          isAuthError: error.statusCode == 401,
+        );
+      }
+      return ApiResponse.error(e.toString());
+    }
+  }
+
+  // Méthodes de compatibilité avec l'ancien code
+  // Ces méthodes sont conservées pour la compatibilité avec le code existant
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    try {
+      final sanitizedPath = path.startsWith('/') ? path : '/$path';
+      
+      return await _retryRequest(() => _dio.get(
+        sanitizedPath,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        onReceiveProgress: onReceiveProgress,
+      ));
+    } catch (e) {
+      debugPrint('Erreur dans la requête GET (méthode de compatibilité): $e');
+      throw handleError(e);
+    }
+  }
+
+  Future<Response> post(
+    String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
@@ -212,35 +613,23 @@ class ApiService {
     try {
       final sanitizedPath = path.startsWith('/') ? path : '/$path';
       
-      Options finalOptions = options ?? Options();
-      finalOptions.headers = {
-        ...?finalOptions.headers,
-        'Accept': 'application/json',
-        'User-Agent': 'ChapecapeApp/1.0',
-      };
-      
-      debugPrint('---------- DÉTAILS COMPLETS DE LA REQUÊTE POST ----------');
-      debugPrint('URL: ${AppConfig.apiUrl}$sanitizedPath');
-      debugPrint('Données: $data');
-      debugPrint('En-têtes: ${finalOptions.headers}');
-      debugPrint('-------------------------------------------------------');
-      
       return await _retryRequest(() => _dio.post(
         sanitizedPath,
         data: data,
         queryParameters: queryParameters,
-        options: finalOptions,
+        options: options,
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
       ));
     } catch (e) {
-      debugPrint('Erreur dans la requête POST: $e');
-      rethrow;
+      debugPrint('Erreur dans la requête POST (méthode de compatibilité): $e');
+      throw handleError(e);
     }
   }
 
-  Future<Response> put(String path, {
+  Future<Response> put(
+    String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
@@ -261,12 +650,13 @@ class ApiService {
         onReceiveProgress: onReceiveProgress,
       ));
     } catch (e) {
-      debugPrint('Erreur dans la requête PUT: $e');
-      rethrow;
+      debugPrint('Erreur dans la requête PUT (méthode de compatibilité): $e');
+      throw handleError(e);
     }
   }
 
-  Future<Response> delete(String path, {
+  Future<Response> delete(
+    String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
@@ -283,12 +673,13 @@ class ApiService {
         cancelToken: cancelToken,
       ));
     } catch (e) {
-      debugPrint('Erreur dans la requête DELETE: $e');
-      rethrow;
+      debugPrint('Erreur dans la requête DELETE (méthode de compatibilité): $e');
+      throw handleError(e);
     }
   }
 
-  Future<Response> patch(String path, {
+  Future<Response> patch(
+    String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
@@ -309,8 +700,19 @@ class ApiService {
         onReceiveProgress: onReceiveProgress,
       ));
     } catch (e) {
-      debugPrint('Erreur dans la requête PATCH: $e');
-      rethrow;
+      debugPrint('Erreur dans la requête PATCH (méthode de compatibilité): $e');
+      throw handleError(e);
     }
+  }
+  
+  // Ajout de la méthode getAuthenticatedImageUrl pour la compatibilité
+  String getAuthenticatedImageUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    
+    final sanitizedPath = path.startsWith('/') ? path.substring(1) : path;
+    final mediaBaseUrl = AppConfig.apiBaseUrl;
+    return '$mediaBaseUrl/media/$sanitizedPath';
   }
 }

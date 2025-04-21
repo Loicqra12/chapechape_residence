@@ -1,9 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:chapechape_client/core/models/residence_model.dart' as model;
-import 'package:chapechape_client/core/models/residence_model.dart' hide ResidenceType;
-import 'package:chapechape_client/core/constants/app_assets.dart' as assets;
+import 'package:chapechape_client/core/models/residence_model.dart';
+import 'package:chapechape_client/core/models/residence_type_enum.dart'; // Ajout de l'import manquant
 import 'package:chapechape_client/core/services/api_service.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
+import 'package:chapechape_client/core/models/api/api_error.dart';
 import 'package:flutter/foundation.dart';
 
 class ResidenceService {
@@ -21,9 +22,16 @@ class ResidenceService {
   static Future<ResidenceService> initialize() async {
     if (_instance != null) return _instance!;
 
+    // Initialiser les services requis
+    final apiService = await ApiService.initialize();
+    final cacheService = CacheService.getInstance();
+    
+    // S'assurer que CacheService est initialisé
+    await cacheService.ensureInitialized();
+
     final instance = ResidenceService._(
-      apiService: await ApiService.initialize(),
-      cacheService: await CacheService.initialize(),
+      apiService: apiService,
+      cacheService: cacheService,
     );
     _instance = instance;
     return instance;
@@ -39,70 +47,80 @@ class ResidenceService {
     // Construire une clé de cache basée sur les paramètres
     final cacheKey = 'residences_all_${filters ?? ''}_page${page ?? 1}_limit${limit ?? 10}';
     
-    return _cacheService.get<List<Residence>>(
-      cacheKey,
-      () async {
-        try {
-          final response = await _apiService.get(
-            '/residences',
-            queryParameters: {
-              if (filters != null) ...filters,
-              if (page != null) 'page': page,
-              if (limit != null) 'limit': limit,
-            },
-          );
+    try {
+      // Vérifier si on a des données en cache
+      final cachedData = _cacheService.get(cacheKey);
+      if (cachedData != null && !forceRefresh) {
+        return (cachedData as List).cast<Residence>();
+      }
+      
+      // Sinon, récupérer les données
+      final response = await _apiService.get(
+        '/residences',
+        queryParameters: {
+          if (filters != null) ...filters,
+          if (page != null) 'page': page,
+          if (limit != null) 'limit': limit,
+        },
+      );
 
-          return (response.data['data'] as List)
-              .map((json) => _adaptBackendResidenceToClient(json))
-              .toList();
-        } on DioException catch (e) {
-          throw _handleDioError(e);
-        }
-      },
-      forceRefresh: forceRefresh,
-      // Plus longue durée de cache pour les résidences (30 minutes)
-      duration: const Duration(minutes: 30),
-    );
+      final residences = (response.data['data'] as List)
+          .map((json) => _adaptBackendResidenceToClient(json))
+          .toList();
+          
+      // Mettre en cache pour 30 minutes
+      await _cacheService.put(cacheKey, residences, expiryInMinutes: 30);
+      
+      return residences;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
 
   // Récupérer une résidence par son ID avec cache
-  Future<Residence> getResidenceById(String id, {bool forceRefresh = false}) async {
+  // Retourne Residence? pour indiquer que la résidence peut être null si non trouvée
+  Future<Residence?> getResidenceById(String id, {bool forceRefresh = false}) async {
     final cacheKey = 'residence_$id';
     
-    return _cacheService.get<Residence>(
-      cacheKey,
-      () async {
-        try {
-          debugPrint('🔍 Récupération des détails de la résidence: $id');
-          final response = await _apiService.get('residences/$id');
-          
-          // LOGS DE DIAGNOSTIC DÉTAILLÉS
-          debugPrint('======== DONNÉES DÉTAILLÉES DE LA RÉSIDENCE ========');
-          debugPrint('Structure complète: ${response.data}');
-          
-          // Vérifier si features existe et sa structure
-          if (response.data['features'] != null) {
-            debugPrint('Features trouvé: ${response.data['features']}');
-          }
-          
-          // Vérifier si location existe et sa structure
-          if (response.data['location'] != null) {
-            debugPrint('Location trouvé: ${response.data['location']}');
-          }
-          
-          // Vérifier les images
-          debugPrint('Images: ${response.data['images']}');
-          debugPrint('================================================');
-          
-          return _adaptBackendResidenceToClient(response.data);
-        } on DioException catch (e) {
-          debugPrint('❌ Erreur lors de la récupération de la résidence: ${e.message}');
-          throw _handleDioError(e);
-        }
-      },
-      forceRefresh: forceRefresh,
-      duration: const Duration(hours: 1),
-    );
+    try {
+      // Vérifier si on a des données en cache
+      final cachedData = _cacheService.get(cacheKey);
+      if (cachedData != null && !forceRefresh) {
+        return cachedData as Residence;
+      }
+      
+      // Sinon, récupérer les données
+      debugPrint('🔍 Récupération des détails de la résidence: $id');
+      final response = await _apiService.get('residences/$id');
+      
+      // LOGS DE DIAGNOSTIC DÉTAILLÉS
+      debugPrint('======== DONNÉES DÉTAILLÉES DE LA RÉSIDENCE ========');
+      debugPrint('Structure complète: ${response.data}');
+      
+      // Vérifier si features existe et sa structure
+      if (response.data['features'] != null) {
+        debugPrint('Features trouvé: ${response.data['features']}');
+      }
+      
+      // Vérifier si location existe et sa structure
+      if (response.data['location'] != null) {
+        debugPrint('Location trouvé: ${response.data['location']}');
+      }
+      
+      // Vérifier les images
+      debugPrint('Images: ${response.data['images']}');
+      debugPrint('================================================');
+      
+      final residence = _adaptBackendResidenceToClient(response.data);
+      
+      // Mettre en cache pour 1 heure
+      await _cacheService.put(cacheKey, residence, expiryInMinutes: 60);
+      
+      return residence;
+    } on DioException catch (e) {
+      debugPrint('❌ Erreur lors de la récupération de la résidence: ${e.message}');
+      throw _handleDioError(e);
+    }
   }
 
   // Rechercher des résidences avec cache
@@ -121,36 +139,40 @@ class ResidenceService {
     // Construire une clé de cache basée sur les critères de recherche
     final cacheKey = 'search_${query ?? ''}_city${city ?? ''}_price${minPrice ?? 0}-${maxPrice ?? 0}_bed${bedrooms ?? 0}_bath${bathrooms ?? 0}_am${amenities?.join('-') ?? ''}_dates${checkIn?.day ?? ''}-${checkOut?.day ?? ''}';
     
-    return _cacheService.get<List<Residence>>(
-      cacheKey,
-      () async {
-        try {
-          final response = await _apiService.get(
-            '/residences/search',
-            queryParameters: {
-              if (query != null) 'query': query,
-              if (city != null) 'city': city,
-              if (minPrice != null) 'minPrice': minPrice,
-              if (maxPrice != null) 'maxPrice': maxPrice,
-              if (bedrooms != null) 'bedrooms': bedrooms,
-              if (bathrooms != null) 'bathrooms': bathrooms,
-              if (amenities != null) 'amenities': amenities.join(','),
-              if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
-              if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
-            },
-          );
+    try {
+      // Vérifier si on a des données en cache
+      final cachedData = _cacheService.get(cacheKey);
+      if (cachedData != null && !forceRefresh) {
+        return (cachedData as List).cast<Residence>();
+      }
+      
+      // Sinon, récupérer les données
+      final response = await _apiService.get(
+        '/residences/search',
+        queryParameters: {
+          if (query != null) 'query': query,
+          if (city != null) 'city': city,
+          if (minPrice != null) 'minPrice': minPrice,
+          if (maxPrice != null) 'maxPrice': maxPrice,
+          if (bedrooms != null) 'bedrooms': bedrooms,
+          if (bathrooms != null) 'bathrooms': bathrooms,
+          if (amenities != null) 'amenities': amenities.join(','),
+          if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
+          if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
+        },
+      );
 
-          return (response.data['data'] as List)
-              .map((json) => _adaptBackendResidenceToClient(json))
-              .toList();
-        } on DioException catch (e) {
-          throw _handleDioError(e);
-        }
-      },
-      forceRefresh: forceRefresh,
-      // Durée de cache plus courte pour les recherches (15 minutes)
-      duration: const Duration(minutes: 15),
-    );
+      final residences = (response.data['data'] as List)
+          .map((json) => _adaptBackendResidenceToClient(json))
+          .toList();
+          
+      // Mettre en cache pour 15 minutes
+      await _cacheService.put(cacheKey, residences, expiryInMinutes: 15);
+      
+      return residences;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
 
   // Récupérer les résidences favorites d'un utilisateur (sans cache car dynamique)
@@ -170,7 +192,7 @@ class ResidenceService {
     try {
       await _apiService.post('/residences/favorites/$residenceId');
       // Invalider le cache des favoris
-      await _cacheService.invalidateByPrefix('residence_$residenceId');
+      await _cacheService.remove('residence_$residenceId');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -181,7 +203,7 @@ class ResidenceService {
     try {
       await _apiService.delete('/residences/favorites/$residenceId');
       // Invalider le cache des favoris
-      await _cacheService.invalidateByPrefix('residence_$residenceId');
+      await _cacheService.remove('residence_$residenceId');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -208,225 +230,84 @@ class ResidenceService {
     }
   }
 
-  // Mappage des types backend vers les types ResidenceType du client
-  model.ResidenceType _mapBackendTypeToClientType(String backendType) {
-    switch (backendType.toLowerCase().trim()) {
-      // Mappings des types de base du backend vers les types spécifiques du client
-      case 'studio':
-        return model.ResidenceType.studioMeuble;
-      case 'apartment':
-        return model.ResidenceType.appartementMeuble;
-      case 'villa':
-        return model.ResidenceType.villaMeublee;
-      case 'house':
-        return model.ResidenceType.house;
-      case 'hotel':
-        return model.ResidenceType.hotel;
-        
-      // 🏠 Résidences meublées
-      case 'studio meublé':
-      case 'studio_meuble':
-      case 'studiomeuble':
-        return model.ResidenceType.studioMeuble;
-      case 'appartement meublé':
-      case 'appartement_meuble':
-      case 'appartementmeuble':
-        return model.ResidenceType.appartementMeuble;
-      case 'villa meublée':
-      case 'villa_meublee':
-      case 'villameublee':
-        return model.ResidenceType.villaMeublee;
-      case 'penthouse':
-        return model.ResidenceType.penthouse;
-      case 'loft':
-        return model.ResidenceType.appartementMeuble; // Loft -> Appartement meublé
-      case 'grenier':
-      case 'grenier aménagé':
-      case 'grenier_amenage':
-        return model.ResidenceType.grenier;
-
-      // 🏨 Hôtels & Hébergements classiques
-      case 'hôtel de passage':
-      case 'hotel de passage':
-      case 'hotel_de_passage':
-      case 'hotel_passage':
-      case 'hoteldepassage':
-        return model.ResidenceType.hotelDePassage;
-      case 'motel':
-        return model.ResidenceType.motel;
-      case 'boutique-hôtel':
-      case 'boutique-hotel':
-      case 'boutique_hotel':
-      case 'boutiquehotel':
-        return model.ResidenceType.boutiqueHotel;
-      case 'hôtel de luxe':
-      case 'hotel de luxe':
-      case 'hotel_de_luxe':
-      case 'hotel_luxe':
-      case 'hoteldeluxe':
-        return model.ResidenceType.hotelDeLuxe;
-      case 'auberge et maison d\'hôtes':
-      case 'auberge et maison d\'hotes':
-      case 'auberge_et_maison_dhotes':
-      case 'aubergeetmaisondhotes':
-      case 'maison_hotes':
-      case 'guest_house':
-        return model.ResidenceType.aubergeEtMaisonDHotes;
-      case 'résidence hôtelière':
-      case 'residence hoteliere':
-      case 'residence_hoteliere':
-      case 'residencehoteliere':
-        return model.ResidenceType.residenceHoteliere;
-
-      // 🌍 Hébergements insolites & nature
-      case 'bungalow':
-        return model.ResidenceType.bungalow;
-      case 'lodge & écolodge':
-      case 'lodge & ecolodge':
-      case 'lodge_et_ecolodge':
-      case 'lodge':
-      case 'lodgetecolodge':
-        return model.ResidenceType.lodgeEtEcolodge;
-      case 'case traditionnelle':
-      case 'case_traditionnelle':
-      case 'casetraditionnelle':
-        return model.ResidenceType.caseTraditionnelle;
-      case 'maison flottante':
-      case 'maison_flottante':
-      case 'maisonflottante':
-        return model.ResidenceType.maisonFlottante;
-      case 'campement touristique':
-      case 'campement_touristique':
-      case 'campementtouristique':
-        return model.ResidenceType.campementTouristique;
-
-      // 🏘️ Colocation & résidences partagées
-      case 'chambre en colocation':
-      case 'chambre_en_colocation':
-      case 'chambre_colocation':
-      case 'chambrecolocation':
-        return model.ResidenceType.chambreEnColocation;
-      case 'coliving':
-      case 'cohabitation':
-        return model.ResidenceType.cohabitation;
-      case 'résidence universitaire':
-      case 'residence universitaire':
-      case 'residence_universitaire':
-        return model.ResidenceType.residenceUniversitaire;
-      case 'cité & dortoir':
-      case 'cite & dortoir':
-      case 'cité dortoir':
-      case 'cite dortoir':
-      case 'cite_dortoir':
-        return model.ResidenceType.citeDortoir;
-
-      // 🏡 Résidences longue durée
-      case 'appartement non meublé':
-      case 'appartement_vide':
-      case 'appartement_non_meuble':
-        return model.ResidenceType.appartementNonMeuble;
-      case 'villa non meublée':
-      case 'villa_vide':
-      case 'villa_non_meublee':
-        return model.ResidenceType.villaNonMeublee;
-      case 'immeuble':
-        return model.ResidenceType.immeuble;
-      case 'cour commune':
-      case 'cour_commune':
-        return model.ResidenceType.courCommune;
-        
-      // ⛺ Hébergements économiques et populaires
-      case 'maison d\'hôtes économique':
-      case 'maison d\'hotes economique':
-      case 'maison_hotes_economique':
-        return model.ResidenceType.maisonDHotesEconomique;
-      case 'résidence familiale en location':
-      case 'residence familiale en location':
-      case 'residence_familiale':
-      case 'residence_familiale_en_location':
-        return model.ResidenceType.residenceFamilialeEnLocation;
-      case 'chambres de passage':
-      case 'chambres_passage':
-      case 'chambres_de_passage':
-        return model.ResidenceType.chambresDePassage;
-
-      default:
-        debugPrint('⚠️ Type de résidence non reconnu: $backendType, utilisation du type par défaut');
-        // Si on ne reconnaît pas, on retourne un type par défaut selon la première lettre
-        if (backendType.toLowerCase().startsWith('s')) {
-          return model.ResidenceType.studioMeuble;
-        } else if (backendType.toLowerCase().startsWith('v')) {
-          return model.ResidenceType.villaMeublee;
-        } else if (backendType.toLowerCase().startsWith('h') || backendType.toLowerCase().startsWith('ho')) {
-          return model.ResidenceType.hotel;
-        } else if (backendType.toLowerCase().startsWith('b')) {
-          return model.ResidenceType.bungalow;
-        } else if (backendType.toLowerCase().startsWith('c')) {
-          return model.ResidenceType.chambreEnColocation;
-        } else {
-          return model.ResidenceType.appartementMeuble;
-        }
+  // Méthode pour mapper le type du backend au type du client
+  ResidenceType _mapBackendTypeToClientType(String backendType) {
+    try {
+      // Conversion manuelle en utilisant un switch
+      switch (backendType.toLowerCase()) {
+        case 'apartment': return ResidenceType.apartment;
+        case 'house': return ResidenceType.house;
+        case 'villa': return ResidenceType.villa;
+        case 'studio': return ResidenceType.studio;
+        case 'room': return ResidenceType.room;
+        case 'hotel': return ResidenceType.hotel;
+        case 'resort': return ResidenceType.resort;
+        case 'motel': return ResidenceType.motel;
+        case 'guesthouse': return ResidenceType.guesthouse;
+        case 'cottage': return ResidenceType.cottage;
+        case 'cabin': return ResidenceType.cabin;
+        case 'chalet': return ResidenceType.chalet;
+        case 'bungalow': return ResidenceType.bungalow;
+        case 'hostel': return ResidenceType.hostel;
+        default: return ResidenceType.other;
+      }
+    } catch (e) {
+      // En cas d'erreur, retourner un type par défaut
+      debugPrint('⚠️ Erreur de conversion du type: $e. Type reçu: $backendType');
+      return ResidenceType.other;
     }
   }
 
   // Adapter les données du backend au format du client
-  Residence _adaptBackendResidenceToClient(Map<String, dynamic> json) {
-    debugPrint('Adaptation des données backend: $json');
-    
+  Residence _adaptBackendResidenceToClient(Map<String, dynamic> data) {
     try {
-      // Extraire l'objet data
-      final data = json['data'] as Map<String, dynamic>? ?? json;
-      debugPrint('Données à adapter: $data');
+      final String id = data['_id'] ?? data['id'] ?? '';
+      final String name = data['title'] ?? data['name'] ?? 'Sans titre';
+      final String description = data['description'] ?? 'Aucune description';
+      final double price = data['price'] != null ? double.parse(data['price'].toString()) : 0.0;
+      final String address = data['address'] ?? '';
+      final String city = data['city'] ?? '';
+      final String country = data['country'] ?? '';
       
-      // Extraire le nom depuis title
-      final name = data['title']?.toString() ?? 'Résidence sans nom';
-      debugPrint('📝 Nom extrait: $name');
+      // Images et vérification du format
+      final List<String> images = _extractImages(data['images']);
       
-      // Extraire la surface depuis area
-      final surface = data['area'] != null ? (data['area'] as num).toDouble() : 0.0;
-      debugPrint('📏 Surface extraite: $surface');
+      // Propriétés numériques
+      final int bedrooms = data['bedrooms'] != null ? int.parse(data['bedrooms'].toString()) : 0;
+      final int bathrooms = data['bathrooms'] != null ? int.parse(data['bathrooms'].toString()) : 0;
+      final double surface = data['surface'] != null 
+        ? double.parse(data['surface'].toString()) 
+        : data['area'] != null 
+          ? double.parse(data['area'].toString()) 
+          : data['squareMeters'] != null 
+            ? double.parse(data['squareMeters'].toString()) 
+            : 0.0;
       
-      // Extraire les autres champs avec gestion des valeurs nulles
-      final String id = data['_id']?.toString() ?? data['id']?.toString() ?? 'unknown_id';
-      final String description = data['description']?.toString() ?? '';
-      final double price = data['price'] != null ? (data['price'] as num).toDouble() : 0.0;
+      // État de disponibilité
+      final bool isAvailable = data['status'] == 'available' || data['isAvailable'] == true;
       
-      // Gestion de l'adresse et de la ville
-      final location = data['location'] as Map<String, dynamic>? ?? {};
-      String address = data['address']?.toString() ?? '';
-      String city = data['city']?.toString() ?? '';
+      // Récupération de la localisation
+      Map<String, dynamic> location = {
+        'address': address,
+        'city': city,
+        'country': country,
+      };
       
-      // Si l'adresse est vide mais que nous avons la ville, l'inclure dans l'adresse
-      if (address.isEmpty && city.isNotEmpty) {
-        address = city;
-      } else if (address.isNotEmpty && city.isNotEmpty && !address.contains(city)) {
-        address = '$address, $city';
+      if (data['location'] is Map<String, dynamic>) {
+        location = {...location, ...data['location'] as Map<String, dynamic>};
       }
       
-      // Si l'adresse est toujours vide, utiliser "Adresse non disponible"
-      if (address.isEmpty) {
-        address = 'Adresse non disponible';
+      if (data['coordinates'] is List) {
+        location['coordinates'] = data['coordinates'];
+      } else if (data['latitude'] != null && data['longitude'] != null) {
+        location['coordinates'] = [data['latitude'], data['longitude']];
       }
       
-      final String country = location['country']?.toString() ?? data['country']?.toString() ?? 'Côte d\'Ivoire';
-      
-      // Gestion des images avec une image par défaut cohérente
-      List<String> images = _extractImages(data['images']);
-      if (images.isEmpty) {
-        images = [''];  // Image par défaut vide pour le moment
-      }
-      
-      // Extraire les caractéristiques
-      final features = data['features'] as Map<String, dynamic>? ?? {};
-      final int bedrooms = data['bedrooms'] as int? ?? features['bedrooms'] as int? ?? 0;
-      final int bathrooms = data['bathrooms'] as int? ?? features['bathrooms'] as int? ?? 0;
-      
-      // Gestion du statut de disponibilité
-      final bool isAvailable = data['status'] == 'available';
-      
-      // Gestion des équipements
+      // Récupération des équipements
       List<String> amenities = [];
-      if (data['amenities'] != null && data['amenities'] is List) {
+      if (data['features'] is Map<String, dynamic>) {
+        amenities = _extractAmenities(data['features'] as Map<String, dynamic>, data);
+      } else if (data['amenities'] is List) {
         amenities = (data['amenities'] as List).map((e) => e.toString()).toList();
       }
       
@@ -435,41 +316,71 @@ class ResidenceService {
       if (bedrooms == 0) {
         backendType = 'studio_meuble';
       }
-      final type = _mapBackendTypeToClientType(backendType);
+      final residenceType = _mapBackendTypeToClientType(backendType);
+      
+      // Regrouper les détails de prix pour les remises
+      Map<String, dynamic>? priceDetails;
+      if (data['discountPrice'] != null) {
+        priceDetails = {
+          'discountPrice': double.tryParse(data['discountPrice'].toString()) ?? 0.0,
+          'originalPrice': price,
+        };
+      }
       
       final residence = Residence(
         id: id,
-        name: name,
+        title: name,
         description: description,
-        price: price,
-        address: address,
-        city: city,
-        country: country,
+        shortDescription: data['shortDescription'] ?? '',
         images: images,
+        price: price,
+        location: location,
         bedrooms: bedrooms,
         bathrooms: bathrooms,
-        surface: surface,
-        isAvailable: isAvailable,
-        location: location,
+        squareMeters: surface,
         amenities: amenities,
-        type: type,
+        hasPool: data['hasPool'] == true || amenities.contains('pool'),
+        hasWifi: data['hasWifi'] == true || amenities.contains('wifi'),
+        isVacationResidence: data['isVacationResidence'] == true,
+        isSpecialResidence: data['isSpecialResidence'] == true,
+        isAvailable: isAvailable,
+        isFeatured: data['isFeatured'] == true,
+        isPopular: data['isPopular'] == true,
+        isVerified: data['isVerified'] == true,
+        isNew: data['isNew'] == true,
+        rating: data['rating'] != null ? double.parse(data['rating'].toString()) : 0.0,
+        reviewCount: data['reviewCount'] != null ? int.parse(data['reviewCount'].toString()) : 0,
+        currency: data['currency']?.toString() ?? 'XOF',
+        type: residenceType,
+        maxOccupancy: data['maxOccupancy'] != null ? int.parse(data['maxOccupancy'].toString()) : bedrooms * 2,
+        owner: data['owner'] ?? data['ownerId'] ?? '',
+        createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt'].toString()) : null,
+        updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt'].toString()) : null,
+        allowsPets: data['allowsPets'] == true,
+        allowsSmoking: data['allowsSmoking'] == true,
+        allowsParties: data['allowsParties'] == true,
+        priceDetails: priceDetails,
         pricePeriod: data['pricePeriod']?.toString() ?? 'month',
-        hourlyRate: data['hourlyRate'] != null ? (data['hourlyRate'] as num).toDouble() : 0.0,
-        halfDayRate: data['halfDayRate'] != null ? (data['halfDayRate'] as num).toDouble() : 0.0,
-        fullDayRate: data['fullDayRate'] != null ? (data['fullDayRate'] as num).toDouble() : 0.0,
-        weekendRate: data['weekendRate'] != null ? (data['weekendRate'] as num).toDouble() : 0.0,
-        rating: data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0,
-        reviewCount: data['reviewCount'] != null ? (data['reviewCount'] as num).toInt() : 0,
-        createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt'].toString()) : DateTime.now(),
-        updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt'].toString()) : DateTime.now(),
+        hourlyRate: data['hourlyRate'] != null ? double.parse(data['hourlyRate'].toString()) : 
+                   data['hourlyRates'] != null && data['hourlyRates']['oneHour'] != null ? 
+                   double.parse(data['hourlyRates']['oneHour'].toString()) : 0.0,
+        halfDayRate: data['halfDayRate'] != null ? double.parse(data['halfDayRate'].toString()) : 
+                    data['dailyRates'] != null && data['dailyRates']['halfDay'] != null ? 
+                    double.parse(data['dailyRates']['halfDay'].toString()) : 0.0,
+        fullDayRate: data['fullDayRate'] != null ? double.parse(data['fullDayRate'].toString()) : 
+                    data['dailyRates'] != null && data['dailyRates']['fullDay'] != null ? 
+                    double.parse(data['dailyRates']['fullDay'].toString()) : 0.0,
+        weekendRate: data['weekendRate'] != null ? double.parse(data['weekendRate'].toString()) : 
+                    data['dailyRates'] != null && data['dailyRates']['weekend'] != null ? 
+                    double.parse(data['dailyRates']['weekend'].toString()) : 0.0,
       );
       
-      debugPrint('✅ Résidence adaptée avec succès: ${residence.name} (${residence.id})');
+      debugPrint('✅ Résidence adaptée avec succès: ${residence.title} (${residence.id})');
       return residence;
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur lors de l\'adaptation des données: $e');
       debugPrint('Stack trace: $stackTrace');
-      debugPrint('JSON reçu: $json');
+      debugPrint('JSON reçu: $data');
       throw Exception('Erreur lors de l\'adaptation des données de la résidence');
     }
   }
@@ -565,6 +476,70 @@ class ResidenceService {
         return Exception('Erreur serveur');
       default:
         return Exception('Une erreur est survenue');
+    }
+  }
+  
+  // Méthodes pour récupérer des résidences par type
+  Future<List<Residence>> getResidencesByType(String type) async {
+    try {
+      return await getAllResidences(
+        filters: {'type': type},
+        forceRefresh: false,
+      );
+    } on DioException catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences par type: $e');
+      throw _handleDioError(e);
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences par type: $e');
+      return [];
+    }
+  }
+  
+  // Récupère les résidences mises en avant
+  Future<List<Residence>> getFeaturedResidences() async {
+    try {
+      return await getAllResidences(
+        filters: {'featured': true},
+        limit: 10,
+      );
+    } on DioException catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences en vedette: $e');
+      throw _handleDioError(e);
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences en vedette: $e');
+      return [];
+    }
+  }
+  
+  // Récupère les résidences spéciales
+  Future<List<Residence>> getSpecialResidences() async {
+    try {
+      return await getAllResidences(
+        filters: {'special': true},
+        limit: 10,
+      );
+    } on DioException catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences spéciales: $e');
+      throw _handleDioError(e);
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences spéciales: $e');
+      return [];
+    }
+  }
+  
+  // Récupère les résidences populaires
+  Future<List<Residence>> getPopularResidences() async {
+    try {
+      return await getAllResidences(
+        filters: {'popular': true, 'sort': 'rating'}, 
+        limit: 10,
+      );
+    } on DioException catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences populaires: $e');
+      throw _handleDioError(e);
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des résidences populaires: $e');
+      return [];
     }
   }
 }

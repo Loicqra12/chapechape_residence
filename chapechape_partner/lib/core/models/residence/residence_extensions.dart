@@ -2,33 +2,96 @@ import 'residence.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/config/app_config.dart';
+import '../../utils/formatters.dart';
 
 extension ResidenceProperties on Residence {
   // Utiliser l'URL de base depuis la configuration
   static String get baseUrl => AppConfig.apiUrl;
   
+  // Flag pour détecter si c'est une image locale qui devrait être chargée comme asset
+  bool get hasPlaceholderImage {
+    final imagePath = mainImage ?? (images.isNotEmpty ? images.first : '');
+    return imagePath.isEmpty || 
+           imagePath.startsWith('assets/') || 
+           imagePath == AppImages.residencePlaceholder;
+  }
+  
   // Méthode utilitaire améliorée pour construire les URLs d'images complètes
   String _getCompleteImageUrl(String imagePath) {
+    // Si l'image est vide, retourner le placeholder
+    if (imagePath.isEmpty) return AppImages.residencePlaceholder;
+    
+    // Si c'est une image locale (assets), la retourner telle quelle
+    if (imagePath.toString().startsWith('assets/')) return imagePath.toString();
+    
+    // Si déjà une URL complète avec le domaine mais pas /residences/
+    if (imagePath.startsWith('http') && imagePath.contains('/uploads/') && !imagePath.contains('/uploads/residences/')) {
+      print('Correction d\'URL: ajout de /residences/ dans: $imagePath');
+      return imagePath.replaceAll('/uploads/', '/uploads/residences/');
+    }
+    
     // Si déjà une URL complète, la retourner telle quelle
     if (imagePath.toString().startsWith('http')) return imagePath.toString();
     
-    // Si c'est une image locale (assets), la retourner telle quelle
-    if (imagePath.toString().startsWith('assets')) return imagePath.toString();
+    // Récupérer l'URL de base en enlevant /api si présent
+    String baseUrl = AppConfig.apiUrl;
+    if (baseUrl.endsWith("/api")) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 4);
+    }
+    
+    // Si le chemin commence par /uploads mais pas par /uploads/residences/
+    if (imagePath.startsWith('/uploads/') && !imagePath.startsWith('/uploads/residences/')) {
+      String modifiedUrl = imagePath.replaceAll('/uploads/', '/uploads/residences/');
+      return '$baseUrl$modifiedUrl';
+    }
     
     // Si le chemin commence déjà par un slash, ne pas en ajouter un autre
     if (imagePath.startsWith('/')) {
       return '$baseUrl$imagePath';
     }
     
-    // Ajouter le slash si nécessaire
-    return '$baseUrl/$imagePath';
+    // Ajouter le slash et le chemin complet avec residences/
+    return '$baseUrl/uploads/residences/$imagePath';
   }
   
   String get imageUrl {
     final imagePath = mainImage ?? (images.isNotEmpty ? images.first : AppImages.residencePlaceholder);
-    print('Original image path: $imagePath');  // Debug: afficher le chemin original
-    final fullUrl = _getCompleteImageUrl(imagePath);
-    print('Full image URL: $fullUrl');  // Debug: afficher l'URL complète
+    print('ResidenceProperties - Image originale: $imagePath');
+    
+    // Si c'est un objet et pas une chaîne, essayer d'extraire l'URL
+    if (imagePath is Map) {
+      print('ResidenceProperties - L\'image est une Map: $imagePath');
+      final String? url = imagePath['url'];
+      if (url != null) {
+        final fullUrl = _getCompleteImageUrl(url);
+        print('ResidenceProperties - URL extraite de la Map: $fullUrl');
+        return fullUrl;
+      }
+    }
+    
+    // Vérifier si l'image est un élément du tableau images mais pas une chaîne
+    if (images.isNotEmpty && imagePath == images.first && imagePath is! String) {
+      print('ResidenceProperties - L\'image n\'est pas une chaîne: $imagePath (type: ${imagePath.runtimeType})');
+      
+      // Si c'est une liste d'images avec structure différente
+      if (images.first is Map) {
+        final firstImage = images.first as Map;
+        if (firstImage.containsKey('url')) {
+          final String imageUrl = firstImage['url'];
+          final fullUrl = _getCompleteImageUrl(imageUrl);
+          print('ResidenceProperties - URL extraite d\'une Map dans images: $fullUrl');
+          return fullUrl;
+        }
+      }
+      
+      // Si on ne peut pas extraire une URL, retourner l'image par défaut
+      print('ResidenceProperties - Impossible d\'extraire l\'URL, retour à l\'image par défaut');
+      return AppImages.residencePlaceholder;
+    }
+    
+    print('ResidenceProperties - Conversion en chaîne et création de l\'URL complète');
+    final fullUrl = _getCompleteImageUrl(imagePath.toString());
+    print('ResidenceProperties - URL complète: $fullUrl');
     return fullUrl;
   }
   
@@ -46,11 +109,34 @@ extension ResidenceProperties on Residence {
   
   String get statusText => isAvailable ? 'Disponible' : 'Non disponible';
   
-  String get formattedPrice => NumberFormat.currency(
-    locale: 'fr_FR',
-    symbol: 'FCFA',
-    decimalDigits: 0,
-  ).format(price);
+  // Formatage de prix avec devise actuelle
+  String get formattedPrice => PriceFormatter.formatPrice(
+    price,
+    withCurrency: true,
+    currency: currency,
+  );
+  
+  // Formatage de prix sans symbole de devise
+  String get formattedPriceWithoutCurrency => PriceFormatter.formatPrice(
+    price,
+    withCurrency: false,
+    currency: currency,
+  );
+  
+  // Conversion du prix vers une autre devise
+  double convertPrice(String targetCurrency) {
+    return CurrencyConverter.convert(price, currency, targetCurrency);
+  }
+  
+  // Formatage du prix dans une autre devise
+  String getFormattedPriceIn(String targetCurrency, {bool withCurrency = true}) {
+    final convertedPrice = convertPrice(targetCurrency);
+    return PriceFormatter.formatPrice(
+      convertedPrice,
+      withCurrency: withCurrency,
+      currency: targetCurrency,
+    );
+  }
   
   String get priceDisplay => formattedPrice;
   

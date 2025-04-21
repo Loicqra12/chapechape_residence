@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:chapechape_partner/core/blocs/auth/auth_bloc.dart';
+import 'package:chapechape_partner/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_partner/presentation/screens/auth/login_screen.dart';
 import 'package:go_router/go_router.dart';
 

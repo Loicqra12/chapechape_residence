@@ -8,6 +8,7 @@ import '../../../core/services/api/residence_service.dart';
 import '../../../core/services/api/reservation_service.dart';
 import '../../../core/services/api/api_service.dart';
 import '../../../core/services/event_bus/residence_event_bus.dart' as event_bus;
+import '../../../core/config/app_config.dart';
 
 // Events
 abstract class DashboardEvent extends Equatable {
@@ -125,9 +126,12 @@ class DashboardError extends DashboardState {
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final DashboardService _dashboardService;
+  final ResidenceService _residenceService;
   StreamSubscription? _residenceEventSubscription;
   
-  DashboardBloc(this._dashboardService) : super(DashboardInitial()) {
+  DashboardBloc(this._dashboardService) : 
+    _residenceService = ResidenceService(baseUrl: AppConfig.apiUrl),
+    super(DashboardInitial()) {
     on<LoadDashboardData>(_onLoadDashboardData);
     on<RefreshDashboardData>(_onRefreshDashboardData);
     on<ChangePeriod>(_onChangePeriod);
@@ -212,148 +216,171 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       // Définir la période par défaut
       final String period = 'monthly';
 
+      // Variables pour stocker les données avec valeurs par défaut au cas où une API échoue
+      DashboardOverview? overview;
+      DashboardFinances? finances;
+      RealtimeStats? realtime;
+      PartnerStats? partnerStats;
+      TrendData? trendData;
+      List<ResidenceStats>? residenceStats;
+      EarningsData? earningsData;
+      
       try {
         // Charger toutes les données en parallèle
         final futures = await Future.wait([
-          // 1. Dashboard Overview (Endpoint 5)
-          _dashboardService.getDashboardOverview(),
+          // 1. Dashboard Overview
+          _dashboardService.getDashboardOverview().catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération du dashboard overview: $e');
+            // Créer un objet vide plutôt que null pour éviter les erreurs
+            return DashboardOverview(
+              totalResidences: 0,
+              bookings: {'total': 0, 'pending': 0, 'confirmed': 0, 'cancelled': 0, 'completed': 0},
+              occupancyRate: 0.0,
+              pendingReviews: 0,
+              newMessages: 0,
+              performance: {'averageResponseTime': 0, 'averageRating': 0.0},
+              responseRate: 0.0
+            );
+          }),
           
-          // 2. Dashboard Finances (Endpoint 6)
-          _dashboardService.getDashboardFinances(),
+          // 2. Dashboard Finances
+          _dashboardService.getDashboardFinances().catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des finances: $e');
+            // Créer un objet vide plutôt que null pour éviter les erreurs
+            return DashboardFinances(
+              monthlyRevenue: 0.0,
+              dailyRevenue: 0.0,
+              weeklyRevenue: 0.0,
+              revenueGrowth: 0.0,
+              bestPerformingResidences: [],
+              revenueByCategory: {}
+            );
+          }),
           
-          // 3. Dashboard Realtime (Endpoint 7)
-          _dashboardService.getDashboardRealtime(),
+          // 3. Dashboard Realtime
+          _dashboardService.getDashboardRealtime().catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des statistiques en temps réel: $e');
+            return RealtimeStats.empty();
+          }),
           
-          // 4. Partner Stats (Endpoint 1)
-          _dashboardService.getPartnerStats(),
+          // 4. Partner Stats
+          _dashboardService.getPartnerStats().catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des statistiques du partenaire: $e');
+            return PartnerStats.empty();
+          }),
           
-          // 5. Trends (Endpoint 2)
-          _dashboardService.getTrends(period: period),
+          // 5. Trends
+          _dashboardService.getTrends(period: period).catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des tendances: $e');
+            return TrendData.empty();
+          }),
           
-          // 6. Residence Stats (Endpoint 3)
-          _dashboardService.getResidenceStats(),
+          // 6. Residence Stats
+          _dashboardService.getResidenceStats().catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des statistiques des résidences: $e');
+            return <ResidenceStats>[];
+          }),
           
-          // 7. Earnings (Endpoint 4)
-          _dashboardService.getEarnings(),
+          // 7. Earnings
+          _dashboardService.getEarnings().catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des revenus: $e');
+            return EarningsData.empty();
+          }),
         ]);
         
-        final overview = futures[0] as DashboardOverview;
-        final finances = futures[1] as DashboardFinances;
-        final realtime = futures[2] as RealtimeStats;
-        final partnerStats = futures[3] as PartnerStats;
-        final trendData = futures[4] as TrendData;
-        final residenceStats = futures[5] as List<ResidenceStats>;
-        final earningsData = futures[6] as EarningsData;
+        overview = futures[0] as DashboardOverview?;
+        finances = futures[1] as DashboardFinances?;
+        realtime = futures[2] as RealtimeStats;
+        partnerStats = futures[3] as PartnerStats;
+        trendData = futures[4] as TrendData;
+        residenceStats = futures[5] as List<ResidenceStats>;
+        earningsData = futures[6] as EarningsData;
         
         // Combiner les données des 3 premiers endpoints en DashboardData
         final dashboardData = DashboardData(
           performance: PerformanceStats(
-            totalResidences: overview.totalResidences,
-            totalReservations: overview.bookings['total'] ?? 0,
-            occupancyRate: overview.occupancyRate,
-            pendingReviews: overview.pendingReviews,
-            newMessages: overview.newMessages,
+            totalResidences: overview?.totalResidences ?? 0,
+            totalReservations: overview?.bookings['total'] ?? 0,
+            occupancyRate: overview?.occupancyRate ?? 0.0,
+            pendingReviews: overview?.pendingReviews ?? 0,
+            newMessages: overview?.newMessages ?? 0,
           ),
           revenue: RevenueStats(
-            totalRevenue: finances.monthlyRevenue,
-            dailyRevenue: finances.dailyRevenue,
-            weeklyRevenue: finances.weeklyRevenue,
-            monthlyRevenue: finances.monthlyRevenue,
-            revenueGrowth: finances.revenueGrowth,
+            totalRevenue: finances?.monthlyRevenue ?? 0,
+            dailyRevenue: finances?.dailyRevenue ?? 0,
+            weeklyRevenue: finances?.weeklyRevenue ?? 0,
+            monthlyRevenue: finances?.monthlyRevenue ?? 0,
+            revenueGrowth: finances?.revenueGrowth ?? 0.0,
             revenueHistory: trendData.points.map((point) => RevenuePoint(
               date: point.date,
               amount: point.revenue,
             )).toList(),
-            bestResidences: finances.bestPerformingResidences,
-            revenueByCategory: finances.revenueByCategory,
+            bestResidences: finances?.bestPerformingResidences ?? [],
+            revenueByCategory: finances?.revenueByCategory ?? {},
           ),
           stats: GeneralStats(
-            responseRate: overview.responseRate,
-            averageResponseTime: overview.performance['averageResponseTime'] ?? 0,
-            rating: overview.performance['averageRating'] ?? 0.0,
-            bookingsByStatus: overview.bookings,
+            responseRate: overview?.responseRate ?? 0.0,
+            averageResponseTime: overview?.performance['averageResponseTime'] ?? 0,
+            rating: overview?.performance['averageRating'] ?? 0.0,
+            bookingsByStatus: overview?.bookings ?? {},
           ),
           realtime: realtime,
         );
         
-        emit(DashboardLoaded(
-          dashboardData: dashboardData,
-          partnerStats: partnerStats,
-          residenceStats: residenceStats,
-          trendData: trendData,
-          earningsData: earningsData,
-          period: period,
-        ));
-      } catch (serviceError) {
-        // Gérer le cas d'erreur du service ou l'absence de données en utilisant des objets vides
-        debugPrint('Erreur du service dashboard: $serviceError');
-        debugPrint('Initialisation avec des données vides par défaut');
-        
-        // Créer des objets vides pour le chargement mais avec le nombre correct de résidences
-        try {
-          // Essayer de récupérer juste les résidences si c'est la seule chose qui fonctionne
-          final residences = await _dashboardService.getResidenceStats();
-          
-          // Filtrer explicitement les résidences problématiques
-          final filteredResidences = residences.where((residence) => 
-            residence.id != '67e2ecd94408a95a7b598b0d' && // Ignorer l'ID connu comme problématique
-            residence.title.isNotEmpty // Ignorer les résidences sans titre
-          ).toList();
-          
-          final residenceCount = filteredResidences.length;
-          
-          debugPrint('Récupération de secours: $residenceCount résidences valides trouvées après filtrage');
-          
-          // Vérifier le contenu des résidences filtrées
-          for (var residence in filteredResidences) {
-            debugPrint('Résidence de secours valide - ID: ${residence.id}, Titre: ${residence.title}, Status: ${residence.status}');
+        // Si le nombre de résidences est 0, essayons de récupérer les résidences directement
+        // via le ResidenceService - cela fonctionnera même si l'API statistics est inaccessible
+        if (partnerStats.totalResidences == 0) {
+          try {
+            debugPrint('🔍 Tentative de récupération des résidences via ResidenceService...');
+            final residences = await _residenceService.getPartnerResidences();
+            
+            // Si nous avons réussi à obtenir des résidences, mettre à jour les statistiques
+            if (residences.isNotEmpty) {
+              debugPrint('✅ ${residences.length} résidences récupérées directement!');
+              
+              // Créer un nouveau PartnerStats avec les informations des résidences
+              partnerStats = PartnerStats(
+                totalResidences: residences.length,
+                bookingsByStatus: partnerStats.bookingsByStatus,
+                averageRating: partnerStats.averageRating,
+                responseRate: partnerStats.responseRate,
+                occupancyRate: partnerStats.occupancyRate,
+                monthlyRevenue: partnerStats.monthlyRevenue,
+              );
+              
+              // Mettre à jour également les données du tableau de bord si elles existent
+              if (overview != null) {
+                // Créer un nouvel objet overview avec les informations mises à jour
+                final Map<String, int> existingBookings = overview.bookings;
+                final Map<String, dynamic> existingPerformance = overview.performance;
+                
+                // Créer un nouvel objet du même type avec les données mises à jour
+                overview = DashboardOverview(
+                  totalResidences: residences.length,
+                  bookings: existingBookings,
+                  occupancyRate: overview.occupancyRate,
+                  pendingReviews: overview.pendingReviews, 
+                  newMessages: overview.newMessages,
+                  performance: existingPerformance,
+                  responseRate: overview.responseRate
+                );
+              }
+            }
+          } catch (e) {
+            debugPrint('❌ Erreur lors de la récupération directe des résidences: $e');
           }
-          
-          // Créer un dashboard avec le nombre correct de résidences
-          final dashboardData = DashboardData.empty();
-          final performance = dashboardData.performance;
-          // Mettre à jour le nombre de résidences
-          final updatedPerformance = PerformanceStats(
-            totalResidences: residenceCount,
-            totalReservations: performance.totalReservations,
-            occupancyRate: performance.occupancyRate,
-            pendingReviews: performance.pendingReviews,
-            newMessages: performance.newMessages,
-          );
-          
-          final updatedDashboardData = dashboardData.copyWith(
-            performance: updatedPerformance,
-          );
-          
-          emit(DashboardLoaded(
-            dashboardData: updatedDashboardData,
-            partnerStats: PartnerStats.empty(),
-            residenceStats: filteredResidences,
-            trendData: TrendData.empty(),
-            earningsData: EarningsData.empty(),
-            period: period,
-          ));
-          
-          return;
-        } catch (e) {
-          debugPrint('Échec de la récupération de secours des résidences: $e');
         }
         
-        // Si même la récupération de secours échoue, initialiser avec des données complètement vides
-        final dashboardData = DashboardData.empty();
-        final partnerStats = PartnerStats.empty();
-        final List<ResidenceStats> residenceStats = [];
-        final trendData = TrendData.empty();
-        final earningsData = EarningsData.empty();
-        
         emit(DashboardLoaded(
           dashboardData: dashboardData,
-          partnerStats: partnerStats,
+          partnerStats: partnerStats ?? PartnerStats.empty(),
           residenceStats: residenceStats,
           trendData: trendData,
           earningsData: earningsData,
           period: period,
         ));
+      } catch (e) {
+        debugPrint('⚠️ Erreur lors du chargement des statistiques, utilisation de fallback: $e');
       }
     } catch (e) {
       debugPrint('Erreur globale du dashboard: $e');

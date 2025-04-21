@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/blocs/residence/residence_state.dart';
-import '../../core/blocs/residence/residence_event.dart';
-import '../../core/models/residence_model.dart';
 import 'residence_card.dart';
 
 class VacationResidencesWidget extends StatelessWidget {

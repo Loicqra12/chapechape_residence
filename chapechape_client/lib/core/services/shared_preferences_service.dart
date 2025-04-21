@@ -75,4 +75,31 @@ class SharedPreferencesService {
   Set<String> getKeys() {
     return _preferences!.getKeys();
   }
+
+  /// Calcule la taille approximative des données stockées dans les SharedPreferences
+  int getSize() {
+    int totalSize = 0;
+    final keys = getKeys();
+    
+    for (final key in keys) {
+      // Taille de la clé
+      totalSize += key.length * 2; // Approximation pour les caractères UTF-16
+      
+      // Taille de la valeur selon son type
+      if (_preferences!.getString(key) != null) {
+        totalSize += (_preferences!.getString(key)?.length ?? 0) * 2;
+      } else if (_preferences!.getStringList(key) != null) {
+        final list = _preferences!.getStringList(key) ?? [];
+        for (final item in list) {
+          totalSize += item.length * 2;
+        }
+      } else if (_preferences!.getInt(key) != null || _preferences!.getDouble(key) != null) {
+        totalSize += 8; // Taille approximative pour int/double
+      } else if (_preferences!.getBool(key) != null) {
+        totalSize += 1; // Taille approximative pour bool
+      }
+    }
+    
+    return totalSize;
+  }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
-import '../../../core/extensions/residence_extensions.dart';
+import '../../../core/models/residence/residence_extensions.dart';
 import '../../../core/services/api/residence_service.dart';
 import '../../../core/config/app_config.dart';
 import 'edit_residence_screen.dart';
@@ -15,16 +15,33 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/shimmer_loading.dart';
 import '../../widgets/common/optimized_image.dart';
 import '../../../core/utils/string_utils.dart';
+import '../../../core/services/event_bus/residence_event_bus.dart';
+import '../../widgets/residence/residence_grid_widget.dart';
 
 class ResidencesScreen extends StatelessWidget {
   const ResidencesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Créer un nouveau bloc avec le service de résidence
+    // tout en s'assurant qu'il est configuré avec le bus d'événements
+    final residenceService = ResidenceService(
+      baseUrl: AppConfig.apiUrl,
+    );
+    
     return BlocProvider(
-      create: (context) => ResidenceBloc(
-        ResidenceService(baseUrl: AppConfig.apiUrl),
-      )..add(RefreshResidences()),
+      create: (context) {
+        // Créer un nouveau bloc avec le service
+        final bloc = ResidenceBloc(residenceService);
+        
+        // Écouter le bus d'événements pour les résidences (plutôt que subscribe qui n'existe pas)
+        // Cette ligne sera gérée directement dans le bloc, on peut la retirer ici
+        
+        // Charger les résidences
+        bloc.add(RefreshResidences());
+        
+        return bloc;
+      },
       child: const _ResidencesView(),
     );
   }
@@ -123,39 +140,109 @@ class _ResidencesViewState extends State<_ResidencesView> {
                   
                   return RefreshIndicator(
                     onRefresh: () async => _loadResidences(),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Options de filtrage et tri
-                          _buildFilterOptions(context, residences.length),
-                          const SizedBox(height: 16),
-                          
-                          // Afficher les résidences selon le filtre sélectionné
-                          if (_filterStatus == 'all' || _filterStatus == 'available')
-                            if (availableResidences.isNotEmpty) ...[
-                              _buildSectionTitle(context, 'Résidences disponibles', availableResidences.length),
-                              const SizedBox(height: 8),
-                              ...availableResidences.map((residence) {
-                                return _buildEnhancedResidenceCard(context, residence);
-                              }).toList(),
-                              const SizedBox(height: 16),
-                            ],
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Options de filtrage et tri
+                            _buildFilterOptions(context, residences.length),
+                            const SizedBox(height: 16),
                             
-                          if (_filterStatus == 'all' || _filterStatus == 'unavailable')
-                            if (unavailableResidences.isNotEmpty) ...[
-                              _buildSectionTitle(context, 'Résidences non disponibles', unavailableResidences.length),
-                              const SizedBox(height: 8),
-                              ...unavailableResidences.map((residence) {
-                                return _buildEnhancedResidenceCard(context, residence);
-                        }).toList(),
-                            ],
-                            
-                          // Bouton pour ajouter une nouvelle résidence
-                          const SizedBox(height: 24),
-                          _buildAddResidenceCard(context),
-                        ],
+                            // Afficher les résidences selon le filtre sélectionné et le mode d'affichage
+                            if (_filterStatus == 'all' || _filterStatus == 'available')
+                              if (availableResidences.isNotEmpty) ...[
+                                _buildSectionTitle(context, 'Résidences disponibles', availableResidences.length),
+                                const SizedBox(height: 8),
+                                
+                                // Mode d'affichage en liste ou en grille
+                                if (_viewMode == 'list')
+                                  Container(
+                                    height: MediaQuery.of(context).size.height * 0.6,
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      physics: const ClampingScrollPhysics(),
+                                      itemCount: availableResidences.length,
+                                      itemBuilder: (context, index) {
+                                        return _buildEnhancedResidenceCard(
+                                          context, 
+                                          availableResidences[index]
+                                        );
+                                      },
+                                    ),
+                                  )
+                                else
+                                  SizedBox(
+                                    // Définir une hauteur pour la grille
+                                    height: availableResidences.length > 2 
+                                        ? MediaQuery.of(context).size.height * 0.6 
+                                        : MediaQuery.of(context).size.height * 0.3,
+                                    child: ResidenceGridWidget(
+                                      residences: availableResidences,
+                                      onResidenceTap: (residence) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ResidenceDetailsScreen(residence: residence),
+                                          ),
+                                        );
+                                      },
+                                      onDeleteTap: (residence) => _deleteResidence(context, residence),
+                                    ),
+                                  ),
+                                
+                                const SizedBox(height: 16),
+                              ],
+                              
+                            if (_filterStatus == 'all' || _filterStatus == 'unavailable')
+                              if (unavailableResidences.isNotEmpty) ...[
+                                _buildSectionTitle(context, 'Résidences non disponibles', unavailableResidences.length),
+                                const SizedBox(height: 8),
+                                
+                                // Mode d'affichage en liste ou en grille
+                                if (_viewMode == 'list')
+                                  Container(
+                                    height: MediaQuery.of(context).size.height * 0.6,
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      physics: const ClampingScrollPhysics(),
+                                      itemCount: unavailableResidences.length,
+                                      itemBuilder: (context, index) {
+                                        return _buildEnhancedResidenceCard(
+                                          context, 
+                                          unavailableResidences[index]
+                                        );
+                                      },
+                                    ),
+                                  )
+                                else
+                                  SizedBox(
+                                    // Définir une hauteur pour la grille
+                                    height: unavailableResidences.length > 2 
+                                        ? MediaQuery.of(context).size.height * 0.6 
+                                        : MediaQuery.of(context).size.height * 0.3,
+                                    child: ResidenceGridWidget(
+                                      residences: unavailableResidences,
+                                      onResidenceTap: (residence) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ResidenceDetailsScreen(residence: residence),
+                                          ),
+                                        );
+                                      },
+                                      onDeleteTap: (residence) => _deleteResidence(context, residence),
+                                    ),
+                                  ),
+                              ],
+                            // Bouton pour ajouter une nouvelle résidence
+                            const SizedBox(height: 24),
+                            _buildAddResidenceCard(context),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -174,6 +261,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
 
   Widget _buildSectionTitle(BuildContext context, String title, int count) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
@@ -181,17 +269,16 @@ class _ResidencesViewState extends State<_ResidencesView> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(width: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Text(
-            '$count',
+            count.toString(),
             style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -201,78 +288,112 @@ class _ResidencesViewState extends State<_ResidencesView> {
   }
 
   Widget _buildFilterOptions(BuildContext context, int totalCount) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _filterStatus,
-                isDense: true,
-                isExpanded: true,
-                items: [
-                  DropdownMenuItem(
-                    value: 'all',
-                    child: Text('Toutes ($totalCount)'),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _filterStatus,
+                    isDense: true,
+                    isExpanded: true,
+                    items: [
+                      DropdownMenuItem(
+                        value: 'all',
+                        child: Text('Toutes ($totalCount)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'available',
+                        child: Text('Disponibles'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'unavailable',
+                        child: Text('Non disponibles'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _filterStatus = value!;
+                      });
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: 'available',
-                    child: Text('Disponibles'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'unavailable',
-                    child: Text('Non disponibles'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _filterStatus = value!;
-                  });
-                },
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _sortBy,
+                    isDense: true,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'date',
+                        child: Text('Date'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'price_asc',
+                        child: Text('Prix croissant'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'price_desc',
+                        child: Text('Prix décroissant'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _sortBy = value!;
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        const SizedBox(height: 8),
+        // Boutons de changement de vue
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            const Text('Vue :'),
+            const SizedBox(width: 8),
+            ToggleButtons(
+              isSelected: [_viewMode == 'list', _viewMode == 'grid'],
+              onPressed: (index) {
+                setState(() {
+                  _viewMode = index == 0 ? 'list' : 'grid';
+                });
+              },
               borderRadius: BorderRadius.circular(8),
+              selectedColor: Theme.of(context).colorScheme.onPrimary,
+              fillColor: Theme.of(context).colorScheme.primary,
+              children: const [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Icon(Icons.view_list),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Icon(Icons.grid_view),
+                ),
+              ],
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _sortBy,
-                isDense: true,
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'date',
-                    child: Text('Date'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'price_asc',
-                    child: Text('Prix croissant'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'price_desc',
-                    child: Text('Prix décroissant'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _sortBy = value!;
-                  });
-                },
-              ),
-            ),
-          ),
+          ],
         ),
       ],
     );
@@ -381,15 +502,60 @@ class _ResidencesViewState extends State<_ResidencesView> {
   }
 
   Widget _buildEnhancedResidenceCard(BuildContext context, Residence residence) {
-    final isAvailable = residence.isAvailable;
-    final statusColor = isAvailable ? Colors.green : Colors.red;
-    final statusText = isAvailable ? 'Disponible' : 'Non disponible';
+    // Statut de la résidence
+    final bool isAvailable = residence.isAvailable;
+    final Color statusColor = isAvailable ? Colors.green : Colors.orange;
+    final String statusText = isAvailable ? 'Disponible' : 'Non disponible';
+    
+    // Debug: afficher les données brutes pour comprendre la structure des images
+    print('====== DÉTAILS DE LA RÉSIDENCE ======');
+    print('Residence ID: ${residence.id}');
+    print('mainImage: ${residence.mainImage}');
+    print('images list: ${residence.images}');
+    
+    // Récupérer l'URL de l'image directement
+    String imageUrl = residence.mainImage ?? '';
+    if (imageUrl.isEmpty && residence.images.isNotEmpty) {
+      if (residence.images.first is String) {
+        imageUrl = residence.images.first as String;
+      } else if (residence.images.first is Map) {
+        final imgMap = residence.images.first as Map;
+        imageUrl = imgMap['url'] ?? '';
+      }
+    }
+    
+    // Ajouter le domaine si nécessaire
+    if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+      // Récupérer l'URL de base en enlevant /api si présent
+      String baseUrl = AppConfig.apiUrl;
+      if (baseUrl.endsWith("/api")) {
+        baseUrl = baseUrl.substring(0, baseUrl.length - 4);
+      }
+      
+      // Construire l'URL complète
+      if (imageUrl.startsWith('/')) {
+        if (imageUrl.startsWith('/uploads/') && !imageUrl.startsWith('/uploads/residences/')) {
+          imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
+        }
+        imageUrl = '$baseUrl$imageUrl';
+      } else {
+        imageUrl = '$baseUrl/uploads/residences/$imageUrl';
+      }
+    }
+    
+    // Si c'est une URL complète, ajouter /residences/ si nécessaire
+    if (imageUrl.startsWith('http') && imageUrl.contains('/uploads/') && !imageUrl.contains('/uploads/residences/')) {
+      imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
+    }
+    
+    print('URL finale de l\'image: $imageUrl');
     
     // Formatage du prix avec le séparateur de milliers
     final priceFormatter = NumberFormat('#,###', 'fr');
-    final formattedPrice = priceFormatter.format(residence.price.toInt());
+    final String formattedPrice = priceFormatter.format(residence.price.toInt());
     
-    String pricePeriod = '';
+    // Déterminer la période du prix
+    String pricePeriod;
     switch (residence.pricePeriod) {
       case 'hour':
         pricePeriod = '/heure';
@@ -467,18 +633,39 @@ class _ResidencesViewState extends State<_ResidencesView> {
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
-                  child: residence.mainImage != null && residence.mainImage!.isNotEmpty
-                      ? OptimizedImage(
-                          imageUrl: _getFullImageUrl(residence.mainImage!),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorWidget: Container(
-                            height: 180,
-                            width: double.infinity,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                          ),
+                          // Désactiver le cache complètement
+                          cacheHeight: null,
+                          cacheWidth: null,
+                          // Ajouter un timestamp pour éviter tout cache
+                          headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0',
+                            'If-Modified-Since': DateTime.now().toUtc().toString(),
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            print('ERREUR CHARGEMENT IMAGE: $error');
+                            print('URL qui a causé l\'erreur: $imageUrl');
+                            return Container(
+                              height: 180,
+                              width: double.infinity,
+                              color: Colors.grey[300],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                  const SizedBox(height: 8),
+                                  Text('Erreur: $error', textAlign: TextAlign.center),
+                                ],
+                              ),
+                            );
+                          },
                         )
                       : Container(
                           height: 180,
@@ -694,25 +881,6 @@ class _ResidencesViewState extends State<_ResidencesView> {
       
       // Forcer un rechargement complet
       _loadResidences();
-    }
-  }
-
-  String _getFullImageUrl(String url) {
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
-    
-    // Vérifier si l'URL commence par /uploads
-    if (url.startsWith('/uploads/')) {
-      // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://localhost:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://localhost:4000${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://localhost:4000/uploads/residences/${url}';
     }
   }
 }

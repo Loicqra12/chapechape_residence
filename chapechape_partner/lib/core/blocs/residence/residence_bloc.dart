@@ -145,6 +145,19 @@ class LoadResidenceDetails extends ResidenceEvent {
 
 class RefreshResidences extends ResidenceEvent {}
 
+class SynchronizeResidence extends ResidenceEvent {
+  final String residenceId;
+  final bool forceRefresh;
+  
+  const SynchronizeResidence({
+    required this.residenceId,
+    this.forceRefresh = true,
+  });
+  
+  @override
+  List<Object> get props => [residenceId, forceRefresh];
+}
+
 // States
 abstract class ResidenceState {}
 
@@ -259,6 +272,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     on<CheckResidenceExists>(_onCheckResidenceExists);
     on<LoadResidenceDetails>(_onLoadResidenceDetails);
     on<RefreshResidences>(_onRefreshResidences);
+    on<SynchronizeResidence>(_onSynchronizeResidence);
     
     // Initialiser le service de synchronisation
     _syncService.initialize(
@@ -400,8 +414,20 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     emit(ResidenceLoading());
     try {
       if (_connectivityService.isOnline) {
-        // En ligne: mise à jour directe
-        final residence = await _residenceService.updateResidence(event.id, event.data, []);
+        // Récupérer d'abord la résidence pour obtenir les images existantes
+        final existingResidence = await _residenceService.getResidenceById(event.id);
+        
+        // Convertir les URLs d'images en objets ResidenceImage
+        final existingImages = existingResidence.images
+            .map((url) => ResidenceImage(url: url))
+            .toList();
+        
+        // En ligne: mise à jour directe avec préservation des images
+        final residence = await _residenceService.updateResidence(
+            event.id, 
+            event.data, 
+            existingImages  // Utiliser les images existantes au lieu de []
+        );
         emit(ResidenceSuccess('Résidence mise à jour avec succès'));
         
         // Notifier via le bus d'événements
@@ -548,8 +574,20 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         'status': event.isAvailable ? 'available' : 'unavailable',
       };
       
-      // Appeler le service pour mettre à jour la résidence
-      await _residenceService.updateResidence(event.residenceId, updateData, []);
+      // Récupérer d'abord la résidence pour obtenir les images existantes
+      final existingResidence = await _residenceService.getResidenceById(event.residenceId);
+      
+      // Convertir les URLs d'images en objets ResidenceImage
+      final existingImages = existingResidence.images
+          .map((url) => ResidenceImage(url: url))
+          .toList();
+      
+      // Appeler le service pour mettre à jour la résidence avec les images existantes
+      await _residenceService.updateResidence(
+          event.residenceId, 
+          updateData, 
+          existingImages
+      );
       
       emit(ResidenceSuccess('Statut de disponibilité mis à jour avec succès'));
       
@@ -711,6 +749,45 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       emit(ResidenceLoaded(residences));
     } catch (e) {
       emit(ResidenceError('Erreur lors du rafraîchissement: $e'));
+    }
+  }
+
+  Future<void> _onSynchronizeResidence(
+    SynchronizeResidence event,
+    Emitter<ResidenceState> emit,
+  ) async {
+    try {
+      // Indiquer que la synchronisation est en cours
+      emit(ResidenceLoading());
+      
+      // Utiliser le service de synchronisation pour forcer la synchronisation
+      final success = await _syncService.forceSyncResidence(event.residenceId);
+      
+      if (success) {
+        // Si la synchronisation a réussi, récupérer les données à jour
+        final residences = await _residenceService.getMyResidences();
+        
+        // Chercher la résidence synchronisée dans la liste
+        final synchronizedResidence = residences.firstWhere(
+          (r) => r.id == event.residenceId,
+          orElse: () => throw Exception('Résidence non trouvée après synchronisation'),
+        );
+        
+        // Informer via le bus d'événements
+        eventBus?.emit(ResidenceEventType.updated);
+        
+        // Émettre l'état avec la résidence synchronisée
+        emit(ResidenceUpdated(
+          residence: synchronizedResidence,
+          residences: residences,
+        ));
+      } else {
+        emit(ResidenceError('Échec de la synchronisation de la résidence'));
+      }
+    } on ApiException catch (e) {
+      emit(ResidenceError.fromApiException(e));
+    } catch (e) {
+      emit(ResidenceError('Erreur lors de la synchronisation: $e'));
     }
   }
 }

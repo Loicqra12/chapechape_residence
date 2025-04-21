@@ -22,7 +22,7 @@ class ShimmerResidenceCard extends StatelessWidget {
             // Image placeholder
             Container(
               height: 160,
-              width: double.infinity,
+              width: 280, // Largeur fixe pour éviter le débordement
               color: Colors.white,
             ),
             
@@ -56,6 +56,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                   
                   // Amenities row placeholder
                   Row(
+                    mainAxisSize: MainAxisSize.min, // Limiter la taille de la ligne
                     children: [
                       Container(
                         height: 12,
@@ -91,12 +92,14 @@ class ShimmerResidenceCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        height: 16,
-                        width: 100,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
+                      Flexible(
+                        child: Container(
+                          height: 16,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
                       ),
                       Container(

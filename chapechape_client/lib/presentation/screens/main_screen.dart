@@ -9,6 +9,8 @@ import '../widgets/notification_button.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/location_selector_widget.dart';
 import '../widgets/auth_button_widget.dart';
+import '../widgets/connectivity_banner.dart';
+import '../../core/models/city.dart';
 import '../../core/theme/app_theme.dart';
 
 class MainScreen extends StatefulWidget {
@@ -22,6 +24,9 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   static const Color blackColor = Color(0xFF1A1A1A);
   static const Color whiteColor = Color(0xFFFFFFFF);
+  
+  // Variables pour gérer la sélection de ville
+  City? _selectedCity;
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -72,50 +77,49 @@ class _MainScreenState extends State<MainScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const LanguageSelector(),
-                const SizedBox(width: 8),
-                const LocationSelectorWidget(),
-                const SizedBox(width: 8),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined, size: 20),
-                        onPressed: () => context.go('/notifications'),
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.secondaryColor, // Or doré
-                            borderRadius: BorderRadius.circular(10),
+                IconButton(
+                  icon: const Icon(Icons.menu, size: 22),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.language),
+                            title: const Text('Langue'),
+                            trailing: const LanguageSelector(),
                           ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: const Text(
-                            '0',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 10,
+                          ListTile(
+                            leading: const Icon(Icons.location_on),
+                            title: const Text('Localisation'),
+                            trailing: SizedBox(
+                              width: 150,
+                              child: LocationSelectorWidget(
+                                onCitySelected: (city) {
+                                  setState(() {
+                                    _selectedCity = city;
+                                  });
+                                },
+                              ),
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(8),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined, size: 20),
+                  onPressed: () => context.go('/notifications'),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(8),
+                ),
+                const SizedBox(width: 4),
                 const AuthButtonWidget(),
-                const SizedBox(width: 16),
               ],
             ),
           ),
@@ -126,30 +130,34 @@ class _MainScreenState extends State<MainScreen> {
         selectedIndex: _calculateSelectedIndex(context),
         onDestinationSelected: (index) => _onItemTapped(index, context),
         backgroundColor: whiteColor,
+        indicatorColor: Colors.transparent,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        height: 60,
+        elevation: 0,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppTheme.secondaryColor),
+            selectedIcon: Icon(Icons.home, color: AppTheme.primaryColor),
             label: 'Accueil',
           ),
           NavigationDestination(
             icon: Icon(Icons.favorite_outline),
-            selectedIcon: Icon(Icons.favorite, color: AppTheme.secondaryColor),
+            selectedIcon: Icon(Icons.favorite, color: AppTheme.primaryColor),
             label: 'Favoris',
           ),
           NavigationDestination(
             icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications, color: AppTheme.secondaryColor),
+            selectedIcon: Icon(Icons.notifications, color: AppTheme.primaryColor),
             label: 'Notifications',
           ),
           NavigationDestination(
             icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat, color: AppTheme.secondaryColor),
+            selectedIcon: Icon(Icons.chat, color: AppTheme.primaryColor),
             label: 'Messages',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppTheme.secondaryColor),
+            selectedIcon: Icon(Icons.person, color: AppTheme.primaryColor),
             label: 'Profil',
           ),
         ],

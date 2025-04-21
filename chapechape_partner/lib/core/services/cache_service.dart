@@ -190,7 +190,7 @@ class CacheService {
   }
   
   /// Récupère une résidence spécifique par son ID
-  Future<dynamic> getCachedResidenceById(String id) async {
+  Future<Map<String, dynamic>?> getResidenceById(String id) async {
     final box = _getBox(_residencesBox);
     final data = box.get(id);
     
@@ -199,11 +199,41 @@ class CacheService {
     try {
       if (data is String) {
         return jsonDecode(data);
+      } else if (data is Map) {
+        return Map<String, dynamic>.from(data);
       }
-      return data;
     } catch (e) {
-      _logger.warning('Erreur lors de la lecture de la résidence $id: $e');
-      return null;
+      _logger.warning('Erreur lors de la récupération de la résidence $id: $e');
+    }
+    
+    return null;
+  }
+  
+  /// Cache une résidence individuelle
+  Future<void> cacheResidence(dynamic residence) async {
+    if (residence == null) return;
+    
+    try {
+      final id = residence is Map ? 
+                (residence['id'] ?? residence['_id'])?.toString() : 
+                null;
+      
+      if (id == null) {
+        _logger.warning('Impossible de cacher la résidence: ID manquant');
+        return;
+      }
+      
+      final box = _getBox(_residencesBox);
+      
+      // Convertir en JSON si nécessaire
+      final String jsonData = residence is Map ? 
+                             jsonEncode(residence) : 
+                             residence.toString();
+      
+      await box.put(id, jsonData);
+      _logger.info('Résidence $id mise en cache');
+    } catch (e) {
+      _logger.warning('Erreur lors de la mise en cache de la résidence: $e');
     }
   }
   
@@ -252,6 +282,78 @@ class CacheService {
       _logger.info('Résidence $id marquée pour synchronisation');
     } catch (e) {
       _logger.warning('Erreur lors du marquage de la résidence $id pour synchronisation: $e');
+    }
+  }
+  
+  /// Récupère les résidences qui ont été modifiées localement
+  Future<List<Map<String, dynamic>>> getLocallyModifiedResidences() async {
+    final box = _getBox(_residencesBox);
+    final List<Map<String, dynamic>> modifiedResidences = [];
+    
+    try {
+      for (var key in box.keys) {
+        // Ignorer les clés spéciales
+        if (key == 'lastUpdated') continue;
+        
+        final data = box.get(key);
+        if (data == null) continue;
+        
+        Map<String, dynamic> residenceMap;
+        if (data is String) {
+          residenceMap = jsonDecode(data);
+        } else if (data is Map) {
+          residenceMap = Map<String, dynamic>.from(data);
+        } else {
+          continue;
+        }
+        
+        // Vérifier si la résidence a besoin d'être synchronisée
+        if (residenceMap['needsSync'] == true || 
+            residenceMap['isLocal'] == true || 
+            residenceMap['modifiedLocally'] == true) {
+          modifiedResidences.add(residenceMap);
+        }
+      }
+      
+      _logger.info('${modifiedResidences.length} résidences modifiées localement trouvées');
+      return modifiedResidences;
+    } catch (e) {
+      _logger.warning('Erreur lors de la récupération des résidences modifiées localement: $e');
+      return [];
+    }
+  }
+  
+  /// Marque une résidence comme synchronisée (supprime les flags de modification locale)
+  Future<void> markResidenceAsSynced(String id) async {
+    final box = _getBox(_residencesBox);
+    final data = box.get(id);
+    
+    if (data == null) return;
+    
+    try {
+      Map<String, dynamic> residenceMap;
+      if (data is String) {
+        residenceMap = jsonDecode(data);
+      } else if (data is Map) {
+        residenceMap = Map<String, dynamic>.from(data);
+      } else {
+        return;
+      }
+      
+      // Supprimer les flags de modification locale
+      residenceMap.remove('needsSync');
+      residenceMap.remove('isLocal');
+      residenceMap.remove('modifiedLocally');
+      residenceMap.remove('modifiedFields');
+      
+      // Mettre à jour la date de dernière synchronisation
+      residenceMap['lastSynced'] = DateTime.now().toIso8601String();
+      
+      // Réécrire dans le cache
+      await box.put(id, jsonEncode(residenceMap));
+      _logger.info('Résidence $id marquée comme synchronisée');
+    } catch (e) {
+      _logger.warning('Erreur lors du marquage de la résidence $id comme synchronisée: $e');
     }
   }
   
@@ -427,6 +529,78 @@ class CacheService {
     }
   }
   
+  /// Récupère les réservations qui ont été modifiées localement
+  Future<List<Map<String, dynamic>>> getLocallyModifiedReservations() async {
+    final box = _getBox(_reservationsBox);
+    final List<Map<String, dynamic>> modifiedReservations = [];
+    
+    try {
+      for (var key in box.keys) {
+        // Ignorer les clés spéciales
+        if (key == 'lastUpdated') continue;
+        
+        final data = box.get(key);
+        if (data == null) continue;
+        
+        Map<String, dynamic> reservationMap;
+        if (data is String) {
+          reservationMap = jsonDecode(data);
+        } else if (data is Map) {
+          reservationMap = Map<String, dynamic>.from(data);
+        } else {
+          continue;
+        }
+        
+        // Vérifier si la réservation a besoin d'être synchronisée
+        if (reservationMap['needsSync'] == true || 
+            reservationMap['isLocal'] == true || 
+            reservationMap['modifiedLocally'] == true) {
+          modifiedReservations.add(reservationMap);
+        }
+      }
+      
+      _logger.info('${modifiedReservations.length} réservations modifiées localement trouvées');
+      return modifiedReservations;
+    } catch (e) {
+      _logger.warning('Erreur lors de la récupération des réservations modifiées localement: $e');
+      return [];
+    }
+  }
+  
+  /// Marque une réservation comme synchronisée (supprime les flags de modification locale)
+  Future<void> markReservationAsSynced(String id) async {
+    final box = _getBox(_reservationsBox);
+    final data = box.get(id);
+    
+    if (data == null) return;
+    
+    try {
+      Map<String, dynamic> reservationMap;
+      if (data is String) {
+        reservationMap = jsonDecode(data);
+      } else if (data is Map) {
+        reservationMap = Map<String, dynamic>.from(data);
+      } else {
+        return;
+      }
+      
+      // Supprimer les flags de modification locale
+      reservationMap.remove('needsSync');
+      reservationMap.remove('isLocal');
+      reservationMap.remove('modifiedLocally');
+      reservationMap.remove('modifiedFields');
+      
+      // Mettre à jour la date de dernière synchronisation
+      reservationMap['lastSynced'] = DateTime.now().toIso8601String();
+      
+      // Réécrire dans le cache
+      await box.put(id, jsonEncode(reservationMap));
+      _logger.info('Réservation $id marquée comme synchronisée');
+    } catch (e) {
+      _logger.warning('Erreur lors du marquage de la réservation $id comme synchronisée: $e');
+    }
+  }
+  
   // Gestion des messages
   
   /// Cache une liste de messages
@@ -540,7 +714,7 @@ class CacheService {
   // Gestion des opérations en attente
   
   /// Enregistre une opération à effectuer lorsque la connexion sera rétablie
-  Future<void> addPendingOperation(String operation, Map<String, dynamic> data) async {
+  Future<void> addPendingOperation(String operation, Map<String, dynamic> data, {String? operationId}) async {
     final box = _getBox(_pendingOperationsBox);
     final pendingOp = {
       'operation': operation,
@@ -548,9 +722,9 @@ class CacheService {
       'timestamp': DateTime.now().toIso8601String(),
     };
     
-    final id = '${operation}_${DateTime.now().millisecondsSinceEpoch}';
+    final id = operationId ?? '${operation}_${DateTime.now().millisecondsSinceEpoch}';
     await box.put(id, jsonEncode(pendingOp));
-    _logger.info('Opération en attente ajoutée: $operation');
+    _logger.info('Opération en attente ajoutée: $operation (ID: $id)');
   }
   
   /// Récupère toutes les opérations en attente

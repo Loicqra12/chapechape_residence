@@ -6,6 +6,7 @@ import 'residence_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../exceptions/api_exception.dart';
 import '../../../core/services/event_bus/residence_event_bus.dart' as event_bus;
+import '../../../core/config/app_config.dart';
 
 class DashboardService extends ApiService {
   final storage = const FlutterSecureStorage();
@@ -400,12 +401,12 @@ class DashboardService extends ApiService {
   // Méthode privée pour obtenir une instance de ResidenceService
   Future<dynamic> _getResidenceService() async {
     try {
-      // Au lieu d'utiliser import dynamique qui ne fonctionne pas ici,
-      // importer le service au niveau de la classe et l'instancier directement
-      final baseUrl = 'http://192.168.1.77:4000/api';
-      // Utiliser le constructeur directement depuis l'import au niveau du fichier
-      // import 'residence_service.dart'; est nécessaire en haut du fichier
-      return ResidenceService(baseUrl: baseUrl);
+      // Utiliser l'API Config central au lieu d'une URL codée en dur
+      final baseUrl = AppConfig.apiUrl;
+      
+      // Récupérer l'instance depuis le DI plutôt que d'en créer une nouvelle
+      // Utiliser l'instance existante de ResidenceService si possible
+      return ResidenceService(baseUrl: baseUrl, storage: const FlutterSecureStorage());
     } catch (e) {
       _log('Erreur lors de l\'initialisation de ResidenceService: $e');
       throw Exception('Impossible d\'initialiser ResidenceService');

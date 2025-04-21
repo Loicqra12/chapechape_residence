@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/blocs/residence/residence_state.dart';
-import '../../core/blocs/residence/residence_event.dart';
-import '../../core/models/residence_model.dart' as model;
-import '../../core/constants/app_assets.dart' as assets;
+import '../../core/models/residence_model.dart';
+import '../../core/utils/residence_adapters.dart';
 import 'residence_card_alias.dart';
 import 'shimmer_residence_card.dart';
 
@@ -61,7 +59,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         if (state is ResidencesLoaded) {
           // Sélectionner les résidences recommandées (par exemple, celles avec les meilleures notes)
           final featuredResidences = state.residences
-              .where((r) => r.rating != null && r.rating! >= 4.0) // Résidences bien notées
+              .where((r) => r.rating >= 4.0) // Résidences bien notées
               .take(5)
               .toList();
 
@@ -125,7 +123,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     );
   }
 
-  Widget _buildResidencesList(BuildContext context, List<model.Residence> residences) {
+  Widget _buildResidencesList(BuildContext context, List<Residence> residences) {
     return Stack(
       children: [
         SizedBox(
@@ -143,11 +141,13 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                   residence: residence,
                   onTap: () => context.go('/residence/${residence.id}'),
                   onFavoritePressed: () {
+                    final isFav = residence.priceDetails != null && 
+                              residence.priceDetails!.containsKey('isFavorite') ? 
+                              residence.priceDetails!['isFavorite'] == true : false;
                     context.read<ResidenceBloc>().add(
-                      ToggleFavorite(
-                        residenceId: residence.id,
-                        isFavorite: !residence.isFavorite,
-                      ),
+                      !isFav
+                        ? AddToFavorites(residenceId: residence.id)
+                        : RemoveFromFavorites(residenceId: residence.id),
                     );
                   },
                 ),
@@ -213,118 +213,36 @@ class _FeaturedListingsState extends State<FeaturedListings> {
   }
 
   Widget _buildMockResidences(BuildContext context) {
-    // Créer des résidences de test pour démonstration
+    // Créer des résidences de test pour démonstration en utilisant notre adaptateur
     final mockResidences = List.generate(
       5,
-      (index) => model.Residence(
+      (index) => ResidenceAdapters.createResidence(
         id: 'mock_$index',
-        name: 'Résidence Test ${index + 1}',
-        description: 'Description de test pour la résidence ${index + 1}',
+        title: 'Résidence Test ${index + 1}',
         price: 250000 + (index * 50000),
+        imageUrl: index % 2 == 0 
+            ? 'assets/images/placeholders/residence_placeholder.jpg'
+            : 'assets/images/placeholders/apartment_placeholder.jpg',
         address: 'Adresse de test ${index + 1}',
         city: 'Abidjan',
         country: 'Côte d\'Ivoire',
-        // Utiliser des URLs d'images plus susceptibles de fonctionner
-        images: index % 2 == 0 
-            ? ['assets/images/placeholders/residence_placeholder.jpg'] 
-            : ['assets/images/placeholders/apartment_placeholder.jpg'],
         bedrooms: 2 + (index % 3),
         bathrooms: 1 + (index % 2),
-        surface: 80 + (index * 10),
+        squareMeters: 80 + (index * 10).toDouble(),
+        hasPool: index % 2 == 0,
+        hasWifi: true,
         isAvailable: true,
-        location: {
-          'displayAddress': 'Cocody, Abidjan',
-          'city': 'Abidjan',
-          'coordinates': [5.359952, -4.008256],
-        },
-        amenities: ['wifi', 'parking', if (index % 2 == 0) 'pool'],
-        rules: [],
-        isFavorite: false,
-        type: _convertToModelType(index % 2 == 0 ? assets.ResidenceType.apartment : assets.ResidenceType.villa),
-        pricePeriod: 'month',
-        hourlyRate: 5000,
-        halfDayRate: 15000,
-        fullDayRate: 25000,
-        weekendRate: 35000,
+        type: index % 2 == 0 ? 'apartment' : 'villa',
         rating: 4.0 + (index * 0.2),
         reviewCount: 10 + index,
+        isFavorite: false,
+        isVacationResidence: index % 3 == 0,
+        isSpecialResidence: index % 4 == 0,
+        isFeatured: true,
+        isPopular: index < 3,
       ),
     );
 
     return _buildResidencesList(context, mockResidences);
-  }
-
-  // Méthode de conversion des types
-  model.ResidenceType _convertToModelType(assets.ResidenceType type) {
-    switch (type) {
-      // Types de base
-      case assets.ResidenceType.apartment:
-        return model.ResidenceType.apartment;
-      case assets.ResidenceType.villa:
-        return model.ResidenceType.villa;
-      case assets.ResidenceType.studio:
-        return model.ResidenceType.studio;
-      case assets.ResidenceType.luxury:
-        return model.ResidenceType.luxury;
-      case assets.ResidenceType.bungalow:
-        return model.ResidenceType.bungalow;
-      case assets.ResidenceType.hotel:
-        return model.ResidenceType.hotel;
-      case assets.ResidenceType.room:
-        return model.ResidenceType.house;
-        
-      // 🏠 Résidences meublées
-      case assets.ResidenceType.studioMeuble:
-        return model.ResidenceType.studioMeuble;
-      case assets.ResidenceType.appartementMeuble:
-        return model.ResidenceType.appartementMeuble;
-      case assets.ResidenceType.villaMeublee:
-        return model.ResidenceType.villaMeublee;
-      case assets.ResidenceType.grenier:
-        return model.ResidenceType.grenier;
-        
-      // 🏨 Hôtels & Hébergements classiques
-      case assets.ResidenceType.hotelDePassage:
-        return model.ResidenceType.hotelDePassage;
-      case assets.ResidenceType.motel:
-        return model.ResidenceType.motel;
-      case assets.ResidenceType.boutiqueHotel:
-        return model.ResidenceType.boutiqueHotel;
-      case assets.ResidenceType.hotelDeLuxe:
-        return model.ResidenceType.hotelDeLuxe;
-      case assets.ResidenceType.aubergeEtMaisonDHotes:
-        return model.ResidenceType.aubergeEtMaisonDHotes;
-      case assets.ResidenceType.residenceHoteliere:
-        return model.ResidenceType.residenceHoteliere;
-        
-      // 🌍 Hébergements insolites & nature
-      case assets.ResidenceType.lodgeEtEcolodge:
-        return model.ResidenceType.lodgeEtEcolodge;
-      case assets.ResidenceType.caseTraditionnelle:
-        return model.ResidenceType.caseTraditionnelle;
-      case assets.ResidenceType.maisonFlottante:
-        return model.ResidenceType.maisonFlottante;
-      case assets.ResidenceType.campementTouristique:
-        return model.ResidenceType.campementTouristique;
-        
-      // 🏘️ Colocation & résidences partagées et autres cas
-      case assets.ResidenceType.penthouse:
-      case assets.ResidenceType.coworking:
-      case assets.ResidenceType.student:
-      case assets.ResidenceType.chambreEnColocation:
-      case assets.ResidenceType.cohabitation:
-      case assets.ResidenceType.residenceUniversitaire:
-      case assets.ResidenceType.citeDortoir:
-      case assets.ResidenceType.appartementNonMeuble:
-      case assets.ResidenceType.villaNonMeublee:
-      case assets.ResidenceType.immeuble:
-      case assets.ResidenceType.courCommune:
-      case assets.ResidenceType.maisonDHotesEconomique:
-      case assets.ResidenceType.residenceFamilialeEnLocation:
-      case assets.ResidenceType.chambresDePassage:
-      case assets.ResidenceType.other:
-      default:
-        return model.ResidenceType.other;
-    }
   }
 }

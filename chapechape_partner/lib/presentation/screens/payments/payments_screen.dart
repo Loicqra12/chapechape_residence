@@ -1,17 +1,345 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import '../../../core/blocs/payment/payment_bloc.dart';
+import '../../../core/models/payment/payment_model.dart';
+import '../../widgets/common/empty_state_widget.dart';
+import '../../widgets/common/error_state_widget.dart';
+import '../../../core/services/api/payment_service.dart';
+import 'package:dio/dio.dart';
 
-class PaymentsScreen extends StatelessWidget {
+class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<PaymentsScreen> createState() => _PaymentsScreenState();
+  
+  // Méthode factory pour créer l'écran avec son propre BlocProvider
+  static Widget withBloc(BuildContext context) {
+    return BlocProvider<PaymentBloc>(
+      create: (context) {
+        try {
+          // Essayer d'utiliser un bloc existant
+          return context.read<PaymentBloc>();
+        } catch (_) {
+          // Si aucun bloc n'est trouvé, en créer un nouveau
+          final dio = Dio();
+          final paymentService = PaymentService(dio);
+          return PaymentBloc(paymentService: paymentService);
+        }
+      },
+      child: const PaymentsScreen(),
+    );
+  }
+}
+
+class _PaymentsScreenState extends State<PaymentsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Charger les données de paiement au démarrage
+    context.read<PaymentBloc>().add(const LoadPayments());
+    
+    // Configuration du scroll pour la pagination
+    _scrollController.addListener(_onScroll);
+  }
+  
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  void _onScroll() {
+    if (_isBottom) {
+      final state = context.read<PaymentBloc>().state;
+      if (state is PaymentsLoaded && !state.hasReachedMax) {
+        context.read<PaymentBloc>().add(
+          LoadPayments(page: state.currentPage + 1),
+        );
+      }
+    }
+  }
+  
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
+  }
+  
+  void _showWithdrawDialog() {
+    final TextEditingController amountController = TextEditingController();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Retirer des fonds'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Montant',
+                  hintText: 'Entrez le montant à retirer',
+                  prefixText: 'FCFA ',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un montant';
+                  }
+                  
+                  final amount = double.tryParse(value);
+                  if (amount == null) {
+                    return 'Montant invalide';
+                  }
+                  
+                  if (amount <= 0) {
+                    return 'Le montant doit être supérieur à 0';
+                  }
+                  
+                  final state = context.read<PaymentBloc>().state;
+                  if (state is PaymentsLoaded) {
+                    if (amount > state.balance) {
+                      return 'Montant supérieur à votre solde';
+                    }
+                  }
+                  
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Méthode de paiement',
+                  border: OutlineInputBorder(),
+                ),
+                value: 'bank_transfer',
+                items: const [
+                  DropdownMenuItem(
+                    value: 'bank_transfer',
+                    child: Text('Virement bancaire'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'mobile_money',
+                    child: Text('Mobile Money'),
+                  ),
+                ],
+                onChanged: (value) {},
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ANNULER'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                // Traiter le retrait
+                final amount = double.parse(amountController.text);
+                context.read<PaymentBloc>().add(
+                  RequestWithdrawal(amount: amount),
+                );
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('RETIRER'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showTransactionDetails(PaymentModel transaction) {
+    final dateFormat = DateFormat('dd MMMM yyyy à HH:mm', 'fr_FR');
     final theme = Theme.of(context);
 
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Détails de la transaction',
+                  style: theme.textTheme.titleLarge,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  NumberFormat.currency(
+                    locale: 'fr_FR',
+                    symbol: 'FCFA',
+                    decimalDigits: 0,
+                  ).format(transaction.amount),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: transaction.type == PaymentType.credit
+                        ? Colors.green
+                        : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _buildDetailRow('ID de transaction', transaction.id),
+            _buildDetailRow('Type', transaction.type == PaymentType.credit ? 'Crédit' : 'Débit'),
+            _buildDetailRow('Source', transaction.source),
+            _buildDetailRow('Date', dateFormat.format(transaction.date)),
+            _buildDetailRow('Statut', transaction.status.toUpperCase()),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+            if (transaction.type == PaymentType.withdrawal && 
+                transaction.status == 'pending')
+              ElevatedButton(
+                onPressed: () {
+                  context.read<PaymentBloc>().add(
+                    CancelWithdrawal(transactionId: transaction.id),
+                  );
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                child: const Text('Annuler le retrait'),
+              ),
+            if (transaction.type == PaymentType.credit && 
+                transaction.source.contains('Réservation'))
+              ElevatedButton(
+                onPressed: () {
+                  // Ouvrir les détails de la réservation associée
+                  final reservationId = transaction.sourceId;
+                  if (reservationId != null) {
+                    // Naviguer vers les détails de la réservation
+                    Navigator.pop(context);
+                    Navigator.pushNamed(
+                      context,
+                      '/reservations/details/$reservationId',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                child: const Text('Voir la réservation'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.grey),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<PaymentBloc, PaymentState>(
+      listener: (context, state) {
+        if (state is PaymentActionSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is PaymentError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paiements'),
-      ),
-      body: ListView(
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  context.read<PaymentBloc>().add(const RefreshPayments());
+                },
+              ),
+            ],
+          ),
+          body: _buildBody(context, state),
+        );
+      },
+    );
+  }
+  
+  Widget _buildBody(BuildContext context, PaymentState state) {
+    if (state is PaymentInitial || (state is PaymentLoading && state is! PaymentsLoaded)) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (state is PaymentError && state is! PaymentsLoaded) {
+      return ErrorStateWidget(
+        message: state.message,
+        onRetry: () {
+          context.read<PaymentBloc>().add(const LoadPayments());
+        },
+      );
+    }
+    
+    if (state is PaymentsLoaded) {
+      return RefreshIndicator(
+        onRefresh: () async {
+          context.read<PaymentBloc>().add(const RefreshPayments());
+        },
+        child: ListView(
+          controller: _scrollController,
         padding: const EdgeInsets.all(16),
         children: [
           // Solde actuel
@@ -20,7 +348,7 @@ class PaymentsScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
               ),
             ),
             child: Padding(
@@ -30,21 +358,23 @@ class PaymentsScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Solde actuel',
-                    style: theme.textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '2,500.00 €',
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      color: theme.colorScheme.primary,
+                      NumberFormat.currency(
+                        locale: 'fr_FR',
+                        symbol: 'FCFA',
+                        decimalDigits: 0,
+                      ).format(state.balance),
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implémenter le retrait
-                    },
+                      onPressed: state.balance > 0 ? _showWithdrawDialog : null,
                     child: const Text('Retirer les fonds'),
                   ),
                 ],
@@ -52,13 +382,75 @@ class PaymentsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Historique des transactions
+            
+            // Résumé des revenus
           Card(
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Résumé',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSummaryItem(
+                            context,
+                            'Revenus du mois',
+                            NumberFormat.currency(
+                              locale: 'fr_FR',
+                              symbol: 'FCFA',
+                              decimalDigits: 0,
+                            ).format(state.monthlyRevenue),
+                            Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildSummaryItem(
+                            context,
+                            'Total des retraits',
+                            NumberFormat.currency(
+                              locale: 'fr_FR',
+                              symbol: 'FCFA',
+                              decimalDigits: 0,
+                            ).format(state.totalWithdrawals),
+                            Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Historique des transactions
+            if (state.transactions.isEmpty)
+              const EmptyStateWidget(
+                icon: Icons.payment,
+                title: 'Aucune transaction',
+                message: 'Vous n\'avez pas encore de transactions',
+              )
+            else
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
               ),
             ),
             child: Column(
@@ -68,31 +460,85 @@ class PaymentsScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Text(
                     'Historique des transactions',
-                    style: theme.textTheme.titleMedium,
+                        style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 const Divider(height: 1),
+                    ...state.transactions.map((transaction) {
+                      return Column(
+                        children: [
                 _TransactionItem(
-                  title: 'Réservation #1234',
-                  amount: '+500.00 €',
-                  date: '01 Mars 2025',
-                  isCredit: true,
-                ),
+                            transaction: transaction,
+                            onTap: () => _showTransactionDetails(transaction),
+                          ),
+                          if (transaction != state.transactions.last)
                 const Divider(height: 1),
-                _TransactionItem(
-                  title: 'Retrait vers compte bancaire',
-                  amount: '-1,000.00 €',
-                  date: '28 Fév 2025',
-                  isCredit: false,
+                        ],
+                      );
+                    }).toList(),
+                    
+                    if (state.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    
+                    if (!state.hasReachedMax && !state.isLoading)
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Center(
+                          child: TextButton(
+                            onPressed: () {
+                              context.read<PaymentBloc>().add(
+                                LoadPayments(page: state.currentPage + 1),
+                              );
+                            },
+                            child: const Text('Charger plus'),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const Divider(height: 1),
-                _TransactionItem(
-                  title: 'Réservation #1233',
-                  amount: '+750.00 €',
-                  date: '25 Fév 2025',
-                  isCredit: true,
-                ),
-              ],
+              ),
+          ],
+        ),
+      );
+    }
+    
+    return const EmptyStateWidget(
+      icon: Icons.payment,
+      title: 'Aucune transaction',
+      message: 'Vous n\'avez pas encore de transactions',
+    );
+  }
+  
+  Widget _buildSummaryItem(
+    BuildContext context,
+    String title,
+    String value,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -102,32 +548,338 @@ class PaymentsScreen extends StatelessWidget {
 }
 
 class _TransactionItem extends StatelessWidget {
-  final String title;
-  final String amount;
-  final String date;
-  final bool isCredit;
+  final PaymentModel transaction;
+  final VoidCallback onTap;
 
   const _TransactionItem({
-    required this.title,
-    required this.amount,
-    required this.date,
-    required this.isCredit,
+    required this.transaction,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
 
     return ListTile(
-      title: Text(title),
-      subtitle: Text(date),
+      title: Text(transaction.source),
+      subtitle: Text(dateFormat.format(transaction.date)),
       trailing: Text(
-        amount,
+        NumberFormat.currency(
+          locale: 'fr_FR',
+          symbol: 'FCFA',
+          decimalDigits: 0,
+        ).format(transaction.amount),
         style: theme.textTheme.titleMedium?.copyWith(
-          color: isCredit ? Colors.green : Colors.red,
+          color: transaction.type == PaymentType.credit ? Colors.green : Colors.red,
           fontWeight: FontWeight.bold,
         ),
       ),
+      onTap: onTap,
     );
+  }
+}
+
+// Classes de BLoC nécessaires si elles n'existent pas encore
+enum PaymentType { credit, withdrawal }
+
+class PaymentModel {
+  final String id;
+  final double amount;
+  final PaymentType type;
+  final String source;
+  final DateTime date;
+  final String status;
+  final String? sourceId;
+  
+  PaymentModel({
+    required this.id,
+    required this.amount,
+    required this.type,
+    required this.source,
+    required this.date,
+    required this.status,
+    this.sourceId,
+  });
+}
+
+abstract class PaymentEvent {
+  const PaymentEvent();
+}
+
+class LoadPayments extends PaymentEvent {
+  final int page;
+  
+  const LoadPayments({this.page = 1});
+}
+
+class RefreshPayments extends PaymentEvent {
+  const RefreshPayments();
+}
+
+class RequestWithdrawal extends PaymentEvent {
+  final double amount;
+  
+  const RequestWithdrawal({required this.amount});
+}
+
+class CancelWithdrawal extends PaymentEvent {
+  final String transactionId;
+  
+  const CancelWithdrawal({required this.transactionId});
+}
+
+abstract class PaymentState {}
+
+class PaymentInitial extends PaymentState {}
+
+class PaymentLoading extends PaymentState {}
+
+class PaymentError extends PaymentState {
+  final String message;
+  
+  PaymentError(this.message);
+}
+
+class PaymentsLoaded extends PaymentState {
+  final List<PaymentModel> transactions;
+  final double balance;
+  final double monthlyRevenue;
+  final double totalWithdrawals;
+  final int currentPage;
+  final bool hasReachedMax;
+  final bool isLoading;
+  
+  PaymentsLoaded({
+    required this.transactions,
+    required this.balance,
+    required this.monthlyRevenue,
+    required this.totalWithdrawals,
+    this.currentPage = 1,
+    this.hasReachedMax = false,
+    this.isLoading = false,
+  });
+}
+
+class PaymentActionSuccess extends PaymentState {
+  final String message;
+  
+  PaymentActionSuccess(this.message);
+}
+
+class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
+  final PaymentService paymentService;
+  
+  PaymentBloc({required this.paymentService}) : super(PaymentInitial()) {
+    on<LoadPayments>(_onLoadPayments);
+    on<RefreshPayments>(_onRefreshPayments);
+    on<RequestWithdrawal>(_onRequestWithdrawal);
+    on<CancelWithdrawal>(_onCancelWithdrawal);
+  }
+  
+  Future<void> _onLoadPayments(
+    LoadPayments event,
+    Emitter<PaymentState> emit,
+  ) async {
+    try {
+      // Si c'est la première page, afficher un loader
+      if (event.page == 1) {
+        emit(PaymentLoading());
+      } else if (state is PaymentsLoaded) {
+        // Sinon, marquer comme chargement en cours tout en gardant les données existantes
+        final currentState = state as PaymentsLoaded;
+        emit(PaymentsLoaded(
+          transactions: currentState.transactions,
+          balance: currentState.balance,
+          monthlyRevenue: currentState.monthlyRevenue,
+          totalWithdrawals: currentState.totalWithdrawals,
+          currentPage: currentState.currentPage,
+          hasReachedMax: currentState.hasReachedMax,
+          isLoading: true,
+        ));
+      }
+      
+      // Simuler un chargement
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Générer des transactions fictives pour la démonstration
+      final List<PaymentModel> mockTransactions = _generateMockTransactions(event.page);
+      
+      // Mettre à jour l'état
+      if (state is PaymentsLoaded) {
+        final currentState = state as PaymentsLoaded;
+        emit(PaymentsLoaded(
+          transactions: event.page == 1
+              ? mockTransactions
+              : [...currentState.transactions, ...mockTransactions],
+          balance: 2500000,
+          monthlyRevenue: 1500000,
+          totalWithdrawals: 500000,
+          currentPage: event.page,
+          hasReachedMax: event.page >= 3, // Pour la démo, max 3 pages
+          isLoading: false,
+        ));
+      } else {
+        emit(PaymentsLoaded(
+          transactions: mockTransactions,
+          balance: 2500000,
+          monthlyRevenue: 1500000,
+          totalWithdrawals: 500000,
+          currentPage: event.page,
+          hasReachedMax: event.page >= 3, // Pour la démo, max 3 pages
+          isLoading: false,
+        ));
+      }
+    } catch (e) {
+      emit(PaymentError('Erreur lors du chargement des transactions: $e'));
+    }
+  }
+  
+  Future<void> _onRefreshPayments(
+    RefreshPayments event,
+    Emitter<PaymentState> emit,
+  ) async {
+    add(const LoadPayments(page: 1));
+  }
+  
+  Future<void> _onRequestWithdrawal(
+    RequestWithdrawal event,
+    Emitter<PaymentState> emit,
+  ) async {
+    try {
+      // Simuler un traitement
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Ajouter la nouvelle transaction à l'état
+      if (state is PaymentsLoaded) {
+        final currentState = state as PaymentsLoaded;
+        
+        // Créer une nouvelle transaction de retrait
+        final newWithdrawal = PaymentModel(
+          id: 'W${DateTime.now().millisecondsSinceEpoch}',
+          amount: event.amount,
+          type: PaymentType.withdrawal,
+          source: 'Retrait sur compte bancaire',
+          date: DateTime.now(),
+          status: 'pending',
+        );
+        
+        // Mettre à jour l'état avec la nouvelle transaction
+        emit(PaymentsLoaded(
+          transactions: [newWithdrawal, ...currentState.transactions],
+          balance: currentState.balance - event.amount,
+          monthlyRevenue: currentState.monthlyRevenue,
+          totalWithdrawals: currentState.totalWithdrawals + event.amount,
+          currentPage: currentState.currentPage,
+          hasReachedMax: currentState.hasReachedMax,
+          isLoading: false,
+        ));
+        
+        // Afficher un message de succès
+        emit(PaymentActionSuccess('Votre demande de retrait a été enregistrée'));
+        
+        // Recharger l'état pour ne pas perdre les données
+        add(const LoadPayments(page: 1));
+      }
+    } catch (e) {
+      emit(PaymentError('Erreur lors de la demande de retrait: $e'));
+    }
+  }
+  
+  Future<void> _onCancelWithdrawal(
+    CancelWithdrawal event,
+    Emitter<PaymentState> emit,
+  ) async {
+    try {
+      // Simuler un traitement
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Mettre à jour l'état
+      if (state is PaymentsLoaded) {
+        final currentState = state as PaymentsLoaded;
+        
+        // Trouver la transaction à annuler
+        final transactionToCancel = currentState.transactions.firstWhere(
+          (t) => t.id == event.transactionId,
+          orElse: () => throw Exception('Transaction non trouvée'),
+        );
+        
+        // Mettre à jour l'état
+        emit(PaymentsLoaded(
+          transactions: currentState.transactions.map((t) {
+            if (t.id == event.transactionId) {
+              return PaymentModel(
+                id: t.id,
+                amount: t.amount,
+                type: t.type,
+                source: t.source,
+                date: t.date,
+                status: 'cancelled',
+                sourceId: t.sourceId,
+              );
+            }
+            return t;
+          }).toList(),
+          balance: currentState.balance + transactionToCancel.amount,
+          monthlyRevenue: currentState.monthlyRevenue,
+          totalWithdrawals: currentState.totalWithdrawals - transactionToCancel.amount,
+          currentPage: currentState.currentPage,
+          hasReachedMax: currentState.hasReachedMax,
+          isLoading: false,
+        ));
+        
+        // Afficher un message de succès
+        emit(PaymentActionSuccess('Votre demande de retrait a été annulée'));
+        
+        // Recharger l'état pour ne pas perdre les données
+        add(const LoadPayments(page: 1));
+      }
+    } catch (e) {
+      emit(PaymentError('Erreur lors de l\'annulation du retrait: $e'));
+    }
+  }
+  
+  List<PaymentModel> _generateMockTransactions(int page) {
+    final now = DateTime.now();
+    
+    final List<PaymentModel> transactions = [];
+    
+    // Différentes sources pour les transactions
+    final sources = [
+      'Réservation #1234',
+      'Réservation #1235',
+      'Réservation #1236',
+      'Retrait sur compte bancaire',
+      'Réservation #1237',
+    ];
+    
+    // Générer des transactions en fonction de la page
+    final baseIndex = (page - 1) * 5;
+    
+    for (int i = 0; i < 5; i++) {
+      final index = baseIndex + i;
+      
+      // Alterner entre crédit et débit
+      final type = index % 4 == 3 ? PaymentType.withdrawal : PaymentType.credit;
+      
+      // Générer un montant aléatoire
+      final amount = (index % 5 + 1) * 250000.0;
+      
+      // Date dans le passé
+      final date = now.subtract(Duration(days: index * 3));
+      
+      // Générer la transaction
+      transactions.add(PaymentModel(
+        id: 'TRX${10000 + index}',
+        amount: amount,
+        type: type,
+        source: sources[i % sources.length],
+        date: date,
+        status: type == PaymentType.withdrawal ? (index % 3 == 0 ? 'pending' : 'completed') : 'completed',
+        sourceId: type == PaymentType.credit ? 'RES${1000 + index}' : null,
+      ));
+    }
+    
+    return transactions;
   }
 }

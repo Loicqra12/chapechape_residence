@@ -49,12 +49,12 @@ class AppTheme {
   
   // Style de bouton principal
   static ButtonStyle primaryButtonStyle = ButtonStyle(
-    backgroundColor: MaterialStateProperty.all(primaryColor),
-    foregroundColor: MaterialStateProperty.all(Colors.white),
-    padding: MaterialStateProperty.all(
+    backgroundColor: WidgetStateProperty.all(primaryColor),
+    foregroundColor: WidgetStateProperty.all(Colors.white),
+    padding: WidgetStateProperty.all(
       const EdgeInsets.symmetric(horizontal: spacingL, vertical: spacingM),
     ),
-    shape: MaterialStateProperty.all(
+    shape: WidgetStateProperty.all(
       RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusMedium),
       ),
@@ -63,12 +63,12 @@ class AppTheme {
   
   // Style de bouton secondaire
   static ButtonStyle secondaryButtonStyle = ButtonStyle(
-    backgroundColor: MaterialStateProperty.all(Colors.white),
-    foregroundColor: MaterialStateProperty.all(primaryColor),
-    padding: MaterialStateProperty.all(
+    backgroundColor: WidgetStateProperty.all(Colors.white),
+    foregroundColor: WidgetStateProperty.all(primaryColor),
+    padding: WidgetStateProperty.all(
       const EdgeInsets.symmetric(horizontal: spacingL, vertical: spacingM),
     ),
-    shape: MaterialStateProperty.all(
+    shape: WidgetStateProperty.all(
       RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusMedium),
         side: const BorderSide(color: primaryColor),
@@ -94,7 +94,7 @@ class AppTheme {
     return ThemeData(
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,
-      colorScheme: const ColorScheme(
+      colorScheme: ColorScheme(
         brightness: Brightness.light,
         primary: primaryColor,
         onPrimary: Colors.white,
@@ -102,10 +102,11 @@ class AppTheme {
         onSecondary: Colors.white,
         error: errorColor,
         onError: Colors.white,
-        background: backgroundColor,
-        onBackground: textPrimaryColor,
         surface: cardColor,
         onSurface: textPrimaryColor,
+        surfaceTint: primaryColor.withOpacity(0.1),
+        background: backgroundColor,
+        onBackground: textPrimaryColor,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
@@ -205,12 +206,12 @@ class AppTheme {
         space: spacingM,
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith<Color>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.disabled)) {
+        fillColor: WidgetStateProperty.resolveWith<Color>(
+          (Set<WidgetState> states) {
+            if (states.contains(WidgetState.disabled)) {
               return textTertiaryColor;
             }
-            if (states.contains(MaterialState.selected)) {
+            if (states.contains(WidgetState.selected)) {
               return primaryColor;
             }
             return Colors.transparent;
