@@ -44,9 +44,9 @@ class Country {
   // Création d'un objet à partir d'une Map
   factory Country.fromMap(Map<String, dynamic> map) {
     return Country(
-      code: map['code'] as String,
-      name: map['name'] as String,
-      phoneCode: map['phoneCode'] as String,
+      code: map['code']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      phoneCode: map['phoneCode']?.toString() ?? '',
     );
   }
 } 

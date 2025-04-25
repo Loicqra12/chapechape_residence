@@ -46,6 +46,7 @@ class Residence {
   final double halfDayRate;
   final double fullDayRate;
   final double weekendRate;
+  final bool isVip;
   
   bool get hasDiscount => discountPrice != null && discountPrice! < price;
   double? get discountPrice => priceDetails != null && priceDetails!.containsKey('discountPrice') ? priceDetails!['discountPrice'] as double : null;
@@ -107,6 +108,11 @@ class Residence {
   String get pricePerNight => '${price.toStringAsFixed(0)} FCFA/nuit';
   bool get isNewListing => createdAt != null && DateTime.now().difference(createdAt!).inDays < 30;
   List<String> get photos => images;
+  
+  // Propriétés ajoutées pour compatibilité
+  int get roomCount => bedrooms;
+  int get bathCount => bathrooms;
+  String get pricePerMonth => '${price.toStringAsFixed(0)} $currency/${pricePeriod == 'month' ? 'mois' : pricePeriod}';
 
   Residence({
     required this.id,
@@ -151,6 +157,7 @@ class Residence {
     this.halfDayRate = 0.0,
     this.fullDayRate = 0.0,
     this.weekendRate = 0.0,
+    this.isVip = false,
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {

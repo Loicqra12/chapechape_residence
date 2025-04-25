@@ -1,0 +1,99 @@
+[
+  {
+    "name": "Abidjan",
+    "countryCode": "CI",
+    "regions": [
+      "Cocody",
+      "Marcory",
+      "Plateau",
+      "Bietry",
+      "Riviera",
+      "Zone 4",
+      "Yopougon",
+      "Adjamé",
+      "Treichville",
+      "Koumassi"
+    ]
+  },
+  {
+    "name": "Bouaké",
+    "countryCode": "CI",
+    "regions": [
+      "Centre-ville",
+      "Belleville",
+      "Sokoura",
+      "N'Gattakro"
+    ]
+  },
+  {
+    "name": "San Pedro",
+    "countryCode": "CI",
+    "regions": [
+      "Cité",
+      "Port",
+      "Bardo"
+    ]
+  },
+  {
+    "name": "Yamoussoukro",
+    "countryCode": "CI",
+    "regions": [
+      "Centre-ville",
+      "Quartier des Ministères",
+      "Habitat"
+    ]
+  },
+  {
+    "name": "Dakar",
+    "countryCode": "SN",
+    "regions": [
+      "Plateau",
+      "Médina",
+      "Almadies",
+      "Fann",
+      "Yoff"
+    ]
+  },
+  {
+    "name": "Bamako",
+    "countryCode": "ML",
+    "regions": [
+      "Commune I",
+      "Commune II",
+      "Commune III",
+      "Commune IV",
+      "Commune V",
+      "Commune VI"
+    ]
+  },
+  {
+    "name": "Ouagadougou",
+    "countryCode": "BF",
+    "regions": [
+      "Ouaga 2000",
+      "Zone du Bois",
+      "Cissin",
+      "Dassasgho"
+    ]
+  },
+  {
+    "name": "Accra",
+    "countryCode": "GH",
+    "regions": [
+      "Airport Residential Area",
+      "Cantonments",
+      "East Legon",
+      "Osu"
+    ]
+  },
+  {
+    "name": "Lagos",
+    "countryCode": "NG",
+    "regions": [
+      "Ikeja",
+      "Victoria Island",
+      "Lekki",
+      "Ikoyi"
+    ]
+  }
+] 

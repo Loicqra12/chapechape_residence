@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/residence_type_enum.dart';
 import '../../core/utils/responsive_utils.dart';
@@ -48,17 +49,20 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
   }
 
   Future<void> _loadCategories() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
     
     try {
       final categories = await _categoryCacheService.getAllCategories();
+      if (!mounted) return;
       setState(() {
         _categories = categories;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -110,41 +114,68 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
         if (widget.showTitle) ... [
           Padding(
             padding: context.responsivePadding,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.title,
-                  style: TextStyle(
-                    fontSize: context.responsiveFontSize(24),
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-                if (isMobile) ...[
-                  const SizedBox(width: 10),
-                  const Icon(
-                    Icons.swipe,
-                    color: Colors.grey,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 5),
-                  const Text(
-                    'Faites défiler',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: TextStyle(
+                              fontSize: context.responsiveFontSize(24),
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Explorez les meilleurs types de logements disponibles',
+                            style: TextStyle(
+                              fontSize: context.responsiveFontSize(14),
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () async {
-                    await _categoryCacheService.forceRefresh();
-                    _loadCategories();
-                  },
-                  tooltip: 'Actualiser les catégories',
+                    if (isMobile) ...[
+                      Flexible(
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.swipe,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Faites défiler',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () async {
+                        await _categoryCacheService.forceRefresh();
+                        _loadCategories();
+                      },
+                      tooltip: 'Actualiser les catégories',
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -164,8 +195,21 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
                 ),
               ),
             ] else ...[
-              SizedBox(
+              Container(
                 height: 260,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.white.withOpacity(0.8),
+                      Colors.white.withOpacity(0.0),
+                      Colors.white.withOpacity(0.0),
+                      Colors.white.withOpacity(0.8),
+                    ],
+                    stops: const [0.0, 0.05, 0.95, 1.0],
+                  ),
+                ),
                 child: ListView(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
@@ -273,28 +317,61 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
         onTap: () {
           _onCategoryTap(type);
         },
+        borderRadius: BorderRadius.circular(16),
+        splashColor: AppTheme.primaryColor.withOpacity(0.1),
+        highlightColor: AppTheme.primaryColor.withOpacity(0.05),
         child: Card(
-          elevation: 4,
+          elevation: 6,
+          shadowColor: AppTheme.primaryColor.withOpacity(0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              width: 1.0,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  icon,
-                  size: 48,
-                  color: AppTheme.primaryColor,
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 40,
+                    color: AppTheme.primaryColor,
+                  ),
+                )
+                .animate()
+                .scaleXY(
+                  duration: 700.ms,
+                  curve: Curves.easeInOut,
+                  begin: 1.0,
+                  end: 1.05,
+                )
+                .then()
+                .scaleXY(
+                  duration: 700.ms,
+                  curve: Curves.easeInOut,
+                  begin: 1.05,
+                  end: 1.0,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   title,
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: context.responsiveFontSize(16),
                     fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
               ],
@@ -302,22 +379,19 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
           ),
         ),
       ),
-    );
+    )
+    .animate()
+    .fadeIn(duration: 400.ms)
+    .slideY(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutQuad);
   }
 
   List<Widget> _buildDefaultCategories(BuildContext context) {
-      return [
+    return [
       _buildCategoryItem(
         context: context,
         title: 'Appartements',
         icon: Icons.apartment,
         type: ResidenceType.apartment,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Studios',
-        icon: Icons.single_bed,
-        type: ResidenceType.studio,
       ),
       _buildCategoryItem(
         context: context,
@@ -327,9 +401,9 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
       ),
       _buildCategoryItem(
         context: context,
-        title: 'Maisons',
-        icon: Icons.home,
-        type: ResidenceType.house,
+        title: 'Studios',
+        icon: Icons.single_bed,
+        type: ResidenceType.studio,
       ),
       _buildCategoryItem(
         context: context,
@@ -339,9 +413,33 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
       ),
       _buildCategoryItem(
         context: context,
-        title: 'Résidences de luxe',
-        icon: Icons.star,
-        type: ResidenceType.luxury,
+        title: 'Résidences de vacances',
+        icon: Icons.beach_access,
+        type: ResidenceType.resort,
+      ),
+      _buildCategoryItem(
+        context: context,
+        title: 'Éco-lodges',
+        icon: Icons.nature_people,
+        type: ResidenceType.cottage,
+      ),
+      _buildCategoryItem(
+        context: context,
+        title: 'Maisons de plage',
+        icon: Icons.waves,
+        type: ResidenceType.bungalow,
+      ),
+      _buildCategoryItem(
+        context: context,
+        title: 'Logements étudiants',
+        icon: Icons.school,
+        type: ResidenceType.student,
+      ),
+      _buildCategoryItem(
+        context: context,
+        title: 'Airbnb locaux',
+        icon: Icons.home,
+        type: ResidenceType.guesthouse,
       ),
     ];
   }

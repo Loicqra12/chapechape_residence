@@ -64,12 +64,12 @@ class City {
   // Création d'un objet à partir d'une Map
   factory City.fromMap(Map<String, dynamic> map) {
     return City(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      region: map['region'] as String,
-      countryCode: map['countryCode'] as String,
-      latitude: map['latitude'] as double?,
-      longitude: map['longitude'] as double?,
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      region: map['region']?.toString() ?? '',
+      countryCode: map['countryCode']?.toString() ?? '',
+      latitude: map['latitude'] != null ? (map['latitude'] is double ? map['latitude'] : double.tryParse(map['latitude'].toString())) : null,
+      longitude: map['longitude'] != null ? (map['longitude'] is double ? map['longitude'] : double.tryParse(map['longitude'].toString())) : null,
       isPopular: map['isPopular'] as bool? ?? false,
     );
   }

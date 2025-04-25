@@ -273,32 +273,39 @@ class ResidenceCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          _buildFeature(Icons.king_bed, '${residence.bedrooms}'),
-                          const SizedBox(width: 15),
-                          _buildFeature(Icons.bathtub, '${residence.bathrooms}'),
-                          const SizedBox(width: 15),
-                          _buildFeature(Icons.square_foot, '${residence.squareMeters.toInt()} m²'),
-                        ],
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(child: _buildFeature(Icons.king_bed, '${residence.bedrooms}')),
+                            const SizedBox(width: 8),
+                            Flexible(child: _buildFeature(Icons.bathtub, '${residence.bathrooms}')),
+                            const SizedBox(width: 8),
+                            Flexible(child: _buildFeature(Icons.square_foot, '${residence.squareMeters.toInt()} m²')),
+                          ],
+                        ),
                       ),
                       if (residence.rating > 0)
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              residence.rating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 16,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 2),
+                              Text(
+                                residence.rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
                     ],
                   ),
@@ -313,18 +320,22 @@ class ResidenceCard extends StatelessWidget {
 
   Widget _buildFeature(IconData icon, String text) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
           color: Colors.grey,
           size: 16,
         ),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
+        const SizedBox(width: 2),
+        Flexible(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

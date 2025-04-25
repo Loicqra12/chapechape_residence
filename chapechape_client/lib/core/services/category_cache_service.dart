@@ -89,12 +89,13 @@ class CategoryCacheService {
         return categories;
       } else {
         logger.error('Erreur lors de la récupération des catégories: réponse null');
-        // En cas d'erreur, on retourne le cache si disponible
-        return _cachedCategories ?? [];
+        // En cas d'erreur, on retourne le cache si disponible ou des données factices
+        return _cachedCategories ?? _getFallbackCategories();
       }
     } catch (e) {
       logger.error('Exception lors de la récupération des catégories: $e');
-      return _cachedCategories ?? [];
+      // En cas d'erreur d'autorisation ou autre, retourner des données factices
+      return _cachedCategories ?? _getFallbackCategories();
     }
   }
   
@@ -103,5 +104,36 @@ class CategoryCacheService {
     _cachedCategories = null;
     _lastFetchTime = null;
     await getAllCategories();
+  }
+  
+  // Données factices pour quand l'API n'est pas accessible
+  List<CategoryData> _getFallbackCategories() {
+    logger.debug('Utilisation des catégories factices');
+    return [
+      CategoryData(
+        id: 'apartment',
+        type: ResidenceType.apartment,
+        title: 'Appartements',
+        features: ['Moderne', 'Familial', 'Services inclus'],
+      ),
+      CategoryData(
+        id: 'villa',
+        type: ResidenceType.villa,
+        title: 'Villas',
+        features: ['Spacieux', 'Jardin', 'Piscine'],
+      ),
+      CategoryData(
+        id: 'studio',
+        type: ResidenceType.studio,
+        title: 'Studios',
+        features: ['Compact', 'Économique', 'Pratique'],
+      ),
+      CategoryData(
+        id: 'luxury',
+        type: ResidenceType.luxury,
+        title: 'Luxe',
+        features: ['Premium', 'Services VIP', 'Emplacement exclusif'],
+      ),
+    ];
   }
 } 

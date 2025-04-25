@@ -34,8 +34,34 @@ const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
 const superAdminRoutes = require("./routes/superadmin.routes");
 const availabilityRoutes = require("./routes/availability.routes");
+const promotionRoutes = require("./routes/promotion.routes");
 
 const app = express();
+
+// Routes publiques de test et promotions (AVANT les middlewares de sécurité)
+// Route de test simple
+app.get("/api/test", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Cette route de test fonctionne correctement"
+  });
+});
+
+// Importer les contrôleurs de promotion directement pour les routes publiques
+const {
+  getPromotions,
+  getActivePromotions,
+  getExclusivePromotions,
+  getPromotion,
+  getResidencePromotions
+} = require("./controllers/promotion/promotion.controller");
+
+// Routes publiques de promotions (sans authentification)
+app.get("/api/promotions", cache(900), getPromotions);
+app.get("/api/promotions/active", cache(900), getActivePromotions);
+app.get("/api/promotions/exclusive", cache(900), getExclusivePromotions);
+app.get("/api/promotions/residence/:id", cache(900), getResidencePromotions);
+app.get("/api/promotions/:id", getPromotion);
 
 // Sécurité
 app.use(
@@ -150,9 +176,6 @@ app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/messages", messageRoutes); // Routes de messagerie
 app.use("/api", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
 
-// Middleware de sécurité pour les fichiers
-app.use("/api/uploads", fileSecurityMiddleware);
-
 // Route de test
 app.get("/", (req, res) => {
   res.json({ message: "Bienvenue sur l'API ChapeChape" });
@@ -189,6 +212,9 @@ app.get("/api/csrf-token", (req, res) => {
     return res.status(200).json({ success: true, csrfToken: token });
   });
 });
+
+// Middleware de sécurité pour les fichiers
+app.use("/api/uploads", fileSecurityMiddleware);
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {

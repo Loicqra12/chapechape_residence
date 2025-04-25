@@ -45,6 +45,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     on<SearchResidences>(_onSearchSpecificResidences);
     on<FilterResidences>(_onFilterResidences);
     on<FilterResidencesByTypeEvent>(_onFilterResidencesByType);
+    on<FilterResidencesByLocation>(_onFilterResidencesByLocation);
     on<ClearFiltersEvent>(_onClearFilters);
     on<RefreshResidencesEvent>(_onRefreshResidences);
     on<LoadResidences>(_onLoadResidencesByParams);
@@ -391,6 +392,39 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       ));
     } catch (e) {
       emit(ResidenceError(e.toString()));
+    }
+  }
+  
+  // Gestionnaire pour filtrer les résidences par localisation
+  Future<void> _onFilterResidencesByLocation(
+    FilterResidencesByLocation event,
+    Emitter<ResidenceState> emit,
+  ) async {
+    try {
+      emit(ResidencesFiltering());
+      
+      // Récupérer les résidences filtrées en utilisant searchResidences
+      final residences = await _residenceService.searchResidences(
+        city: event.cityId,
+        // Inclure d'autres paramètres de filtre si nécessaire
+      );
+      
+      // Construire l'objet de filtres pour l'état
+      final filters = <String, dynamic>{
+        'location': {
+          if (event.cityId != null) 'cityId': event.cityId,
+          if (event.region != null) 'region': event.region,
+          if (event.countryCode != null) 'countryCode': event.countryCode,
+          if (event.neighborhood != null) 'neighborhood': event.neighborhood,
+        },
+      };
+      
+      emit(ResidencesFilterResult(
+        residences: residences,
+        filters: filters,
+      ));
+    } catch (e) {
+      emit(ResidenceError('Erreur lors du filtrage par localisation: $e'));
     }
   }
   

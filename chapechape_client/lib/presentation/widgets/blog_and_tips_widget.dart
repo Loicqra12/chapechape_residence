@@ -1,79 +1,138 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_assets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:flutter_animate/flutter_animate.dart';
 
-class BlogAndTipsWidget extends StatelessWidget {
-  const BlogAndTipsWidget({Key? key}) : super(key: key);
+import '../../core/models/blog_post_model.dart';
+import '../../core/utils/responsive_utils.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/services/blog_service.dart';
+
+class BlogAndTipsWidget extends StatefulWidget {
+  final List<BlogPost>? blogPosts;
+  final bool isLoading;
+  final VoidCallback? onSeeAllPressed;
+  final EdgeInsets padding;
+  final String title;
+  final String emptyStateMessage;
+  final bool enableAnimation;
+
+  const BlogAndTipsWidget({
+    Key? key,
+    this.blogPosts,
+    this.isLoading = false,
+    this.onSeeAllPressed,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    this.title = 'Blog & Conseils',
+    this.emptyStateMessage = 'Aucun article de blog disponible',
+    this.enableAnimation = true,
+  }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final articles = [
-      {
-        'title': 'Découvrez la Villa Santorini à Abidjan',
-        'image': ResidenceAssets.villa1,
-        'category': 'Visite',
-        'readTime': '5 min',
-      },
-      {
-        'title': 'Les meilleurs appartements à Abidjan',
-        'image': ResidenceAssets.apartment4,
-        'category': 'Guide',
-        'readTime': '8 min',
-      },
-      {
-        'title': 'Studios de luxe au Quai d\'Orsay',
-        'image': ResidenceAssets.luxury1,
-        'category': 'Vidéo',
-        'readTime': '4 min',
-      },
-    ];
+  State<BlogAndTipsWidget> createState() => _BlogAndTipsWidgetState();
+}
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
+  final BlogService _blogService = BlogService();
+  List<BlogPost> _blogPosts = [];
+  bool _isLoading = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadBlogPosts();
+  }
+  
+  Future<void> _loadBlogPosts() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      if (widget.blogPosts != null) {
+        setState(() {
+          _blogPosts = widget.blogPosts!;
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      final blogPosts = await _blogService.getRecentBlogPosts();
+      
+      setState(() {
+        _blogPosts = blogPosts;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Erreur lors du chargement des articles de blog: $e');
+      setState(() {
+        _blogPosts = [];
+        _isLoading = false;
+      });
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    // Initialisation de la locale française pour timeago
+    timeago.setLocaleMessages('fr', timeago.FrMessages());
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(context),
+        const SizedBox(height: 16),
+        _isLoading || widget.isLoading 
+            ? _buildLoadingSkeleton() 
+            : _buildBlogPostsList(context),
+      ],
+    ).animate(
+      target: widget.enableAnimation ? 1 : 0,
+    ).fadeIn(
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: widget.padding,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Blog et Conseils',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                ),
+          Expanded(
+            child: Text(
+              widget.title,
+              style: TextStyle(
+                fontSize: context.responsiveFontSize(20),
+                fontWeight: FontWeight.bold,
               ),
-              TextButton(
-                onPressed: () {
-                  // TODO: Naviguer vers la page du blog
-                },
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Voir tout',
-                  style: TextStyle(
-                    color: Color(0xFFFFD700),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          const SizedBox(height: 16),
           SizedBox(
-            height: 300,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: articles.length,
-              itemBuilder: (context, index) {
-                final article = articles[index];
-                return _buildBlogCard(context, article);
+            width: 100,
+            child: TextButton(
+              onPressed: widget.onSeeAllPressed ?? () {
+                context.push('/blog');
               },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: const Text(
+                'Voir tout',
+                style: TextStyle(
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],
@@ -81,128 +140,465 @@ class BlogAndTipsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildBlogCard(BuildContext context, dynamic post) {
-    return Container(
-      width: 260,
-      margin: const EdgeInsets.only(right: 16),
-      child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-              child: _buildBlogImage(post),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              constraints: const BoxConstraints(maxHeight: 140),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+  Widget _buildBlogPostsList(BuildContext context) {
+    if (_blogPosts.isEmpty) {
+      return _buildEmptyState(context);
+    }
+    
+    return SizedBox(
+      height: 280,
+      child: ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: widget.padding.horizontal / 2),
+        scrollDirection: Axis.horizontal,
+        itemCount: _blogPosts.length,
+        itemBuilder: (context, index) {
+          final blogPost = _blogPosts[index];
+          return _buildBlogPostCard(context, blogPost);
+        },
+      ),
+    );
+  }
+
+  Widget _buildBlogPostCard(BuildContext context, BlogPost blogPost) {
+    return GestureDetector(
+      onTap: () {
+        context.push('/blog/${blogPost.id}');
+      },
+      child: Container(
+        width: 280,
+        margin: const EdgeInsets.only(right: 16, bottom: 8),
+        child: Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image du blog
+              Stack(
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                  SizedBox(
+                    height: 130,
+                    width: double.infinity,
+                    child: _buildImage(blogPost),
+                  ),
+                  
+                  // Badge de catégorie
+                  if (blogPost.category != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFD700).withOpacity(0.2),
+                          color: _getCategoryColor(blogPost.category),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          post['category']!,
+                          _getCategoryText(blogPost.category),
                           style: const TextStyle(
-                            color: Color(0xFFFFD700),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              
+              // Contenu du blog
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Titre
+                      Text(
+                        blogPost.title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      
+                      // Sous-titre / résumé
+                      if (blogPost.summary != null)
+                        Flexible(
+                          child: Text(
+                            blogPost.summary!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        post['readTime']!,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    post['title']!,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () {
-                        // TODO: Naviguer vers l'article
-                      },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
+                      
+                      const Spacer(flex: 1),
+                      
+                      // Informations de l'auteur et date
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
                         children: [
-                          Text(
-                            'Lire l\'article',
-                            style: TextStyle(
-                              color: Color(0xFFFFD700),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          if (blogPost.authorImageUrl != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: CircleAvatar(
+                                radius: 10,
+                                backgroundImage: _getAuthorImage(blogPost),
+                              ),
+                            ),
+                          
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  blogPost.authorName ?? 'Équipe ChapeChape',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  _formatDate(blogPost.publishedDate),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[600],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
-                          SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: Color(0xFFFFD700),
-                            size: 16,
+                          
+                          // Badge de temps de lecture
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.access_time_rounded,
+                                  size: 10,
+                                  color: Colors.grey[700],
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${blogPost.readTimeMinutes ?? 3} min',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[700],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBlogImage(dynamic post) {
-    return Image.asset(
-      post['image']!,
-      height: 160,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          height: 160,
-          color: Colors.grey[300],
-          child: const Icon(Icons.image, size: 40),
-        );
-      },
+  Widget _buildImage(BlogPost blogPost) {
+    final imageUrl = blogPost.imageUrl;
+    
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: const Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            color: Colors.grey,
+            size: 32,
+          ),
+        ),
+      );
+    }
+    
+    // Si l'URL commence par "http" ou "https", c'est une URL en ligne
+    if (imageUrl.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            color: Colors.white,
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          color: Colors.grey[200],
+          child: const Center(
+            child: Icon(
+              Icons.error_outline,
+              color: Colors.grey,
+              size: 32,
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Sinon, c'est un asset local (nous utilisons désormais des URLs en ligne)
+    return Container(
+      color: Colors.grey[200],
+      child: const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.grey,
+          size: 32,
+        ),
+      ),
     );
+  }
+
+  ImageProvider _getAuthorImage(BlogPost blogPost) {
+    final imageUrl = blogPost.authorImageUrl;
+    
+    // Si l'URL est valide et c'est une URL en ligne
+    if (imageUrl != null && imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      return CachedNetworkImageProvider(imageUrl);
+    }
+    
+    // Avatar par défaut avec une couleur générée par le nom de l'auteur
+    return NetworkImage(
+      'https://ui-avatars.com/api/?name=${Uri.encodeComponent(blogPost.authorName ?? "User")}&background=random&color=fff&size=100'
+    );
+  }
+  
+  Widget _buildEmptyState(BuildContext context) {
+    return Container(
+      padding: widget.padding,
+      alignment: Alignment.center,
+      height: 200,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.article_outlined,
+            size: 48,
+            color: AppTheme.textSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            widget.emptyStateMessage,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadBlogPosts,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Actualiser'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton() {
+    return SizedBox(
+      height: 240,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Container(
+            width: 280,
+            margin: const EdgeInsets.only(right: 16),
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Image placeholder
+                    Container(
+                      height: 130,
+                      color: Colors.white,
+                    ),
+                    
+                    // Content placeholder
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title placeholder
+                          Container(
+                            width: double.infinity,
+                            height: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 200,
+                            height: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          
+                          // Summary placeholder
+                          Container(
+                            width: double.infinity,
+                            height: 12,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 150,
+                            height: 12,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Author info placeholder
+                          Row(
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 100,
+                                    height: 12,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    width: 80,
+                                    height: 10,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              Container(
+                                width: 50,
+                                height: 20,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Date inconnue';
+    
+    try {
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      // Utiliser timeago pour les dates récentes (moins de 7 jours)
+      if (difference.inDays < 7) {
+        return timeago.format(date, locale: 'fr');
+      }
+      
+      // Pour les dates plus anciennes, utiliser un format standard
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return 'Date inconnue';
+    }
+  }
+
+  String _getCategoryText(String? category) {
+    if (category == null) return 'Général';
+    
+    switch (category.toLowerCase()) {
+      case 'tips':
+        return 'Conseils';
+      case 'news':
+        return 'Actualités';
+      case 'guide':
+        return 'Guide';
+      case 'market':
+        return 'Marché';
+      case 'lifestyle':
+        return 'Style de vie';
+      default:
+        return category;
+    }
+  }
+
+  Color _getCategoryColor(String? category) {
+    if (category == null) return Colors.grey;
+    
+    switch (category.toLowerCase()) {
+      case 'tips':
+        return Colors.green;
+      case 'news':
+        return Colors.blue;
+      case 'guide':
+        return Colors.orange;
+      case 'market':
+        return Colors.purple;
+      case 'lifestyle':
+        return Colors.teal;
+      default:
+        return Colors.grey;
+    }
   }
 }

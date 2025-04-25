@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Côte d'Ivoire",
+    "code": "CI",
+    "dialCode": "+225",
+    "flagPath": "assets/images/flags/ci.png"
+  },
+  {
+    "name": "Sénégal",
+    "code": "SN",
+    "dialCode": "+221",
+    "flagPath": "assets/images/flags/sn.png"
+  },
+  {
+    "name": "Mali",
+    "code": "ML",
+    "dialCode": "+223",
+    "flagPath": "assets/images/flags/ml.png"
+  },
+  {
+    "name": "Burkina Faso",
+    "code": "BF",
+    "dialCode": "+226",
+    "flagPath": "assets/images/flags/bf.png"
+  },
+  {
+    "name": "Guinée",
+    "code": "GN",
+    "dialCode": "+224",
+    "flagPath": "assets/images/flags/gn.png"
+  },
+  {
+    "name": "Bénin",
+    "code": "BJ",
+    "dialCode": "+229",
+    "flagPath": "assets/images/flags/bj.png"
+  },
+  {
+    "name": "Togo",
+    "code": "TG",
+    "dialCode": "+228",
+    "flagPath": "assets/images/flags/tg.png"
+  },
+  {
+    "name": "Ghana",
+    "code": "GH",
+    "dialCode": "+233",
+    "flagPath": "assets/images/flags/gh.png"
+  },
+  {
+    "name": "Nigéria",
+    "code": "NG",
+    "dialCode": "+234",
+    "flagPath": "assets/images/flags/ng.png"
+  },
+  {
+    "name": "Cameroun",
+    "code": "CM",
+    "dialCode": "+237",
+    "flagPath": "assets/images/flags/cm.png"
+  }
+] 

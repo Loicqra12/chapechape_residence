@@ -131,25 +131,28 @@ void main() async {
       ],
       child: BlocBuilder<LocaleCubit, LocaleState>(
         builder: (context, localeState) {
-          return FlutterEasyLoading(
-            child: MaterialApp.router(
-              title: AppConfig.appName,
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: ThemeMode.system,
-              locale: localeState?.locale ?? const Locale('fr'),
-              routerConfig: AppRouter.router,
-              localizationsDelegates: const [
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('fr', ''),
-                Locale('en', ''),
-              ],
-              builder: EasyLoading.init(), // Initialiser EasyLoading
+          return Directionality(
+            textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
+            child: FlutterEasyLoading(
+              child: MaterialApp.router(
+                title: AppConfig.appName,
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: ThemeMode.system,
+                locale: localeState?.locale ?? const Locale('fr'),
+                routerConfig: AppRouter.router,
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: const [
+                  Locale('fr', ''),
+                  Locale('en', ''),
+                ],
+                builder: EasyLoading.init(), // Initialiser EasyLoading
+              ),
             ),
           );
         }
@@ -269,23 +272,29 @@ class MyApp extends StatelessWidget {
       ],
       child: BlocBuilder<LocaleCubit, LocaleState>(
         builder: (context, localeState) {
-          return MaterialApp.router(
-            title: AppConfig.appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.system,
-            locale: localeState?.locale ?? const Locale('fr'),
-            routerConfig: AppRouter.router,
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('fr', ''),
-              Locale('en', ''),
-            ],
+          return Directionality(
+            textDirection: TextDirection.ltr, // Utiliser ltr pour le français
+            child: FlutterEasyLoading(
+              child: MaterialApp.router(
+                title: AppConfig.appName,
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: ThemeMode.system,
+                locale: localeState?.locale ?? const Locale('fr'),
+                routerConfig: AppRouter.router,
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: const [
+                  Locale('fr', ''),
+                  Locale('en', ''),
+                ],
+                builder: EasyLoading.init(), // Initialiser EasyLoading
+              ),
+            ),
           );
         }
       ),

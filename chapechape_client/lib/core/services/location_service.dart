@@ -1,14 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/location_suggestion_model.dart';
 import '../models/city.dart';
 import '../models/country.dart';
+import 'map_provider/map_service_interface.dart';
+import 'map_provider/osm_map_service.dart';
 
 class LocationService {
   static LocationService? _instance;
   List<City> _cities = [];
   List<Country> _countries = [];
+  
+  // Service cartographique utilisé (peut être changé facilement)
+  final MapServiceInterface _mapService = OSMMapService();
   
   // Singleton pattern
   factory LocationService() {
@@ -181,6 +187,94 @@ class LocationService {
     }
   }
   
+  // Obtenir tous les quartiers d'une ville
+  List<String> getNeighborhoodsByCity(String cityId) {
+    // Quartiers fictifs pour la démonstration
+    final Map<String, List<String>> neighborhoods = {
+      'abidjan': [
+        'Akouédo',
+        'Angré',
+        'Deux Plateaux',
+        'Palmeraie',
+        'Vallons',
+        'Cocody Centre',
+        'Ambassade',
+      ],
+      'cocody': [
+        'Akouédo',
+        'Angré',
+        'Deux Plateaux',
+        'Palmeraie',
+        'Vallons',
+        'Ambassade',
+      ],
+      'plateau': [
+        'Plateau Centre',
+        'Zone Administrative',
+        'Zone Commerciale',
+        'Quartier des Affaires',
+      ],
+      'yamoussoukro': [
+        'Quartier Millionnaire',
+        'Assabou',
+        'N\'Zuessi',
+        'Zone Administrative',
+      ],
+      'bouake': [
+        'Belleville',
+        'Commerce',
+        'Dar-es-Salam',
+        'Sokoura',
+        'Koko',
+      ],
+    };
+    
+    return neighborhoods[cityId] ?? [];
+  }
+  
+  // Rechercher des quartiers par nom
+  List<String> searchNeighborhoods(String query, String cityId) {
+    if (query.isEmpty) return [];
+    
+    final neighborhoods = getNeighborhoodsByCity(cityId);
+    final lowercaseQuery = query.toLowerCase();
+    
+    return neighborhoods
+        .where((neighborhood) => neighborhood.toLowerCase().contains(lowercaseQuery))
+        .toList();
+  }
+  
+  // Obtenir les suggestions de localisation avec quartiers
+  Future<List<LocationSuggestionModel>> getNeighborhoodSuggestions(String query, String cityId) async {
+    // Simuler un délai réseau
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    if (query.isEmpty) {
+      return [];
+    }
+    
+    final City? city = getCityById(cityId);
+    if (city == null) return [];
+    
+    final neighborhoods = searchNeighborhoods(query, cityId);
+    final Country? country = getCountryByCode(city.countryCode);
+    
+    return neighborhoods.map((neighborhood) => 
+      LocationSuggestionModel(
+        id: '${cityId}_$neighborhood',
+        name: neighborhood,
+        fullAddress: '$neighborhood, ${city.name}, ${country?.name ?? ""}',
+        city: city.name,
+        district: neighborhood,
+        country: country?.name ?? "",
+        latitude: city.latitude,
+        longitude: city.longitude,
+        isPopular: false,
+        searchCount: 0,
+      )
+    ).toList();
+  }
+  
   // Simuler une API de suggestions de localisation
   Future<List<LocationSuggestionModel>> getSuggestions(String query) async {
     // Simuler un délai réseau
@@ -308,5 +402,147 @@ class LocationService {
     ];
     
     return suggestions;
+  }
+  
+  // Simuler l'obtention de la position actuelle de l'utilisateur
+  // Note: Normalement, cela utiliserait geolocator, mais nous simulons ici
+  Future<LatLng?> getCurrentUserLocation() async {
+    // Utiliser le service cartographique pour obtenir la position
+    final position = await _mapService.getCurrentLocation();
+    
+    if (position != null) {
+      return LatLng(position['latitude']!, position['longitude']!);
+    }
+    
+    return null;
+  }
+  
+  // Obtenir l'autorisation de localisation
+  Future<bool> requestLocationPermission() async {
+    // Utiliser le service cartographique pour demander l'autorisation
+    return _mapService.requestLocationPermission();
+  }
+  
+  // Calculer la distance entre deux points en kilomètres (formule de Haversine)
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    // Utiliser le service cartographique pour calculer la distance
+    return _mapService.calculateDistance(lat1, lon1, lat2, lon2);
+  }
+  
+  // Obtenir les résidences à proximité de la position de l'utilisateur
+  Future<List<LocationSuggestionModel>> getNearbyLocations(LatLng userLocation, {double radiusKm = 5.0}) async {
+    // Simuler un délai réseau
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    // Liste complète des emplacements disponibles
+    final allLocations = await getAllLocations();
+    
+    // Filtrer pour ne conserver que les emplacements dans le rayon spécifié
+    final nearbyLocations = allLocations.where((location) {
+      final distance = calculateDistance(
+        userLocation.latitude, 
+        userLocation.longitude,
+        location.latitude ?? 0.0,
+        location.longitude ?? 0.0
+      );
+      
+      return distance <= radiusKm;
+    }).toList();
+    
+    // Trier par distance
+    nearbyLocations.sort((a, b) {
+      final distanceA = calculateDistance(
+        userLocation.latitude, 
+        userLocation.longitude,
+        a.latitude ?? 0.0,
+        a.longitude ?? 0.0
+      );
+      
+      final distanceB = calculateDistance(
+        userLocation.latitude, 
+        userLocation.longitude,
+        b.latitude ?? 0.0,
+        b.longitude ?? 0.0
+      );
+      
+      return distanceA.compareTo(distanceB);
+    });
+    
+    return nearbyLocations;
+  }
+  
+  // Obtenir tous les emplacements disponibles
+  Future<List<LocationSuggestionModel>> getAllLocations() async {
+    // Combiner toutes les sources d'emplacements
+    final List<LocationSuggestionModel> allLocations = [];
+    
+    // Ajouter les emplacements populaires
+    allLocations.addAll(await getPopularLocations());
+    
+    // Ajouter des emplacements supplémentaires
+    allLocations.addAll([
+      LocationSuggestionModel(
+        id: '3',
+        name: 'Marcory',
+        fullAddress: 'Marcory, Abidjan, Côte d\'Ivoire',
+        city: 'Abidjan',
+        district: 'Marcory',
+        country: 'Côte d\'Ivoire',
+        latitude: 5.3019,
+        longitude: -3.9826,
+        isPopular: true,
+        searchCount: 850,
+      ),
+      LocationSuggestionModel(
+        id: '4',
+        name: 'Bietry',
+        fullAddress: 'Bietry, Zone 4, Abidjan, Côte d\'Ivoire',
+        city: 'Abidjan',
+        district: 'Zone 4',
+        country: 'Côte d\'Ivoire',
+        latitude: 5.2910,
+        longitude: -3.9734,
+        isPopular: false,
+        searchCount: 420,
+      ),
+      LocationSuggestionModel(
+        id: '6',
+        name: 'Yopougon',
+        fullAddress: 'Yopougon, Abidjan, Côte d\'Ivoire',
+        city: 'Abidjan',
+        district: 'Yopougon',
+        country: 'Côte d\'Ivoire',
+        latitude: 5.3364,
+        longitude: -4.0674,
+        isPopular: false,
+        searchCount: 780,
+      ),
+      LocationSuggestionModel(
+        id: '7',
+        name: 'Treichville',
+        fullAddress: 'Treichville, Abidjan, Côte d\'Ivoire',
+        city: 'Abidjan',
+        district: 'Treichville',
+        country: 'Côte d\'Ivoire',
+        latitude: 5.2950,
+        longitude: -4.0200,
+        isPopular: false,
+        searchCount: 650,
+      ),
+      LocationSuggestionModel(
+        id: '8',
+        name: 'Angré',
+        fullAddress: 'Angré, Cocody, Abidjan, Côte d\'Ivoire',
+        city: 'Abidjan',
+        district: 'Cocody',
+        country: 'Côte d\'Ivoire',
+        latitude: 5.3839,
+        longitude: -3.9980,
+        isPopular: false,
+        searchCount: 920,
+      ),
+    ]);
+    
+    return allLocations;
   }
 }

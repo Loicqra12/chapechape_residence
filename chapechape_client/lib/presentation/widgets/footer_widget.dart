@@ -125,8 +125,10 @@ class FooterWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 10,
                 children: [
                   _buildPaymentMethodLogo('assets/images/payment/visa.png'),
                   _buildPaymentMethodLogo('assets/images/payment/mastercard.png'),
@@ -152,8 +154,10 @@ class FooterWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 10,
                 children: [
                   _buildPartnerLogo('assets/logos/partners/partner1_logo.png'),
                   _buildPartnerLogo('assets/logos/partners/partner2_logo.png'),
@@ -177,15 +181,16 @@ class FooterWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 16,
+                runSpacing: 16,
                 children: [
                   _buildStoreButton(
                     'App Store',
                     FontAwesomeIcons.appStoreIos,
                     () {},
                   ),
-                  const SizedBox(width: 16),
                   _buildStoreButton(
                     'Google Play',
                     FontAwesomeIcons.googlePlay,

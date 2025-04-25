@@ -1,12 +1,14 @@
 // lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/residence_type_enum.dart';
 import '../../core/constants/app_assets.dart' as assets;
+import '../../core/services/promotion_service.dart';
 import '../widgets/featured_listings.dart';
 import '../widgets/categories_menu_widget.dart';
 import '../widgets/advanced_search_widget.dart';
@@ -15,449 +17,276 @@ import '../widgets/blog_and_tips_widget.dart';
 import '../widgets/footer_widget.dart';
 import '../widgets/special_residences_widget.dart';
 import '../widgets/residence_type_widget.dart';
+import '../widgets/exclusive_promotions_widget.dart';
+import '../screens/promotion_detail_screen.dart';
+import '../widgets/home_banner_carousel.dart';
+import '../widgets/popular_categories_widget.dart';
+import '../widgets/around_me_widget.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Initialiser le chargement des résidences
+    // Initialiser le chargement des résidences après le rendu initial
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ResidenceBloc>().add(const LoadResidences());
+      // Initialiser le service de promotions pour le pré-chargement
+      PromotionService.initialize();
     });
     
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        if (state is Authenticated) {
-          return _buildAuthenticatedContent(context, state);
-        } else {
-          return _buildUnauthenticatedContent(context);
-        }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scaffold(
+          body: SafeArea(
+            child: ListView(
+              key: const Key('home_screen_list_view'),
+              physics: const ClampingScrollPhysics(),
+              children: [
+                // Bannière d'accueil avec carousel dynamique
+                HomeBannerCarousel(constraints: constraints),
+                
+                // Section de recherche (commune à tous)
+                const AdvancedSearchWidget(),
+                
+                // Section des catégories (commune à tous)
+                _buildSectionHeader(
+                  constraints, 
+                  'Catégories', 
+                  'Explorez nos différents types d\'hébergements'
+                ),
+                
+                // Nouveau widget de catégories populaires avec animations
+                const PopularCategoriesWidget(
+                  title: 'Catégories populaires',
+                  subtitle: 'Découvrez nos types d\'hébergements les plus demandés',
+                  itemsPerRow: 2,
+                  viewStyle: 'grid',
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Widget de catégories existant (modes d'affichage alternatifs)
+                SizedBox(
+                  height: 280,
+                  width: constraints.maxWidth,
+                  child: CategoriesMenuWidget(
+                    title: "Explorez par catégories",
+                    filterType: ResidenceType.other,
+                  ),
+                ),
+                
+                // Section des offres spéciales (commune à tous)
+                _buildSectionHeader(
+                  constraints, 
+                  'Offres spéciales', 
+                  'Résidences avec piscines et aménités exclusives'
+                ),
+                
+                // Widget des promotions exclusives
+                FutureBuilder<PromotionService>(
+                  future: PromotionService.initialize(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 24.0),
+                        child: ExclusivePromotionsWidget(
+                          title: 'Offres & Promotions',
+                          subtitle: 'Nos meilleures offres du moment',
+                          maxItems: 5,
+                          exclusiveOnly: false,
+                          onPromotionSelected: (promotion) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PromotionDetailScreen(
+                                  promotionId: promotion.id,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }
+                    return const SizedBox(height: 20);
+                  },
+                ),
+                
+                SizedBox(
+                  height: 400,
+                  width: constraints.maxWidth,
+                  child: SpecialResidencesWidget(
+                    title: "Résidences Spéciales",
+                    filterType: ResidenceType.luxury,
+                  ),
+                ),
+                
+                // Section Autour de moi (géolocalisation)
+                _buildSectionHeader(
+                  constraints, 
+                  'Autour de moi', 
+                  'Découvrez les résidences à proximité de votre position'
+                ),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: AroundMeWidget(
+                    title: 'À proximité',
+                    subtitle: 'Explorez les quartiers autour de vous',
+                    itemCount: 5,
+                    radiusKm: 5.0,
+                    showMap: true,
+                  ),
+                ),
+                
+                // Section des résidences recommandées (commune à tous)
+                _buildSectionHeader(
+                  constraints, 
+                  'Résidences recommandées', 
+                  'Nos meilleures sélections pour vous'
+                ),
+                
+                SizedBox(
+                  height: 370,
+                  width: constraints.maxWidth,
+                  child: FeaturedListings(),
+                ),
+                
+                // Section pour encourager l'inscription (uniquement pour les non-connectés)
+                _buildSignUpPrompt(context, constraints),
+                
+                // Témoignages clients (commun à tous)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: TestimonialsWidget(),
+                ),
+                
+                // Section blog et conseils (commune à tous)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: BlogAndTipsWidget(),
+                ),
+                
+                // Footer (commun à tous)
+                FooterWidget(),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
 
-  Widget _buildAuthenticatedContent(BuildContext context, Authenticated state) {
-    // Utiliser LayoutBuilder pour s'assurer que les contraintes sont appliquées
-    return LayoutBuilder(
-      builder: (context, constraints) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-                  // Message de bienvenue personnalisé avec largeur contrainte
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryColor,
-                      AppTheme.primaryColor.withOpacity(0.8),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bonjour ${state.user.firstName}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Bienvenue sur ChapeChape Résidences',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Section de recherche et filtres
-              const AdvancedSearchWidget(),
-              
-                  // Section des catégories - avec largeur contrainte
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.symmetric(vertical: 16.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Catégories',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Explorez nos différents types d\'hébergements',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-                  
-                  // Widgets avec hauteur fixe pour éviter les contraintes indéfinies
-                  SizedBox(
-                    height: 250,
-                    width: constraints.maxWidth,
-                    child: const CategoriesMenuWidget(
-                      title: "Explorez par catégories",
-                      filterType: ResidenceType.other,
-                    ),
-                  ),
-                  
-                  // Sections de résidences avec largeur contrainte
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Offres spéciales',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Résidences avec piscines et aménités exclusives',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-                  
-                  // Widgets avec hauteur fixe et largeur contrainte
-                  SizedBox(
-                    height: 370,
-                    width: constraints.maxWidth,
-                    child: const SpecialResidencesWidget(
-                      title: "Résidences Spéciales",
-                      filterType: ResidenceType.luxury,
-                    ),
-                  ),
-                  
-                  // Le reste du contenu avec le même pattern...
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Résidences recommandées',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Nos meilleures sélections pour vous',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-                  
-                  SizedBox(
-                    height: 370,
-                    width: constraints.maxWidth,
-                    child: const FeaturedListings(),
-                  ),
-                  
-                  // Utiliser des widgets adaptés pour le reste des sections
-                  // ...
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _buildUnauthenticatedContent(BuildContext context) {
-    // Utiliser LayoutBuilder pour s'assurer que les contraintes sont appliquées
-    return LayoutBuilder(
-      builder: (context, constraints) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-                  // Bannière d'accueil principale
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryColor,
-                      AppTheme.primaryColor.withOpacity(0.8),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Trouvez votre résidence idéale',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                          textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Studios, appartements, villas et plus encore',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
-                          textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Section de recherche et filtres
-              const AdvancedSearchWidget(),
-              
-              // Section des catégories
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.symmetric(vertical: 16.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                        Text(
-                      'Catégories',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                        SizedBox(height: 4),
-                        Text(
-                      'Explorez nos différents types d\'hébergements',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-                  
-                  // Widgets des catégories
-                  SizedBox(
-                    height: 250,
-                    width: constraints.maxWidth,
-                    child: const CategoriesMenuWidget(
-                      title: "Explorez par catégories",
-                      filterType: ResidenceType.other,
-                    ),
-                  ),
-              
-              // Section des offres spéciales
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                          'Offres spéciales',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                          'Résidences avec piscines et aménités exclusives',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-                  // Widget des résidences spéciales
-                  SizedBox(
-                    height: 370,
-                    width: constraints.maxWidth,
-                    child: const SpecialResidencesWidget(
-                      title: "Résidences Spéciales",
-                      filterType: ResidenceType.luxury,
-                    ),
-                  ),
-                  
-                  // Section des résidences recommandées
-              Container(
-                    width: constraints.maxWidth,
-                margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                          'Résidences recommandées',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                          'Nos meilleures sélections pour vous',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-                  
-                  // Widget des résidences en vedette
-                  SizedBox(
-                    height: 370,
-                    width: constraints.maxWidth,
-                    child: const FeaturedListings(),
-                  ),
-                  
-                  // Sections des types de résidences
-                  _buildResidenceTypeSection(context, assets.ResidenceType.apartment, 'Appartements', 'Confort et praticité au cœur de la ville'),
-                  _buildResidenceTypeSection(context, assets.ResidenceType.villa, 'Villas', 'Élégance et espace pour toute la famille'),
-                  _buildResidenceTypeSection(context, assets.ResidenceType.studio, 'Studios', 'Parfaits pour les séjours individuels'),
-                  _buildResidenceTypeSection(context, assets.ResidenceType.luxury, 'Résidences de luxe', 'Pour une expérience premium'),
-                  
-                  // Sections témoignages, blog et autres...
-                  const SizedBox(height: 32),
-                  const TestimonialsWidget(),
-                  const SizedBox(height: 32),
-                  const BlogAndTipsWidget(),
-                  const SizedBox(height: 32),
-                  const FooterWidget(),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-    );
-  }
-
-  // Helper widget pour les sections de type de résidence
-  Widget _buildResidenceTypeSection(BuildContext context, assets.ResidenceType type, String title, String subtitle) {
+  // Widget d'en-tête de section réutilisable
+  Widget _buildSectionHeader(BoxConstraints constraints, String title, String subtitle) {
     return Container(
-      width: MediaQuery.of(context).size.width,
+      width: constraints.maxWidth,
       margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
             title,
             style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
-                    Text(
+          Text(
             subtitle,
             style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-          SizedBox(
-            height: 230,
-            child: ResidenceTypeWidget(
-              type: type,
-              title: getTitleForType(type),
-              description: getDescriptionForType(type),
-                      ),
-                    ),
-                  ],
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+        ],
       ),
     );
   }
-
-  String getTitleForType(assets.ResidenceType type) {
-    switch (type) {
-      case assets.ResidenceType.apartment:
-        return 'Appartement';
-      case assets.ResidenceType.luxury:
-        return 'Résidence de luxe';
-      case assets.ResidenceType.villa:
-        return 'Villa';
-      case assets.ResidenceType.studio:
-        return 'Studio';
-      default:
-        return 'Logement';
-    }
-  }
-
-  String getDescriptionForType(assets.ResidenceType type) {
-    switch (type) {
-      case assets.ResidenceType.apartment:
-        return 'Appartements confortables pour tous vos besoins';
-      case assets.ResidenceType.luxury:
-        return 'Résidences haut de gamme avec services premium';
-      case assets.ResidenceType.villa:
-        return 'Villas spacieuses avec jardin privé';
-      case assets.ResidenceType.studio:
-        return 'Studios compacts et fonctionnels';
-      default:
-        return 'Logements adaptés à tous les besoins';
-    }
+  
+  // Section d'incitation à l'inscription (visible uniquement pour les non-connectés)
+  Widget _buildSignUpPrompt(BuildContext context, BoxConstraints constraints) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        // Ne montrer que pour les utilisateurs non connectés
+        if (state is Authenticated) {
+          return const SizedBox.shrink();
+        }
+        
+        return Container(
+          width: constraints.maxWidth,
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          padding: const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: AppTheme.primaryColor.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'Rejoignez ChapeChape Résidences',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Créez un compte pour accéder à des fonctionnalités exclusives, enregistrer vos favoris et recevoir des offres personnalisées.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  SizedBox(
+                    width: 140,
+                    child: ElevatedButton(
+                      onPressed: () => context.push('/register'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('S\'inscrire'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 140,
+                    child: TextButton(
+                      onPressed: () => context.push('/login'),
+                      child: const Text('Se connecter'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

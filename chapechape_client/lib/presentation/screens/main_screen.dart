@@ -60,6 +60,11 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Définir des constantes pour la cohérence visuelle
+    const double iconSize = 22.0;
+    const double iconSpacing = 8.0;
+    const EdgeInsets iconPadding = EdgeInsets.all(8.0);
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -72,53 +77,50 @@ class _MainScreenState extends State<MainScreen> {
             fit: BoxFit.contain,
           ),
         ),
+        title: _selectedCity != null 
+          ? InkWell(
+              onTap: () => _showLocationMenu(context),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on, size: 16, color: AppTheme.primaryColor),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      _selectedCity!.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
+                ],
+              ),
+            )
+          : null,
+        centerTitle: false,
         actions: [
           Flexible(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.menu, size: 22),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (context) => Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.language),
-                            title: const Text('Langue'),
-                            trailing: const LanguageSelector(),
-                          ),
-                          ListTile(
-                            leading: const Icon(Icons.location_on),
-                            title: const Text('Localisation'),
-                            trailing: SizedBox(
-                              width: 150,
-                              child: LocationSelectorWidget(
-                                onCitySelected: (city) {
-                                  setState(() {
-                                    _selectedCity = city;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                  icon: const Icon(Icons.menu, size: iconSize),
+                  onPressed: () => _showLocationMenu(context),
                   constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(8),
+                  padding: iconPadding,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: iconSpacing),
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined, size: 20),
+                  icon: const Icon(Icons.notifications_outlined, size: iconSize),
                   onPressed: () => context.go('/notifications'),
                   constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(8),
+                  padding: iconPadding,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: iconSpacing),
                 const AuthButtonWidget(),
               ],
             ),
@@ -148,7 +150,7 @@ class _MainScreenState extends State<MainScreen> {
           NavigationDestination(
             icon: Icon(Icons.notifications_outlined),
             selectedIcon: Icon(Icons.notifications, color: AppTheme.primaryColor),
-            label: 'Notifications',
+            label: 'Notifs',
           ),
           NavigationDestination(
             icon: Icon(Icons.chat_outlined),
@@ -161,6 +163,114 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Profil',
           ),
         ],
+      ),
+    );
+  }
+  
+  // Méthode pour afficher le menu de localisation amélioré
+  void _showLocationMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(20),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 10,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Barre de poignée pour indiquer qu'on peut faire glisser
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Sélecteur de langue
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.language, color: Colors.grey[700]),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Langue',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ),
+                  const LanguageSelector(),
+                ],
+              ),
+            ),
+            const Divider(),
+            // Sélecteur de localisation
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.location_on, color: Colors.grey[700]),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Localisation',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        LocationSelectorWidget(
+                          onCitySelected: (city) {
+                            setState(() {
+                              _selectedCity = city;
+                            });
+                            // Feedback visuel de sélection
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Localisation mise à jour : ${city.name}'),
+                                backgroundColor: AppTheme.primaryColor,
+                                duration: const Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            );
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

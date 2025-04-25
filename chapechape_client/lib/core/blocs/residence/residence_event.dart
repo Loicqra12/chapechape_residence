@@ -143,6 +143,23 @@ class FilterResidencesByTypeEvent extends ResidenceEvent {
   List<Object?> get props => [type, categoryLabel];
 }
 
+class FilterResidencesByLocation extends ResidenceEvent {
+  final String? cityId;
+  final String? region;
+  final String? countryCode;
+  final String? neighborhood;
+
+  FilterResidencesByLocation({
+    this.cityId,
+    this.region,
+    this.countryCode,
+    this.neighborhood,
+  });
+
+  @override
+  List<Object?> get props => [cityId, region, countryCode, neighborhood];
+}
+
 class ClearFiltersEvent extends ResidenceEvent {}
 
 class RefreshResidencesEvent extends ResidenceEvent {}

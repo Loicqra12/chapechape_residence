@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/models/city.dart';
 import '../../core/models/country.dart';
 import 'search_bar_widget.dart';
-import 'date_range_picker_widget.dart';
 import 'residence_type_selector_widget.dart';
 import 'price_range_slider_widget.dart';
-import 'location_selector_widget.dart';
-import 'country_selector_widget.dart';
+import 'multilevel_location_selector.dart';
+import 'animated_search_field.dart';
+import 'animated_filter_option.dart';
 
 class AdvancedSearchWidget extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSearch;
@@ -31,6 +32,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     phoneCode: '+225'
   );
   City? _selectedCity;
+  LocationSelection? _selectedLocation;
   DateTimeRange? _selectedDateRange;
   String _selectedResidenceType = 'Tous';
   RangeValues _priceRange = const RangeValues(5000, 500000);
@@ -63,6 +65,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     final searchParams = {
       'country': _selectedCountry,
       'city': _selectedCity,
+      'location': _selectedLocation?.toMap(),
       'dateRange': _selectedDateRange,
       'residenceType': _selectedResidenceType,
       'priceRange': _priceRange,
@@ -83,110 +86,332 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     ).format(price) + ' FCFA';
   }
   
-  // Construction de l'interface pour mobile
-  Widget _buildMobileLayout() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Barre de recherche
-        TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: 'Rechercher',
-            prefixIcon: const Icon(Icons.search),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+  // Sélection d'une plage de dates
+  Future<void> _selectDateRange(BuildContext context) async {
+    final initialDateRange = _selectedDateRange ?? DateTimeRange(
+      start: DateTime.now(),
+      end: DateTime.now().add(const Duration(days: 7)),
+    );
+    
+    final newDateRange = await showDateRangePicker(
+      context: context,
+      initialDateRange: initialDateRange,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
             ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Sélecteur de pays en version compacte
-        Row(
+          child: child!,
+        );
+      },
+    );
+    
+    if (newDateRange != null) {
+      setState(() {
+        _selectedDateRange = newDateRange;
+      });
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ExpansionTile(
+        title: Row(
           children: [
-            CountrySelectorWidget(
-              onCountrySelected: (country) {
-                setState(() {
-                  _selectedCountry = country;
-                  _selectedCity = null; // Réinitialiser la ville quand le pays change
-                });
-              },
-              showLabel: false,
-              showBorder: false,
-              showCompact: true,
-              initialCountry: _selectedCountry,
-            ),
-            
-            const SizedBox(width: 8),
-            
-            // Sélecteur de localisation
+            const Icon(Icons.search, color: AppTheme.primaryColor),
+            const SizedBox(width: 12),
             Expanded(
-              child: SizedBox(
-                height: 48,
-                child: LocationSelectorWidget(
-                  onCitySelected: (city) {
-                    setState(() {
-                      _selectedCity = city;
-                    });
-                  },
-                  initialCountry: _selectedCountry,
-                  initialCity: _selectedCity,
-                  hintText: 'Où allez-vous?',
+              child: Text(
+                'Recherche avancée',
+                style: TextStyle(
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.bold,
+                  fontSize: context.responsiveFontSize(18),
                 ),
               ),
             ),
           ],
         ),
+        initiallyExpanded: true,
+        backgroundColor: Colors.white,
+        collapsedBackgroundColor: Colors.white,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        childrenPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        children: [
+          // Champ de recherche animé
+          AnimatedSearchField(
+            controller: _searchController,
+            hint: 'Rechercher une résidence, un quartier, une ville...',
+            prefixIcon: Icons.search,
+            onSubmitted: (value) {
+              // Déclencher la recherche lors de la soumission
+              _executeSearch();
+            },
+            getSuggestions: (query) async {
+              // Ici, normalement, vous feriez appel à un service pour obtenir des suggestions
+              // Pour l'exemple, utilisons des suggestions statiques
+              await Future.delayed(const Duration(milliseconds: 300)); // Simuler un délai réseau
+              
+              if (query.isEmpty) return [];
+              
+              final suggestions = [
+                'Abidjan - Cocody',
+                'Abidjan - Marcory',
+                'Abidjan - Plateau',
+                'Abidjan - Zone 4',
+                'Abidjan - Angré',
+                'Yamoussoukro - Centre',
+                'Grand Bassam',
+                'Assinie',
+                'San Pedro',
+              ];
+              
+              return suggestions.where((suggestion) => 
+                suggestion.toLowerCase().contains(query.toLowerCase())
+              ).toList();
+            },
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Section des filtres rapides
+          _buildQuickFiltersSection(),
+          
+          const SizedBox(height: 24),
+          
+          // Localisation améliorée
+          _buildLocationSection(),
+          
+          const SizedBox(height: 24),
+          
+          // Date et durée
+          _buildDateRangeSection(),
+          
+          const SizedBox(height: 24),
+          
+          // Type de résidence et prix
+          _buildTypeAndPriceSection(),
+          
+          const SizedBox(height: 16),
+          
+          // Bouton de recherche
+          _buildSearchButton(),
+        ],
+      )
+      .animate()
+      .fade(duration: 400.ms, curve: Curves.easeOutQuad)
+      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutQuad),
+    );
+  }
+  
+  // Section des filtres rapides avec options animées
+  Widget _buildQuickFiltersSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Filtres rapides',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
+            fontSize: context.responsiveFontSize(16),
+          ),
+        ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         
-        // Sélecteur de dates
-        GestureDetector(
-          onTap: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        // Liste horizontale de filtres
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              // Option "Toutes les résidences"
+              AnimatedFilterOption(
+                label: 'Toutes',
+                icon: Icons.home,
+                isActive: _selectedResidenceType == 'Tous',
+                onTap: () {
+                  setState(() {
+                    _selectedResidenceType = 'Tous';
+                  });
+                },
               ),
-              builder: (context) => SizedBox(
-                height: MediaQuery.of(context).size.height * 0.8,
-                child: DateRangePickerWidget(
-                  initialDateRange: _selectedDateRange,
-                  onDateRangeSelected: (dateRange) {
-                    setState(() {
-                      _selectedDateRange = dateRange;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
+              
+              const SizedBox(width: 8),
+              
+              // Option "Appartements"
+              AnimatedFilterOption(
+                label: 'Appartements',
+                icon: Icons.apartment,
+                isActive: _selectedResidenceType == 'Appartement',
+                onTap: () {
+                  setState(() {
+                    _selectedResidenceType = 'Appartement';
+                  });
+                },
               ),
-            );
+              
+              const SizedBox(width: 8),
+              
+              // Option "Villas"
+              AnimatedFilterOption(
+                label: 'Villas',
+                icon: Icons.villa,
+                isActive: _selectedResidenceType == 'Villa',
+                onTap: () {
+                  setState(() {
+                    _selectedResidenceType = 'Villa';
+                  });
+                },
+              ),
+              
+              const SizedBox(width: 8),
+              
+              // Option "Studios"
+              AnimatedFilterOption(
+                label: 'Studios',
+                icon: Icons.single_bed,
+                isActive: _selectedResidenceType == 'Studio',
+                onTap: () {
+                  setState(() {
+                    _selectedResidenceType = 'Studio';
+                  });
+                },
+              ),
+              
+              const SizedBox(width: 8),
+              
+              // Option "Court séjour"
+              AnimatedFilterOption(
+                label: 'Court séjour',
+                subtitle: 'Réservation à l\'heure',
+                icon: Icons.timelapse,
+                isActive: _selectedResidenceType == 'Hôtel de passe/Court séjour',
+                onTap: () {
+                  setState(() {
+                    _selectedResidenceType = 'Hôtel de passe/Court séjour';
+                  });
+                },
+                color: Colors.purple,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Section de localisation
+  Widget _buildLocationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Localisation',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
+            fontSize: context.responsiveFontSize(16),
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Widget de sélection de localisation multi-niveau
+        MultilevelLocationSelector(
+          onLocationSelected: (location) {
+            setState(() {
+              _selectedLocation = location;
+              // Pour compatibilité avec le code existant
+              if (location.country != null) {
+                _selectedCountry = location.country!;
+              }
+              if (location.city != null) {
+                _selectedCity = location.city;
+              }
+            });
           },
+          initialSelection: _selectedLocation,
+          hint: 'Sélectionner un lieu',
+        ),
+      ],
+    )
+    .animate()
+    .fadeIn(delay: 100.ms, duration: 300.ms)
+    .slideX(begin: -0.1, end: 0, delay: 100.ms, duration: 300.ms);
+  }
+  
+  // Section de sélection de dates
+  Widget _buildDateRangeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dates de séjour',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
+            fontSize: context.responsiveFontSize(16),
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Widget de sélection de dates
+        GestureDetector(
+          onTap: () => _selectDateRange(context),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, size: 20),
+                Icon(
+                  Icons.calendar_today,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+                
                 const SizedBox(width: 12),
+                
                 Expanded(
                   child: Text(
                     _selectedDateRange != null
-                        ? '${DateFormat('dd MMM', 'fr_FR').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM', 'fr_FR').format(_selectedDateRange!.end)}'
-                        : 'Sélectionner des dates',
+                        ? '${DateFormat('dd/MM/yyyy').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM/yyyy').format(_selectedDateRange!.end)}'
+                        : 'Sélectionner les dates',
                     style: TextStyle(
-                      fontSize: context.responsiveFontSize(14),
-                      color: _selectedDateRange != null ? Colors.black : Colors.grey[600],
+                      color: _selectedDateRange != null
+                          ? Colors.grey[800]
+                          : Colors.grey[500],
                     ),
                   ),
                 ),
+                
                 Icon(
                   Icons.arrow_drop_down,
                   color: Colors.grey[600],
@@ -195,373 +420,152 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
             ),
           ),
         ),
-        
-        const SizedBox(height: 16),
-        
-        // Type de résidence
-        DropdownButtonFormField<String>(
-          value: _selectedResidenceType,
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.home),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-          ),
-          items: _residenceTypes.map((type) {
-            return DropdownMenuItem<String>(
-              value: type,
-              child: Text(type),
-            );
-          }).toList(),
-          onChanged: (newValue) {
-            if (newValue != null) {
-              setState(() {
-                _selectedResidenceType = newValue;
-              });
-            }
-          },
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Fourchette de prix
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 12.0, bottom: 8.0),
-              child: Text(
-                'Prix : ${_formatPrice(_priceRange.start)} - ${_formatPrice(_priceRange.end)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            RangeSlider(
-              values: _priceRange,
-              min: _minPrice,
-              max: _maxPrice,
-              divisions: 100,
-              activeColor: AppTheme.primaryColor,
-              inactiveColor: Colors.grey[300],
-              labels: RangeLabels(
-                _formatPrice(_priceRange.start),
-                _formatPrice(_priceRange.end),
-              ),
-              onChanged: (values) {
-                setState(() {
-                  _priceRange = values;
-                });
-              },
-            ),
-          ],
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Bouton de recherche
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _executeSearch,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              'Rechercher',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
       ],
-    );
+    )
+    .animate()
+    .fadeIn(delay: 200.ms, duration: 300.ms)
+    .slideX(begin: 0.1, end: 0, delay: 200.ms, duration: 300.ms);
   }
   
-  // Construction de l'interface pour tablette/bureau
-  Widget _buildTabletLayout() {
+  // Section type de résidence et prix
+  Widget _buildTypeAndPriceSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Première ligne: Pays, Localisation, Dates
-        Row(
-          children: [
-            // Pays
-            Expanded(
-              flex: 1,
-              child: CountrySelectorWidget(
-                onCountrySelected: (country) {
-                  setState(() {
-                    _selectedCountry = country;
-                    _selectedCity = null;
-                  });
-                },
-                initialCountry: _selectedCountry,
-                showLabel: true,
-              ),
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Localisation
-            Expanded(
-              flex: 2,
-              child: LocationSelectorWidget(
-                onCitySelected: (city) {
-                  setState(() {
-                    _selectedCity = city;
-                  });
-                },
-                initialCountry: _selectedCountry,
-                initialCity: _selectedCity,
-                label: 'Destination',
-                hintText: 'Rechercher une ville ou une commune',
-              ),
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Dates
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      'Dates',
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(16),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          contentPadding: EdgeInsets.zero,
-                          content: SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.8,
-                            height: MediaQuery.of(context).size.height * 0.7,
-                            child: DateRangePickerWidget(
-                              initialDateRange: _selectedDateRange,
-                              onDateRangeSelected: (dateRange) {
-                                setState(() {
-                                  _selectedDateRange = dateRange;
-                                });
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.calendar_today, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _selectedDateRange != null
-                                  ? '${DateFormat('dd MMM', 'fr_FR').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM', 'fr_FR').format(_selectedDateRange!.end)}'
-                                  : 'Sélectionner des dates',
-                              style: TextStyle(
-                                fontSize: context.responsiveFontSize(14),
-                                color: _selectedDateRange != null ? Colors.black : Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_drop_down,
-                            color: Colors.grey[600],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        // Sélection de types plus complète
+        Text(
+          'Type de résidence',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
+            fontSize: context.responsiveFontSize(16),
+          ),
         ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         
-        // Deuxième ligne: Type, Prix, Bouton Recherche
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Type de résidence
-            Expanded(
-              flex: 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-                    child: Text(
-                      'Type de résidence',
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(16),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: _selectedResidenceType,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.home),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    items: _residenceTypes.map((type) {
-                      return DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _selectedResidenceType = newValue;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedResidenceType,
+              isExpanded: true,
+              icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
+              items: _residenceTypes.map((String type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedResidenceType = newValue;
+                  });
+                }
+              },
             ),
-            
-            const SizedBox(width: 16),
-            
-            // Fourchette de prix
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-                    child: Text(
-                      'Prix (FCFA)',
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(16),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _formatPrice(_priceRange.start),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                _formatPrice(_priceRange.end),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                        RangeSlider(
-                          values: _priceRange,
-                          min: _minPrice,
-                          max: _maxPrice,
-                          divisions: 100,
-                          activeColor: AppTheme.primaryColor,
-                          inactiveColor: Colors.grey[300],
-                          onChanged: (values) {
-                            setState(() {
-                              _priceRange = values;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Curseur de prix
+        Text(
+          'Fourchette de prix (FCFA)',
+          style: TextStyle(
+            color: Colors.grey[800],
+            fontWeight: FontWeight.bold,
+            fontSize: context.responsiveFontSize(16),
+          ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        Text(
+          '${_formatPrice(_priceRange.start)} - ${_formatPrice(_priceRange.end)}',
+          style: TextStyle(
+            color: AppTheme.primaryColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: AppTheme.primaryColor,
+            inactiveTrackColor: Colors.grey.shade200,
+            thumbColor: AppTheme.primaryColor,
+            overlayColor: AppTheme.primaryColor.withOpacity(0.2),
+            valueIndicatorColor: AppTheme.primaryColor,
+            showValueIndicator: ShowValueIndicator.always,
+            valueIndicatorTextStyle: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
-            
-            const SizedBox(width: 16),
-            
-            // Bouton de recherche
-            SizedBox(
-              height: 56,
-              width: 120,
-              child: ElevatedButton(
-                onPressed: _executeSearch,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.search),
-                    SizedBox(width: 8),
-                    Text('Rechercher', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
+          ),
+          child: RangeSlider(
+            min: _minPrice,
+            max: _maxPrice,
+            divisions: 100,
+            values: _priceRange,
+            labels: RangeLabels(
+              _formatPrice(_priceRange.start),
+              _formatPrice(_priceRange.end),
             ),
-          ],
+            onChanged: (RangeValues values) {
+              setState(() {
+                _priceRange = values;
+              });
+            },
+          ),
         ),
       ],
-    );
+    )
+    .animate()
+    .fadeIn(delay: 300.ms, duration: 300.ms)
+    .slideY(begin: 0.1, end: 0, delay: 300.ms, duration: 300.ms);
   }
   
-  @override
-  Widget build(BuildContext context) {
-    // Utiliser un LayoutBuilder pour s'adapter à la taille de l'écran
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Card(
-          elevation: 4,
+  // Bouton de recherche
+  Widget _buildSearchButton() {
+    return Container(
+      width: double.infinity,
+      height: 50,
+      margin: const EdgeInsets.only(top: 8),
+      child: ElevatedButton(
+        onPressed: _executeSearch,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: constraints.maxWidth > 800
-                ? _buildTabletLayout()
-                : _buildMobileLayout(),
-          ),
-        );
-      },
-    );
+          elevation: 2,
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search),
+            SizedBox(width: 8),
+            Text(
+              'Rechercher',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    )
+    .animate()
+    .fadeIn(delay: 400.ms, duration: 300.ms)
+    .scale(delay: 400.ms, duration: 300.ms);
   }
 }

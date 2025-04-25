@@ -17,6 +17,17 @@ class TestimonialsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<TestimonialModel> testimonials = TestimonialsData.testimonials;
 
+    // Vérifier si la liste est vide pour éviter les erreurs de null
+    if (testimonials.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: context.responsiveMargin,
+        child: const Center(
+          child: Text('Aucun témoignage disponible'),
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: context.responsiveMargin,
@@ -44,20 +55,9 @@ class TestimonialsWidget extends StatelessWidget {
             const SizedBox(height: 24),
           ],
           
-          // Carousel de témoignages
-          FlutterCarousel(
-            items: testimonials.map((testimonial) => 
-              _buildTestimonialCard(context, testimonial)
-            ).toList(),
-            options: CarouselOptions(
-              height: context.responsiveHeight(300),
-              viewportFraction: _getViewportFraction(context),
-              autoPlay: true,
-              autoPlayInterval: const Duration(seconds: 5),
-              enlargeCenterPage: true,
-              enableInfiniteScroll: testimonials.length > 1,
-            ),
-          ),
+          // Carousel de témoignages - Ajout d'une vérification supplémentaire
+          if (testimonials.isNotEmpty) 
+            _buildSafeCarousel(context, testimonials),
         ],
       ),
     );
@@ -172,5 +172,38 @@ class TestimonialsWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Méthode sécurisée pour créer le carousel avec gestion des erreurs
+  Widget _buildSafeCarousel(BuildContext context, List<TestimonialModel> testimonials) {
+    try {
+      return FlutterCarousel(
+        items: testimonials.map((testimonial) => 
+          _buildTestimonialCard(context, testimonial)
+        ).toList(),
+        options: CarouselOptions(
+          height: context.responsiveHeight(300),
+          viewportFraction: _getViewportFraction(context),
+          // Désactiver complètement l'autoplay pour éviter les erreurs de timer
+          autoPlay: false,
+          enlargeCenterPage: true,
+          enableInfiniteScroll: testimonials.length > 1,
+          onPageChanged: (index, reason) {
+            // Gestionnaire d'événements vide intentionnellement
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('Erreur dans le carousel: $e');
+      // Fallback en cas d'erreur - afficher le premier témoignage de manière statique
+      return testimonials.isNotEmpty
+          ? Container(
+              constraints: BoxConstraints(
+                maxHeight: context.responsiveHeight(300),
+              ),
+              child: _buildTestimonialCard(context, testimonials[0]),
+            )
+          : const SizedBox.shrink();
+    }
   }
 }
