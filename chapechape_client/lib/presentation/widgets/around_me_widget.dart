@@ -143,9 +143,11 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         snippet: location.fullAddress,
         onTap: () {
           // Mettre en surbrillance l'élément correspondant dans la liste
-          setState(() {
-            _hoveredIndex = i;
-          });
+          if (mounted) {
+            setState(() {
+              _hoveredIndex = i;
+            });
+          }
         },
       );
       
@@ -154,9 +156,11 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
       }
     }
     
-    setState(() {
-      _markers['markers'] = markersList;
-    });
+    if (mounted) {
+      setState(() {
+        _markers['markers'] = markersList;
+      });
+    }
   }
   
   @override
@@ -308,10 +312,12 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                widget.radiusKm * 2;
-                _initialize();
-              });
+              if (mounted) {
+                setState(() {
+                  widget.radiusKm * 2;
+                  _initialize();
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
@@ -406,8 +412,16 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
   ) {
     // Ajustement de la taille pour corriger le débordement
     return MouseRegion(
-      onEnter: (_) => setState(() => _hoveredIndex = index),
-      onExit: (_) => setState(() => _hoveredIndex = -1),
+      onEnter: (_) {
+        if (mounted) {
+          setState(() => _hoveredIndex = index);
+        }
+      },
+      onExit: (_) {
+        if (mounted) {
+          setState(() => _hoveredIndex = -1);
+        }
+      },
       child: GestureDetector(
         onTap: () {
           // Naviguer vers la page des résidences dans ce quartier

@@ -6,7 +6,7 @@ import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_extensions.dart';
 import '../../../core/services/api/residence_service.dart';
-import '../../../core/config/app_config.dart';
+import '../../../core/config/app_config_manager.dart';
 import '../../../core/constants/app_images.dart';
 import 'edit_residence_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
@@ -26,7 +26,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ResidenceBloc(
-        ResidenceService(baseUrl: AppConfig.apiUrl),
+        ResidenceService(baseUrl: AppConfigManager.apiUrl),
       )..add(CheckResidenceExists(residence.id, 
           onSuccess: (exists) {
             if (exists) {
@@ -313,32 +313,14 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
     });
   }
 
-  String _getFullImageUrl(String url) {
-    // Si l'URL contient déjà le domaine mais pas /residences/
-    if (url.startsWith('http') && url.contains('/uploads/') && !url.contains('/uploads/residences/')) {
-      return url.replaceAll('/uploads/', '/uploads/residences/');
-    }
+  String _buildImageUrl(String url) {
+    if (url.isEmpty) return '';
     
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
+    // Si l'URL est déjà complète, la retourner telle quelle
+    if (url.startsWith('http')) return url;
     
-    // Vérifier si l'URL commence par /uploads
-    if (url.startsWith('/uploads/')) {
-      // Ajouter 'residences/' après '/uploads/' si elle n'y est pas déjà
-      if (!url.startsWith('/uploads/residences/')) {
-        String modifiedUrl = url.replaceAll('/uploads/', '/uploads/residences/');
-        return 'http://192.168.1.68:4000${modifiedUrl}';
-      }
-      return 'http://192.168.1.68:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet avec residences
-      return 'http://192.168.1.68:4000/uploads/residences${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://192.168.1.68:4000/uploads/residences/${url}';
-    }
+    // Utiliser AppConfigManager pour construire l'URL
+    return AppConfigManager.getResidenceImageUrl(url);
   }
   
   void _resetZoom() {
@@ -490,7 +472,7 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
                           offset: _position,
                           child: ClipRRect(
                             child: Image.network(
-                              _getFullImageUrl(imageUrl.toString()),
+                              _buildImageUrl(imageUrl.toString()),
                               fit: BoxFit.cover,
                               loadingBuilder: (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
@@ -1496,7 +1478,7 @@ class _EnhancedGalleryTab extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              _getFullImageUrl(imageUrl.toString()),
+                              AppConfigManager.getResidenceImageUrl(imageUrl.toString()),
                               height: double.infinity,
                               width: double.infinity,
                               fit: BoxFit.cover,
@@ -1576,34 +1558,6 @@ class _EnhancedGalleryTab extends StatelessWidget {
       ],
       ),
     );
-  }
-
-  String _getFullImageUrl(String url) {
-    // Si l'URL contient déjà le domaine mais pas /residences/
-    if (url.startsWith('http') && url.contains('/uploads/') && !url.contains('/uploads/residences/')) {
-      return url.replaceAll('/uploads/', '/uploads/residences/');
-    }
-    
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
-    
-    // Vérifier si l'URL commence par /uploads
-    if (url.startsWith('/uploads/')) {
-      // Ajouter 'residences/' après '/uploads/' si elle n'y est pas déjà
-      if (!url.startsWith('/uploads/residences/')) {
-        String modifiedUrl = url.replaceAll('/uploads/', '/uploads/residences/');
-        return 'http://192.168.1.68:4000${modifiedUrl}';
-      }
-      return 'http://192.168.1.68:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet avec residences
-      return 'http://192.168.1.68:4000/uploads/residences${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://192.168.1.68:4000/uploads/residences/${url}';
-    }
   }
 }
 

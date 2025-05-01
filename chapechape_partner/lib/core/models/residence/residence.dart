@@ -52,6 +52,9 @@ class Residence {
   final String? cityCode;
   final String? cityName;
   
+  // Statut de suppression
+  final bool? deleted;
+  
   // Devise du prix
   final String currency;
 
@@ -98,6 +101,7 @@ class Residence {
     this.regionName,
     this.cityCode,
     this.cityName,
+    this.deleted,
     this.currency = 'FCFA',
   });
 
@@ -168,6 +172,9 @@ class Residence {
     // Extraire la devise du prix (avec FCFA comme valeur par défaut)
     final currency = json['currency']?.toString() ?? 'FCFA';
     
+    // Extraire le statut de suppression
+    final deleted = json['deleted'] as bool?;
+    
     return Residence(
       id: json['_id']?.toString() ?? '',
       name: json['title']?.toString() ?? json['name']?.toString() ?? '',
@@ -215,6 +222,7 @@ class Residence {
       regionName: regionName,
       cityCode: cityCode,
       cityName: cityName,
+      deleted: deleted,
       currency: currency,
     );
   }
@@ -266,6 +274,7 @@ class Residence {
       'regionName': regionName,
       'cityCode': cityCode,
       'cityName': cityName,
+      'deleted': deleted,
     };
   }
 

@@ -8,7 +8,14 @@ class AppAssets {
   static const String appLogoDark = 'assets/logos/logo_dark.png';
   static const String appIcon = 'assets/logos/app_icon.png';
   static const String splashLogo = 'assets/logos/splash_logo.png';
-  static const String defaultAvatar = 'assets/images/avatars/default_avatar.png';
+  
+  // Retourne une URL pour un avatar dynamique basé sur le nom de l'utilisateur
+  static String getDefaultAvatar({String name = 'User', int size = 100}) {
+    // Encodage URL pour éviter les problèmes avec les caractères spéciaux
+    final encodedName = Uri.encodeComponent(name);
+    return 'https://ui-avatars.com/api/?name=$encodedName&size=$size&background=random&color=fff&bold=true';
+  }
+  
   static const String onboardingBackground1 = 'assets/images/onboarding/onboarding_bg_1.jpg';
   static const String onboardingBackground2 = 'assets/images/onboarding/onboarding_bg_2.jpg';
   static const String onboardingBackground3 = 'assets/images/onboarding/onboarding_bg_3.jpg';

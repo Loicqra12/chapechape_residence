@@ -9,13 +9,15 @@ const {
     updateResidence,
     deleteResidence,
     searchResidences,
-    uploadImages
+    uploadImages,
+    getAllResidences
 } = require('../controllers/residence/residence.controller');
 const Residence = require('../models/residence.model');
 
 // Routes publiques
 router.get('/', getResidences);
 router.get('/search', searchResidences);
+router.get('/all', getAllResidences);
 
 // Routes protégées (partenaires uniquement)
 router.use(protect);

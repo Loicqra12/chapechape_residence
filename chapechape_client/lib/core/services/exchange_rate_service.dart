@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -99,33 +100,47 @@ class ExchangeRateService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        // Mettre à jour les taux
-        final ratesData = data['rates'] as Map<String, dynamic>;
-        _rates = {};
-        
-        // Ajouter la devise de base (taux = 1)
-        _rates[_baseCurrency] = 1.0;
-        
-        // Ajouter les autres devises
-        for (final currency in _trackedCurrencies) {
-          if (currency != _baseCurrency && ratesData.containsKey(currency)) {
-            if (ratesData[currency] is num) {
-              _rates[currency] = (ratesData[currency] as num).toDouble();
+        // Vérifier que les données et les taux sont présents et valides
+        if (data != null && data.containsKey('rates') && data['rates'] != null) {
+          try {
+            final ratesData = data['rates'] as Map<String, dynamic>;
+            _rates = {};
+            
+            // Ajouter la devise de base (taux = 1)
+            _rates[_baseCurrency] = 1.0;
+            
+            // Ajouter les autres devises
+            for (final currency in _trackedCurrencies) {
+              if (currency != _baseCurrency && ratesData.containsKey(currency)) {
+                if (ratesData[currency] is num) {
+                  _rates[currency] = (ratesData[currency] as num).toDouble();
+                }
+              }
             }
+            
+            // Ajouter le taux pour FCFA (qui est fixe par rapport à l'EUR)
+            // 1 EUR = 655.957 FCFA (taux fixe)
+            _rates['FCFA'] = 655.957;
+            
+            // Mettre à jour la date
+            _lastUpdated = DateTime.now();
+            
+            // Sauvegarder dans le cache
+            await _saveRatesToCache();
+            
+            return true;
+          } catch (e) {
+            print('Erreur lors du traitement des taux de change: $e');
+            // Utiliser des taux par défaut en cas d'erreur
+            _setupDefaultRates();
+            return false;
           }
+        } else {
+          print('Format de réponse invalide ou données manquantes: ${data?.toString().substring(0, min(100, data.toString().length))}...');
+          // Utiliser des taux par défaut en cas de données manquantes
+          _setupDefaultRates();
+          return false;
         }
-        
-        // Ajouter le taux pour FCFA (qui est fixe par rapport à l'EUR)
-        // 1 EUR = 655.957 FCFA (taux fixe)
-        _rates['FCFA'] = 655.957;
-        
-        // Mettre à jour la date
-        _lastUpdated = DateTime.now();
-        
-        // Sauvegarder dans le cache
-        await _saveRatesToCache();
-        
-        return true;
       } else {
         print('Erreur lors de la récupération des taux de change: ${response.statusCode}');
         return false;
@@ -134,6 +149,17 @@ class ExchangeRateService {
       print('Exception lors de la récupération des taux de change: $e');
       return false;
     }
+  }
+  
+  // Définir des taux par défaut en cas d'erreur
+  void _setupDefaultRates() {
+    _rates = {
+      _baseCurrency: 1.0,
+      'USD': 1.12, // Taux approximatif
+      'GBP': 0.86, // Taux approximatif
+      'XOF': 655.957, // Taux fixe
+      'FCFA': 655.957, // Taux fixe
+    };
   }
   
   // Convertir un montant d'une devise à une autre

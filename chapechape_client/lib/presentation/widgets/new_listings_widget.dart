@@ -71,6 +71,24 @@ class _NewListingsWidgetState extends State<NewListingsWidget> {
           
           return _buildResidencesList(context, newResidences);
         } else if (state is ResidenceError) {
+          // Utiliser les résidences préservées en cas d'erreur
+          if (state.preservedResidences != null && state.preservedResidences!.isNotEmpty) {
+            // Filtrer pour obtenir les nouvelles résidences (moins de 15 jours)
+            final now = DateTime.now();
+            final newResidences = state.preservedResidences!.where((residence) {
+              // Vérifier si la résidence a été créée il y a moins de 15 jours
+              if (residence.createdAt != null) {
+                return now.difference(residence.createdAt!).inDays <= 15;
+              }
+              return false;
+            }).take(5).toList();
+            
+            if (newResidences.isNotEmpty) {
+              return _buildResidencesList(context, newResidences);
+            }
+          }
+          
+          // Si pas de résidences préservées ou pas de nouvelles résidences, afficher l'erreur
           return SizedBox(
             height: 300,
             child: Center(

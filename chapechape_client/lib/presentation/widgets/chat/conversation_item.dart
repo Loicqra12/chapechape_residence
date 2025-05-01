@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/constants/app_assets.dart'; // Correction du chemin d'importation
 
 class ConversationItem extends StatelessWidget {
   final ChatConversation conversation;
@@ -38,11 +39,9 @@ class ConversationItem extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: Theme.of(context).primaryColor,
         backgroundImage: otherParticipant.avatarUrl != null ? 
-            NetworkImage(otherParticipant.avatarUrl!) : null,
-        child: otherParticipant.avatarUrl == null ? Text(
-          otherParticipant.name.isNotEmpty ? otherParticipant.name[0].toUpperCase() : 'A',
-          style: const TextStyle(color: Colors.white),
-        ) : null,
+            NetworkImage(otherParticipant.avatarUrl!) : 
+            NetworkImage(AppAssets.getDefaultAvatar(name: otherParticipant.name)),
+        radius: 24,
       ),
       title: Text(
         otherParticipant.name,

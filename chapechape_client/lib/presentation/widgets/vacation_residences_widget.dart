@@ -25,60 +25,76 @@ class VacationResidencesWidget extends StatelessWidget {
             return const SizedBox.shrink();
           }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Résidences de vacances',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        context.goNamed('vacation_residences');
-                      },
-                      child: const Text('Voir tout'),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 280,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: vacationResidences.length,
-                  itemBuilder: (context, index) {
-                    final residence = vacationResidences[index];
-                    return SizedBox(
-                      width: 280,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: ResidenceCard(
-                          residence: residence,
-                          showBeachBadge: true,
-                          onTap: () {
-                            context.read<ResidenceBloc>().add(
-                                  LoadResidenceDetails(residenceId: residence.id),
-                                );
-                            context.go('/residence-details/${residence.id}');
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
+          return _buildVacationResidencesList(context, vacationResidences);
+        }
+        
+        // Utiliser les résidences préservées en cas d'erreur
+        if (state is ResidenceError && state.preservedResidences != null && state.preservedResidences!.isNotEmpty) {
+          final vacationResidences = state.preservedResidences!
+              .where((r) => r.isVacationResidence)
+              .take(5)
+              .toList();
+              
+          if (vacationResidences.isNotEmpty) {
+            return _buildVacationResidencesList(context, vacationResidences);
+          }
         }
 
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildVacationResidencesList(BuildContext context, List<Residence> vacationResidences) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Résidences de vacances',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              TextButton(
+                onPressed: () {
+                  context.goNamed('vacation_residences');
+                },
+                child: const Text('Voir tout'),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 280,
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            scrollDirection: Axis.horizontal,
+            itemCount: vacationResidences.length,
+            itemBuilder: (context, index) {
+              final residence = vacationResidences[index];
+              return SizedBox(
+                width: 280,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: ResidenceCard(
+                    residence: residence,
+                    showBeachBadge: true,
+                    onTap: () {
+                      context.read<ResidenceBloc>().add(
+                            LoadResidenceDetails(residenceId: residence.id),
+                          );
+                      context.go('/residence-details/${residence.id}');
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

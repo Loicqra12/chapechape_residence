@@ -60,7 +60,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
         if (req.files && req.files.length > 0) {
             console.log(`Traitement de ${req.files.length} images`);
             
-            const images = req.files.map(file => `/uploads/${file.filename}`);
+            const images = req.files.map(file => `/uploads/residences/${file.filename}`);
             
             console.log('Images avant sauvegarde:', images);
             console.log('Images existantes:', residence.images);
@@ -116,6 +116,29 @@ exports.getResidences = asyncHandler(async (req, res) => {
             limit
         }
     });
+});
+
+// @desc    Obtenir toutes les résidences (format liste)
+// @route   GET /api/residences/all
+// @access  Public
+exports.getAllResidences = asyncHandler(async (req, res) => {
+    try {
+        console.log('Récupération de toutes les résidences (format liste sans wrapper)');
+        
+        // Utiliser lean() pour des performances optimales
+        const residences = await Residence.find()
+            .populate('partner', 'firstName lastName email phoneNumber')
+            .lean();
+        
+        console.log(`${residences.length} résidences trouvées au total`);
+        
+        // Renvoyer directement la liste sans wrapper success/data
+        // Compatible avec les attentes du client mobile
+        res.json(residences);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des résidences (format liste):', error);
+        throw new Error(`Erreur serveur: ${error.message}`);
+    }
 });
 
 // @desc    Obtenir une résidence
@@ -312,7 +335,7 @@ exports.uploadImages = asyncHandler(async (req, res) => {
         throw new ApiError('Veuillez télécharger des images', 400);
     }
 
-    const images = req.files.map(file => `/uploads/${file.filename}`);
+    const images = req.files.map(file => `/uploads/residences/${file.filename}`);
 
     residence.images = [...residence.images, ...images];
     await residence.save();

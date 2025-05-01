@@ -1,0 +1,338 @@
+[
+  {
+    "id": "cocody",
+    "name": "Cocody",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3641352,
+    "longitude": -3.9673475,
+    "isPopular": true
+  },
+  {
+    "id": "marcory",
+    "name": "Marcory",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3020198,
+    "longitude": -3.9784288,
+    "isPopular": true
+  },
+  {
+    "id": "plateau",
+    "name": "Plateau",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3220556,
+    "longitude": -4.0168485,
+    "isPopular": true
+  },
+  {
+    "id": "bietry",
+    "name": "Biétry",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.2902639,
+    "longitude": -3.9950252,
+    "isPopular": true
+  },
+  {
+    "id": "riviera",
+    "name": "Riviera",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3801351,
+    "longitude": -3.9534151,
+    "isPopular": true
+  },
+  {
+    "id": "zone4",
+    "name": "Zone 4",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3011091,
+    "longitude": -3.9917707,
+    "isPopular": true
+  },
+  {
+    "id": "yopougon",
+    "name": "Yopougon",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3260341,
+    "longitude": -4.0853076,
+    "isPopular": true
+  },
+  {
+    "id": "adjame",
+    "name": "Adjamé",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3560572,
+    "longitude": -4.0249181,
+    "isPopular": true
+  },
+  {
+    "id": "treichville",
+    "name": "Treichville",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.2950556,
+    "longitude": -4.0205252,
+    "isPopular": true
+  },
+  {
+    "id": "koumassi",
+    "name": "Koumassi",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.2850198,
+    "longitude": -3.9650252,
+    "isPopular": true
+  },
+  {
+    "id": "abobo",
+    "name": "Abobo",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.4189092,
+    "longitude": -4.0249181,
+    "isPopular": true
+  },
+  {
+    "id": "angre",
+    "name": "Angré",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3886851,
+    "longitude": -3.9827707,
+    "isPopular": true
+  },
+  {
+    "id": "deux_plateaux",
+    "name": "Deux Plateaux",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3775198,
+    "longitude": -4.0026919,
+    "isPopular": true
+  },
+  {
+    "id": "palmeraie",
+    "name": "Palmeraie",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3911091,
+    "longitude": -3.9517707,
+    "isPopular": true
+  },
+  {
+    "id": "vallon",
+    "name": "Vallon",
+    "cityId": "abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3559092,
+    "longitude": -3.9777707,
+    "isPopular": false
+  },
+  
+  {
+    "id": "central_yamoussoukro",
+    "name": "Centre-Ville",
+    "cityId": "yamoussoukro",
+    "countryCode": "CI",
+    "latitude": 6.8276228,
+    "longitude": -5.2893433,
+    "isPopular": true
+  },
+  {
+    "id": "assabou",
+    "name": "Assabou",
+    "cityId": "yamoussoukro",
+    "countryCode": "CI",
+    "latitude": 6.8416228,
+    "longitude": -5.2753433,
+    "isPopular": true
+  },
+  {
+    "id": "dioulakro",
+    "name": "Dioulakro",
+    "cityId": "yamoussoukro",
+    "countryCode": "CI",
+    "latitude": 6.8176228,
+    "longitude": -5.2753433,
+    "isPopular": false
+  },
+  {
+    "id": "fondation",
+    "name": "Fondation",
+    "cityId": "yamoussoukro",
+    "countryCode": "CI",
+    "latitude": 6.8106228,
+    "longitude": -5.2893433,
+    "isPopular": true
+  },
+  
+  {
+    "id": "medina",
+    "name": "Médina",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.6720557,
+    "longitude": -17.4387546,
+    "isPopular": true
+  },
+  {
+    "id": "plateau_dakar",
+    "name": "Plateau",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.6781335,
+    "longitude": -17.4299657,
+    "isPopular": true
+  },
+  {
+    "id": "fann",
+    "name": "Fann",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.6936557,
+    "longitude": -17.4637546,
+    "isPopular": true
+  },
+  {
+    "id": "point_e",
+    "name": "Point E",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7050557,
+    "longitude": -17.4537546,
+    "isPopular": true
+  },
+  {
+    "id": "sacre_coeur",
+    "name": "Sacré-Cœur",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7190557,
+    "longitude": -17.4587546,
+    "isPopular": true
+  },
+  {
+    "id": "almadies",
+    "name": "Almadies",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7487546,
+    "longitude": -17.5087546,
+    "isPopular": true
+  },
+  {
+    "id": "ngor",
+    "name": "Ngor",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7520557,
+    "longitude": -17.5157546,
+    "isPopular": true
+  },
+  {
+    "id": "yoff",
+    "name": "Yoff",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7587546,
+    "longitude": -17.4887546,
+    "isPopular": true
+  },
+  {
+    "id": "ouakam",
+    "name": "Ouakam",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7287546,
+    "longitude": -17.4987546,
+    "isPopular": true
+  },
+  {
+    "id": "mermoz",
+    "name": "Mermoz",
+    "cityId": "dakar",
+    "countryCode": "SN",
+    "latitude": 14.7120557,
+    "longitude": -17.4787546,
+    "isPopular": true
+  },
+  
+  {
+    "id": "aci2000",
+    "name": "ACI 2000",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6292316,
+    "longitude": -8.0028892,
+    "isPopular": true
+  },
+  {
+    "id": "badalabougou",
+    "name": "Badalabougou",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6212316,
+    "longitude": -7.9928892,
+    "isPopular": true
+  },
+  {
+    "id": "hamdallaye",
+    "name": "Hamdallaye",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6332316,
+    "longitude": -8.0228892,
+    "isPopular": true
+  },
+  {
+    "id": "hippodrome",
+    "name": "Hippodrome",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6392316,
+    "longitude": -8.0128892,
+    "isPopular": true
+  },
+  {
+    "id": "kalaban_coura",
+    "name": "Kalaban-Coura",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6192316,
+    "longitude": -7.9828892,
+    "isPopular": true
+  },
+  {
+    "id": "lafiabougou",
+    "name": "Lafiabougou",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6442316,
+    "longitude": -8.0328892,
+    "isPopular": true
+  },
+  {
+    "id": "magnambougou",
+    "name": "Magnambougou",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6142316,
+    "longitude": -7.9728892,
+    "isPopular": true
+  },
+  {
+    "id": "quartier_du_fleuve",
+    "name": "Quartier du Fleuve",
+    "cityId": "bamako",
+    "countryCode": "ML",
+    "latitude": 12.6342316,
+    "longitude": -7.9928892,
+    "isPopular": true
+  }
+]

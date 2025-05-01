@@ -69,34 +69,17 @@ class CategoryCacheService {
       }
     }
     
-    try {
-      // Appel à l'API pour récupérer les catégories
-      logger.debug('Récupération des catégories depuis l\'API');
-      final response = await apiService.get('/categories');
-      
-      if (response != null) {
-        // Convertir la réponse en Map - response est de type Response<dynamic> de Dio
-        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
-        final List<CategoryData> categories = (data['categories'] as List)
-            .map((item) => CategoryData.fromJson(item))
-            .toList();
-        
-        // Mise à jour du cache
-        _cachedCategories = categories;
-        _lastFetchTime = DateTime.now();
-        
-        logger.debug('${categories.length} catégories récupérées avec succès');
-        return categories;
-      } else {
-        logger.error('Erreur lors de la récupération des catégories: réponse null');
-        // En cas d'erreur, on retourne le cache si disponible ou des données factices
-        return _cachedCategories ?? _getFallbackCategories();
-      }
-    } catch (e) {
-      logger.error('Exception lors de la récupération des catégories: $e');
-      // En cas d'erreur d'autorisation ou autre, retourner des données factices
-      return _cachedCategories ?? _getFallbackCategories();
-    }
+    // NOTE: Le rôle client n'est pas autorisé à accéder à la route '/categories'
+    // On utilise directement les catégories factices pour éviter l'erreur d'autorisation
+    logger.debug('Utilisation des catégories factices pour l\'application client');
+    final categories = _getFallbackCategories();
+    
+    // Mise à jour du cache
+    _cachedCategories = categories;
+    _lastFetchTime = DateTime.now();
+    
+    logger.debug('${categories.length} catégories factices chargées');
+    return categories;
   }
   
   Future<void> forceRefresh() async {

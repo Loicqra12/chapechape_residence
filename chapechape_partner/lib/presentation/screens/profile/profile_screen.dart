@@ -17,6 +17,7 @@ import '../residences/residences_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:io' show Platform;
+import 'package:chapechape_partner/core/config/app_config_manager.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -80,7 +81,7 @@ class ProfileScreen extends StatelessWidget {
                                 radius: 60,
                                 backgroundColor: theme.colorScheme.primaryContainer,
                                 backgroundImage: partner?.profilePictureUrl != null
-                                    ? NetworkImage(_getFullImageUrl(partner!.profilePictureUrl!))
+                                    ? NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!))
                                     : null,
                                 child: partner?.profilePictureUrl == null
                                     ? Text(
@@ -597,23 +598,15 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  String _getFullImageUrl(String url) {
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
+  String _buildProfileImageUrl(String url) {
+    // Si l'URL est vide, retourner une image par défaut au lieu d'une chaîne vide
+    if (url.isEmpty) return 'https://via.placeholder.com/120';
     
-    // Vérifier si l'URL commence par /uploads/
-    if (url.startsWith('/uploads/')) {
-      // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://192.168.1.68:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://192.168.1.68:4000/uploads/profiles${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://192.168.1.68:4000/uploads/profiles/${url}';
-    }
+    // Si l'URL est déjà complète, la retourner telle quelle
+    if (url.startsWith('http')) return url;
+    
+    // Utiliser AppConfigManager pour construire l'URL
+    return AppConfigManager.getProfileImageUrl(url);
   }
 
   Widget _buildResidenceIndicator(

@@ -23,59 +23,72 @@ class PersonalizedSuggestionsWidget extends StatelessWidget {
             return const SizedBox.shrink();
           }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Suggestions pour vous',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        // TODO: Naviguer vers la liste complète
-                      },
-                      child: const Text('Voir tout'),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 280,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: suggestedResidences.length,
-                  itemBuilder: (context, index) {
-                    final residence = suggestedResidences[index];
-                    return SizedBox(
-                      width: 280,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: ResidenceCard(
-                          residence: residence,
-                          onTap: () {
-                            context.read<ResidenceBloc>().add(
-                                  LoadResidenceDetails(residenceId: residence.id),
-                                );
-                            context.go('/residence-details/${residence.id}');
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
+          return _buildSuggestionsList(context, suggestedResidences);
+        }
+        
+        // Utiliser les résidences préservées en cas d'erreur
+        if (state is ResidenceError && state.preservedResidences != null && state.preservedResidences!.isNotEmpty) {
+          final suggestedResidences = state.preservedResidences!.take(5).toList();
+              
+          if (suggestedResidences.isNotEmpty) {
+            return _buildSuggestionsList(context, suggestedResidences);
+          }
         }
 
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildSuggestionsList(BuildContext context, List<Residence> suggestedResidences) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Suggestions pour vous',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              TextButton(
+                onPressed: () {
+                  // TODO: Naviguer vers la liste complète
+                },
+                child: const Text('Voir tout'),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 280,
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            scrollDirection: Axis.horizontal,
+            itemCount: suggestedResidences.length,
+            itemBuilder: (context, index) {
+              final residence = suggestedResidences[index];
+              return SizedBox(
+                width: 280,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: ResidenceCard(
+                    residence: residence,
+                    onTap: () {
+                      context.read<ResidenceBloc>().add(
+                            LoadResidenceDetails(residenceId: residence.id),
+                          );
+                      context.go('/residence-details/${residence.id}');
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

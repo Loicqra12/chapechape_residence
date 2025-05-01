@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/loading_overlay.dart';
+import '../widgets/location_filter_widget.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/models/residence_model.dart';
 import '../../config/theme.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -15,6 +17,18 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   bool _isLoading = false;
+  Map<String, dynamic> _filters = {};
+  bool _showAdvancedFilters = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Charger les résidences au démarrage avec des filtres vides
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ResidenceBloc>().add(const SearchResidencesEvent(filters: {}));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,37 +36,110 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         title: const Text('Recherche de résidences'),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              print('🔄 Rafraîchissement des résidences demandé...');
+              // Débogage: forcer le rafraîchissement et afficher les données
+              context.read<ResidenceBloc>().add(const RefreshResidencesEvent());
+              
+              // Afficher des informations de débogage après un délai
+              Future.delayed(const Duration(seconds: 3), () {
+                final state = context.read<ResidenceBloc>().state;
+                if (state is ResidencesLoaded) {
+                  print('✅ ResidencesLoaded: ${state.residences.length} résidences chargées');
+                  for (var residence in state.residences) {
+                    print('   - ${residence.id}: ${residence.title} (${residence.pricePeriod})');
+                  }
+                } else {
+                  print('❌ État actuel: ${state.runtimeType}');
+                }
+              });
+            },
+          ),
+          IconButton(
+            icon: Icon(_showAdvancedFilters ? Icons.filter_list_off : Icons.filter_list),
+            onPressed: () {
+              setState(() {
+                _showAdvancedFilters = !_showAdvancedFilters;
+              });
+            },
+            tooltip: _showAdvancedFilters ? 'Masquer les filtres' : 'Afficher les filtres',
+          ),
+        ],
       ),
-      body: BlocConsumer<ResidenceBloc, ResidenceState>(
-        listener: (context, state) {
-          setState(() {
-            _isLoading = state is ResidenceLoading;
-          });
-        },
-        builder: (context, state) {
-          if (state is ResidenceLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+      body: Column(
+        children: [
+          // Zone de filtres avancés
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _showAdvancedFilters ? null : 0,
+            child: _showAdvancedFilters
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: LocationFilterWidget(
+                      onApplyFilters: _applyLocationFilters,
+                      currentFilters: _filters,
+                    ),
+                  ).animate().fadeIn(duration: 300.ms)
+                : const SizedBox.shrink(),
+          ),
+          
+          // Liste des résidences
+          Expanded(
+            child: BlocConsumer<ResidenceBloc, ResidenceState>(
+              listener: (context, state) {
+                setState(() {
+                  _isLoading = state is ResidenceLoading;
+                });
+              },
+              builder: (context, state) {
+                if (state is ResidenceLoading && _filters.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
-          if (state is ResidencesLoaded) {
-            final residences = state.residences;
-            
-            if (residences.isEmpty) {
-              return _buildEmptyState();
-            }
+                if (state is ResidencesLoaded) {
+                  final residences = state.residences;
+                  
+                  if (residences.isEmpty) {
+                    return _buildEmptyState();
+                  }
 
-            return LoadingOverlay(
-              isLoading: _isLoading,
-              child: _buildResidencesList(residences),
-            );
-          }
+                  return LoadingOverlay(
+                    isLoading: _isLoading,
+                    child: _buildResidencesList(residences),
+                  );
+                }
 
-          return const Center(
-            child: Text('Utilisez les filtres pour rechercher une résidence'),
-          );
-        },
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Utilisez les filtres pour rechercher une résidence',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      if (!_showAdvancedFilters)
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedFilters = true;
+                            });
+                          },
+                          icon: const Icon(Icons.filter_list),
+                          label: const Text('Afficher les filtres'),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -281,5 +368,25 @@ class _SearchScreenState extends State<SearchScreen> {
     // Mettre en majuscule la première lettre
     if (cleanType.isEmpty) return 'Résidence';
     return cleanType.substring(0, 1).toUpperCase() + cleanType.substring(1);
+  }
+
+  // Appliquer les filtres de localisation
+  void _applyLocationFilters(Map<String, dynamic> locationFilters) {
+    setState(() {
+      _filters = {..._filters, ...locationFilters};
+    });
+    
+    // Construire des filtres API-compatibles et lancer la recherche
+    final apiFilters = context
+        .read<ResidenceBloc>()
+        .buildLocationFilter(
+          countryCode: locationFilters['countryCode'],
+          regionId: locationFilters['regionId'],
+          cityId: locationFilters['cityId'],
+          neighborhoodId: locationFilters['neighborhoodId'],
+        );
+    
+    // Lancer la recherche avec les filtres combinés
+    context.read<ResidenceBloc>().add(SearchResidencesEvent(filters: apiFilters));
   }
 }

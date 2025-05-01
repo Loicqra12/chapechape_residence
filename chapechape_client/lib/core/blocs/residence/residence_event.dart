@@ -162,7 +162,13 @@ class FilterResidencesByLocation extends ResidenceEvent {
 
 class ClearFiltersEvent extends ResidenceEvent {}
 
-class RefreshResidencesEvent extends ResidenceEvent {}
+class RefreshResidencesEvent extends ResidenceEvent {
+  const RefreshResidencesEvent();
+}
+
+class RestorePreviousStateEvent extends ResidenceEvent {
+  const RestorePreviousStateEvent();
+}
 
 class LoadResidences extends ResidenceEvent {
   final Map<String, dynamic>? filters;

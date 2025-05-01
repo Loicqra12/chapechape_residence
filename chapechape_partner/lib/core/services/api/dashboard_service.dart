@@ -399,7 +399,7 @@ class DashboardService extends ApiService {
   }
 
   // Méthode privée pour obtenir une instance de ResidenceService
-  Future<dynamic> _getResidenceService() async {
+  Future<ResidenceService> _getResidenceService() async {
     try {
       // Utiliser l'API Config central au lieu d'une URL codée en dur
       final baseUrl = AppConfig.apiUrl;

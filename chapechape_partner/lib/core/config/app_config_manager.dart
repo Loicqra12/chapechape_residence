@@ -1,78 +1,171 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'environment.dart';
+import 'package:chapechape_partner/core/services/ip_detection_service.dart';
 
+/// Gestionnaire de configuration de l'application
+/// Responsable de charger et fournir les configurations selon l'environnement
 class AppConfigManager {
-  // Singleton pattern
+  // Singleton
   static final AppConfigManager _instance = AppConfigManager._internal();
   factory AppConfigManager() => _instance;
   AppConfigManager._internal();
 
-  // État d'initialisation
-  static bool _initialized = false;
-
   // Configuration actuelle
   static Map<String, dynamic> _config = {};
-
-  // Initialisation de la configuration
-  static Future<void> initialize({Environment? environment}) async {
-    if (_initialized) return;
-
-    // Définir l'environnement si spécifié
-    if (environment != null) {
-      EnvironmentConfig.setEnvironment(environment);
-    }
-
-    // Charger la configuration en fonction de l'environnement
-    await _loadConfig();
+  
+  // Environnement actuel
+  static Environment _environment = Environment.development;
+  static Environment get environment => _environment;
+  
+  // Service de détection d'IP
+  static IpDetectionService? _ipDetectionService;
+  
+  // Clé pour stocker l'URL personnalisée du serveur
+  static const String _customServerUrlKey = 'custom_server_url_enabled';
+  
+  // Indique si une URL personnalisée est utilisée
+  static bool _useCustomServerUrl = false;
+  static bool get useCustomServerUrl => _useCustomServerUrl;
+  
+  /// Initialise le gestionnaire de configuration
+  static Future<void> initialize({
+    Environment environment = Environment.development,
+    bool autoDetectIp = true,
+  }) async {
+    _environment = environment;
     
-    _initialized = true;
-    debugPrint('🔧 Configuration initialisée: ${EnvironmentConfig.current}');
+    // Initialiser le service de détection d'IP
+    _ipDetectionService = await IpDetectionService.initialize();
+    
+    // Charger la configuration depuis les préférences
+    final prefs = await SharedPreferences.getInstance();
+    _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
+    
+    // Charger la configuration selon l'environnement
+    _loadConfig();
+    
+    // Tenter de détecter automatiquement l'IP du serveur si demandé
+    if (autoDetectIp && !_useCustomServerUrl) {
+      await _ipDetectionService?.autoDetectServerIp();
+      // Recharger la configuration avec la nouvelle IP
+      _loadConfig();
+    }
+    
+    debugPrint('🔧 Configuration initialisée pour l\'environnement: ${_environment.toString().split('.').last}');
+    debugPrint('🔧 URL API: ${_config['apiUrl']}');
   }
-
-  // Chargement de la configuration
-  static Future<void> _loadConfig() async {
+  
+  /// Active ou désactive l'utilisation d'une URL personnalisée
+  static Future<void> setUseCustomServerUrl(bool value) async {
+    _useCustomServerUrl = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_customServerUrlKey, value);
+    _loadConfig(); // Recharger la configuration
+  }
+  
+  /// Définit une nouvelle adresse IP pour le serveur
+  static Future<void> setServerIp(String ip) async {
+    await _ipDetectionService?.setServerIp(ip);
+    _loadConfig(); // Recharger la configuration
+  }
+  
+  /// Définit un nouveau port pour le serveur
+  static Future<void> setServerPort(int port) async {
+    await _ipDetectionService?.setServerPort(port);
+    _loadConfig(); // Recharger la configuration
+  }
+  
+  /// Charge la configuration selon l'environnement actuel
+  static void _loadConfig() {
     try {
-      switch (EnvironmentConfig.current) {
+      switch (_environment) {
         case Environment.development:
-          _config = {
-            'appName': 'ChapeChape Partner (Dev)',
-            'apiUrl': 'http://192.168.1.68:4000/api',
-            'apiBaseUrl': 'http://192.168.1.68:4000',
-            'wsUrl': 'ws://192.168.1.68:4000/ws',
-            'apiVersion': 'v1',
-            'apiTimeout': 30000,
-            'wsReconnectInterval': 5000,
-            'appVersion': '1.0.0-dev',
-            'environment': 'development',
-          };
+          // Si nous utilisons une URL personnalisée, utiliser l'IP du service de détection
+          if (_useCustomServerUrl && _ipDetectionService != null) {
+            _config = {
+              'appName': 'ChapeChape Partner (Dev)',
+              'apiUrl': _ipDetectionService!.serverApiUrl,
+              'apiBaseUrl': _ipDetectionService!.serverBaseUrl,
+              'wsUrl': _ipDetectionService!.serverWsUrl,
+              'apiVersion': 'v1',
+              'apiTimeout': 30000,
+              'wsReconnectInterval': 5000,
+              'appVersion': '1.0.0-dev',
+              'environment': 'development',
+            };
+          } else {
+            // Configuration par défaut
+            _config = {
+              'appName': 'ChapeChape Partner (Dev)',
+              'apiUrl': 'http://192.168.1.78:4000/api',
+              'apiBaseUrl': 'http://192.168.1.78:4000',
+              'wsUrl': 'ws://192.168.1.78:4000/ws',
+              'apiVersion': 'v1',
+              'apiTimeout': 30000,
+              'wsReconnectInterval': 5000,
+              'appVersion': '1.0.0-dev',
+              'environment': 'development',
+            };
+          }
           break;
-        
         case Environment.staging:
-          _config = {
-            'appName': 'ChapeChape Partner (Staging)',
-            'apiUrl': 'https://staging-api.chapechape.com/api',
-            'apiBaseUrl': 'https://staging-api.chapechape.com',
-            'wsUrl': 'wss://staging-api.chapechape.com/ws',
-            'apiVersion': 'v1',
-            'apiTimeout': 30000,
-            'wsReconnectInterval': 5000,
-            'appVersion': '1.0.0-staging',
-            'environment': 'staging',
-          };
+          // Si nous utilisons une URL personnalisée, utiliser l'IP du service de détection
+          if (_useCustomServerUrl && _ipDetectionService != null) {
+            _config = {
+              'appName': 'ChapeChape Partner (Staging)',
+              'apiUrl': _ipDetectionService!.serverApiUrl,
+              'apiBaseUrl': _ipDetectionService!.serverBaseUrl,
+              'wsUrl': _ipDetectionService!.serverWsUrl,
+              'apiVersion': 'v1',
+              'apiTimeout': 30000,
+              'wsReconnectInterval': 5000,
+              'appVersion': '1.0.0-staging',
+              'environment': 'staging',
+            };
+          } else {
+            // Configuration par défaut
+            _config = {
+              'appName': 'ChapeChape Partner (Staging)',
+              'apiUrl': 'https://staging-api.chapechape.com/api',
+              'apiBaseUrl': 'https://staging-api.chapechape.com',
+              'wsUrl': 'wss://staging-api.chapechape.com/ws',
+              'apiVersion': 'v1',
+              'apiTimeout': 30000,
+              'wsReconnectInterval': 5000,
+              'appVersion': '1.0.0-staging',
+              'environment': 'staging',
+            };
+          }
           break;
-        
         case Environment.production:
-          _config = {
-            'appName': 'ChapeChape Partner',
-            'apiUrl': 'https://api.chapechape.com/api',
-            'apiBaseUrl': 'https://api.chapechape.com',
-            'wsUrl': 'wss://api.chapechape.com/ws',
-            'apiVersion': 'v1',
-            'apiTimeout': 30000,
-            'wsReconnectInterval': 5000,
-            'appVersion': '1.0.0',
-            'environment': 'production',
-          };
+          // Si nous utilisons une URL personnalisée, utiliser l'IP du service de détection
+          if (_useCustomServerUrl && _ipDetectionService != null) {
+            _config = {
+              'appName': 'ChapeChape Partner',
+              'apiUrl': _ipDetectionService!.serverApiUrl,
+              'apiBaseUrl': _ipDetectionService!.serverBaseUrl,
+              'wsUrl': _ipDetectionService!.serverWsUrl,
+              'apiVersion': 'v1',
+              'apiTimeout': 30000,
+              'wsReconnectInterval': 5000,
+              'appVersion': '1.0.0',
+              'environment': 'production',
+            };
+          } else {
+            // Configuration par défaut
+            _config = {
+              'appName': 'ChapeChape Partner',
+              'apiUrl': 'https://api.chapechape.com/api',
+              'apiBaseUrl': 'https://api.chapechape.com',
+              'wsUrl': 'wss://api.chapechape.com/ws',
+              'apiVersion': 'v1',
+              'apiTimeout': 30000,
+              'wsReconnectInterval': 5000,
+              'appVersion': '1.0.0',
+              'environment': 'production',
+            };
+          }
           break;
       }
     } catch (e) {
@@ -80,9 +173,9 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Partner (Fallback)',
-        'apiUrl': 'http://192.168.1.68:4000/api',
-        'apiBaseUrl': 'http://192.168.1.68:4000',
-        'wsUrl': 'ws://192.168.1.68:4000/ws',
+        'apiUrl': 'http://192.168.1.78:4000/api',
+        'apiBaseUrl': 'http://192.168.1.78:4000',
+        'wsUrl': 'ws://192.168.1.78:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -94,36 +187,94 @@ class AppConfigManager {
 
   // Accesseurs de la configuration avec sécurité pour null
   static String get appName => _config['appName'] as String? ?? 'ChapeChape Partner';
-  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.68:4000/api';
-  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.68:4000';
-  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.68:4000/ws';
+  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.78:4000/api';
+  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.78:4000';
+  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.78:4000/ws';
   static String get apiVersion => _config['apiVersion'] as String? ?? 'v1';
   static int get apiTimeout => _config['apiTimeout'] as int? ?? 30000;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int? ?? 5000;
   static String get appVersion => _config['appVersion'] as String? ?? '1.0.0';
-  static String get environment => _config['environment'] as String? ?? 'development';
+  static String get environmentName => _config['environment'] as String? ?? 'development';
 
-  // Méthode utilitaire pour obtenir l'URL complète d'un endpoint
+  /// Indique si l'application est en mode débogage
+  static bool get isDebug => !kReleaseMode;
+  
+  /// Construit un point de terminaison d'API complet
   static String getApiEndpoint(String path) {
-    // Si le chemin commence déjà par http(s)://, retourner tel quel
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+    final baseUrl = apiUrl;
+    if (path.startsWith('/')) {
+      return '$baseUrl$path';
+    } else {
+      return '$baseUrl/$path';
     }
-    
-    // Assurer que le chemin commence par /
-    String normalizedPath = path.startsWith('/') ? path : '/$path';
-    
-    // Construire l'URL complète
-    return apiUrl + normalizedPath;
   }
   
-  // Méthode utilitaire pour obtenir l'URL complète d'une ressource média (image, etc.)
+  /// Construit une URL de média complète
   static String getMediaUrl(String path) {
-    final mediaBaseUrl = _config['mediaBaseUrl'] ?? apiBaseUrl + '/media';
-    
-    // Nettoie le chemin d'accès pour éviter les doubles slashes
-    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    
-    return '$mediaBaseUrl/$cleanPath';
+    final baseUrl = apiBaseUrl;
+    if (path.startsWith('/')) {
+      return '$baseUrl$path';
+    } else if (path.startsWith('http')) {
+      return path; // Déjà une URL complète
+    } else {
+      return '$baseUrl/$path';
+    }
   }
+  
+  /// Construit une URL d'image de résidence complète
+  static String getResidenceImageUrl(String path) {
+    if (path.startsWith('http')) {
+      return path; // Déjà une URL complète
+    }
+    
+    final baseUrl = apiBaseUrl;
+    
+    if (path.startsWith('/uploads/')) {
+      // Ne pas ajouter 'residences/' - utiliser le chemin tel quel
+      return '$baseUrl$path';
+    } else if (path.startsWith('/')) {
+      // URL relative mais sans uploads, ajouter le chemin uploads
+      return '$baseUrl/uploads$path';
+    } else {
+      // URL sans slash initial, ajouter le chemin complet avec slash
+      return '$baseUrl/uploads/$path';
+    }
+  }
+  
+  /// Construit une URL d'image de profil complète
+  static String getProfileImageUrl(String path) {
+    if (path.startsWith('http')) {
+      return path; // Déjà une URL complète
+    }
+    
+    final baseUrl = apiBaseUrl;
+    
+    if (path.startsWith('/')) {
+      return '$baseUrl$path';
+    } else if (path.startsWith('uploads/profiles')) {
+      return '$baseUrl/$path';
+    } else {
+      return '$baseUrl/uploads/profiles/$path';
+    }
+  }
+  
+  /// Vérifie si le serveur est accessible
+  static Future<bool> isServerReachable() async {
+    return await _ipDetectionService?.isServerReachable() ?? false;
+  }
+  
+  /// Tente de détecter automatiquement l'IP du serveur
+  static Future<bool> autoDetectServerIp() async {
+    final result = await _ipDetectionService?.autoDetectServerIp() ?? false;
+    if (result) {
+      _loadConfig(); // Recharger la configuration avec la nouvelle IP
+    }
+    return result;
+  }
+  
+  /// Obtient l'adresse IP actuelle du serveur
+  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.78';
+  
+  /// Obtient le port actuel du serveur
+  static int get serverPort => _ipDetectionService?.serverPort ?? 4000;
 }

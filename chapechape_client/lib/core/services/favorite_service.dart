@@ -52,9 +52,16 @@ class FavoriteService {
   Future<List<String>> getFavorites() async {
     try {
       // Vérifier d'abord dans le cache
-      final cachedFavorites = _cacheService.get(_favoritesKey);
+      final cachedFavorites = await _cacheService.get(_favoritesKey);
       if (cachedFavorites != null) {
-        return List<String>.from(cachedFavorites as List);
+        // Sécurisation du typage avec une conversion explicite et sécurisée
+        if (cachedFavorites is List) {
+          // Conversion explicite pour éviter les erreurs de typage
+          final List<dynamic> favoritesList = cachedFavorites;
+          return List<String>.from(favoritesList.map((item) => item.toString()));
+        } else {
+          _logger.warning('Le cache contient une valeur de type inattendu: ${cachedFavorites.runtimeType}');
+        }
       }
       
       // Sinon, essayer dans les SharedPreferences
@@ -62,13 +69,20 @@ class FavoriteService {
       final favoritesString = prefs.getString(_favoritesKey);
       
       if (favoritesString != null) {
-        final List<dynamic> decodedFavorites = jsonDecode(favoritesString);
-        final favoritesList = List<String>.from(decodedFavorites);
-        
-        // Stocker dans le cache pour un accès plus rapide ultérieurement
-        _cacheService.put(_favoritesKey, favoritesList);
-        
-        return favoritesList;
+        try {
+          final List<dynamic> decodedFavorites = jsonDecode(favoritesString);
+          final favoritesList = List<String>.from(decodedFavorites.map((item) => item.toString()));
+          
+          // Stocker dans le cache pour un accès plus rapide ultérieurement
+          _cacheService.put(_favoritesKey, favoritesList);
+          
+          return favoritesList;
+        } catch (e) {
+          _logger.error('Erreur de décodage JSON des favoris: $e');
+          // En cas d'erreur de décodage, réinitialiser les favoris
+          await prefs.remove(_favoritesKey);
+          _cacheService.remove(_favoritesKey);
+        }
       }
       
       return [];
@@ -187,8 +201,8 @@ class FavoriteService {
       // Construire une clé de cache spécifique pour cette vérification
       final cacheKey = 'favorite_check_$residenceId';
       
-      // Vérifier dans le cache
-      final cachedResult = _cacheService.get(cacheKey);
+      // Vérifier dans le cache - Attendre la résolution de la Future
+      final cachedResult = await _cacheService.get(cacheKey);
       if (cachedResult != null) {
         return cachedResult as bool;
       }
@@ -198,7 +212,7 @@ class FavoriteService {
       final isFavorite = favorites.contains(residenceId);
       
       // Mettre en cache le résultat pour des vérifications rapides ultérieures
-      _cacheService.put(cacheKey, isFavorite, expiryInMinutes: 5);
+      await _cacheService.put(cacheKey, isFavorite, expiryInMinutes: 5);
       
       return isFavorite;
     } catch (e) {

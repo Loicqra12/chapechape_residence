@@ -49,16 +49,54 @@ class _CountrySelectorWidgetState extends State<CountrySelectorWidget> {
   void _filterCountries(String query) {
     setState(() {
       _searchQuery = query.toLowerCase();
+      
+      // Si la recherche est vide, afficher tous les pays
       if (_searchQuery.isEmpty) {
         _filteredCountries = _locationService.getCountries();
-      } else {
+        return;
+      }
+      
+      // Normaliser la recherche (retirer les accents)
+      String normalizedQuery = _normalizeString(_searchQuery);
+      
+      _filteredCountries = _locationService.getCountries()
+          .where((country) {
+            // Normaliser le nom du pays
+            String normalizedName = _normalizeString(country.name.toLowerCase());
+            
+            // Vérifier si le nom normalisé contient la recherche normalisée
+            return normalizedName.contains(normalizedQuery) ||
+                   country.code.toLowerCase().contains(_searchQuery) ||
+                   country.phoneCode.toLowerCase().contains(_searchQuery);
+          })
+          .toList();
+          
+      // Si aucun résultat, essayer avec une recherche partielle
+      if (_filteredCountries.isEmpty && _searchQuery.length > 2) {
         _filteredCountries = _locationService.getCountries()
             .where((country) => 
-                country.name.toLowerCase().contains(_searchQuery) ||
-                country.phoneCode.toLowerCase().contains(_searchQuery))
+                _normalizeString(country.name.toLowerCase()).contains(
+                    normalizedQuery.substring(0, normalizedQuery.length > 2 ? 3 : normalizedQuery.length)
+                )
+            )
             .toList();
       }
     });
+  }
+  
+  // Fonction pour normaliser les chaînes (enlever les accents)
+  String _normalizeString(String input) {
+    // Mapping des caractères accentués vers leurs équivalents sans accent
+    const accents = {
+      'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a',
+      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+      'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+      'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
+      'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+      'ÿ': 'y', 'ñ': 'n', 'ç': 'c',
+    };
+    
+    return input.split('').map((char) => accents[char] ?? char).join('');
   }
 
   void _showCountryPicker() {

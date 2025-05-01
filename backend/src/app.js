@@ -98,12 +98,6 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Middleware de sécurité
-app.use(securityMiddleware);
-
-// Middleware de logging
-app.use(logger.http);
-
 // Middleware de base
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -114,6 +108,30 @@ app.use(compression());
 
 // Middlewares
 app.use(morgan("dev"));
+
+// Servir les fichiers statiques publiquement pour les images (AVANT sécurité)
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "../uploads"), {
+    maxAge: "1d",
+    etag: true,
+  })
+);
+
+// Ajouter également la route /api/uploads pour maintenir la rétrocompatibilité
+app.use(
+  "/api/uploads",
+  express.static(path.join(__dirname, "../uploads"), {
+    maxAge: "1d",
+    etag: true,
+  })
+);
+
+// Middleware de sécurité (APRÈS exposer les ressources publiques)
+app.use(securityMiddleware);
+
+// Middleware de logging
+app.use(logger.http);
 
 // Documentation API
 app.use(
@@ -151,15 +169,6 @@ app.use("/api/users", csrfMiddleware);
 //     next();
 //   }
 // });
-
-// Servir les fichiers statiques
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "../uploads"), {
-    maxAge: "1d",
-    etag: true,
-  })
-);
 
 // Routes avec cache pour les requêtes GET
 app.use("/api/residences", cache(3600), residenceRoutes);

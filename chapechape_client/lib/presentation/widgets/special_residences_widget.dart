@@ -51,17 +51,23 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHeader(context),
-        const SizedBox(height: 8),
-        _buildSubtitle(context),
-        const SizedBox(height: 16),
-        widget.isLoading
-            ? _buildLoadingSkeleton()
-            : _buildItemsList(context),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(context),
+            const SizedBox(height: 8),
+            _buildSubtitle(context),
+            const SizedBox(height: 8),
+            Expanded(
+              child: widget.isLoading
+                ? _buildLoadingSkeleton()
+                : _buildItemsList(context),
+            ),
+          ],
+        );
+      }
     );
   }
 

@@ -1,47 +1,321 @@
 [
   {
+    "id": "abidjan",
     "name": "Abidjan",
     "countryCode": "CI",
-    "regions": [
-      "Cocody",
-      "Marcory",
-      "Plateau",
-      "Bietry",
-      "Riviera",
-      "Zone 4",
-      "Yopougon",
-      "Adjamé",
-      "Treichville",
-      "Koumassi"
-    ]
+    "regionId": "abidjan",
+    "isPopular": true,
+    "latitude": 5.3599517,
+    "longitude": -4.0082563,
+    "description": "Capitale économique de la Côte d'Ivoire",
+    "population": 5400000,
+    "communes": [
+      "Abobo", "Adjamé", "Attécoubé", "Cocody", "Koumassi", 
+      "Marcory", "Plateau", "Port-Bouët", "Treichville", "Yopougon"
+    ],
+    "mainSites": [
+      "Plateau d'affaires", "Cathédrale St. Paul", "Marché de Marcory", 
+      "Port autonome", "Université Félix Houphouët-Boigny"
+    ],
+    "codePostal": "01 BP",
+    "areaSqKm": 422
   },
   {
-    "name": "Bouaké",
-    "countryCode": "CI",
-    "regions": [
-      "Centre-ville",
-      "Belleville",
-      "Sokoura",
-      "N'Gattakro"
-    ]
-  },
-  {
-    "name": "San Pedro",
-    "countryCode": "CI",
-    "regions": [
-      "Cité",
-      "Port",
-      "Bardo"
-    ]
-  },
-  {
+    "id": "yamoussoukro",
     "name": "Yamoussoukro",
     "countryCode": "CI",
-    "regions": [
-      "Centre-ville",
-      "Quartier des Ministères",
-      "Habitat"
-    ]
+    "regionId": "yamoussoukro",
+    "isPopular": true,
+    "latitude": 6.8276228,
+    "longitude": -5.2893433
+  },
+  {
+    "id": "bouake",
+    "name": "Bouaké",
+    "countryCode": "CI",
+    "regionId": "gbeke",
+    "isPopular": true,
+    "latitude": 7.6873751,
+    "longitude": -5.0583954
+  },
+  {
+    "id": "daloa",
+    "name": "Daloa",
+    "countryCode": "CI",
+    "regionId": "haut_sassandra",
+    "isPopular": true,
+    "latitude": 6.8786238,
+    "longitude": -6.4531742
+  },
+  {
+    "id": "korhogo",
+    "name": "Korhogo",
+    "countryCode": "CI",
+    "regionId": "poro",
+    "isPopular": true,
+    "latitude": 9.4520428,
+    "longitude": -5.6295096
+  },
+  {
+    "id": "san_pedro",
+    "name": "San-Pédro",
+    "countryCode": "CI",
+    "regionId": "san_pedro",
+    "isPopular": true,
+    "latitude": 4.7487839,
+    "longitude": -6.6372847
+  },
+  {
+    "id": "man",
+    "name": "Man",
+    "countryCode": "CI",
+    "regionId": "tonkpi",
+    "isPopular": true,
+    "latitude": 7.4003285,
+    "longitude": -7.5518741
+  },
+  {
+    "id": "gagnoa",
+    "name": "Gagnoa",
+    "countryCode": "CI",
+    "regionId": "goh",
+    "isPopular": true,
+    "latitude": 6.1338552,
+    "longitude": -5.8794005
+  },
+  {
+    "id": "abengourou",
+    "name": "Abengourou",
+    "countryCode": "CI",
+    "regionId": "indenie_djuablin",
+    "isPopular": true,
+    "latitude": 6.7317139,
+    "longitude": -3.4944992
+  },
+  {
+    "id": "divo",
+    "name": "Divo",
+    "countryCode": "CI",
+    "regionId": "loh_djiboua",
+    "isPopular": true,
+    "latitude": 5.8371548,
+    "longitude": -5.3669633
+  },
+  {
+    "id": "bingerville",
+    "name": "Bingerville",
+    "countryCode": "CI",
+    "regionId": "abidjan",
+    "isPopular": true,
+    "latitude": 5.3541667,
+    "longitude": -3.8853069
+  },
+  {
+    "id": "grand_bassam",
+    "name": "Grand-Bassam",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": true,
+    "latitude": 5.2099294,
+    "longitude": -3.7485891
+  },
+  {
+    "id": "assinie",
+    "name": "Assinie",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": true,
+    "latitude": 5.1421782,
+    "longitude": -3.2889108
+  },
+  {
+    "id": "bonoua",
+    "name": "Bonoua",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": true,
+    "latitude": 5.2736469,
+    "longitude": -3.5953724
+  },
+  {
+    "id": "dabou",
+    "name": "Dabou",
+    "countryCode": "CI",
+    "regionId": "grands_ponts",
+    "isPopular": true,
+    "latitude": 5.3256179,
+    "longitude": -4.3759259
+  },
+  {
+    "id": "jacqueville",
+    "name": "Jacqueville",
+    "countryCode": "CI",
+    "regionId": "grands_ponts",
+    "isPopular": true,
+    "latitude": 5.2049632,
+    "longitude": -4.4290209
+  },
+  {
+    "id": "anyama",
+    "name": "Anyama",
+    "countryCode": "CI",
+    "regionId": "abidjan",
+    "isPopular": true,
+    "latitude": 5.4885098,
+    "longitude": -4.0517092
+  },
+  {
+    "id": "grand_lahou",
+    "name": "Grand-Lahou",
+    "countryCode": "CI",
+    "regionId": "grands_ponts",
+    "isPopular": false,
+    "latitude": 5.1360694,
+    "longitude": -5.0250348
+  },
+  {
+    "id": "toumodi",
+    "name": "Toumodi",
+    "countryCode": "CI",
+    "regionId": "belier",
+    "isPopular": false,
+    "latitude": 6.5521776,
+    "longitude": -5.0154347
+  },
+  {
+    "id": "tiebissou",
+    "name": "Tiébissou",
+    "countryCode": "CI",
+    "regionId": "belier",
+    "isPopular": false,
+    "latitude": 7.1554957,
+    "longitude": -5.227338
+  },
+  {
+    "id": "tabou",
+    "name": "Tabou",
+    "countryCode": "CI",
+    "regionId": "san_pedro",
+    "isPopular": false,
+    "latitude": 4.4231013,
+    "longitude": -7.3608199
+  },
+  {
+    "id": "sassandra",
+    "name": "Sassandra",
+    "countryCode": "CI",
+    "regionId": "gbokle",
+    "isPopular": false,
+    "latitude": 4.9513738,
+    "longitude": -6.0859254
+  },
+  {
+    "id": "soubre",
+    "name": "Soubré",
+    "countryCode": "CI",
+    "regionId": "nawa",
+    "isPopular": false,
+    "latitude": 5.7860744,
+    "longitude": -6.6046231
+  },
+  {
+    "id": "duekoue",
+    "name": "Duékoué",
+    "countryCode": "CI",
+    "regionId": "guemon",
+    "isPopular": false,
+    "latitude": 6.7418644,
+    "longitude": -7.3510835
+  },
+  {
+    "id": "ferkessedougou",
+    "name": "Ferkessédougou",
+    "countryCode": "CI",
+    "regionId": "tchologo",
+    "isPopular": false,
+    "latitude": 9.5923134,
+    "longitude": -5.196661
+  },
+  {
+    "id": "odienne",
+    "name": "Odienné",
+    "countryCode": "CI",
+    "regionId": "kabadougou",
+    "isPopular": false,
+    "latitude": 9.5049225,
+    "longitude": -7.5651884
+  },
+  {
+    "id": "bondoukou",
+    "name": "Bondoukou",
+    "countryCode": "CI",
+    "regionId": "gontougo",
+    "isPopular": false,
+    "latitude": 8.0363125,
+    "longitude": -2.8009521
+  },
+  {
+    "id": "adzope",
+    "name": "Adzopé",
+    "countryCode": "CI",
+    "regionId": "la_me",
+    "isPopular": false,
+    "latitude": 6.1067718,
+    "longitude": -3.8633243
+  },
+  {
+    "id": "aboisso",
+    "name": "Aboisso",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": false,
+    "latitude": 5.4673831,
+    "longitude": -3.2083387
+  },
+  {
+    "id": "agboville",
+    "name": "Agboville",
+    "countryCode": "CI",
+    "regionId": "agneby_tiassa",
+    "isPopular": false,
+    "latitude": 5.9263,
+    "longitude": -4.2105
+  },
+  {
+    "id": "yaou",
+    "name": "Yaou",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": false,
+    "latitude": 5.4135,
+    "longitude": -3.2546
+  },
+  {
+    "id": "assinie_mafia",
+    "name": "Assinie-Mafia",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": true,
+    "latitude": 5.1236,
+    "longitude": -3.3012
+  },
+  {
+    "id": "songon",
+    "name": "Songon",
+    "countryCode": "CI",
+    "regionId": "abidjan",
+    "isPopular": false,
+    "latitude": 5.3167,
+    "longitude": -4.2000
+  },
+  {
+    "id": "adiake",
+    "name": "Adiaké",
+    "countryCode": "CI",
+    "regionId": "sud_comoe",
+    "isPopular": false,
+    "latitude": 5.2861,
+    "longitude": -3.3036
   },
   {
     "name": "Dakar",
@@ -96,4 +370,4 @@
       "Ikoyi"
     ]
   }
-] 
+]

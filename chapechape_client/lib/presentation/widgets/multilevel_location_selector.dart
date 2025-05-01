@@ -117,7 +117,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
   void _loadRegions() {
     if (_selectedCountry == null) return;
     
-    _availableRegions = _locationService.getRegionsByCountry(_selectedCountry!.code);
+    _availableRegions = _locationService.getRegionNamesByCountry(_selectedCountry!.code);
     setState(() {});
     
     // Si une région est déjà sélectionnée, charger ses villes
@@ -144,7 +144,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
   void _loadNeighborhoods() {
     if (_selectedCity == null) return;
     
-    _availableNeighborhoods = _locationService.getNeighborhoodsByCity(_selectedCity!.id);
+    _availableNeighborhoods = _locationService.getNeighborhoodNamesByCity(_selectedCity!.id);
     setState(() {});
   }
   

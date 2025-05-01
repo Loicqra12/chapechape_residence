@@ -36,9 +36,9 @@ class ApiService {
         validateStatus: (status) {
           return status != null && status < 500;
         },
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+        sendTimeout: const Duration(seconds: 60),
         followRedirects: true,
         maxRedirects: 5,
       ),

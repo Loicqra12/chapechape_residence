@@ -45,14 +45,20 @@ class ResidenceAvailabilityChecked extends ResidenceState {
 
 class ResidenceError extends ResidenceState {
   final String message;
+  final List<Residence>? preservedResidences;
 
-  const ResidenceError(this.message);
+  const ResidenceError(this.message, {this.preservedResidences});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, preservedResidences];
 }
 
 class ResidencesLoading extends ResidenceState {}
+
+// Nouvel état pour indiquer un rafraîchissement des données
+class ResidenceRefreshing extends ResidenceState {
+  const ResidenceRefreshing();
+}
 
 class ResidencesByTypeLoaded extends ResidenceState {
   final List<Residence> residences;

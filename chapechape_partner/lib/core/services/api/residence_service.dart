@@ -41,7 +41,7 @@ class ResidenceService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await storage!.read(key: 'token');
+          final token = await this.storage.read(key: 'token');
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -629,7 +629,7 @@ class ResidenceService {
   Future<Residence> createResidence(Map<String, dynamic> data, List<ResidenceImage> images) async {
     try {
       // Vérifier le token d'authentification
-      final token = await storage!.read(key: 'token');
+      final token = await storage.read(key: 'token');
       if (token == null) throw Exception('Aucun token d\'authentification trouvé');
 
       // Adapter les données pour le backend
@@ -882,7 +882,7 @@ class ResidenceService {
         return;
       }
       
-      final token = await storage!.read(key: 'token');
+      final token = await storage.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/residences/$residenceId/images'),
@@ -1030,7 +1030,7 @@ class ResidenceService {
         // Vider le cache local pour forcer un rafraîchissement
         try {
           if (storage != null) {
-            storage!.delete(key: 'residences_cache');
+            storage.delete(key: 'residences_cache');
             print("🧹 Cache des résidences effacé après suppression");
           }
         } catch (e) {
@@ -1044,6 +1044,12 @@ class ResidenceService {
           json.decode(response.body)
         );
       }
+    } on SocketException {
+      throw ApiException(
+        'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
+        0,
+        {'error': 'network_error'}
+      );
     } catch (e) {
       print("❌ Erreur lors de la suppression: $e");
       rethrow;
@@ -1309,10 +1315,8 @@ class ResidenceService {
               
               // Vider le cache local pour éviter les problèmes
               try {
-                if (storage != null) {
-                  storage!.delete(key: 'residences_cache');
-                  print("🧹 Cache des résidences effacé");
-                }
+                storage.delete(key: 'residences_cache');
+                print("🧹 Cache des résidences effacé");
               } catch (e) {
                 print("⚠️ Erreur lors de la suppression du cache: $e");
               }

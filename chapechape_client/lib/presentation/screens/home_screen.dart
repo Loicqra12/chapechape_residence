@@ -30,9 +30,22 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Initialiser le chargement des résidences après le rendu initial
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ResidenceBloc>().add(const LoadResidences());
+      print('🚀 HomeScreen - Initialisation du chargement des résidences');
+      
+      // IMPORTANT: Forcer le rafraîchissement des résidences au démarrage
+      context.read<ResidenceBloc>().add(const RefreshResidencesEvent());
+      
       // Initialiser le service de promotions pour le pré-chargement
       PromotionService.initialize();
+      
+      // Afficher des informations de débogage après un délai
+      Future.delayed(const Duration(seconds: 3), () {
+        final state = context.read<ResidenceBloc>().state;
+        print('🏠 État du bloc Residence après 3 secondes: ${state.runtimeType}');
+        if (state is ResidencesLoaded) {
+          print('✅ ${state.residences.length} résidences chargées');
+        }
+      });
     });
     
     return LayoutBuilder(
@@ -113,11 +126,25 @@ class HomeScreen extends StatelessWidget {
                 ),
                 
                 SizedBox(
-                  height: 400,
+                  // Augmenter la hauteur pour éviter le débordement
+                  height: 450,
                   width: constraints.maxWidth,
-                  child: SpecialResidencesWidget(
-                    title: "Résidences Spéciales",
-                    filterType: ResidenceType.luxury,
+                  child: BlocBuilder<ResidenceBloc, ResidenceState>(
+                    builder: (context, state) {
+                      // Utiliser les résidences chargées ou préservées en cas d'erreur
+                      final residences = state is ResidencesLoaded 
+                          ? state.residences 
+                          : (state is ResidenceError && state.preservedResidences != null)
+                              ? state.preservedResidences!
+                              : [];
+                              
+                      return SpecialResidencesWidget(
+                        title: "Résidences Spéciales",
+                        filterType: ResidenceType.luxury,
+                        isLoading: state is ResidenceLoading || state is ResidenceRefreshing,
+                        items: residences,
+                      );
+                    },
                   ),
                 ),
                 
@@ -147,9 +174,27 @@ class HomeScreen extends StatelessWidget {
                 ),
                 
                 SizedBox(
-                  height: 370,
+                  // Augmenter la hauteur pour éviter le débordement
+                  height: 420,
                   width: constraints.maxWidth,
-                  child: FeaturedListings(),
+                  child: BlocBuilder<ResidenceBloc, ResidenceState>(
+                    builder: (context, state) {
+                      // Utiliser les résidences chargées ou préservées en cas d'erreur
+                      final residences = state is ResidencesLoaded 
+                          ? state.residences 
+                          : (state is ResidenceError && state.preservedResidences != null)
+                              ? state.preservedResidences!
+                              : [];
+                              
+                      return FeaturedListings(
+                        isLoading: state is ResidenceLoading || state is ResidenceRefreshing,
+                        listings: residences,
+                        onSeeAllPressed: () {
+                          context.push('/search');
+                        },
+                      );
+                    },
+                  ),
                 ),
                 
                 // Section pour encourager l'inscription (uniquement pour les non-connectés)

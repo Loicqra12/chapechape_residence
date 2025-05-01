@@ -81,6 +81,20 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
           
           return _buildResidencesList(context, filteredResidences);
         } else if (state is ResidenceError) {
+          // Si des résidences sont préservées, les utiliser au lieu d'afficher une erreur
+          if (state.preservedResidences != null && state.preservedResidences!.isNotEmpty) {
+            final model_types.ResidenceType? convertedType = convertToResidenceType(widget.type);
+            final filteredResidences = state.preservedResidences!
+                .where((r) => r.type == convertedType)
+                .take(5)
+                .toList();
+                
+            if (filteredResidences.isNotEmpty) {
+              return _buildResidencesList(context, filteredResidences);
+            }
+          }
+          
+          // Sinon, afficher l'erreur
           return Center(
             child: Text(
               'Erreur: ${state.message}',

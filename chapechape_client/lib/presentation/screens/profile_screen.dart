@@ -6,6 +6,7 @@ import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/blocs/user/user_bloc.dart';
 import 'package:chapechape_client/core/blocs/user/user_event.dart';
 import 'package:chapechape_client/core/blocs/user/user_state.dart';
+import 'package:chapechape_client/core/constants/app_assets.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -164,7 +165,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       radius: 60,
                       backgroundImage: user.profilePicture != null
                           ? NetworkImage(user.profilePicture!)
-                          : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                          : NetworkImage(AppAssets.getDefaultAvatar(
+                              name: '${user.firstName} ${user.lastName}',
+                              size: 200,
+                            )),
                     ),
                     CircleAvatar(
                       radius: 20,

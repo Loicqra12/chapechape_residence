@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/models/listing_model.dart';
 import '../../core/models/residence_model.dart';
@@ -10,6 +11,7 @@ import '../../core/utils/responsive_utils.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/config/app_config_manager.dart'; // Import AppConfigManager
 
 /// Widget pour afficher les annonces et résidences en vedette
 /// 
@@ -57,17 +59,33 @@ class _FeaturedListingsState extends State<FeaturedListings> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHeader(context),
-        const SizedBox(height: 8),
-        _buildSubtitle(context),
-        const SizedBox(height: 16),
-        widget.isLoading
-            ? _buildLoadingSkeleton()
-            : _buildListingsList(context),
-      ],
+    print('🏠 FeaturedListings.build - isLoading: ${widget.isLoading}, listings.length: ${widget.listings.length}');
+    if (widget.listings.isNotEmpty) {
+      print('🏠 Premier élément: ${widget.listings.first.runtimeType}');
+      if (widget.listings.first is Map) {
+        print('🏠 Contenu du premier élément (Map): ${widget.listings.first}');
+      }
+    } else {
+      print('🏠 Aucun élément à afficher');
+    }
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(context),
+            const SizedBox(height: 8),
+            _buildSubtitle(context),
+            const SizedBox(height: 8), 
+            Expanded(
+              child: widget.isLoading
+                  ? _buildLoadingSkeleton()
+                  : _buildListingsList(context),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -132,11 +150,13 @@ class _FeaturedListingsState extends State<FeaturedListings> {
 
   Widget _buildListingsList(BuildContext context) {
     if (widget.listings.isEmpty) {
+      print('🏠 _buildListingsList - Aucune résidence trouvée');
       return _buildEmptyState(context);
     }
 
+    print('🏠 _buildListingsList - ${widget.listings.length} résidences trouvées');
     return SizedBox(
-      height: 300,
+      height: 330, // Augmenter la hauteur du conteneur de liste
       child: Stack(
         children: [
           ListView.builder(
@@ -307,118 +327,133 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                 : BorderSide.none,
           ),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image
-              Stack(
-                children: [
-                  SizedBox(
-                    height: 160,
-                    width: double.infinity,
-                    child: _buildImage(item),
-                  ),
-                  if (isPromoted)
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: _buildPromotedBadge(),
-                    ),
-                  _buildStatusBadge(status),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    left: 12,
-                    child: _buildPriceBadge(price),
-                  ),
-                ],
-              ),
-              
-              // Contenu
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            location ?? 'Emplacement non spécifié',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: 350), // Contrainte de hauteur maximale
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: NeverScrollableScrollPhysics(), // Empêche le défilement tout en permettant le contenu de déborder
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image - hauteur fixe
+                          Stack(
+                            children: [
+                              SizedBox(
+                                height: 160,
+                                width: double.infinity,
+                                child: _buildImage(item),
+                              ),
+                              if (isPromoted)
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: _buildPromotedBadge(),
+                                ),
+                              _buildStatusBadge(status),
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.7),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 8,
+                                left: 12,
+                                child: _buildPriceBadge(price),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          
+                          // Contenu
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        location ?? 'Emplacement non spécifié',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildFeatureItem(
+                                      icon: Icons.hotel_outlined,
+                                      value: bedrooms != null
+                                          ? '$bedrooms'
+                                          : '-',
+                                      label: 'Chambres',
+                                    ),
+                                    _buildFeatureItem(
+                                      icon: Icons.bathtub_outlined,
+                                      value: bathrooms != null
+                                          ? '$bathrooms'
+                                          : '-',
+                                      label: 'SdB',
+                                    ),
+                                    _buildFeatureItem(
+                                      icon: Icons.square_foot_outlined,
+                                      value: area != null
+                                          ? '${area.toInt()}'
+                                          : '-',
+                                      label: 'm²',
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildFeatureItem(
-                          icon: Icons.hotel_outlined,
-                          value: bedrooms != null
-                              ? '$bedrooms'
-                              : '-',
-                          label: 'Chambres',
-                        ),
-                        _buildFeatureItem(
-                          icon: Icons.bathtub_outlined,
-                          value: bathrooms != null
-                              ? '$bathrooms'
-                              : '-',
-                          label: 'SdB',
-                        ),
-                        _buildFeatureItem(
-                          icon: Icons.square_foot_outlined,
-                          value: area != null
-                              ? '${area.toInt()}'
-                              : '-',
-                          label: 'm²',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -596,37 +631,28 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     required String value,
     required String label,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
+    return SizedBox(
+      width: 78, // Réduire légèrement la largeur
       child: Column(
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: AppTheme.primaryColor,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ],
+          Icon(
+            icon,
+            size: 18, // Réduire légèrement la taille de l'icône
+            color: AppTheme.primaryColor,
           ),
+          const SizedBox(height: 4), // Réduire l'espace
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13, // Réduire légèrement la taille de la police
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2), // Réduire l'espace
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11, // Réduire légèrement la taille de la police
               color: Colors.grey[600],
             ),
           ),
@@ -650,12 +676,30 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         fit: BoxFit.cover,
       );
     }
-
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
-      fit: BoxFit.cover,
-      placeholder: (context, url) => _buildImagePlaceholder(),
-      errorWidget: (context, url, error) => _buildImageError(),
+    
+    // Récupérer le token d'authentification pour les images
+    return FutureBuilder<String?>(
+      future: const FlutterSecureStorage().read(key: 'token'),
+      builder: (context, snapshot) {
+        // Afficher un placeholder pendant le chargement du token
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildImagePlaceholder();
+        }
+        
+        final token = snapshot.data;
+        
+        // S'assurer que imageUrl n'est jamais null ici (bien qu'il ait déjà été vérifié plus haut)
+        final nonNullImageUrl = imageUrl ?? AppAssets.placeholderImage;
+        
+        return CachedNetworkImage(
+          imageUrl: nonNullImageUrl,
+          fit: BoxFit.cover,
+          // Ajouter le token d'authentification aux headers si disponible
+          httpHeaders: token != null ? {'Authorization': 'Bearer $token'} : null,
+          placeholder: (context, url) => _buildImagePlaceholder(),
+          errorWidget: (context, url, error) => _buildImageErrorWithFallback(url),
+        );
+      }
     );
   }
 
@@ -669,7 +713,102 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     );
   }
 
-  Widget _buildImageError() {
+  // Amélioration de l'affichage des erreurs avec une tentative de chargement sans token
+  Widget _buildImageErrorWithFallback(String? url) {
+    // Si l'URL est null, afficher le widget d'erreur par défaut
+    if (url == null) {
+      print('⚠️ URL d\'image nulle');
+      return _buildDefaultErrorWidget();
+    }
+    
+    print('! Traitement de l\'URL d\'image: $url');
+    
+    // Pour les URLs externes ou déjà complètes, essayer de les charger directement
+    if (url.startsWith('http')) {
+      print('! URL externe ou complète détectée: $url');
+      
+      // Déterminer si c'est une URL avec ou sans le sous-dossier 'residences'
+      String alternativeUrl = '';
+      if (url.contains('/uploads/residences/')) {
+        // Si l'URL contient déjà /uploads/residences/, créer une alternative sans ce sous-dossier
+        alternativeUrl = url.replaceFirst('/uploads/residences/', '/uploads/');
+      } else if (url.contains('/uploads/') && !url.contains('/uploads/residences/')) {
+        // Si l'URL contient /uploads/ mais pas /residences/, créer une alternative avec ce sous-dossier
+        alternativeUrl = url.replaceFirst('/uploads/', '/uploads/residences/');
+      }
+      
+      return CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => _buildImagePlaceholder(),
+        errorWidget: (context, url, error) {
+          print('! Erreur de chargement d\'URL externe: $error ($url)');
+          
+          // Si une URL alternative est disponible, l'essayer
+          if (alternativeUrl.isNotEmpty) {
+            print('! Tentative avec URL alternative: $alternativeUrl');
+            return CachedNetworkImage(
+              imageUrl: alternativeUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => _buildImagePlaceholder(),
+              errorWidget: (context, url, error) {
+                print('! Erreur aussi avec l\'URL alternative: $error');
+                return _buildDefaultErrorWidget();
+              },
+            );
+          }
+          
+          return _buildDefaultErrorWidget();
+        },
+      );
+    }
+    
+    // Pour les chemins relatifs avec /uploads/ (non complets)
+    if (url.startsWith('/uploads/')) {
+      // Utiliser AppConfigManager pour construire l'URL
+      final String fullUrl = AppConfigManager.getResidenceImageUrl(url);
+      
+      print('! URL relative convertie en URL complète: $fullUrl');
+      
+      return CachedNetworkImage(
+        imageUrl: fullUrl,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => _buildImagePlaceholder(),
+        errorWidget: (context, url, error) {
+          print('! Erreur de chargement après conversion: $error ($fullUrl)');
+          
+          // Tenter avec le chemin alternatif (ajouter ou supprimer /residences/)
+          String alternativeUrl = '';
+          if (url.contains('/uploads/residences/')) {
+            alternativeUrl = AppConfigManager.getResidenceImageUrl(url.replaceFirst('/uploads/residences/', '/uploads/'));
+          } else {
+            alternativeUrl = AppConfigManager.getResidenceImageUrl(url.replaceFirst('/uploads/', '/uploads/residences/'));
+          }
+          
+          print('! Tentative avec le chemin alternatif: $alternativeUrl');
+          
+          return CachedNetworkImage(
+            imageUrl: alternativeUrl,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => _buildImagePlaceholder(),
+            errorWidget: (context, url, error) {
+              print('! Erreur également avec le chemin alternatif: $error');
+              return _buildDefaultErrorWidget();
+            },
+          );
+        },
+      );
+    }
+    
+    // Fallback pour les autres cas
+    print('! Format d\'URL non reconnu, utilisation de l\'image par défaut');
+    return Image.asset(
+      AppAssets.placeholderImage,
+      fit: BoxFit.cover,
+    );
+  }
+
+  Widget _buildDefaultErrorWidget() {
     return Container(
       color: Colors.grey[200],
       child: Center(

@@ -325,6 +325,14 @@ class AppRouter {
         ),
       ),
       GoRoute(
+        path: '/residences/:id',
+        name: 'residence_details_alt',
+        redirect: (context, state) {
+          final id = state.pathParameters['id'];
+          return '/residence/$id';
+        },
+      ),
+      GoRoute(
         path: '/search',
         name: 'search',
         builder: (context, state) => const SearchScreen(), // Accessible à tous

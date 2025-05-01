@@ -5,16 +5,34 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/location_suggestion_model.dart';
 import '../models/city.dart';
 import '../models/country.dart';
+import '../models/region.dart';
+import '../models/neighborhood.dart';
 import 'map_provider/map_service_interface.dart';
 import 'map_provider/osm_map_service.dart';
+import 'location_cache_service.dart';
 
 class LocationService {
   static LocationService? _instance;
   List<City> _cities = [];
   List<Country> _countries = [];
+  List<Region> _regions = [];
+  List<Neighborhood> _neighborhoods = [];
   
   // Service cartographique utilisé (peut être changé facilement)
   final MapServiceInterface _mapService = OSMMapService();
+  
+  // Service de cache
+  final LocationCacheService _cacheService = LocationCacheService();
+  
+  // Indicateur de chargement des données
+  bool _isLoading = false;
+  Completer<bool>? _loadingCompleter;
+  
+  // Chemins des fichiers JSON
+  static const String _countriesPath = 'assets/data/countries.json';
+  static const String _regionsPath = 'assets/data/regions.json';
+  static const String _citiesPath = 'assets/data/cities.json';
+  static const String _neighborhoodsPath = 'assets/data/neighborhoods.json';
   
   // Singleton pattern
   factory LocationService() {
@@ -23,26 +41,170 @@ class LocationService {
   }
   
   LocationService._internal() {
-    // Initialiser avec des données par défaut immédiatement
-    _initializeDefaultData();
+    // Charger les données
+    _loadData();
+  }
+  
+  /// Charge les données de localisation
+  /// Priorité: 
+  /// 1. Cache en mémoire
+  /// 2. Cache persistant
+  /// 3. Fichiers JSON dans assets
+  Future<bool> _loadData() async {
+    // Si le chargement est déjà en cours, attendre sa fin
+    if (_isLoading) {
+      return await _loadingCompleter!.future;
+    }
+    
+    // Créer un nouveau completer
+    _isLoading = true;
+    _loadingCompleter = Completer<bool>();
+    
+    try {
+      // Essayer de charger depuis le cache
+      final bool cacheValid = await _cacheService.isValid();
+      
+      if (cacheValid) {
+        final loadedFromCache = await _loadFromCache();
+        if (loadedFromCache) {
+          _isLoading = false;
+          _loadingCompleter!.complete(true);
+          return true;
+        }
+      }
+      
+      // Si le cache n'est pas valide, charger depuis les fichiers assets
+      await _loadFromAssets();
+      
+      // Sauvegarder dans le cache
+      await _saveToCache();
+      
+      _isLoading = false;
+      _loadingCompleter!.complete(true);
+      return true;
+    } catch (e) {
+      print('Erreur lors du chargement des données de localisation: $e');
+      
+      // En cas d'erreur, initialiser avec des données par défaut
+      _initializeDefaultData();
+      
+      _isLoading = false;
+      _loadingCompleter!.complete(false);
+      return false;
+    }
+  }
+  
+  /// Charger les données depuis le cache
+  Future<bool> _loadFromCache() async {
+    try {
+      // Charger les pays
+      final countries = await _cacheService.getCountries();
+      if (countries != null) {
+        _countries = countries;
+      } else {
+        return false;
+      }
+      
+      // Charger les régions
+      final regions = await _cacheService.getRegions();
+      if (regions != null) {
+        _regions = regions;
+      } else {
+        return false;
+      }
+      
+      // Charger les villes
+      final cities = await _cacheService.getCities();
+      if (cities != null) {
+        _cities = cities;
+      } else {
+        return false;
+      }
+      
+      // Charger les quartiers
+      final neighborhoods = await _cacheService.getNeighborhoods();
+      if (neighborhoods != null) {
+        _neighborhoods = neighborhoods;
+      } else {
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      print('Erreur lors du chargement des données depuis le cache: $e');
+      return false;
+    }
+  }
+  
+  /// Sauvegarder les données dans le cache
+  Future<void> _saveToCache() async {
+    await _cacheService.setCountries(_countries);
+    await _cacheService.setRegions(_regions);
+    await _cacheService.setCities(_cities);
+    await _cacheService.setNeighborhoods(_neighborhoods);
+  }
+  
+  /// Charger les données depuis les fichiers assets
+  Future<void> _loadFromAssets() async {
+    try {
+      // Charger les pays
+      final countriesString = await rootBundle.loadString(_countriesPath);
+      final countriesJson = jsonDecode(countriesString) as List<dynamic>;
+      _countries = countriesJson.map((json) => Country.fromJson(json)).toList();
+      
+      // Charger les régions
+      final regionsString = await rootBundle.loadString(_regionsPath);
+      final regionsJson = jsonDecode(regionsString) as List<dynamic>;
+      _regions = regionsJson.map((json) => Region.fromJson(json)).toList();
+      
+      // Charger les villes
+      final citiesString = await rootBundle.loadString(_citiesPath);
+      final citiesJson = jsonDecode(citiesString) as List<dynamic>;
+      _cities = citiesJson.map((json) => City.fromJson(json)).toList();
+      
+      // S'assurer que le drapeau isPopular est bien défini
+      for (var city in _cities) {
+        // Vérifier si isPopular est null, et le définir à false par défaut
+        if (city.isPopular == null) {
+          city = city.copyWith(isPopular: false);
+        }
+      }
+      
+      // Charger les quartiers
+      final neighborhoodsString = await rootBundle.loadString(_neighborhoodsPath);
+      final neighborhoodsJson = jsonDecode(neighborhoodsString) as List<dynamic>;
+      _neighborhoods = neighborhoodsJson.map((json) => Neighborhood.fromJson(json)).toList();
+    } catch (e) {
+      print('Erreur lors du chargement des données depuis les assets: $e');
+      throw e;
+    }
   }
   
   // Initialiser avec des données par défaut
   void _initializeDefaultData() {
     // Pays par défaut
     _countries = [
-      Country(code: 'ci', name: 'Côte d\'Ivoire', phoneCode: '+225'),
-      Country(code: 'sn', name: 'Sénégal', phoneCode: '+221'),
-      Country(code: 'gh', name: 'Ghana', phoneCode: '+233'),
-      Country(code: 'ng', name: 'Nigeria', phoneCode: '+234'),
+      Country(code: 'ci', name: 'Côte d\'Ivoire', phoneCode: '+225', capital: 'Yamoussoukro'),
+      Country(code: 'sn', name: 'Sénégal', phoneCode: '+221', capital: 'Dakar'),
+      Country(code: 'gh', name: 'Ghana', phoneCode: '+233', capital: 'Accra'),
+      Country(code: 'ng', name: 'Nigeria', phoneCode: '+234', capital: 'Abuja'),
     ];
     
-    // Quelques villes de Côte d'Ivoire par défaut
+    // Quelques régions par défaut pour la Côte d'Ivoire
+    _regions = [
+      Region(id: 'lagunes', name: 'Lagunes', countryCode: 'ci', mainCity: 'Abidjan'),
+      Region(id: 'lacs', name: 'Lacs', countryCode: 'ci', mainCity: 'Yamoussoukro'),
+      Region(id: 'gbeke', name: 'Gbêkê', countryCode: 'ci', mainCity: 'Bouaké'),
+      Region(id: 'san_pedro', name: 'San-Pédro', countryCode: 'ci', mainCity: 'San Pedro'),
+    ];
+    
+    // Villes par défaut
     _cities = [
       City(
         id: 'abidjan',
         name: 'Abidjan',
         region: 'Lagunes',
+        regionId: 'lagunes',
         countryCode: 'ci',
         latitude: 5.3599517,
         longitude: -4.0082563,
@@ -52,6 +214,7 @@ class LocationService {
         id: 'yamoussoukro',
         name: 'Yamoussoukro',
         region: 'Lacs',
+        regionId: 'lacs',
         countryCode: 'ci',
         latitude: 6.8276228,
         longitude: -5.2893433,
@@ -60,73 +223,93 @@ class LocationService {
       City(
         id: 'bouake',
         name: 'Bouaké',
-        region: 'Vallée du Bandama',
+        region: 'Gbêkê',
+        regionId: 'gbeke',
         countryCode: 'ci',
-        latitude: 7.6898329,
-        longitude: -5.0309311,
+        latitude: 7.6898864,
+        longitude: -5.0364485,
         isPopular: true,
       ),
       City(
-        id: 'cocody',
-        name: 'Cocody',
-        region: 'District Autonome d\'Abidjan',
+        id: 'san_pedro',
+        name: 'San Pedro',
+        region: 'San-Pédro',
+        regionId: 'san_pedro',
         countryCode: 'ci',
-        latitude: 5.3601774,
-        longitude: -3.9812076,
-        isPopular: true,
-      ),
-      City(
-        id: 'plateau',
-        name: 'Plateau',
-        region: 'District Autonome d\'Abidjan',
-        countryCode: 'ci',
-        latitude: 5.3241081,
-        longitude: -4.0211811,
+        latitude: 4.7456134,
+        longitude: -6.6391225,
         isPopular: true,
       ),
     ];
     
-    // Essayer de charger les données complètes
-    initialize();
+    // Quartiers par défaut
+    _neighborhoods = [
+      Neighborhood(
+        id: 'cocody',
+        name: 'Cocody',
+        cityId: 'abidjan',
+        countryCode: 'ci',
+        latitude: 5.3641352,
+        longitude: -3.9673475,
+        isPopular: true,
+      ),
+      Neighborhood(
+        id: 'marcory',
+        name: 'Marcory',
+        cityId: 'abidjan',
+        countryCode: 'ci',
+        latitude: 5.3020198,
+        longitude: -3.9784288,
+        isPopular: true,
+      ),
+      Neighborhood(
+        id: 'plateau',
+        name: 'Plateau',
+        cityId: 'abidjan',
+        countryCode: 'ci',
+        latitude: 5.3220556,
+        longitude: -4.0168485,
+        isPopular: true,
+      ),
+    ];
   }
   
-  // Initialisation du service
-  Future<void> initialize() async {
-    await _loadCountries();
-    await _loadCities();
-  }
-  
-  // Chargement des pays depuis le fichier JSON
-  Future<void> _loadCountries() async {
-    try {
-      final String jsonString = await rootBundle.loadString('assets/data/countries.json');
-      final List<dynamic> jsonList = json.decode(jsonString);
-      _countries = jsonList.map((json) => Country.fromMap(json)).toList();
-    } catch (e) {
-      print('Erreur lors du chargement des pays: $e');
-    }
-  }
-  
-  // Chargement des villes depuis le fichier JSON
-  Future<void> _loadCities() async {
-    try {
-      final String jsonString = await rootBundle.loadString('assets/data/cities.json');
-      final List<dynamic> jsonList = json.decode(jsonString);
-      _cities = jsonList.map((json) => City.fromMap(json)).toList();
-    } catch (e) {
-      print('Erreur lors du chargement des villes: $e');
-    }
-  }
-  
-  // Obtenir tous les pays
+  /// Retourne tous les pays disponibles
   List<Country> getCountries() {
     return _countries;
   }
   
-  // Obtenir un pays par son code
+  /// Obtenir un pays par son code
   Country? getCountryByCode(String code) {
     try {
-      return _countries.firstWhere((country) => country.code.toLowerCase() == code.toLowerCase());
+      return _countries.firstWhere(
+        (country) => country.code.toLowerCase() == code.toLowerCase()
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  // Obtenir toutes les régions d'un pays
+  List<Region> getRegionsByCountry(String countryCode) {
+    return _regions.where((region) => 
+      region.countryCode.toLowerCase() == countryCode.toLowerCase()
+    ).toList();
+  }
+  
+  // Méthode de compatibilité pour l'ancien code - retourne les noms des régions
+  List<String> getRegionNamesByCountry(String countryCode) {
+    final regions = getRegionsByCountry(countryCode);
+    return regions.map((region) => region.name).toList();
+  }
+  
+  // Obtenir une région par son ID
+  Region? getRegionById(String regionId, String countryCode) {
+    try {
+      return _regions.firstWhere((region) => 
+        region.id.toLowerCase() == regionId.toLowerCase() && 
+        region.countryCode.toLowerCase() == countryCode.toLowerCase()
+      );
     } catch (e) {
       return null;
     }
@@ -139,140 +322,171 @@ class LocationService {
   
   // Obtenir les villes populaires d'un pays
   List<City> getPopularCitiesByCountry(String countryCode) {
-    return _cities.where(
-      (city) => city.countryCode.toLowerCase() == countryCode.toLowerCase() && city.isPopular
-    ).toList();
+    List<City> result = [];
+    
+    try {
+      // Filtrer les villes populaires du pays spécifié
+      result = _cities.where(
+        (city) => 
+          city.countryCode.toLowerCase() == countryCode.toLowerCase() && 
+          city.isPopular == true
+      ).toList();
+      
+      // Si aucune ville populaire n'est trouvée, retourner les 5 premières villes du pays
+      if (result.isEmpty) {
+        print('Aucune ville populaire trouvée pour le pays $countryCode');
+        return getCitiesByCountry(countryCode).take(5).toList();
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération des villes populaires: $e');
+    }
+    
+    return result;
   }
   
-  // Obtenir toutes les villes d'une région
+  // Obtenir les villes d'une région
   List<City> getCitiesByRegion(String countryCode, String region) {
     return _cities.where(
       (city) => city.countryCode.toLowerCase() == countryCode.toLowerCase() && 
-                city.region.toLowerCase() == region.toLowerCase()
+                (city.regionId != null && city.regionId!.toLowerCase() == region.toLowerCase())
     ).toList();
   }
   
-  // Recherche de villes par nom
-  List<City> searchCities(String query, {String? countryCode}) {
-    if (query.isEmpty) return [];
-    
-    final lowercaseQuery = query.toLowerCase();
-    var filteredCities = _cities.where(
-      (city) => city.name.toLowerCase().contains(lowercaseQuery)
-    ).toList();
+  // Obtenir une ville par son ID
+  City? getCityById(String cityId) {
+    try {
+      return _cities.firstWhere((city) => city.id.toLowerCase() == cityId.toLowerCase());
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  // Rechercher des villes par nom
+  List<City> searchCitiesByName(String query, {String? countryCode, String? region}) {
+    List<City> filteredCities = _cities;
     
     if (countryCode != null) {
-      filteredCities = filteredCities.where(
-        (city) => city.countryCode.toLowerCase() == countryCode.toLowerCase()
+      filteredCities = filteredCities.where((city) => 
+        city.countryCode.toLowerCase() == countryCode.toLowerCase()
+      ).toList();
+    }
+    
+    if (region != null) {
+      filteredCities = filteredCities.where((city) => 
+        city.regionId != null && city.regionId!.toLowerCase() == region.toLowerCase()
+      ).toList();
+    }
+    
+    if (query.isNotEmpty) {
+      final lowerQuery = query.toLowerCase();
+      filteredCities = filteredCities.where((city) => 
+        city.name.toLowerCase().contains(lowerQuery)
       ).toList();
     }
     
     return filteredCities;
   }
   
-  // Obtenir toutes les régions d'un pays
-  List<String> getRegionsByCountry(String countryCode) {
-    final cities = getCitiesByCountry(countryCode);
-    final regions = cities.map((city) => city.region).toSet().toList();
-    regions.sort();
-    return regions;
+  // Méthode de compatibilité pour l'ancien nom
+  List<City> searchCities(String query, {String? countryCode, String? region}) {
+    return searchCitiesByName(query, countryCode: countryCode, region: region);
   }
   
-  // Obtenir une ville par son ID
-  City? getCityById(String id) {
+  // Obtenir tous les quartiers d'une ville
+  List<Neighborhood> getNeighborhoodsByCity(String cityId) {
+    return _neighborhoods.where((neighborhood) => 
+      neighborhood.cityId.toLowerCase() == cityId.toLowerCase()
+    ).toList();
+  }
+  
+  // Obtenir les quartiers populaires d'une ville
+  List<Neighborhood> getPopularNeighborhoodsByCity(String cityId) {
+    return _neighborhoods.where((neighborhood) => 
+      neighborhood.cityId.toLowerCase() == cityId.toLowerCase() && 
+      neighborhood.isPopular
+    ).toList();
+  }
+  
+  // Méthode de compatibilité - retourne les noms des quartiers par ID de ville
+  List<String> getNeighborhoodNamesByCity(String cityId) {
+    final neighborhoods = getNeighborhoodsByCity(cityId);
+    return neighborhoods.map((n) => n.name).toList();
+  }
+  
+  // Méthode de compatibilité - retourne les noms des quartiers populaires par ID de ville
+  List<String> getPopularNeighborhoodNamesByCity(String cityId) {
+    final neighborhoods = getPopularNeighborhoodsByCity(cityId);
+    return neighborhoods.map((n) => n.name).toList();
+  }
+  
+  // Obtenir un quartier par son ID
+  Neighborhood? getNeighborhoodById(String neighborhoodId) {
     try {
-      return _cities.firstWhere((city) => city.id == id);
+      return _neighborhoods.firstWhere((neighborhood) => 
+        neighborhood.id.toLowerCase() == neighborhoodId.toLowerCase()
+      );
     } catch (e) {
       return null;
     }
   }
   
-  // Obtenir tous les quartiers d'une ville
-  List<String> getNeighborhoodsByCity(String cityId) {
-    // Quartiers fictifs pour la démonstration
-    final Map<String, List<String>> neighborhoods = {
-      'abidjan': [
-        'Akouédo',
-        'Angré',
-        'Deux Plateaux',
-        'Palmeraie',
-        'Vallons',
-        'Cocody Centre',
-        'Ambassade',
-      ],
-      'cocody': [
-        'Akouédo',
-        'Angré',
-        'Deux Plateaux',
-        'Palmeraie',
-        'Vallons',
-        'Ambassade',
-      ],
-      'plateau': [
-        'Plateau Centre',
-        'Zone Administrative',
-        'Zone Commerciale',
-        'Quartier des Affaires',
-      ],
-      'yamoussoukro': [
-        'Quartier Millionnaire',
-        'Assabou',
-        'N\'Zuessi',
-        'Zone Administrative',
-      ],
-      'bouake': [
-        'Belleville',
-        'Commerce',
-        'Dar-es-Salam',
-        'Sokoura',
-        'Koko',
-      ],
-    };
-    
-    return neighborhoods[cityId] ?? [];
-  }
-  
   // Rechercher des quartiers par nom
-  List<String> searchNeighborhoods(String query, String cityId) {
-    if (query.isEmpty) return [];
+  List<Neighborhood> searchNeighborhoods(String query, {String? cityId}) {
+    final normalizedQuery = query.toLowerCase();
+    var filteredNeighborhoods = _neighborhoods.where((neighborhood) => 
+      neighborhood.name.toLowerCase().contains(normalizedQuery)
+    ).toList();
     
-    final neighborhoods = getNeighborhoodsByCity(cityId);
-    final lowercaseQuery = query.toLowerCase();
-    
-    return neighborhoods
-        .where((neighborhood) => neighborhood.toLowerCase().contains(lowercaseQuery))
-        .toList();
-  }
-  
-  // Obtenir les suggestions de localisation avec quartiers
-  Future<List<LocationSuggestionModel>> getNeighborhoodSuggestions(String query, String cityId) async {
-    // Simuler un délai réseau
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    if (query.isEmpty) {
-      return [];
+    if (cityId != null) {
+      filteredNeighborhoods = filteredNeighborhoods.where((neighborhood) => 
+        neighborhood.cityId.toLowerCase() == cityId.toLowerCase()
+      ).toList();
     }
     
-    final City? city = getCityById(cityId);
-    if (city == null) return [];
-    
-    final neighborhoods = searchNeighborhoods(query, cityId);
-    final Country? country = getCountryByCode(city.countryCode);
-    
-    return neighborhoods.map((neighborhood) => 
-      LocationSuggestionModel(
-        id: '${cityId}_$neighborhood',
-        name: neighborhood,
-        fullAddress: '$neighborhood, ${city.name}, ${country?.name ?? ""}',
-        city: city.name,
-        district: neighborhood,
-        country: country?.name ?? "",
-        latitude: city.latitude,
-        longitude: city.longitude,
-        isPopular: false,
-        searchCount: 0,
-      )
-    ).toList();
+    return filteredNeighborhoods;
+  }
+  
+  /// Recherche par niveau (country, region, city, neighborhood)
+  List<dynamic> searchByLevel(String query, String level, {String? parentId}) {
+    switch (level) {
+      case 'country':
+        return _countries.where((country) => 
+          country.name.toLowerCase().contains(query.toLowerCase())
+        ).toList();
+      case 'region':
+        if (parentId != null) {
+          return getRegionsByCountry(parentId).where((region) => 
+            region.name.toLowerCase().contains(query.toLowerCase())
+          ).toList();
+        }
+        return [];
+      case 'city':
+        if (parentId != null) {
+          if (parentId.contains('region_')) {
+            // parentId est une région
+            final regionId = parentId.replaceFirst('region_', '');
+            final region = getRegionById(regionId, '');
+            return getCitiesByRegion(region?.countryCode ?? '', region?.id ?? '')
+                   .where((city) => city.name.toLowerCase().contains(query.toLowerCase()))
+                   .toList();
+          } else {
+            // parentId est un pays
+            return getCitiesByCountry(parentId)
+                   .where((city) => city.name.toLowerCase().contains(query.toLowerCase()))
+                   .toList();
+          }
+        }
+        return [];
+      case 'neighborhood':
+        if (parentId != null) {
+          return getNeighborhoodsByCity(parentId)
+                 .where((neighborhood) => neighborhood.name.toLowerCase().contains(query.toLowerCase()))
+                 .toList();
+        }
+        return [];
+      default:
+        return [];
+    }
   }
   
   // Simuler une API de suggestions de localisation

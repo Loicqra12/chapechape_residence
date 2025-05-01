@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/models/residence_model.dart';
-import 'package:chapechape_client/core/models/residence_type_enum.dart'; // Ajout de l'import manquant
+import 'package:chapechape_client/core/models/residence_type_enum.dart'; 
 import 'package:chapechape_client/core/services/api_service.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
-import 'package:chapechape_client/core/models/api/api_error.dart';
-import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 class ResidenceService {
   final ApiService _apiService;
@@ -37,43 +39,113 @@ class ResidenceService {
     return instance;
   }
 
-  // Récupérer toutes les résidences avec cache
+  // Récupérer toutes les résidences (standards et partenaires)
   Future<List<Residence>> getAllResidences({
     Map<String, dynamic>? filters,
     int? page,
     int? limit,
     bool forceRefresh = false,
   }) async {
-    // Construire une clé de cache basée sur les paramètres
-    final cacheKey = 'residences_all_${filters ?? ''}_page${page ?? 1}_limit${limit ?? 10}';
-    
     try {
-      // Vérifier si on a des données en cache
-      final cachedData = _cacheService.get(cacheKey);
-      if (cachedData != null && !forceRefresh) {
-        return (cachedData as List).cast<Residence>();
+      print('📋 DÉBUT getAllResidences - forceRefresh: $forceRefresh');
+      
+      // Construire une clé de cache basée sur les paramètres
+      final cacheKey = 'residences_all_${filters ?? ''}_page${page ?? 1}_limit${limit ?? 10}';
+      
+      // Vérifier si les données sont en cache et si on ne force pas le rafraîchissement
+      if (!forceRefresh) {
+        final cachedData = await _cacheService.get(cacheKey);
+        if (cachedData != null) {
+          final List<Residence> cachedResidences = (cachedData as List).cast<Residence>();
+          print('📋 Utilisation des résidences en cache (${cachedResidences.length})');
+          return cachedResidences;
+        }
       }
       
-      // Sinon, récupérer les données
-      final response = await _apiService.get(
-        '/residences',
-        queryParameters: {
-          if (filters != null) ...filters,
-          if (page != null) 'page': page,
-          if (limit != null) 'limit': limit,
-        },
-      );
-
-      final residences = (response.data['data'] as List)
-          .map((json) => _adaptBackendResidenceToClient(json))
-          .toList();
-          
-      // Mettre en cache pour 30 minutes
-      await _cacheService.put(cacheKey, residences, expiryInMinutes: 30);
+      // Liste pour stocker toutes les résidences
+      List<Residence> allResidences = [];
+      bool hasLocalResidences = false;
       
-      return residences;
-    } on DioException catch (e) {
-      throw _handleDioError(e);
+      // 1. D'abord récupérer les résidences générales
+      try {
+        print('📋 Récupération des résidences générales...');
+        final response = await _apiService.get(
+          '/residences',
+          queryParameters: {
+            if (filters != null) ...filters,
+            if (page != null) 'page': page,
+            if (limit != null) 'limit': limit,
+          },
+        );
+        
+        if (response.data['data'] is List) {
+          print('📋 ${(response.data['data'] as List).length} résidences générales trouvées');
+          final residences = (response.data['data'] as List)
+              .map((json) => _adaptBackendResidenceToClient(json))
+              .toList();
+          
+          allResidences.addAll(residences);
+          print('📋 Résidences générales ajoutées: ${residences.length}');
+          hasLocalResidences = residences.isNotEmpty;
+        } else {
+          print('📋 Aucune résidence générale trouvée');
+        }
+      } catch (e) {
+        print('📋 ERREUR lors de la récupération des résidences générales: $e');
+        // Continuer même en cas d'erreur pour tenter de récupérer les résidences partenaires
+      }
+      
+      // 2. Ensuite récupérer les résidences partenaires
+      // Ajouter un délai avant d'appeler l'API partenaire pour éviter l'erreur 429
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      try {
+        print('📋 Récupération des résidences partenaires...');
+        final response = await _apiService.get('/residences/all');
+        
+        if (response.statusCode == 200 && response.data is List) {
+          print('📋 ${(response.data as List).length} résidences partenaires trouvées');
+          final partnerResidences = (response.data as List)
+              .map((json) => _adaptBackendResidenceToClient(json))
+              .toList();
+          
+          allResidences.addAll(partnerResidences);
+          print('📋 Résidences partenaires ajoutées: ${partnerResidences.length}');
+        } else {
+          print('📋 Aucune résidence partenaire trouvée ou format de réponse incorrect');
+        }
+      } catch (e) {
+        if (e is DioException && e.response?.statusCode == 429) {
+          print('📋 ERREUR lors de la récupération des résidences partenaires: Limite de taux (429) - Trop de requêtes');
+          // Si on n'a pas de résidences locales, essayer de récupérer du cache
+          if (allResidences.isEmpty && !hasLocalResidences) {
+            try {
+              final cachedData = await _cacheService.get(cacheKey);
+              if (cachedData != null) {
+                print('📋 Utilisation du cache comme secours après erreur 429');
+                return (cachedData as List).cast<Residence>();
+              }
+            } catch (cacheError) {
+              print('📋 Impossible d\'accéder au cache: $cacheError');
+            }
+          }
+        } else {
+          print('📋 ERREUR lors de la récupération des résidences partenaires: $e');
+        }
+        // On continue avec les résidences locales uniquement
+      }
+      
+      // Mettre en cache toutes les résidences obtenues (même si partielles)
+      if (allResidences.isNotEmpty) {
+        await _cacheService.put(cacheKey, allResidences, expiryInMinutes: 5);
+        print('📋 ${allResidences.length} résidences mises en cache pour 5 minutes');
+      }
+      
+      print('📋 FIN getAllResidences - ${allResidences.length} résidences au total');
+      return allResidences;
+    } catch (e) {
+      print('📋 ERREUR GÉNÉRALE dans getAllResidences: $e');
+      return [];
     }
   }
 
@@ -83,47 +155,177 @@ class ResidenceService {
     final cacheKey = 'residence_$id';
     
     try {
-      // Vérifier si on a des données en cache
-      final cachedData = _cacheService.get(cacheKey);
+      // Vérifier si on a des données en cache et qu'on ne force pas le rafraîchissement
+      final cachedData = await _cacheService.get(cacheKey);
       if (cachedData != null && !forceRefresh) {
-        return cachedData as Residence;
+        print('🏠 Utilisation du cache pour la résidence $id');
+        if (cachedData is Residence) {
+          return cachedData;
+        } else if (cachedData is Map<String, dynamic>) {
+          try {
+            return _adaptBackendResidenceToClient(cachedData);
+          } catch (e) {
+            print('🏠 ERREUR lors de l\'adaptation des données du cache: $e');
+            // Si l'adaptation échoue, continuer avec la récupération depuis l'API
+          }
+        } else {
+          print('🏠 Type de données en cache incorrect: ${cachedData.runtimeType}');
+        }
       }
       
-      // Sinon, récupérer les données
-      debugPrint('🔍 Récupération des détails de la résidence: $id');
-      final response = await _apiService.get('residences/$id');
+      print('🏠 Récupération des détails de la résidence $id depuis l\'API...');
       
-      // LOGS DE DIAGNOSTIC DÉTAILLÉS
-      debugPrint('======== DONNÉES DÉTAILLÉES DE LA RÉSIDENCE ========');
-      debugPrint('Structure complète: ${response.data}');
+      // Liste pour stocker les erreurs rencontrées
+      final List<String> attempts = [];
       
-      // Vérifier si features existe et sa structure
-      if (response.data['features'] != null) {
-        debugPrint('Features trouvé: ${response.data['features']}');
+      // Méthode 1: Essayer avec le endpoint standard
+      try {
+        // Ajouter un timestamp pour éviter les problèmes de cache
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        
+        // Utiliser options au lieu de headers directement car l'API ne prend pas de headers
+        final response = await _apiService.get(
+          '/residences/$id?_t=$timestamp',
+          options: Options(
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+            },
+          ),
+        );
+        
+        if (response.statusCode == 200) {
+          if (response.data['data'] != null) {
+            print('🏠 Résidence $id trouvée via endpoint normal');
+            final residence = _adaptBackendResidenceToClient(response.data['data']);
+            
+            // Mettre en cache avec une durée de validité plus longue (15 minutes)
+            await _cacheService.put(cacheKey, residence, expiryInMinutes: 15);
+            
+            return residence;
+          }
+        }
+      } catch (e) {
+        attempts.add('Endpoint standard: $e');
+        print('🏠 Erreur lors de la récupération via l\'endpoint normal: $e');
       }
       
-      // Vérifier si location existe et sa structure
-      if (response.data['location'] != null) {
-        debugPrint('Location trouvé: ${response.data['location']}');
+      // Méthode 2: Essayer avec une requête HTTP directe (comme dans l'app partenaire)
+      try {
+        // Utiliser une requête HTTP directe sans préfixe /api pour éviter les confusions
+        final baseUrl = _apiService.baseUrl.replaceFirst('/api', '');
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        
+        print('🏠 Tentative avec requête HTTP directe: $baseUrl/residences/$id?_t=$timestamp');
+        final publicResponse = await http.get(
+          Uri.parse('$baseUrl/residences/$id?_t=$timestamp'),
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
+        );
+        
+        if (publicResponse.statusCode == 200) {
+          final responseData = json.decode(publicResponse.body);
+          if (responseData['data'] != null) {
+            print('🏠 Résidence $id trouvée via requête HTTP directe');
+            final residence = _adaptBackendResidenceToClient(responseData['data']);
+            await _cacheService.put(cacheKey, residence, expiryInMinutes: 15);
+            return residence;
+          }
+        } else {
+          attempts.add('Requête HTTP directe: ${publicResponse.statusCode} - ${publicResponse.body}');
+        }
+      } catch (publicError) {
+        attempts.add('Requête HTTP directe: $publicError');
+        print('🏠 Erreur lors de la tentative avec requête HTTP directe: $publicError');
       }
       
-      // Vérifier les images
-      debugPrint('Images: ${response.data['images']}');
-      debugPrint('================================================');
+      // Méthode 3: Essayer avec la route /all qui ne nécessite pas d'authentification
+      try {
+        print('🏠 Tentative via la route /residences/all...');
+        final allResponse = await _apiService.get('/residences/all');
+        
+        if (allResponse.statusCode == 200 && allResponse.data is List) {
+          print('🏠 Recherche de la résidence $id dans ${allResponse.data.length} résidences...');
+          final List<dynamic> allResidences = allResponse.data;
+          
+          // Rechercher la résidence par ID dans la liste
+          final Map<String, dynamic>? foundResidence = allResidences.firstWhere(
+            (item) => item['_id'] == id || item['id'] == id,
+            orElse: () => null,
+          );
+          
+          if (foundResidence != null) {
+            print('🏠 Résidence $id trouvée via la route /all');
+            final residence = _adaptBackendResidenceToClient(foundResidence);
+            await _cacheService.put(cacheKey, residence, expiryInMinutes: 15);
+            return residence;
+          } else {
+            attempts.add('Route /all: Résidence non trouvée dans la liste');
+          }
+        }
+      } catch (allError) {
+        attempts.add('Route /all: $allError');
+        print('🏠 Erreur lors de la tentative via la route /all: $allError');
+      }
       
-      final residence = _adaptBackendResidenceToClient(response.data);
+      // Méthode 4: Rechercher dans toutes les résidences en cache
+      try {
+        print('🏠 Recherche de la résidence $id dans toutes les résidences en cache...');
+        final cachedAllResidences = await _cacheService.get('all_residences');
+        
+        if (cachedAllResidences != null && cachedAllResidences is List) {
+          final List<Residence> residences = cachedAllResidences.cast<Residence>();
+          
+          for (final residence in residences) {
+            if (residence.id == id) {
+              print('🏠 Résidence $id trouvée dans le cache global');
+              await _cacheService.put(cacheKey, residence, expiryInMinutes: 15);
+              return residence;
+            }
+          }
+          
+          attempts.add('Cache global: Résidence non trouvée');
+        } else {
+          attempts.add('Cache global: Aucune résidence en cache');
+        }
+      } catch (cacheError) {
+        attempts.add('Cache global: $cacheError');
+        print('🏠 Erreur lors de la recherche dans le cache: $cacheError');
+      }
       
-      // Mettre en cache pour 1 heure
-      await _cacheService.put(cacheKey, residence, expiryInMinutes: 60);
+      // Si nous arrivons ici, la résidence n'a pas été trouvée
+      print('🏠 RÉSIDENCE NON TROUVÉE APRÈS TOUTES LES TENTATIVES:');
+      for (int i = 0; i < attempts.length; i++) {
+        print('🏠 Tentative ${i+1}: ${attempts[i]}');
+      }
       
-      return residence;
-    } on DioException catch (e) {
-      debugPrint('❌ Erreur lors de la récupération de la résidence: ${e.message}');
-      throw _handleDioError(e);
+      throw Exception('Résidence non trouvée après plusieurs tentatives');
+    } catch (e) {
+      print('🏠 ERREUR lors de la récupération de la résidence $id: $e');
+      
+      // En cas d'erreur, essayer de récupérer du cache même si forceRefresh=true
+      if (forceRefresh) {
+        try {
+          final lastResortCache = await _cacheService.get(cacheKey);
+          if (lastResortCache != null) {
+            print('🏠 Utilisation du cache comme dernier recours malgré forceRefresh=true');
+            return lastResortCache as Residence;
+          }
+        } catch (cacheError) {
+          print('🏠 Impossible d\'accéder au cache comme dernier recours: $cacheError');
+        }
+      }
+      
+      return null; // Retourner null si la résidence n'a pas été trouvée
     }
   }
 
-  // Rechercher des résidences avec cache
+  // Rechercher des résidences avec des critères spécifiques
   Future<List<Residence>> searchResidences({
     String? query,
     String? city,
@@ -141,35 +343,92 @@ class ResidenceService {
     
     try {
       // Vérifier si on a des données en cache
-      final cachedData = _cacheService.get(cacheKey);
+      final cachedData = await _cacheService.get(cacheKey);
       if (cachedData != null && !forceRefresh) {
         return (cachedData as List).cast<Residence>();
       }
       
-      // Sinon, récupérer les données
-      final response = await _apiService.get(
-        '/residences/search',
-        queryParameters: {
-          if (query != null) 'query': query,
-          if (city != null) 'city': city,
-          if (minPrice != null) 'minPrice': minPrice,
-          if (maxPrice != null) 'maxPrice': maxPrice,
-          if (bedrooms != null) 'bedrooms': bedrooms,
-          if (bathrooms != null) 'bathrooms': bathrooms,
-          if (amenities != null) 'amenities': amenities.join(','),
-          if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
-          if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
-        },
-      );
-
-      final residences = (response.data['data'] as List)
-          .map((json) => _adaptBackendResidenceToClient(json))
-          .toList();
-          
-      // Mettre en cache pour 15 minutes
-      await _cacheService.put(cacheKey, residences, expiryInMinutes: 15);
+      // Liste pour stocker tous les résultats de recherche
+      List<Residence> allResults = [];
       
-      return residences;
+      // 1. Rechercher dans les résidences générales
+      try {
+        final response = await _apiService.get(
+          '/residences/search',
+          queryParameters: {
+            if (query != null) 'query': query,
+            if (city != null) 'city': city,
+            if (minPrice != null) 'minPrice': minPrice,
+            if (maxPrice != null) 'maxPrice': maxPrice,
+            if (bedrooms != null) 'bedrooms': bedrooms,
+            if (bathrooms != null) 'bathrooms': bathrooms,
+            if (amenities != null) 'amenities': amenities.join(','),
+            if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
+            if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
+          },
+        );
+
+        if (response.data['data'] is List) {
+          final residences = (response.data['data'] as List)
+              .map((json) => _adaptBackendResidenceToClient(json))
+              .toList();
+          
+          allResults.addAll(residences);
+        }
+      } catch (e) {
+        print('Erreur lors de la recherche de résidences générales: $e');
+        // Continuer pour rechercher dans les résidences partenaires
+      }
+      
+      // 2. Rechercher dans les résidences partenaires
+      try {
+        final partnerResponse = await _apiService.get(
+          '/residences/all',
+          queryParameters: {
+            if (query != null) 'query': query,
+            if (city != null) 'city': city,
+          },
+        );
+
+        if (partnerResponse.data['data'] is List) {
+          // Filtrer manuellement les résultats des partenaires
+          final partnerResidences = (partnerResponse.data['data'] as List)
+              .map((json) => _adaptBackendResidenceToClient(json))
+              .where((residence) {
+                bool matches = true;
+                
+                // Filtrer par prix si spécifié
+                if (minPrice != null && residence.price < minPrice) matches = false;
+                if (maxPrice != null && residence.price > maxPrice) matches = false;
+                
+                // Filtrer par nombre de chambres/salles de bain si spécifié
+                if (bedrooms != null && residence.bedrooms < bedrooms) matches = false;
+                if (bathrooms != null && residence.bathrooms < bathrooms) matches = false;
+                
+                // Filtrer par disponibilité si spécifié
+                if (checkIn != null && checkOut != null) {
+                  // Logique de vérification de disponibilité à implémenter
+                }
+                
+                return matches;
+              })
+              .toList();
+          
+          // Ajouter les résidences partenaires qui ne sont pas déjà dans les résultats
+          for (var residence in partnerResidences) {
+            if (!allResults.any((r) => r.id == residence.id)) {
+              allResults.add(residence);
+            }
+          }
+        }
+      } catch (e) {
+        print('Erreur lors de la recherche de résidences partenaires: $e');
+      }
+      
+      // Mettre en cache pour 5 minutes
+      await _cacheService.put(cacheKey, allResults, expiryInMinutes: 5);
+      
+      return allResults;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -261,127 +520,108 @@ class ResidenceService {
   // Adapter les données du backend au format du client
   Residence _adaptBackendResidenceToClient(Map<String, dynamic> data) {
     try {
-      final String id = data['_id'] ?? data['id'] ?? '';
-      final String name = data['title'] ?? data['name'] ?? 'Sans titre';
-      final String description = data['description'] ?? 'Aucune description';
-      final double price = data['price'] != null ? double.parse(data['price'].toString()) : 0.0;
-      final String address = data['address'] ?? '';
-      final String city = data['city'] ?? '';
-      final String country = data['country'] ?? '';
+      // Si l'objet est déjà une instance de Residence, le retourner directement
+      if (data is Residence) {
+        print('✅ Objet déjà de type Residence, pas besoin d\'adaptation');
+        return data as Residence;
+      }
       
-      // Images et vérification du format
+      print('✅ Adaptation de la résidence: ${data['title'] ?? data['name'] ?? 'Sans titre'} (${data['_id'] ?? data['id'] ?? 'ID manquant'})');
+      
+      // Extraire et formater les images
       final List<String> images = _extractImages(data['images']);
       
-      // Propriétés numériques
-      final int bedrooms = data['bedrooms'] != null ? int.parse(data['bedrooms'].toString()) : 0;
-      final int bathrooms = data['bathrooms'] != null ? int.parse(data['bathrooms'].toString()) : 0;
-      final double surface = data['surface'] != null 
-        ? double.parse(data['surface'].toString()) 
-        : data['area'] != null 
-          ? double.parse(data['area'].toString()) 
-          : data['squareMeters'] != null 
-            ? double.parse(data['squareMeters'].toString()) 
-            : 0.0;
-      
-      // État de disponibilité
-      final bool isAvailable = data['status'] == 'available' || data['isAvailable'] == true;
-      
-      // Récupération de la localisation
-      Map<String, dynamic> location = {
-        'address': address,
-        'city': city,
-        'country': country,
+      // Création de la localisation
+      final Map<String, dynamic> locationMap = {
+        'address': data['address'] ?? '',
+        'city': data['city'] ?? '',
+        'country': data['country'] ?? '',
       };
       
-      if (data['location'] is Map<String, dynamic>) {
-        location = {...location, ...data['location'] as Map<String, dynamic>};
+      // Ajouter les coordonnées si elles existent
+      if (data['latitude'] != null && data['longitude'] != null) {
+        locationMap['coordinates'] = [
+          data['longitude'], 
+          data['latitude']
+        ];
+      } else if (data['location']?['coordinates'] is List) {
+        locationMap['coordinates'] = data['location']['coordinates'];
       }
+
+      // Type de résidence
+      String typeStr = (data['type'] ?? 'apartment').toString();
+      final residenceType = _mapBackendTypeToClientType(typeStr);
       
-      if (data['coordinates'] is List) {
-        location['coordinates'] = data['coordinates'];
-      } else if (data['latitude'] != null && data['longitude'] != null) {
-        location['coordinates'] = [data['latitude'], data['longitude']];
-      }
-      
-      // Récupération des équipements
-      List<String> amenities = [];
-      if (data['features'] is Map<String, dynamic>) {
-        amenities = _extractAmenities(data['features'] as Map<String, dynamic>, data);
-      } else if (data['amenities'] is List) {
-        amenities = (data['amenities'] as List).map((e) => e.toString()).toList();
-      }
-      
-      // Type de résidence - utiliser le type correct pour les studios
-      String backendType = data['type']?.toString() ?? '';
-      if (bedrooms == 0) {
-        backendType = 'studio_meuble';
-      }
-      final residenceType = _mapBackendTypeToClientType(backendType);
-      
-      // Regrouper les détails de prix pour les remises
-      Map<String, dynamic>? priceDetails;
-      if (data['discountPrice'] != null) {
-        priceDetails = {
-          'discountPrice': double.tryParse(data['discountPrice'].toString()) ?? 0.0,
-          'originalPrice': price,
-        };
-      }
-      
-      final residence = Residence(
-        id: id,
-        title: name,
-        description: description,
+      return Residence(
+        id: data['_id'] ?? data['id'] ?? '',
+        title: data['title'] ?? data['name'] ?? 'Sans titre',
+        description: data['description'] ?? 'Aucune description disponible',
         shortDescription: data['shortDescription'] ?? '',
         images: images,
-        price: price,
-        location: location,
-        bedrooms: bedrooms,
-        bathrooms: bathrooms,
-        squareMeters: surface,
-        amenities: amenities,
-        hasPool: data['hasPool'] == true || amenities.contains('pool'),
-        hasWifi: data['hasWifi'] == true || amenities.contains('wifi'),
+        price: data['price'] != null ? double.parse(data['price'].toString()) : 0.0,
+        location: locationMap,
+        bedrooms: data['bedrooms'] != null ? int.parse(data['bedrooms'].toString()) : 0,
+        bathrooms: data['bathrooms'] != null ? int.parse(data['bathrooms'].toString()) : 0,
+        squareMeters: data['surface'] != null 
+          ? double.parse(data['surface'].toString()) 
+          : data['area'] != null 
+            ? double.parse(data['area'].toString()) 
+            : 0.0,
+        amenities: data['amenities'] is List 
+          ? (data['amenities'] as List).map((e) => e.toString()).toList() 
+          : _extractAmenities(data['features'] ?? {}, data),
+        hasPool: data['hasPool'] == true || (data['amenities'] is List && (data['amenities'] as List).contains('pool')),
+        hasWifi: data['hasWifi'] == true || (data['amenities'] is List && (data['amenities'] as List).contains('wifi')),
         isVacationResidence: data['isVacationResidence'] == true,
-        isSpecialResidence: data['isSpecialResidence'] == true,
-        isAvailable: isAvailable,
+        isSpecialResidence: data['isSpecial'] == true || data['isSpecialResidence'] == true,
+        isAvailable: data['status'] == 'available' || data['isAvailable'] == true,
         isFeatured: data['isFeatured'] == true,
         isPopular: data['isPopular'] == true,
         isVerified: data['isVerified'] == true,
         isNew: data['isNew'] == true,
         rating: data['rating'] != null ? double.parse(data['rating'].toString()) : 0.0,
-        reviewCount: data['reviewCount'] != null ? int.parse(data['reviewCount'].toString()) : 0,
+        reviewCount: data['reviews'] != null ? int.parse(data['reviews'].toString()) : 0,
         currency: data['currency']?.toString() ?? 'XOF',
         type: residenceType,
-        maxOccupancy: data['maxOccupancy'] != null ? int.parse(data['maxOccupancy'].toString()) : bedrooms * 2,
+        maxOccupancy: data['maxOccupancy'] != null ? int.parse(data['maxOccupancy'].toString()) : 2,
         owner: data['owner'] ?? data['ownerId'] ?? '',
-        createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt'].toString()) : null,
-        updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt'].toString()) : null,
-        allowsPets: data['allowsPets'] == true,
-        allowsSmoking: data['allowsSmoking'] == true,
-        allowsParties: data['allowsParties'] == true,
-        priceDetails: priceDetails,
         pricePeriod: data['pricePeriod']?.toString() ?? 'month',
-        hourlyRate: data['hourlyRate'] != null ? double.parse(data['hourlyRate'].toString()) : 
-                   data['hourlyRates'] != null && data['hourlyRates']['oneHour'] != null ? 
-                   double.parse(data['hourlyRates']['oneHour'].toString()) : 0.0,
-        halfDayRate: data['halfDayRate'] != null ? double.parse(data['halfDayRate'].toString()) : 
-                    data['dailyRates'] != null && data['dailyRates']['halfDay'] != null ? 
-                    double.parse(data['dailyRates']['halfDay'].toString()) : 0.0,
-        fullDayRate: data['fullDayRate'] != null ? double.parse(data['fullDayRate'].toString()) : 
-                    data['dailyRates'] != null && data['dailyRates']['fullDay'] != null ? 
-                    double.parse(data['dailyRates']['fullDay'].toString()) : 0.0,
-        weekendRate: data['weekendRate'] != null ? double.parse(data['weekendRate'].toString()) : 
-                    data['dailyRates'] != null && data['dailyRates']['weekend'] != null ? 
-                    double.parse(data['dailyRates']['weekend'].toString()) : 0.0,
       );
-      
-      debugPrint('✅ Résidence adaptée avec succès: ${residence.title} (${residence.id})');
-      return residence;
     } catch (e, stackTrace) {
-      debugPrint('❌ Erreur lors de l\'adaptation des données: $e');
-      debugPrint('Stack trace: $stackTrace');
-      debugPrint('JSON reçu: $data');
-      throw Exception('Erreur lors de l\'adaptation des données de la résidence');
+      print('❌ ERREUR lors de l\'adaptation de la résidence: $e');
+      print('Stack trace: $stackTrace');
+      print('❌ Données reçues: $data');
+      
+      // Créer une résidence par défaut en cas d'erreur
+      return Residence(
+        id: data['_id'] ?? data['id'] ?? 'error-${DateTime.now().millisecondsSinceEpoch}',
+        title: data['title'] ?? 'Résidence indisponible',
+        description: 'Information indisponible',
+        shortDescription: '',
+        images: [],
+        price: 0,
+        location: {'address': 'Adresse indisponible', 'city': '', 'country': ''},
+        bedrooms: 0,
+        bathrooms: 0,
+        squareMeters: 0,
+        amenities: [],
+        hasPool: false,
+        hasWifi: false,
+        isVacationResidence: false,
+        isSpecialResidence: false,
+        isAvailable: false,
+        isFeatured: false,
+        isPopular: false,
+        isVerified: false, 
+        isNew: false,
+        rating: 0.0,
+        reviewCount: 0,
+        currency: 'XOF',
+        type: ResidenceType.apartment,
+        maxOccupancy: 1,
+        owner: '',
+        pricePeriod: 'month',
+      );
     }
   }
   
@@ -407,7 +647,10 @@ class ResidenceService {
 
   // Fonction pour extraire et formater correctement les URLs des images
   List<String> _extractImages(dynamic imagesData) {
-    if (imagesData == null) return [];
+    if (imagesData == null) {
+      print("❌ Images data est null");
+      return [];
+    }
     
     List<String> imageUrls = [];
     String baseUrl = _apiService.baseUrl;
@@ -417,12 +660,18 @@ class ResidenceService {
       baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
     
-    print("Base URL utilisée pour les images: $baseUrl");
+    // Nettoyer la baseUrl pour éviter les duplications de '/api'
+    final cleanBaseUrl = baseUrl.replaceAll('/api', '');
+    
+    print("Base URL utilisée pour les images: $cleanBaseUrl");
     print("Images data brut: $imagesData");
+    print("Type des données d'images: ${imagesData.runtimeType}");
     
     if (imagesData is List) {
+      int index = 0;
       for (var img in imagesData) {
         String imageUrl = '';
+        print("Traitement de l'image #$index: $img (type: ${img.runtimeType})");
         
         if (img is String) {
           imageUrl = img;
@@ -437,29 +686,46 @@ class ResidenceService {
         // Ajouter le domaine si c'est un chemin relatif
         if (imageUrl.isNotEmpty) {
           if (!imageUrl.startsWith('http')) {
-            // Différents cas de chemins relatifs
+            // Extraire le nom du fichier pour différents cas de chemins relatifs
             if (imageUrl.startsWith('/uploads/')) {
-              imageUrl = '$baseUrl$imageUrl';
+              // Ajouter '/residences/' si ce n'est pas déjà présent
+              if (!imageUrl.startsWith('/uploads/residences/')) {
+                imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
+              }
+              imageUrl = '$cleanBaseUrl$imageUrl';
             } else if (imageUrl.startsWith('uploads/')) {
-              imageUrl = '$baseUrl/$imageUrl';
+              // Ajouter '/residences/' si ce n'est pas déjà présent
+              if (!imageUrl.startsWith('uploads/residences/')) {
+                imageUrl = imageUrl.replaceAll('uploads/', 'uploads/residences/');
+              }
+              imageUrl = '$cleanBaseUrl/$imageUrl';
             } else if (imageUrl.startsWith('/')) {
-              imageUrl = '$baseUrl$imageUrl';
+              imageUrl = '$cleanBaseUrl/uploads/residences$imageUrl';
             } else {
-              // Fallback pour tout autre cas
-              imageUrl = '$baseUrl/uploads/$imageUrl';
+              imageUrl = '$cleanBaseUrl/uploads/residences/$imageUrl';
             }
+          } else if (imageUrl.startsWith('http') && imageUrl.contains('/uploads/') && !imageUrl.contains('/uploads/residences/')) {
+            // Si c'est une URL complète, ajouter /residences/ si nécessaire
+            imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
           }
-          print("URL d'image extraite dans le client: $imageUrl");
+          print("✅ URL d'image #$index extraite et formatée: $imageUrl");
           imageUrls.add(imageUrl);
+        } else {
+          print("❌ URL vide pour l'image #$index");
         }
+        index++;
       }
+    } else {
+      print("❌ Images data n'est pas une liste: ${imagesData.runtimeType}");
     }
     
     // Si aucune image trouvée, ajouter une image par défaut
     if (imageUrls.isEmpty) {
+      print("❌ Aucune image trouvée, utilisation de l'image par défaut");
       imageUrls.add('https://via.placeholder.com/300x200?text=No+Image');
     }
     
+    print("Images finales extraites: $imageUrls");
     return imageUrls;
   }
 
@@ -496,50 +762,158 @@ class ResidenceService {
   }
   
   // Récupère les résidences mises en avant
-  Future<List<Residence>> getFeaturedResidences() async {
+  Future<List<Residence>> getFeaturedResidences({bool forceRefresh = false}) async {
+    final cacheKey = 'featured_residences';
+    
     try {
-      return await getAllResidences(
-        filters: {'featured': true},
-        limit: 10,
-      );
-    } on DioException catch (e) {
-      debugPrint('Erreur lors de la récupération des résidences en vedette: $e');
-      throw _handleDioError(e);
+      // Vérifier si on a des données en cache et si on ne force pas le rafraîchissement
+      final cachedData = await _cacheService.get(cacheKey);
+      if (cachedData != null && !forceRefresh) {
+        print('🌟 Utilisation du cache pour les résidences en vedette');
+        final List<dynamic> cachedList = cachedData as List;
+        return cachedList.map((e) => e as Residence).toList();
+      }
+      
+      // Récupérer toutes les résidences
+      final allResidences = await getAllResidences(forceRefresh: forceRefresh);
+      
+      // Filtrer les résidences mises en avant
+      final featuredResidences = allResidences.where((r) => r.isFeatured == true).toList();
+      print('🌟 ${featuredResidences.length} résidences en vedette trouvées');
+      
+      // Mettre en cache avec une durée de validité plus longue (30 minutes)
+      if (featuredResidences.isNotEmpty) {
+        await _cacheService.put(cacheKey, featuredResidences, expiryInMinutes: 30);
+        print('🌟 Résidences en vedette mises en cache pour 30 minutes');
+      }
+      
+      return featuredResidences;
     } catch (e) {
-      debugPrint('Erreur lors de la récupération des résidences en vedette: $e');
+      print('🌟 ERREUR lors de la récupération des résidences en vedette: $e');
+      
+      // En cas d'erreur, essayer de récupérer du cache même si forceRefresh=true
+      try {
+        final cachedData = await _cacheService.get(cacheKey);
+        if (cachedData != null) {
+          print('🌟 Utilisation du cache comme fallback après erreur');
+          final List<dynamic> cachedList = cachedData as List;
+          return cachedList.map((e) => e as Residence).toList();
+        }
+      } catch (_) {}
+      
+      // Si tout échoue, retourner une liste vide
       return [];
     }
   }
-  
-  // Récupère les résidences spéciales
-  Future<List<Residence>> getSpecialResidences() async {
+
+  // Récupérer les résidences spéciales
+  Future<List<Residence>> getSpecialResidences({bool forceRefresh = false}) async {
+    final cacheKey = 'special_residences';
+    
     try {
-      return await getAllResidences(
-        filters: {'special': true},
-        limit: 10,
-      );
-    } on DioException catch (e) {
-      debugPrint('Erreur lors de la récupération des résidences spéciales: $e');
-      throw _handleDioError(e);
+      // Vérifier si on a des données en cache et si on ne force pas le rafraîchissement
+      final cachedData = await _cacheService.get(cacheKey);
+      if (cachedData != null && !forceRefresh) {
+        print('✨ Utilisation du cache pour les résidences spéciales');
+        final List<dynamic> cachedList = cachedData as List;
+        return cachedList.map((e) => e as Residence).toList();
+      }
+      
+      // Récupérer toutes les résidences
+      final allResidences = await getAllResidences(forceRefresh: forceRefresh);
+      
+      // Filtrer les résidences spéciales
+      final specialResidences = allResidences.where((r) => r.isSpecialResidence == true).toList();
+      print('✨ ${specialResidences.length} résidences spéciales trouvées');
+      
+      // Mettre en cache avec une durée de validité plus longue (30 minutes)
+      if (specialResidences.isNotEmpty) {
+        await _cacheService.put(cacheKey, specialResidences, expiryInMinutes: 30);
+        print('✨ Résidences spéciales mises en cache pour 30 minutes');
+      }
+      
+      return specialResidences;
     } catch (e) {
-      debugPrint('Erreur lors de la récupération des résidences spéciales: $e');
+      print('✨ ERREUR lors de la récupération des résidences spéciales: $e');
+      
+      // En cas d'erreur, essayer de récupérer du cache même si forceRefresh=true
+      try {
+        final cachedData = await _cacheService.get(cacheKey);
+        if (cachedData != null) {
+          print('✨ Utilisation du cache comme fallback après erreur');
+          final List<dynamic> cachedList = cachedData as List;
+          return cachedList.map((e) => e as Residence).toList();
+        }
+      } catch (_) {}
+      
+      // Si tout échoue, retourner une liste vide
       return [];
     }
   }
-  
-  // Récupère les résidences populaires
-  Future<List<Residence>> getPopularResidences() async {
+
+  // Récupérer les résidences populaires
+  Future<List<Residence>> getPopularResidences({bool forceRefresh = false}) async {
+    final cacheKey = 'residences_popular';
+    
     try {
-      return await getAllResidences(
-        filters: {'popular': true, 'sort': 'rating'}, 
-        limit: 10,
-      );
+      if (!forceRefresh) {
+        final cachedData = await _cacheService.get(cacheKey);
+        if (cachedData != null) {
+          return (cachedData as List).cast<Residence>();
+        }
+      }
+      
+      List<Residence> popularResidences = [];
+      
+      // 1. Récupérer les résidences populaires standards
+      try {
+        final response = await _apiService.get('/residences/popular');
+        if (response.data['data'] is List) {
+          final residences = (response.data['data'] as List)
+            .map((json) => _adaptBackendResidenceToClient(json))
+            .toList();
+          
+          popularResidences.addAll(residences);
+        }
+      } catch (e) {
+        print('Erreur lors de la récupération des résidences populaires standards: $e');
+      }
+      
+      // 2. Récupérer toutes les résidences des partenaires et sélectionner les plus récentes
+      try {
+        final partnerResponse = await _apiService.get('/residences/all');
+        if (partnerResponse.data['data'] is List) {
+          // Convertir en objets Residence
+          List<Residence> partnerResidences = (partnerResponse.data['data'] as List)
+            .map((json) => _adaptBackendResidenceToClient(json))
+            .toList();
+          
+          // Trier par date de création (les plus récentes d'abord)
+          partnerResidences.sort((a, b) {
+            // Vérification de null safety
+            final dateA = a.createdAt ?? DateTime.now();
+            final dateB = b.createdAt ?? DateTime.now();
+            return dateB.compareTo(dateA);
+          });
+          
+          // Prendre les 5 plus récentes
+          partnerResidences = partnerResidences.take(5).toList();
+          
+          // Ajouter uniquement celles qui ne sont pas déjà présentes
+          for (var residence in partnerResidences) {
+            if (!popularResidences.any((r) => r.id == residence.id)) {
+              popularResidences.add(residence);
+            }
+          }
+        }
+      } catch (e) {
+        print('Erreur lors de la récupération des résidences populaires des partenaires: $e');
+      }
+      
+      await _cacheService.put(cacheKey, popularResidences, expiryInMinutes: 5);
+      return popularResidences;
     } on DioException catch (e) {
-      debugPrint('Erreur lors de la récupération des résidences populaires: $e');
       throw _handleDioError(e);
-    } catch (e) {
-      debugPrint('Erreur lors de la récupération des résidences populaires: $e');
-      return [];
     }
   }
 }

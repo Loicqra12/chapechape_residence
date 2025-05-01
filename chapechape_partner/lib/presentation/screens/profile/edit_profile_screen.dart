@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/auth/auth_event.dart';
+import 'package:chapechape_partner/core/config/app_config_manager.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -96,23 +97,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  String _getFullImageUrl(String url) {
-    if (url.startsWith('http')) {
-      // L'URL est déjà complète
-      return url;
-    }
+  /// Construit l'URL complète d'une image de profil à partir d'un chemin relatif
+  String _buildProfileImageUrl(String url) {
+    if (url.isEmpty) return '';
     
-    // Vérifier si l'URL commence par /uploads/
-    if (url.startsWith('/uploads/')) {
-      // C'est un chemin relatif correct, ajouter juste le domaine
-      return 'http://192.168.1.68:4000${url}';
-    } else if (url.startsWith('/')) {
-      // URL relative mais sans uploads, ajouter le chemin complet
-      return 'http://192.168.1.68:4000/uploads/profiles${url}';
-    } else {
-      // URL sans slash initial, ajouter le chemin complet avec slash
-      return 'http://192.168.1.68:4000/uploads/profiles/${url}';
-    }
+    // Si l'URL est déjà complète, la retourner telle quelle
+    if (url.startsWith('http')) return url;
+    
+    // Utiliser AppConfigManager pour construire l'URL
+    return AppConfigManager.getProfileImageUrl(url);
   }
 
   Future<void> _uploadDocument(String type) async {
@@ -222,7 +215,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 )
                               : partner?.profilePictureUrl != null
                                   ? DecorationImage(
-                                      image: NetworkImage(_getFullImageUrl(partner!.profilePictureUrl!)),
+                                      image: NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!)),
                                       fit: BoxFit.cover,
                                     )
                                   : null,

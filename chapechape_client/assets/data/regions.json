@@ -1,0 +1,300 @@
+[
+  {
+    "id": "abidjan",
+    "name": "District Autonome d'Abidjan",
+    "countryCode": "CI",
+    "latitude": 5.3599517,
+    "longitude": -4.0082563,
+    "isPopular": true
+  },
+  {
+    "id": "yamoussoukro",
+    "name": "District Autonome de Yamoussoukro",
+    "countryCode": "CI",
+    "latitude": 6.8276228,
+    "longitude": -5.2893433,
+    "isPopular": true
+  },
+  {
+    "id": "bas_sassandra",
+    "name": "Bas-Sassandra",
+    "countryCode": "CI",
+    "latitude": 4.9513738,
+    "longitude": -6.2359254,
+    "isPopular": false
+  },
+  {
+    "id": "comoe",
+    "name": "Comoé",
+    "countryCode": "CI",
+    "latitude": 5.4635371,
+    "longitude": -3.2083387,
+    "isPopular": false
+  },
+  {
+    "id": "denguele",
+    "name": "Denguélé",
+    "countryCode": "CI",
+    "latitude": 9.6502696,
+    "longitude": -7.4405842,
+    "isPopular": false
+  },
+  {
+    "id": "goh_djiboua",
+    "name": "Gôh-Djiboua",
+    "countryCode": "CI",
+    "latitude": 5.9001651,
+    "longitude": -5.7843276,
+    "isPopular": false
+  },
+  {
+    "id": "lacs",
+    "name": "Lacs",
+    "countryCode": "CI",
+    "latitude": 7.1238578,
+    "longitude": -5.0913379,
+    "isPopular": false
+  },
+  {
+    "id": "lagunes",
+    "name": "Lagunes",
+    "countryCode": "CI",
+    "latitude": 5.3046686,
+    "longitude": -4.3499454,
+    "isPopular": true
+  },
+  {
+    "id": "montagnes",
+    "name": "Montagnes",
+    "countryCode": "CI",
+    "latitude": 7.5467552,
+    "longitude": -7.5543446,
+    "isPopular": false
+  },
+  {
+    "id": "sassandra_marahoue",
+    "name": "Sassandra-Marahoué",
+    "countryCode": "CI",
+    "latitude": 6.8812861,
+    "longitude": -6.4368093,
+    "isPopular": false
+  },
+  {
+    "id": "savanes",
+    "name": "Savanes",
+    "countryCode": "CI",
+    "latitude": 9.4119861,
+    "longitude": -5.6197879,
+    "isPopular": false
+  },
+  {
+    "id": "vallee_bandama",
+    "name": "Vallée du Bandama",
+    "countryCode": "CI",
+    "latitude": 8.0288729,
+    "longitude": -5.0913379,
+    "isPopular": false
+  },
+  {
+    "id": "woroba",
+    "name": "Woroba",
+    "countryCode": "CI",
+    "latitude": 8.3243792,
+    "longitude": -7.0802356,
+    "isPopular": false
+  },
+  {
+    "id": "zanzan",
+    "name": "Zanzan",
+    "countryCode": "CI",
+    "latitude": 8.0642971,
+    "longitude": -3.2656491,
+    "isPopular": false
+  },
+  
+  {
+    "id": "dakar",
+    "name": "Dakar",
+    "countryCode": "SN",
+    "latitude": 14.7645042,
+    "longitude": -17.3660286,
+    "isPopular": true
+  },
+  {
+    "id": "thies",
+    "name": "Thiès",
+    "countryCode": "SN",
+    "latitude": 14.7886451,
+    "longitude": -16.9622922,
+    "isPopular": true
+  },
+  {
+    "id": "diourbel",
+    "name": "Diourbel",
+    "countryCode": "SN",
+    "latitude": 14.7294261,
+    "longitude": -16.231884,
+    "isPopular": false
+  },
+  {
+    "id": "saint_louis",
+    "name": "Saint-Louis",
+    "countryCode": "SN",
+    "latitude": 16.0326171,
+    "longitude": -16.4818442,
+    "isPopular": true
+  },
+  {
+    "id": "matam",
+    "name": "Matam",
+    "countryCode": "SN",
+    "latitude": 15.6571175,
+    "longitude": -13.2574359,
+    "isPopular": false
+  },
+  {
+    "id": "louga",
+    "name": "Louga",
+    "countryCode": "SN",
+    "latitude": 15.6173263,
+    "longitude": -16.2342185,
+    "isPopular": false
+  },
+  {
+    "id": "fatick",
+    "name": "Fatick",
+    "countryCode": "SN",
+    "latitude": 14.3343618,
+    "longitude": -16.4118652,
+    "isPopular": false
+  },
+  {
+    "id": "kaolack",
+    "name": "Kaolack",
+    "countryCode": "SN",
+    "latitude": 14.1652083,
+    "longitude": -16.0759295,
+    "isPopular": true
+  },
+  {
+    "id": "kaffrine",
+    "name": "Kaffrine",
+    "countryCode": "SN",
+    "latitude": 14.1061081,
+    "longitude": -15.5423446,
+    "isPopular": false
+  },
+  {
+    "id": "tambacounda",
+    "name": "Tambacounda",
+    "countryCode": "SN",
+    "latitude": 13.7709372,
+    "longitude": -13.6730547,
+    "isPopular": false
+  },
+  {
+    "id": "kedougou",
+    "name": "Kédougou",
+    "countryCode": "SN",
+    "latitude": 12.5564933,
+    "longitude": -12.1751741,
+    "isPopular": false
+  },
+  {
+    "id": "kolda",
+    "name": "Kolda",
+    "countryCode": "SN",
+    "latitude": 12.9089868,
+    "longitude": -14.9406366,
+    "isPopular": false
+  },
+  {
+    "id": "sedhiou",
+    "name": "Sédhiou",
+    "countryCode": "SN",
+    "latitude": 12.7047942,
+    "longitude": -15.5562506,
+    "isPopular": false
+  },
+  {
+    "id": "ziguinchor",
+    "name": "Ziguinchor",
+    "countryCode": "SN",
+    "latitude": 12.5598984,
+    "longitude": -16.2633679,
+    "isPopular": true
+  },
+  
+  {
+    "id": "bamako",
+    "name": "District de Bamako",
+    "countryCode": "ML",
+    "latitude": 12.6392316,
+    "longitude": -8.0028892,
+    "isPopular": true
+  },
+  {
+    "id": "kayes",
+    "name": "Kayes",
+    "countryCode": "ML",
+    "latitude": 14.4461578,
+    "longitude": -11.4448416,
+    "isPopular": true
+  },
+  {
+    "id": "koulikoro",
+    "name": "Koulikoro",
+    "countryCode": "ML",
+    "latitude": 12.8632092,
+    "longitude": -7.5587015,
+    "isPopular": true
+  },
+  {
+    "id": "sikasso",
+    "name": "Sikasso",
+    "countryCode": "ML",
+    "latitude": 11.3170251,
+    "longitude": -5.6739526,
+    "isPopular": true
+  },
+  {
+    "id": "segou",
+    "name": "Ségou",
+    "countryCode": "ML",
+    "latitude": 13.4499111,
+    "longitude": -6.1930153,
+    "isPopular": true
+  },
+  {
+    "id": "mopti",
+    "name": "Mopti",
+    "countryCode": "ML",
+    "latitude": 14.4843116,
+    "longitude": -4.1991677,
+    "isPopular": true
+  },
+  {
+    "id": "tombouctou",
+    "name": "Tombouctou",
+    "countryCode": "ML",
+    "latitude": 16.767821,
+    "longitude": -3.0231282,
+    "isPopular": true
+  },
+  {
+    "id": "gao",
+    "name": "Gao",
+    "countryCode": "ML",
+    "latitude": 16.2785224,
+    "longitude": 0.0411546,
+    "isPopular": false
+  },
+  {
+    "id": "kidal",
+    "name": "Kidal",
+    "countryCode": "ML",
+    "latitude": 18.4405637,
+    "longitude": 1.4030451,
+    "isPopular": false
+  }
+]

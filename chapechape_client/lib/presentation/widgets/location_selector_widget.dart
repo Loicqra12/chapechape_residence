@@ -74,7 +74,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
   
   // Charger les régions du pays sélectionné
   void _loadRegions() {
-    _regions = _locationService.getRegionsByCountry(_selectedCountry.code);
+    _regions = _locationService.getRegionNamesByCountry(_selectedCountry.code);
     setState(() {});
   }
   
@@ -239,75 +239,80 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                 final city = _suggestions[index];
                 return ListTile(
                   title: Text(city.name),
-                  subtitle: Text(city.region),
-                  onTap: () => _onCitySelected(city),
+                  subtitle: Text(_regions.contains(city.region) ? city.region : ''),
+                  onTap: () {
+                    _onCitySelected(city);
+                    Navigator.pop(context);
+                  },
                 );
               },
             ),
           )
         else if (!_isSearching && _selectedCity == null)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-              // Villes populaires
-              if (_popularCities.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 8),
-                  child: Text(
-                    'Villes populaires',
-                    style: TextStyle(
-                      fontSize: context.responsiveFontSize(14),
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Villes populaires
+                if (_popularCities.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 8),
+                    child: Text(
+                      'Villes populaires',
+                      style: TextStyle(
+                        fontSize: context.responsiveFontSize(14),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
                     ),
                   ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _popularCities.map((city) {
-                    return InkWell(
-                      onTap: () => _onCitySelected(city),
-                      child: Chip(
-                        label: Text(city.name),
-                        backgroundColor: Colors.grey[200],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _popularCities.map((city) {
+                      return InkWell(
+                        onTap: () => _onCitySelected(city),
+                        child: Chip(
+                          label: Text(city.name),
+                          backgroundColor: Colors.grey[200],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+                
+                // Régions
+                if (_regions.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 8),
+                    child: Text(
+                      'Régions',
+                      style: TextStyle(
+                        fontSize: context.responsiveFontSize(14),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
                       ),
-                    );
-                  }).toList(),
-                ),
-              ],
-              
-              // Régions
-              if (_regions.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 16, bottom: 8),
-                  child: Text(
-                    'Régions',
-                    style: TextStyle(
-                      fontSize: context.responsiveFontSize(14),
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
                     ),
                   ),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _regions.map((region) {
-                    return InkWell(
-                      onTap: () {
-                        // Afficher les villes de cette région dans un modal
-                        _showCitiesInRegion(region);
-                      },
-                      child: Chip(
-                        label: Text(region),
-                        backgroundColor: Colors.blue[50],
-                      ),
-                    );
-                  }).toList(),
-                ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _regions.map((region) {
+                      return InkWell(
+                        onTap: () {
+                          // Afficher les villes de cette région dans un modal
+                          _showCitiesInRegion(region);
+                        },
+                        child: Chip(
+                          label: Text(region),
+                          backgroundColor: Colors.blue[50],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
       ],
     );
@@ -454,7 +459,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                           final city = _suggestions[index];
                           return ListTile(
                             title: Text(city.name),
-                            subtitle: Text(city.region),
+                            subtitle: Text(_regions.contains(city.region) ? city.region : ''),
                             onTap: () {
                               _onCitySelected(city);
                               Navigator.pop(context);
@@ -462,8 +467,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                           );
                         },
                       )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    : ListView(
                         children: [
                           Text(
                             'Villes populaires',
@@ -483,14 +487,37 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                                   _onCitySelected(city);
                                   Navigator.pop(context);
                                 },
-                  );
-                }).toList(),
+                              );
+                            }).toList(),
                           ),
+                          if (_regions.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              'Régions',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _regions.map((region) {
+                                return ActionChip(
+                                  label: Text(region),
+                                  onPressed: () {
+                                    _showCitiesInRegion(region);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ],
                       ),
-          ),
-        ],
-      ),
+                ),
+              ],
+            ),
           ),
         );
       },
