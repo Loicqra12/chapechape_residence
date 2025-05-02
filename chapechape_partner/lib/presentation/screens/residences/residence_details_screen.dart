@@ -986,6 +986,86 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
           ),
         ),
         
+        // Section pour les Points d'intérêt à proximité
+        if (residence.nearbyPlaces.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Points d\'intérêt à proximité',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
+                            onPressed: () {
+                              // TODO: Navigation vers l'écran d'édition des points d'intérêt
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Édition des points d\'intérêt bientôt disponible')),
+                              );
+                            },
+                            tooltip: 'Modifier les points d\'intérêt',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ...residence.nearbyPlaces.map((place) => _buildNearbyPlaceItem(context, place)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+        // Section pour les FAQ
+        if (residence.faqs.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Questions fréquentes',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
+                            onPressed: () {
+                              // TODO: Navigation vers l'écran d'édition des FAQ
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Édition des FAQ bientôt disponible')),
+                              );
+                            },
+                            tooltip: 'Modifier les FAQ',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ...residence.faqs.map((faq) => _buildFaqItem(context, faq)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+            
         const SizedBox(height: 80), // Espace pour le floating action button
       ],
     );
@@ -1175,6 +1255,127 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
               const SizedBox(width: 4),
               Text(allowed ? 'Autorisé' : 'Non autorisé'),
       ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Nouvelle méthode pour construire un item de point d'intérêt
+  Widget _buildNearbyPlaceItem(BuildContext context, Map<String, dynamic> place) {
+    final name = place['name'] as String? ?? 'Point d\'intérêt';
+    final description = place['description'] as String? ?? '';
+    final distance = place['distance'] as String? ?? '';
+    final category = place['category'] as String? ?? 'general';
+    
+    IconData icon;
+    switch (category.toLowerCase()) {
+      case 'restaurant':
+      case 'restauration':
+        icon = Icons.restaurant;
+        break;
+      case 'shopping':
+      case 'magasin':
+        icon = Icons.shopping_bag;
+        break;
+      case 'transport':
+        icon = Icons.directions_bus;
+        break;
+      case 'loisir':
+      case 'divertissement':
+        icon = Icons.movie;
+        break;
+      case 'education':
+      case 'école':
+        icon = Icons.school;
+        break;
+      case 'santé':
+      case 'hopital':
+        icon = Icons.local_hospital;
+        break;
+      default:
+        icon = Icons.place;
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (distance.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          distance,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (description.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      description,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Nouvelle méthode pour construire un item de FAQ
+  Widget _buildFaqItem(BuildContext context, Map<String, dynamic> faq) {
+    final question = faq['question'] as String? ?? 'Question';
+    final answer = faq['answer'] as String? ?? 'Réponse non disponible';
+    
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        title: Text(
+          question,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        children: [
+          Text(
+            answer,
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
       ),
@@ -1633,6 +1834,31 @@ class _EnhancedReviewsTab extends StatelessWidget {
               ),
             ),
             
+            // Nouvelle section pour les notes détaillées par catégorie
+            if (residence.stars > 0)
+              Card(
+                margin: const EdgeInsets.only(top: 16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Notes détaillées',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildRatingCategory(context, 'Propreté', 4.7),
+                      _buildRatingCategory(context, 'Communication', 4.5),
+                      _buildRatingCategory(context, 'Arrivée', 4.2),
+                      _buildRatingCategory(context, 'Précision', 4.6),
+                      _buildRatingCategory(context, 'Emplacement', 4.3),
+                      _buildRatingCategory(context, 'Qualité-prix', 4.1),
+                    ],
+                  ),
+                ),
+              ),
+            
             const SizedBox(height: 16),
             
             if (residence.reviewCount > 0)
@@ -1676,6 +1902,58 @@ class _EnhancedReviewsTab extends StatelessWidget {
             const SizedBox(height: 80), // Espace pour le floating action button
           ],
         ),
+      ),
+    );
+  }
+  
+  // Nouvelle méthode pour afficher une catégorie de notation
+  Widget _buildRatingCategory(BuildContext context, String category, double rating) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              category,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          Expanded(
+            flex: 5,
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Container(
+                  height: 8,
+                  width: 220 * (rating / 5), // Largeur proportionnelle à la note
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        _getRatingColor(rating),
+                        _getRatingColor(rating).withOpacity(0.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          Text(
+            rating.toStringAsFixed(1),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

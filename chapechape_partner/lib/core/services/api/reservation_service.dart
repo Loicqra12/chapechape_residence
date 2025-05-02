@@ -3,7 +3,7 @@ import '../../models/reservation/reservation.dart';
 
 class ReservationService {
   final Dio _dio;
-  static const String baseUrl = 'http://localhost:4000';
+  static const String baseUrl = 'http://192.168.1.66:4000';
 
   ReservationService(this._dio);
 

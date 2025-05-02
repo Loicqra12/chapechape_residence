@@ -81,7 +81,7 @@ class Reservation {
     final residenceImage = data['residence_image'] ?? 
                           (data['residence'] is Map && data['residence']['images'] is List && data['residence']['images'].isNotEmpty
                               ? data['residence']['images'][0]
-                              : 'https://via.placeholder.com/300x200?text=Image+non+disponible');
+                              : 'assets/images/placeholders/residence_placeholder.png');
     
     // Extraire les informations du client
     final clientName = data['client_name'] ?? 

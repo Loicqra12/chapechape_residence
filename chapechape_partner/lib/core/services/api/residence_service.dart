@@ -1418,4 +1418,146 @@ class ResidenceService {
       );
     }
   }
+
+  // Méthodes pour les nouvelles fonctionnalités
+  
+  /// Ajoute un lieu à proximité d'une résidence
+  Future<Map<String, dynamic>> addNearbyPlace(String residenceId, Map<String, dynamic> nearbyPlace) async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw ApiException('Token non trouvé. Veuillez vous reconnecter.', 401, {});
+      }
+
+      final response = await _dio.post(
+        '/residences/$residenceId/nearby-places',
+        data: nearbyPlace,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 201) {
+        return response.data['data'];
+      } else {
+        throw ApiException('Erreur lors de l\'ajout du lieu à proximité: ${response.statusMessage}', 
+            response.statusCode ?? 500, response.data ?? {});
+      }
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode ?? 500;
+      final data = e.response?.data ?? {};
+      final message = e.response?.statusMessage ?? e.message ?? 'Erreur réseau';
+      throw ApiException('Erreur lors de l\'ajout du lieu à proximité: $message', statusCode, data);
+    } catch (e) {
+      throw ApiException('Erreur lors de l\'ajout du lieu à proximité: $e', 500, {});
+    }
+  }
+
+  /// Ajoute une FAQ à une résidence
+  Future<Map<String, dynamic>> addFaq(String residenceId, Map<String, dynamic> faq) async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw ApiException('Token non trouvé. Veuillez vous reconnecter.', 401, {});
+      }
+
+      final response = await _dio.post(
+        '/residences/$residenceId/faqs',
+        data: faq,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 201) {
+        return response.data['data'];
+      } else {
+        throw ApiException('Erreur lors de l\'ajout de la FAQ: ${response.statusMessage}', 
+            response.statusCode ?? 500, response.data ?? {});
+      }
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode ?? 500;
+      final data = e.response?.data ?? {};
+      final message = e.response?.statusMessage ?? e.message ?? 'Erreur réseau';
+      throw ApiException('Erreur lors de l\'ajout de la FAQ: $message', statusCode, data);
+    } catch (e) {
+      throw ApiException('Erreur lors de l\'ajout de la FAQ: $e', 500, {});
+    }
+  }
+
+  /// Met à jour les équipements améliorés d'une résidence
+  Future<Map<String, dynamic>> updateEnhancedAmenities(String residenceId, Map<String, dynamic> enhancedAmenities) async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw ApiException('Token non trouvé. Veuillez vous reconnecter.', 401, {});
+      }
+
+      final response = await _dio.put(
+        '/residences/$residenceId/enhanced-amenities',
+        data: enhancedAmenities,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw ApiException('Erreur lors de la mise à jour des équipements améliorés: ${response.statusMessage}', 
+            response.statusCode ?? 500, response.data ?? {});
+      }
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode ?? 500;
+      final data = e.response?.data ?? {};
+      final message = e.response?.statusMessage ?? e.message ?? 'Erreur réseau';
+      throw ApiException('Erreur lors de la mise à jour des équipements améliorés: $message', statusCode, data);
+    } catch (e) {
+      throw ApiException('Erreur lors de la mise à jour des équipements améliorés: $e', 500, {});
+    }
+  }
+
+  /// Met à jour les méthodes de paiement acceptées pour une résidence
+  Future<List<String>> updatePaymentMethods(String residenceId, List<String> paymentMethods) async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw ApiException('Token non trouvé. Veuillez vous reconnecter.', 401, {});
+      }
+
+      final response = await _dio.put(
+        '/residences/$residenceId/payment-methods',
+        data: {'paymentMethods': paymentMethods},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['data']);
+      } else {
+        throw ApiException('Erreur lors de la mise à jour des méthodes de paiement: ${response.statusMessage}', 
+            response.statusCode ?? 500, response.data ?? {});
+      }
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode ?? 500;
+      final data = e.response?.data ?? {};
+      final message = e.response?.statusMessage ?? e.message ?? 'Erreur réseau';
+      throw ApiException('Erreur lors de la mise à jour des méthodes de paiement: $message', statusCode, data);
+    } catch (e) {
+      throw ApiException('Erreur lors de la mise à jour des méthodes de paiement: $e', 500, {});
+    }
+  }
 }

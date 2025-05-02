@@ -50,7 +50,7 @@ class MediaService {
       }
 
       // Utiliser l'URL complète au lieu du chemin relatif
-      const String url = 'http://192.168.1.77:4000/api/partners/profile';
+      const String url = 'http://192.168.1.66:4000/api/partners/profile';
       print('📤 Envoi vers: $url');
       
       final response = await Dio().put(

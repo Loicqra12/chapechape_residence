@@ -33,6 +33,14 @@ class EditResidenceScreen extends StatelessWidget {
   }
 }
 
+// Classe pour les éléments de localisation (pays, régions, villes)
+class LocationItem {
+  final String code;
+  final String name;
+
+  LocationItem(this.code, this.name);
+}
+
 class _EditResidenceView extends StatefulWidget {
   final Residence? residence;
 
@@ -101,6 +109,31 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   bool _hasRoomService = false;
   bool _hasLaundry = false;
   bool _hasMeetingRoom = false;
+  bool _hasRunningWater = false;
+  bool _hasWaterTank = false;
+  bool _hasElectricity = false;
+  bool _hasInverter = false;
+  bool _hasFiberOptic = false;
+  bool _hasEthernet = false;
+  bool _hasFullKitchen = false;
+  bool _hasKitchenette = false;
+  bool _hasRefrigerator = false;
+  bool _hasMicrowave = false;
+  bool _hasOven = false;
+  bool _hasFan = false;
+  bool _hasCelingFan = false;
+  bool _hasAlarmSystem = false;
+  bool _hasCCTV = false;
+  bool _hasSecurityGuard = false;
+
+  // Méthodes de paiement acceptées
+  bool _acceptsCash = true;
+  bool _acceptsWave = false;
+  bool _acceptsOrangeMoney = false;
+  bool _acceptsMoovMoney = false;
+  bool _acceptsMtnMoney = false;
+  bool _acceptsCreditCard = false;
+  bool _acceptsBankTransfer = false;
 
   // Variables pour la localisation
   String _selectedCountry = 'CI'; // Côte d'Ivoire par défaut
@@ -121,16 +154,18 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
   // Données des pays, régions et villes
   final List<LocationItem> _availableCountries = [
-    LocationItem('CI', 'Côte d\'Ivoire'),
     LocationItem('SN', 'Sénégal'),
-    LocationItem('ML', 'Mali'),
+    LocationItem('CI', 'Côte d\'Ivoire'),
     LocationItem('BF', 'Burkina Faso'),
-    LocationItem('GH', 'Ghana'),
+    LocationItem('ML', 'Mali'),
     LocationItem('GN', 'Guinée'),
     LocationItem('BJ', 'Bénin'),
     LocationItem('TG', 'Togo'),
     LocationItem('NE', 'Niger'),
     LocationItem('CM', 'Cameroun'),
+    LocationItem('GA', 'Gabon'),
+    LocationItem('CG', 'Congo'),
+    LocationItem('ST', 'Saint-Louis'),
   ];
 
   // Map des régions par pays (simplifiée pour l'exemple, à compléter)
@@ -161,7 +196,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
   // Map des villes par région (simplifiée pour l'exemple, à compléter)
   Map<String, List<LocationItem>> _citiesByRegion = {
-    'AB': [
+    'CI_AB': [
       // Abidjan
       LocationItem('CO', 'Cocody'),
       LocationItem('PL', 'Plateau'),
@@ -177,7 +212,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       LocationItem('SG', 'Songon'),
       LocationItem('AM', 'Anyama'),
     ],
-    'YA': [
+    'CI_YA': [
       // Yamoussoukro
       LocationItem('CE', 'Centre'),
       LocationItem('NO', 'Nord'),
@@ -185,7 +220,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       LocationItem('OU', 'Ouest'),
     ],
     // Nouvelles zones côtières et plages
-    'ZC': [
+    'CI_ZC': [
       // Zones côtières et plages
       LocationItem('GB', 'Grand-Bassam'),
       LocationItem('AS', 'Assinie'),
@@ -195,8 +230,39 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       LocationItem('SS', 'Sassandra'),
     ],
     // Autres régions...
+    'SN_DK': [
+      LocationItem('DK', 'Dakar'),
+      LocationItem('GD', 'Grand Dakar'),
+      LocationItem('AL', 'Almadies'),
+      LocationItem('PL', 'Plateau'),
+      LocationItem('ME', 'Médina'),
+      LocationItem('OG', 'Ouakam'),
+      LocationItem('YF', 'Yoff'),
+    ],
+    'SL_FR': [
+      LocationItem('CU', 'CU'),
+      LocationItem('BL', 'Boulbinet'),
+      LocationItem('KA', 'Kaloum'),
+      LocationItem('MA', 'Matam'),
+      LocationItem('RA', 'Ratoma'),
+    ],
+    'GH_AC': [
+      LocationItem('AC', 'Accra'),
+      LocationItem('KO', 'Korle Bu'),
+      LocationItem('LA', 'La'),
+      LocationItem('AB', 'Abeka'),
+      LocationItem('OK', 'Okai Koi'),
+    ],
+    'NG_LG': [
+      LocationItem('IK', 'Ikeja'),
+      LocationItem('AP', 'Apapa'),
+      LocationItem('ET', 'Eti-Osa'),
+      LocationItem('SU', 'Surulere'),
+      LocationItem('YB', 'Yaba'),
+    ],
   };
 
+  // Map des catégories de résidences
   final Map<String, Map<String, dynamic>> _residenceCategories = {
     'residence_meublee': {
       'label': 'Résidences meublées',
@@ -323,7 +389,8 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
       // S'assurer que le type est valide dans sa catégorie
       _ensureSelectedTypeIsValid();
-      print('🔍 Type final utilisé: $_selectedType (catégorie: $_selectedCategory)');
+      print(
+          '🔍 Type final utilisé: $_selectedType (catégorie: $_selectedCategory)');
 
       // Initialiser les états des amenities
       _hasPool = widget.residence!.hasPool;
@@ -338,6 +405,26 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       _hasSpa = widget.residence!.amenities.contains('spa');
       _hasMeetingRoom = widget.residence!.amenities.contains('meeting_room');
 
+// Initialiser les nouveaux équipements
+      _hasRunningWater = widget.residence!.amenities.contains('running_water');
+      _hasHotWater = widget.residence!.amenities.contains('hot_water');
+      _hasWaterTank = widget.residence!.amenities.contains('water_tank');
+      _hasElectricity =
+          widget.residence!.amenities.contains('electricity') || true;
+      _hasInverter = widget.residence!.amenities.contains('inverter');
+      _hasFiberOptic = widget.residence!.amenities.contains('fiber_optic');
+      _hasEthernet = widget.residence!.amenities.contains('ethernet');
+      _hasFullKitchen = widget.residence!.amenities.contains('full_kitchen');
+      _hasKitchenette = widget.residence!.amenities.contains('kitchenette');
+      _hasRefrigerator = widget.residence!.amenities.contains('refrigerator');
+      _hasMicrowave = widget.residence!.amenities.contains('microwave');
+      _hasOven = widget.residence!.amenities.contains('oven');
+      _hasFan = widget.residence!.amenities.contains('fan');
+      _hasCelingFan = widget.residence!.amenities.contains('ceiling_fan');
+      _hasAlarmSystem = widget.residence!.amenities.contains('alarm_system');
+      _hasCCTV = widget.residence!.amenities.contains('cctv');
+      _hasSecurityGuard =
+          widget.residence!.amenities.contains('security_guard');
       // Initialiser les règles
       _allowsSmoking = widget.residence!.allowsSmoking;
       _allowsPets = widget.residence!.allowsPets;
@@ -362,6 +449,23 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       // Initialiser les images existantes
       _existingImages =
           widget.residence!.images.map((img) => img.toString()).toList();
+
+      // Initialiser les méthodes de paiement
+      if (widget.residence != null &&
+          widget.residence!.paymentMethods != null) {
+        _acceptsCash = widget.residence!.paymentMethods!.contains('cash');
+        _acceptsWave = widget.residence!.paymentMethods!.contains('wave');
+        _acceptsOrangeMoney =
+            widget.residence!.paymentMethods!.contains('orange_money');
+        _acceptsMoovMoney =
+            widget.residence!.paymentMethods!.contains('moov_money');
+        _acceptsMtnMoney =
+            widget.residence!.paymentMethods!.contains('mtn_money');
+        _acceptsCreditCard =
+            widget.residence!.paymentMethods!.contains('credit_card');
+        _acceptsBankTransfer =
+            widget.residence!.paymentMethods!.contains('bank_transfer');
+      }
     }
   }
 
@@ -874,6 +978,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
           // Liste des aménités
           'amenities': _buildAmenitiesList(),
+
+          // Méthodes de paiement acceptées
+          'paymentMethods': _buildPaymentMethodsList(),
         };
 
         // Vérifier pour les tarifs alternatifs
@@ -1014,6 +1121,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   // Construit la liste des aménités en fonction des sélections de l'utilisateur
   List<String> _buildAmenitiesList() {
     List<String> amenities = [];
+    // Équipements existants
     if (_hasWifi) amenities.add('wifi');
     if (_hasPool) amenities.add('pool');
     if (_hasParking) amenities.add('parking');
@@ -1024,6 +1132,27 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     if (_hasMeetingRoom) amenities.add('meeting_room');
     if (_hasTerrace) amenities.add('terrace');
     if (_hasBalcony) amenities.add('balcony');
+    // Nouveaux équipements
+    if (_hasRunningWater) amenities.add('running_water');
+    if (_hasHotWater) amenities.add('hot_water');
+    if (_hasWaterTank) amenities.add('water_tank');
+    if (_hasElectricity) amenities.add('electricity');
+    if (_hasGenerator) amenities.add('generator');
+    if (_hasSolarEnergy) amenities.add('solar_energy');
+    if (_hasInverter) amenities.add('inverter');
+    if (_hasFiberOptic) amenities.add('fiber_optic');
+    if (_hasEthernet) amenities.add('ethernet');
+    if (_hasFullKitchen) amenities.add('full_kitchen');
+    if (_hasKitchenette) amenities.add('kitchenette');
+    if (_hasRefrigerator) amenities.add('refrigerator');
+    if (_hasMicrowave) amenities.add('microwave');
+    if (_hasOven) amenities.add('oven');
+    if (_hasFan) amenities.add('fan');
+    if (_hasCelingFan) amenities.add('ceiling_fan');
+    if (_hasSecurity) amenities.add('security');
+    if (_hasAlarmSystem) amenities.add('alarm_system');
+    if (_hasCCTV) amenities.add('cctv');
+    if (_hasSecurityGuard) amenities.add('security_guard');
     return amenities;
   }
 
@@ -1066,6 +1195,24 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       _allowsParties = false;
       _isAvailable = true;
       _hasAlternativePricing = false;
+
+      // Réinitialiser les nouveaux équipements
+      _hasRunningWater = false;
+      _hasWaterTank = false;
+      _hasElectricity = true;
+      _hasInverter = false;
+      _hasFiberOptic = false;
+      _hasEthernet = false;
+      _hasFullKitchen = false;
+      _hasKitchenette = false;
+      _hasRefrigerator = false;
+      _hasMicrowave = false;
+      _hasOven = false;
+      _hasFan = false;
+      _hasCelingFan = false;
+      _hasAlarmSystem = false;
+      _hasCCTV = false;
+      _hasSecurityGuard = false;
     });
   }
 
@@ -1576,9 +1723,339 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                             setState(() => _isAvailable = value),
                       ),
 
+// Eau
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.water_drop,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Eau courante'),
+                          ],
+                        ),
+                        value: _hasRunningWater,
+                        onChanged: (value) =>
+                            setState(() => _hasRunningWater = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.hot_tub,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Eau chaude'),
+                          ],
+                        ),
+                        value: _hasHotWater,
+                        onChanged: (value) =>
+                            setState(() => _hasHotWater = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.water_damage,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Réservoir d\'eau'),
+                          ],
+                        ),
+                        value: _hasWaterTank,
+                        onChanged: (value) =>
+                            setState(() => _hasWaterTank = value),
+                      ),
+
+// Électricité
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.electric_bolt,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Électricité'),
+                          ],
+                        ),
+                        value: _hasElectricity,
+                        onChanged: (value) =>
+                            setState(() => _hasElectricity = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.power,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Générateur'),
+                          ],
+                        ),
+                        value: _hasGenerator,
+                        onChanged: (value) =>
+                            setState(() => _hasGenerator = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.solar_power,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Énergie solaire'),
+                          ],
+                        ),
+                        value: _hasSolarEnergy,
+                        onChanged: (value) =>
+                            setState(() => _hasSolarEnergy = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.battery_charging_full,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Onduleur'),
+                          ],
+                        ),
+                        value: _hasInverter,
+                        onChanged: (value) =>
+                            setState(() => _hasInverter = value),
+                      ),
+
+// Internet
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.wifi,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('WiFi'),
+                          ],
+                        ),
+                        value: _hasWifi,
+                        onChanged: (value) => setState(() => _hasWifi = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.fiber_new,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Fibre optique'),
+                          ],
+                        ),
+                        value: _hasFiberOptic,
+                        onChanged: (value) =>
+                            setState(() => _hasFiberOptic = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.lan,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Ethernet'),
+                          ],
+                        ),
+                        value: _hasEthernet,
+                        onChanged: (value) =>
+                            setState(() => _hasEthernet = value),
+                      ),
+
+// Cuisine
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.kitchen,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Cuisine'),
+                          ],
+                        ),
+                        value: _hasKitchen,
+                        onChanged: (value) =>
+                            setState(() => _hasKitchen = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.kitchen,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Cuisine complète'),
+                          ],
+                        ),
+                        value: _hasFullKitchen,
+                        onChanged: (value) =>
+                            setState(() => _hasFullKitchen = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.countertops,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Kitchenette'),
+                          ],
+                        ),
+                        value: _hasKitchenette,
+                        onChanged: (value) =>
+                            setState(() => _hasKitchenette = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.kitchen,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Réfrigérateur'),
+                          ],
+                        ),
+                        value: _hasRefrigerator,
+                        onChanged: (value) =>
+                            setState(() => _hasRefrigerator = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.microwave,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Micro-ondes'),
+                          ],
+                        ),
+                        value: _hasMicrowave,
+                        onChanged: (value) =>
+                            setState(() => _hasMicrowave = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.local_fire_department,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Four'),
+                          ],
+                        ),
+                        value: _hasOven,
+                        onChanged: (value) => setState(() => _hasOven = value),
+                      ),
+
+// Refroidissement
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.ac_unit,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Climatisation'),
+                          ],
+                        ),
+                        value: _hasAirConditioning,
+                        onChanged: (value) =>
+                            setState(() => _hasAirConditioning = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.air,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Ventilateur'),
+                          ],
+                        ),
+                        value: _hasFan,
+                        onChanged: (value) => setState(() => _hasFan = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.cyclone,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Ventilateur de plafond'),
+                          ],
+                        ),
+                        value: _hasCelingFan,
+                        onChanged: (value) =>
+                            setState(() => _hasCelingFan = value),
+                      ),
+
+// Sécurité
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.security,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Sécurité'),
+                          ],
+                        ),
+                        value: _hasSecurity,
+                        onChanged: (value) =>
+                            setState(() => _hasSecurity = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.alarm,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Système d\'alarme'),
+                          ],
+                        ),
+                        value: _hasAlarmSystem,
+                        onChanged: (value) =>
+                            setState(() => _hasAlarmSystem = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.videocam,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Caméras de surveillance'),
+                          ],
+                        ),
+                        value: _hasCCTV,
+                        onChanged: (value) => setState(() => _hasCCTV = value),
+                      ),
+                      SwitchListTile(
+                        title: Row(
+                          children: [
+                            Icon(Icons.person,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary),
+                            SizedBox(width: 8),
+                            Text('Gardien de sécurité'),
+                          ],
+                        ),
+                        value: _hasSecurityGuard,
+                        onChanged: (value) =>
+                            setState(() => _hasSecurityGuard = value),
+                      ),
+
                       Divider(),
 
-                      // Options spécifiques à la catégorie
+// Options spécifiques à la catégorie
                       Text(
                         'Options spécifiques',
                         style: Theme.of(context).textTheme.titleSmall,
@@ -1695,6 +2172,41 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
               const SizedBox(height: 32),
 
+              // Section des méthodes de paiement
+              Text(
+                'Méthodes de paiement acceptées',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Sélectionnez les méthodes de paiement que vous acceptez. Les paiements passeront par ChapeChape qui prélèvera une commission de 10%.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: [
+                  _buildPaymentMethodChip('cash', 'Espèces', Icons.money),
+                  _buildPaymentMethodChip('wave', 'Wave', Icons.waves),
+                  _buildPaymentMethodChip(
+                      'orange_money', 'Orange Money', Icons.phone_android),
+                  _buildPaymentMethodChip(
+                      'moov_money', 'Moov Money', Icons.phone_android),
+                  _buildPaymentMethodChip(
+                      'mtn_money', 'MTN Money', Icons.phone_android),
+                  _buildPaymentMethodChip(
+                      'credit_card', 'Carte bancaire', Icons.credit_card),
+                  _buildPaymentMethodChip('bank_transfer', 'Virement bancaire',
+                      Icons.account_balance),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
               FilledButton(
                 onPressed: _submitForm,
                 child: Text(isEditing ? 'Mettre à jour' : 'Créer'),
@@ -1749,18 +2261,19 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   void _updatePricePeriodBasedOnType() {
     // Obtenir la période recommandée
     final recommendedPeriod = _getExpectedPricePeriodForType(_selectedType);
-    
+
     // Vérifier si la période recommandée est valide
     final validPeriods = ['hour', 'day', 'week', 'month'];
-    
+
     if (!validPeriods.contains(recommendedPeriod)) {
-      print('⚠️ Période de facturation invalide: $recommendedPeriod. Utilisation de "day" par défaut.');
+      print(
+          '⚠️ Période de facturation invalide: $recommendedPeriod. Utilisation de "day" par défaut.');
       setState(() {
         _selectedPricePeriod = 'day';
       });
       return;
     }
-    
+
     setState(() {
       _selectedPricePeriod = recommendedPeriod;
       print('✅ Période de facturation mise à jour: $_selectedPricePeriod');
@@ -1790,10 +2303,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       case 'maison_hotes_economique':
       case 'residence_familiale':
         return 'Ce type d\'hébergement est souvent facturé à la semaine';
-
-      case 'appartement_meuble':
-      case 'penthouse':
-        return 'Les locations longue durée sont généralement facturées au mois';
 
       default:
         return 'Sélectionnez la période de tarification appropriée';
@@ -2277,10 +2786,10 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   // Méthode pour convertir un type backend en type frontend lors de l'édition
   String _mapBackendTypeToFrontendType(String backendType) {
     print('🔍 Conversion du type: "$backendType"');
-    
+
     // Normaliser le type (enlever espaces en trop, mettre en minuscules)
     final normalizedType = backendType.toLowerCase().trim();
-    
+
     // Mapping explicite et complet entre les types backend et frontend
     final Map<String, String> typeMapping = {
       // Types d'appartements
@@ -2290,17 +2799,17 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       'penthouse': 'penthouse',
       'loft': 'loft',
       'attic': 'grenier',
-      
+
       // Types de studios
       'studio': 'studio_meuble',
       'furnished_studio': 'studio_meuble',
-      
+
       // Types de villas
       'villa': 'villa_meublee',
       'house': 'villa_meublee',
       'furnished_villa': 'villa_meublee',
       'unfurnished_villa': 'villa_vide',
-      
+
       // Types d'hôtels
       'hotel': 'hotel_passage',
       'boutique_hotel': 'boutique_hotel',
@@ -2308,7 +2817,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       'motel': 'motel',
       'guest_house': 'guest_house',
       'hotel_residence': 'residence_hoteliere',
-      
+
       // Hébergements insolites
       'bungalow': 'bungalow',
       'lodge': 'lodge',
@@ -2316,43 +2825,45 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       'traditional_hut': 'case_traditionnelle',
       'floating_house': 'maison_flottante',
       'tourist_camp': 'campement_touristique',
-      
+
       // Colocation
       'room': 'chambre_colocation',
       'coliving': 'coliving',
       'guest_house_room': 'maison_hotes',
       'university_residence': 'residence_universitaire',
       'dormitory': 'cite_dortoir',
-      
+
       // Résidences longue durée
       'unfurnished_apartment': 'appartement_vide',
       'building': 'immeuble',
       'shared_court': 'cour_commune',
-      
+
       // Économiques
       'budget_house': 'maison_hotes_economique',
       'family_residence': 'residence_familiale',
       'short_stay_rooms': 'chambres_passage',
     };
-    
+
     // Vérifier d'abord si le type est déjà un type frontend valide
     for (var category in _residenceCategories.keys) {
-      final types = _residenceCategories[category]!['types'] as List<ResidenceType>;
+      final types =
+          _residenceCategories[category]!['types'] as List<ResidenceType>;
       for (var residenceType in types) {
         if (residenceType.value.toLowerCase() == normalizedType) {
           print('✅ Type déjà valide: $backendType → ${residenceType.value}');
-          return residenceType.value; // Retourner le type exact avec la casse correcte
+          return residenceType
+              .value; // Retourner le type exact avec la casse correcte
         }
       }
     }
-    
+
     // Essayer de trouver une correspondance dans le mapping
     if (typeMapping.containsKey(normalizedType)) {
       final mappedType = typeMapping[normalizedType]!;
       print('✅ Type mappé: $backendType → $mappedType');
       return mappedType;
     }
-    
+
     // Fallback basé sur des préfixes pour les types inconnus
     for (var entry in typeMapping.entries) {
       if (normalizedType.startsWith(entry.key.split('_')[0])) {
@@ -2360,12 +2871,13 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         return entry.value;
       }
     }
-    
+
     // Dernier recours: choisir un type par défaut selon la première lettre
     print('⚠️ Type inconnu: $backendType. Utilisation d\'un type par défaut.');
     if (normalizedType.startsWith('s')) {
       return 'studio_meuble';
-    } else if (normalizedType.startsWith('v') || normalizedType.startsWith('h')) {
+    } else if (normalizedType.startsWith('v') ||
+        normalizedType.startsWith('h')) {
       return 'villa_meublee';
     } else if (normalizedType.startsWith('h')) {
       return 'hotel_passage';
@@ -2373,7 +2885,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       return 'appartement_meuble'; // Type par défaut
     }
   }
-  
+
   // Nouvelle méthode pour s'assurer que le type sélectionné est valide
   void _ensureSelectedTypeIsValid() {
     if (_selectedType == null || _selectedType.isEmpty) {
@@ -2382,31 +2894,33 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       _selectedCategory = _getCategoryFromType(_selectedType);
       return;
     }
-    
+
     // Vérifier si le type sélectionné existe dans la catégorie actuelle
-    bool typeExistsInCategory = _availableTypesForCategory
-        .any((type) => type.value == _selectedType);
-    
+    bool typeExistsInCategory =
+        _availableTypesForCategory.any((type) => type.value == _selectedType);
+
     if (!typeExistsInCategory) {
       print('⚠️ Type invalide dans la catégorie: $_selectedType');
-      
+
       // Chercher le type dans toutes les catégories
       String? foundCategory;
       for (var category in _residenceCategories.keys) {
-        final types = _residenceCategories[category]!['types'] as List<ResidenceType>;
+        final types = _residenceCategories[category]!['types']
+            as List<ResidenceType>;
         if (types.any((type) => type.value == _selectedType)) {
           foundCategory = category;
           break;
         }
       }
-      
+
       // Si le type existe dans une autre catégorie, changer de catégorie
       if (foundCategory != null) {
         print('✅ Type trouvé dans une autre catégorie: $foundCategory');
         _selectedCategory = foundCategory;
       } else {
         // Sinon, utiliser le premier type de la catégorie actuelle
-        print('⚠️ Type non trouvé dans aucune catégorie, utilisation du premier type disponible');
+        print(
+            '⚠️ Type non trouvé dans aucune catégorie, utilisation du premier type disponible');
         _selectedType = _availableTypesForCategory.first.value;
       }
     }
@@ -2415,32 +2929,35 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   // Méthode pour s'assurer que la valeur du dropdown existe dans les options
   String _ensureTypeValueExists(String typeValue) {
     // Vérifier si la valeur existe dans les options disponibles
-    bool valueExists = _availableTypesForCategory
-        .any((type) => type.value == typeValue);
-    
+    bool valueExists =
+        _availableTypesForCategory.any((type) => type.value == typeValue);
+
     // Si la valeur n'existe pas, retourner la première option disponible
     if (!valueExists && _availableTypesForCategory.isNotEmpty) {
-      print('⚠️ Valeur non trouvée dans les options du dropdown: $typeValue. Utilisation de la première option.');
+      print(
+          '⚠️ Valeur non trouvée dans les options du dropdown: $typeValue. Utilisation de la première option.');
       return _availableTypesForCategory.first.value;
     }
-    
+
     return typeValue;
   }
 
   // Méthode pour s'assurer que la catégorie existe
   String _ensureCategoryExists(String categoryValue) {
     if (!_residenceCategories.containsKey(categoryValue)) {
-      print('⚠️ Catégorie non trouvée: $categoryValue. Utilisation de la première catégorie disponible.');
+      print(
+          '⚠️ Catégorie non trouvée: $categoryValue. Utilisation de la première catégorie disponible.');
       return _residenceCategories.keys.first;
     }
     return categoryValue;
   }
-  
+
   // Méthode pour s'assurer que la période existe
   String _ensurePeriodExists(String periodValue) {
     final validPeriods = ['hour', 'day', 'week', 'month'];
     if (!validPeriods.contains(periodValue)) {
-      print('⚠️ Période non valide: $periodValue. Utilisation de "day" par défaut.');
+      print(
+          '⚠️ Période non valide: $periodValue. Utilisation de "day" par défaut.');
       return 'day';
     }
     return periodValue;
@@ -2453,19 +2970,97 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       print('⚠️ Aucune ville disponible pour la région: $regionCode');
       return '';
     }
-    
+
     // Vérifier si la ville existe dans la région
-    bool cityExists = _getCitiesForRegion(regionCode)
-        .any((city) => city.code == cityCode);
-    
+    bool cityExists =
+        _getCitiesForRegion(regionCode).any((city) => city.code == cityCode);
+
     // Si la ville n'existe pas, utiliser la première ville disponible
     if (!cityExists) {
-      print('⚠️ Ville non trouvée dans la région: $cityCode (région: $regionCode). Utilisation de la première ville disponible.');
+      print(
+          '⚠️ Ville non trouvée dans la région: $cityCode (région: $regionCode). Utilisation de la première ville disponible.');
       return _getCitiesForRegion(regionCode).first.code;
     }
-    
+
     // Sinon, retourner la ville sélectionnée
     return cityCode;
+  }
+
+  // Méthode pour construire la liste des méthodes de paiement sélectionnées
+  List<String> _buildPaymentMethodsList() {
+    List<String> paymentMethods = [];
+    if (_acceptsCash) paymentMethods.add('cash');
+    if (_acceptsWave) paymentMethods.add('wave');
+    if (_acceptsOrangeMoney) paymentMethods.add('orange_money');
+    if (_acceptsMoovMoney) paymentMethods.add('moov_money');
+    if (_acceptsMtnMoney) paymentMethods.add('mtn_money');
+    if (_acceptsCreditCard) paymentMethods.add('credit_card');
+    if (_acceptsBankTransfer) paymentMethods.add('bank_transfer');
+    return paymentMethods;
+  }
+
+  // Méthode pour construire un chip de méthode de paiement
+  Widget _buildPaymentMethodChip(
+      String paymentMethod, String label, IconData icon) {
+    return ChoiceChip(
+      label: Text(label),
+      avatar: Icon(icon),
+      selected: _getPaymentMethodSelected(paymentMethod),
+      onSelected: (value) {
+        setState(() {
+          _updatePaymentMethod(paymentMethod, value);
+        });
+      },
+    );
+  }
+
+  // Méthode pour obtenir l'état de sélection d'une méthode de paiement
+  bool _getPaymentMethodSelected(String paymentMethod) {
+    switch (paymentMethod) {
+      case 'cash':
+        return _acceptsCash;
+      case 'wave':
+        return _acceptsWave;
+      case 'orange_money':
+        return _acceptsOrangeMoney;
+      case 'moov_money':
+        return _acceptsMoovMoney;
+      case 'mtn_money':
+        return _acceptsMtnMoney;
+      case 'credit_card':
+        return _acceptsCreditCard;
+      case 'bank_transfer':
+        return _acceptsBankTransfer;
+      default:
+        return false;
+    }
+  }
+
+  // Méthode pour mettre à jour l'état de sélection d'une méthode de paiement
+  void _updatePaymentMethod(String paymentMethod, bool value) {
+    switch (paymentMethod) {
+      case 'cash':
+        _acceptsCash = value;
+        break;
+      case 'wave':
+        _acceptsWave = value;
+        break;
+      case 'orange_money':
+        _acceptsOrangeMoney = value;
+        break;
+      case 'moov_money':
+        _acceptsMoovMoney = value;
+        break;
+      case 'mtn_money':
+        _acceptsMtnMoney = value;
+        break;
+      case 'credit_card':
+        _acceptsCreditCard = value;
+        break;
+      case 'bank_transfer':
+        _acceptsBankTransfer = value;
+        break;
+    }
   }
 }
 
@@ -2474,11 +3069,4 @@ class ResidenceType {
   final String label;
 
   ResidenceType(this.value, this.label);
-}
-
-class LocationItem {
-  final String code;
-  final String name;
-
-  LocationItem(this.code, this.name);
 }

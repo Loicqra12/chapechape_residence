@@ -58,6 +58,13 @@ class Residence {
   // Devise du prix
   final String currency;
 
+  // Nouveaux champs pour l'interface améliorée
+  final int stars;
+  final List<Map<String, dynamic>> nearbyPlaces;
+  final List<Map<String, dynamic>> faqs;
+  final Map<String, dynamic> enhancedAmenities;
+  final List<String> paymentMethods;
+
   Residence({
     required this.id,
     required this.name,
@@ -103,6 +110,11 @@ class Residence {
     this.cityName,
     this.deleted,
     this.currency = 'FCFA',
+    this.stars = 0,
+    this.nearbyPlaces = const [],
+    this.faqs = const [],
+    this.enhancedAmenities = const {},
+    this.paymentMethods = const [],
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -175,6 +187,13 @@ class Residence {
     // Extraire le statut de suppression
     final deleted = json['deleted'] as bool?;
     
+    // Extraire les nouveaux champs
+    final stars = json['stars'] as int? ?? 0;
+    final nearbyPlaces = (json['nearbyPlaces'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [];
+    final faqs = (json['faqs'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [];
+    final enhancedAmenities = json['enhancedAmenities'] as Map<String, dynamic>? ?? {};
+    final paymentMethods = (json['paymentMethods'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [];
+
     return Residence(
       id: json['_id']?.toString() ?? '',
       name: json['title']?.toString() ?? json['name']?.toString() ?? '',
@@ -224,6 +243,11 @@ class Residence {
       cityName: cityName,
       deleted: deleted,
       currency: currency,
+      stars: stars,
+      nearbyPlaces: nearbyPlaces,
+      faqs: faqs,
+      enhancedAmenities: enhancedAmenities,
+      paymentMethods: paymentMethods,
     );
   }
 
@@ -275,6 +299,11 @@ class Residence {
       'cityCode': cityCode,
       'cityName': cityName,
       'deleted': deleted,
+      'stars': stars,
+      'nearbyPlaces': nearbyPlaces,
+      'faqs': faqs,
+      'enhancedAmenities': enhancedAmenities,
+      'paymentMethods': paymentMethods,
     };
   }
 

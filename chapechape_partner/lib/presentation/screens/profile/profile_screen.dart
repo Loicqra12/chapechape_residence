@@ -17,7 +17,6 @@ import '../residences/residences_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:io' show Platform;
-import 'package:chapechape_partner/core/config/app_config_manager.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -80,12 +79,12 @@ class ProfileScreen extends StatelessWidget {
                               child: CircleAvatar(
                                 radius: 60,
                                 backgroundColor: theme.colorScheme.primaryContainer,
-                                backgroundImage: partner?.profilePictureUrl != null
-                                    ? NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!))
-                                    : null,
-                                child: partner?.profilePictureUrl == null
+                                backgroundImage: partner?.profilePictureUrl != null && partner?.profilePictureUrl?.isNotEmpty == true
+                                    ? NetworkImage(partner!.profilePictureUrl!)
+                                    : const AssetImage('assets/images/placeholders/profile_placeholder.png'),
+                                child: partner?.profilePictureUrl == null || partner?.profilePictureUrl?.isEmpty == true
                                     ? Text(
-                                        partner?.fullName?.substring(0, 1).toUpperCase() ?? 'P',
+                                        partner?.fullName.substring(0, 1).toUpperCase() ?? 'P',
                                         style: TextStyle(
                                           fontSize: 48,
                                           color: theme.colorScheme.onPrimaryContainer,
@@ -596,17 +595,6 @@ class ProfileScreen extends StatelessWidget {
       ),
       onTap: onTap,
     );
-  }
-
-  String _buildProfileImageUrl(String url) {
-    // Si l'URL est vide, retourner une image par défaut au lieu d'une chaîne vide
-    if (url.isEmpty) return 'https://via.placeholder.com/120';
-    
-    // Si l'URL est déjà complète, la retourner telle quelle
-    if (url.startsWith('http')) return url;
-    
-    // Utiliser AppConfigManager pour construire l'URL
-    return AppConfigManager.getProfileImageUrl(url);
   }
 
   Widget _buildResidenceIndicator(

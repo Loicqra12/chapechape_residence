@@ -508,7 +508,7 @@ class DashboardScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               image: DecorationImage(
                 image: NetworkImage(residence.imageUrl ?? 
-                  'https://via.placeholder.com/60'),
+                  'assets/images/placeholders/profile_placeholder.png'),
                 fit: BoxFit.cover,
               ),
             ),

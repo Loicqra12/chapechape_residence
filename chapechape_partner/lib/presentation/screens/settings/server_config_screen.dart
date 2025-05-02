@@ -227,11 +227,11 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                   const SizedBox(height: 16.0),
                   TextField(
                     controller: _ipController,
-                    decoration: const InputDecoration(
-                      labelText: 'Adresse IP',
-                      hintText: '192.168.1.78',
+                    decoration: InputDecoration(
+                      labelText: 'Adresse IP du serveur',
+                      hintText: '192.168.1.65',
                       border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.computer),
+                      prefixIcon: const Icon(Icons.computer),
                     ),
                     keyboardType: TextInputType.number,
                     enabled: _useCustomServerUrl,
