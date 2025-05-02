@@ -86,9 +86,38 @@ const residenceSchema = mongoose.Schema({
   amenities: [{
     type: String,
     enum: [
+      // Options de base
       'wifi', 'parking', 'pool', 'gym', 'security',
       'air_conditioning', 'heating', 'kitchen', 'tv',
-      'washing_machine', 'dryer'
+      'washing_machine', 'dryer',
+      
+      // Options générales étendues
+      'hot_water', 'balcony', 'garden', 'terrace', 
+      'shared_kitchen', 'generator', 'solar_energy',
+      'spa', 'restaurant', 'bar', 'room_service', 
+      'laundry', 'meeting_room',
+      
+      // Options liées à l'eau
+      'running_water', 'water_tank',
+      
+      // Options liées à l'électricité
+      'electricity', 'inverter', 
+      
+      // Options liées à Internet
+      'fiber_optic', 'ethernet',
+      
+      // Options liées à la cuisine
+      'full_kitchen', 'kitchenette', 'refrigerator', 
+      'microwave', 'oven',
+      
+      // Options liées au confort climatique
+      'fan', 'ceiling_fan',
+      
+      // Options liées à la sécurité
+      'alarm_system', 'cctv', 'security_guard',
+      
+      // Autres options
+      'cleaning'
     ]
   }],
   rules: {
@@ -101,6 +130,92 @@ const residenceSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'CancellationPolicy'
   },
+  // Classification par étoiles
+  stars: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0
+  },
+  // Notation et avis
+  rating: {
+    overall: { type: Number, default: 0 },
+    cleanliness: { type: Number, default: 0 },
+    comfort: { type: Number, default: 0 },
+    facilities: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 }
+  },
+  // Points d'intérêt à proximité
+  nearbyPlaces: [{
+    name: { type: String },
+    type: { type: String, enum: ['restaurant', 'bar', 'shop', 'market', 'other'] },
+    distance: { type: Number }, // en mètres
+    description: { type: String }
+  }],
+  // Questions fréquentes
+  faqs: [{
+    question: { type: String },
+    answer: { type: String }
+  }],
+  // Informations détaillées sur les équipements
+  enhancedAmenities: {
+    water: {
+      runningWater: { type: Boolean, default: false },
+      hotWater: { type: Boolean, default: false },
+      waterTank: { type: Boolean, default: false }
+    },
+    electricity: {
+      mainGrid: { type: Boolean, default: false },
+      generator: { type: Boolean, default: false },
+      solarEnergy: { type: Boolean, default: false },
+      inverter: { type: Boolean, default: false }
+    },
+    internet: {
+      wifi: { type: Boolean, default: false },
+      fiberOptic: { type: Boolean, default: false },
+      ethernet: { type: Boolean, default: false }
+    },
+    kitchen: {
+      fullKitchen: { type: Boolean, default: false },
+      kitchenette: { type: Boolean, default: false },
+      sharedKitchen: { type: Boolean, default: false },
+      refrigerator: { type: Boolean, default: false },
+      microwave: { type: Boolean, default: false },
+      oven: { type: Boolean, default: false }
+    },
+    cooling: {
+      airConditioning: { type: Boolean, default: false },
+      fan: { type: Boolean, default: false },
+      ceilingFan: { type: Boolean, default: false }
+    },
+    security: {
+      securitySystem: { type: Boolean, default: false },
+      alarmSystem: { type: Boolean, default: false },
+      cctv: { type: Boolean, default: false },
+      securityGuard: { type: Boolean, default: false }
+    },
+    extras: {
+      cleaning: { type: Boolean, default: false },
+      balcony: { type: Boolean, default: false },
+      garden: { type: Boolean, default: false },
+      terrace: { type: Boolean, default: false },
+      parking: { type: Boolean, default: false },
+      pool: { type: Boolean, default: false },
+      gym: { type: Boolean, default: false },
+      spa: { type: Boolean, default: false },
+      restaurant: { type: Boolean, default: false },
+      bar: { type: Boolean, default: false },
+      roomService: { type: Boolean, default: false },
+      laundry: { type: Boolean, default: false },
+      meetingRoom: { type: Boolean, default: false },
+      tv: { type: Boolean, default: false }
+    }
+  },
+  // Méthodes de paiement acceptées
+  paymentMethods: [{
+    type: String,
+    enum: ['cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer']
+  }],
   // Champs pour la suppression douce
   deleted: {
     type: Boolean,

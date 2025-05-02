@@ -17,10 +17,12 @@ const reviewSchema = new mongoose.Schema({
         required: true
     },
     rating: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 5
+        overall: { type: Number, required: true, min: 1, max: 5 },
+        cleanliness: { type: Number, min: 1, max: 5, default: 0 },
+        comfort: { type: Number, min: 1, max: 5, default: 0 },
+        facilities: { type: Number, min: 1, max: 5, default: 0 },
+        value: { type: Number, min: 1, max: 5, default: 0 },
+        location: { type: Number, min: 1, max: 5, default: 0 }
     },
     comment: {
         type: String,
@@ -82,7 +84,12 @@ reviewSchema.statics.getResidenceStats = async function(residenceId) {
         { 
             $group: {
                 _id: '$residence',
-                averageRating: { $avg: '$rating' },
+                averageOverallRating: { $avg: '$rating.overall' },
+                averageCleanlinessRating: { $avg: '$rating.cleanliness' },
+                averageComfortRating: { $avg: '$rating.comfort' },
+                averageFacilitiesRating: { $avg: '$rating.facilities' },
+                averageValueRating: { $avg: '$rating.value' },
+                averageLocationRating: { $avg: '$rating.location' },
                 numberOfReviews: { $sum: 1 },
                 ratings: {
                     $push: '$rating'
@@ -92,20 +99,69 @@ reviewSchema.statics.getResidenceStats = async function(residenceId) {
         {
             $addFields: {
                 ratingDistribution: {
-                    5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r', 5] } } } },
-                    4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r', 4] } } } },
-                    3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r', 3] } } } },
-                    2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r', 2] } } } },
-                    1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r', 1] } } } }
+                    overall: {
+                        5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.overall', 5] } } } },
+                        4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.overall', 4] } } } },
+                        3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.overall', 3] } } } },
+                        2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.overall', 2] } } } },
+                        1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.overall', 1] } } } }
+                    },
+                    cleanliness: {
+                        5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.cleanliness', 5] } } } },
+                        4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.cleanliness', 4] } } } },
+                        3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.cleanliness', 3] } } } },
+                        2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.cleanliness', 2] } } } },
+                        1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.cleanliness', 1] } } } }
+                    },
+                    comfort: {
+                        5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.comfort', 5] } } } },
+                        4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.comfort', 4] } } } },
+                        3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.comfort', 3] } } } },
+                        2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.comfort', 2] } } } },
+                        1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.comfort', 1] } } } }
+                    },
+                    facilities: {
+                        5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.facilities', 5] } } } },
+                        4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.facilities', 4] } } } },
+                        3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.facilities', 3] } } } },
+                        2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.facilities', 2] } } } },
+                        1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.facilities', 1] } } } }
+                    },
+                    value: {
+                        5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.value', 5] } } } },
+                        4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.value', 4] } } } },
+                        3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.value', 3] } } } },
+                        2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.value', 2] } } } },
+                        1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.value', 1] } } } }
+                    },
+                    location: {
+                        5: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.location', 5] } } } },
+                        4: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.location', 4] } } } },
+                        3: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.location', 3] } } } },
+                        2: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.location', 2] } } } },
+                        1: { $size: { $filter: { input: '$ratings', as: 'r', cond: { $eq: ['$$r.location', 1] } } } }
+                    }
                 }
             }
         }
     ]);
 
     return stats[0] || {
-        averageRating: 0,
+        averageOverallRating: 0,
+        averageCleanlinessRating: 0,
+        averageComfortRating: 0,
+        averageFacilitiesRating: 0,
+        averageValueRating: 0,
+        averageLocationRating: 0,
         numberOfReviews: 0,
-        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        ratingDistribution: {
+            overall: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            cleanliness: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            comfort: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            facilities: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            value: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            location: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        }
     };
 };
 

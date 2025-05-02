@@ -9,6 +9,7 @@ const Payment = require('../../models/payment.model');
 const { validateBookingDates } = require('../../utils/validation');
 const bookingService = require('../../services/booking.service');
 const availabilityService = require('../../services/availability.service');
+const Review = require('../../models/review.model');
 
 // Obtenir toutes les réservations (admin seulement)
 exports.getAllBookings = asyncHandler(async (req, res) => {
@@ -246,17 +247,51 @@ exports.updateBookingStatus = asyncHandler(async (req, res) => {
  */
 exports.addBookingReview = asyncHandler(async (req, res) => {
     const { rating, comment } = req.body;
-    
-    const booking = await bookingService.addBookingReview(
-        req.params.bookingId,
-        req.user._id,
-        rating,
+
+    // Validation
+    if (!rating) {
+        throw new ApiError('Une note est requise', 400);
+    }
+
+    // Créer l'objet de notation
+    let ratingObject;
+    if (typeof rating === 'number') {
+        // Compatibilité avec l'ancien format
+        ratingObject = {
+            overall: rating,
+            cleanliness: 0,
+            comfort: 0,
+            facilities: 0,
+            value: 0,
+            location: 0
+        };
+    } else if (typeof rating === 'object') {
+        // Nouveau format détaillé
+        ratingObject = {
+            overall: rating.overall || 0,
+            cleanliness: rating.cleanliness || 0,
+            comfort: rating.comfort || 0,
+            facilities: rating.facilities || 0,
+            value: rating.value || 0,
+            location: rating.location || 0
+        };
+    } else {
+        throw new ApiError('Format de notation invalide', 400);
+    }
+
+    // Créer l'avis
+    const booking = await Booking.findById(req.params.bookingId);
+    const review = await Review.create({
+        user: req.user.id,
+        residence: booking.residence,
+        reservation: booking._id,
+        rating: ratingObject,
         comment
-    );
-    
+    });
+
     res.status(200).json({
         success: true,
-        data: booking
+        data: review
     });
 });
 

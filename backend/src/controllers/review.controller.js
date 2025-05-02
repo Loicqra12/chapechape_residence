@@ -7,6 +7,14 @@ const createReview = async (req, res) => {
     try {
         const { residenceId, reservationId, rating, comment, photos } = req.body;
 
+        // Validation des champs requis
+        if (!residenceId || !rating) {
+            return res.status(400).json({
+                success: false,
+                message: "Veuillez fournir l'identifiant de la résidence et une note"
+            });
+        }
+
         // Vérifier si l'utilisateur a déjà laissé un avis pour cette résidence
         const existingReview = await Review.findOne({
             user: req.user._id,
@@ -21,11 +29,39 @@ const createReview = async (req, res) => {
         }
 
         // Créer l'avis
+        let ratingObject;
+        if (typeof rating === 'number') {
+            // Compatibilité avec l'ancien format
+            ratingObject = {
+                overall: rating,
+                cleanliness: 0,
+                comfort: 0,
+                facilities: 0,
+                value: 0,
+                location: 0
+            };
+        } else if (typeof rating === 'object') {
+            // Nouveau format détaillé
+            ratingObject = {
+                overall: rating.overall || 0,
+                cleanliness: rating.cleanliness || 0,
+                comfort: rating.comfort || 0,
+                facilities: rating.facilities || 0,
+                value: rating.value || 0,
+                location: rating.location || 0
+            };
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Format de notation invalide"
+            });
+        }
+
         const review = await Review.create({
             user: req.user._id,
             residence: residenceId,
             reservation: reservationId,
-            rating,
+            rating: ratingObject,
             comment,
             photos: photos || []
         });
@@ -152,7 +188,7 @@ const updateReview = async (req, res) => {
         const { id } = req.params;
         const { rating, comment, photos } = req.body;
 
-        // Trouver l'avis
+        // Récupérer l'avis
         const review = await Review.findById(id);
         
         if (!review) {
@@ -170,10 +206,36 @@ const updateReview = async (req, res) => {
             });
         }
 
-        // Mettre à jour l'avis
-        review.rating = rating || review.rating;
+        // Mettre à jour les champs
+        if (rating) {
+            if (typeof rating === 'number') {
+                // Compatibilité avec l'ancien format
+                review.rating = {
+                    overall: rating,
+                    cleanliness: review.rating.cleanliness || 0,
+                    comfort: review.rating.comfort || 0,
+                    facilities: review.rating.facilities || 0,
+                    value: review.rating.value || 0,
+                    location: review.rating.location || 0
+                };
+            } else if (typeof rating === 'object') {
+                // Nouveau format détaillé
+                review.rating = {
+                    overall: rating.overall || review.rating.overall,
+                    cleanliness: rating.cleanliness || review.rating.cleanliness,
+                    comfort: rating.comfort || review.rating.comfort,
+                    facilities: rating.facilities || review.rating.facilities,
+                    value: rating.value || review.rating.value,
+                    location: rating.location || review.rating.location
+                };
+            }
+        }
+        
         review.comment = comment || review.comment;
-        review.photos = photos || review.photos;
+        
+        if (photos && Array.isArray(photos)) {
+            review.photos = photos;
+        }
 
         await review.save();
 

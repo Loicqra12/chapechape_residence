@@ -345,3 +345,365 @@ exports.uploadImages = asyncHandler(async (req, res) => {
         data: residence.toObject()
     });
 });
+
+// @desc    Ajouter des points d'intérêt à proximité d'une résidence
+// @route   POST /api/residences/:id/nearby-places
+// @access  Private (Partner only)
+exports.addNearbyPlace = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, type, distance, description } = req.body;
+
+    // Validation des données
+    if (!name || !type || !distance) {
+        throw new ApiError('Veuillez fournir le nom, le type et la distance du lieu à proximité', 400);
+    }
+
+    // Vérifier que le type est valide
+    const validTypes = ['restaurant', 'bar', 'shop', 'market', 'other'];
+    if (!validTypes.includes(type)) {
+        throw new ApiError(`Type invalide. Les types valides sont: ${validTypes.join(', ')}`, 400);
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la résidence
+    if (residence.partner.toString() !== req.user.id) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+    }
+
+    // Créer le nouveau lieu à proximité
+    const nearbyPlace = {
+        name,
+        type,
+        distance,
+        description: description || ''
+    };
+
+    // Ajouter à la liste des lieux à proximité
+    residence.nearbyPlaces = residence.nearbyPlaces || [];
+    residence.nearbyPlaces.push(nearbyPlace);
+    await residence.save();
+
+    res.status(201).json({
+        success: true,
+        data: nearbyPlace
+    });
+});
+
+// @desc    Ajouter une FAQ à une résidence
+// @route   POST /api/residences/:id/faqs
+// @access  Private (Partner only)
+exports.addFaq = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { question, answer } = req.body;
+
+    // Validation des données
+    if (!question || !answer) {
+        throw new ApiError('Veuillez fournir la question et la réponse', 400);
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la résidence
+    if (residence.partner.toString() !== req.user.id) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+    }
+
+    // Créer la nouvelle FAQ
+    const faq = {
+        question,
+        answer
+    };
+
+    // Ajouter à la liste des FAQs
+    residence.faqs = residence.faqs || [];
+    residence.faqs.push(faq);
+    await residence.save();
+
+    res.status(201).json({
+        success: true,
+        data: faq
+    });
+});
+
+// @desc    Mettre à jour les équipements améliorés d'une résidence
+// @route   PUT /api/residences/:id/enhanced-amenities
+// @access  Private (Partner only)
+exports.updateEnhancedAmenities = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { 
+        water, 
+        electricity, 
+        internet, 
+        kitchen, 
+        cooling, 
+        security,
+        extras
+    } = req.body;
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la résidence
+    if (residence.partner.toString() !== req.user.id) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+    }
+
+    // Initialiser les équipements améliorés si nécessaire
+    residence.enhancedAmenities = residence.enhancedAmenities || {};
+
+    // Mettre à jour les équipements améliorés
+    if (water) residence.enhancedAmenities.water = water;
+    if (electricity) residence.enhancedAmenities.electricity = electricity;
+    if (internet) residence.enhancedAmenities.internet = internet;
+    if (kitchen) residence.enhancedAmenities.kitchen = kitchen;
+    if (cooling) residence.enhancedAmenities.cooling = cooling;
+    if (security) residence.enhancedAmenities.security = security;
+    if (extras) residence.enhancedAmenities.extras = extras;
+
+    await residence.save();
+
+    res.status(200).json({
+        success: true,
+        data: residence.enhancedAmenities
+    });
+});
+
+// @desc    Mettre à jour les méthodes de paiement acceptées pour une résidence
+// @route   PUT /api/residences/:id/payment-methods
+// @access  Private (Partner only)
+exports.updatePaymentMethods = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { paymentMethods } = req.body;
+
+    // Validation des données
+    if (!paymentMethods || !Array.isArray(paymentMethods)) {
+        throw new ApiError('Veuillez fournir un tableau de méthodes de paiement', 400);
+    }
+
+    // Vérifier que les méthodes de paiement sont valides
+    const validMethods = ['cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer'];
+    const invalidMethods = paymentMethods.filter(method => !validMethods.includes(method));
+    if (invalidMethods.length > 0) {
+        throw new ApiError(`Méthodes de paiement invalides: ${invalidMethods.join(', ')}. Les méthodes valides sont: ${validMethods.join(', ')}`, 400);
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la résidence
+    if (residence.partner.toString() !== req.user.id) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+    }
+
+    // Mettre à jour les méthodes de paiement
+    residence.paymentMethods = paymentMethods;
+    await residence.save();
+
+    res.status(200).json({
+        success: true,
+        data: residence.paymentMethods
+    });
+});
+
+// @desc    Ajouter ou mettre à jour un point d'intérêt à proximité d'une résidence
+// @route   PUT /api/residences/:id/nearby-places
+// @access  Private (Partner only)
+exports.updateNearbyPlaces = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { nearbyPlaces } = req.body;
+
+    // Validation des données
+    if (!nearbyPlaces || !Array.isArray(nearbyPlaces)) {
+        throw new ApiError('Veuillez fournir un tableau de points d\'intérêt', 400);
+    }
+
+    // Valider chaque point d'intérêt
+    const validTypes = ['restaurant', 'bar', 'shop', 'market', 'other'];
+    for (const place of nearbyPlaces) {
+        if (!place.name || !place.type || place.distance === undefined) {
+            throw new ApiError('Chaque point d\'intérêt doit avoir un nom, un type et une distance', 400);
+        }
+        
+        if (!validTypes.includes(place.type)) {
+            throw new ApiError(`Type de point d'intérêt invalide: ${place.type}. Les types valides sont: ${validTypes.join(', ')}`, 400);
+        }
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la résidence
+    if (residence.partner.toString() !== req.user.id) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+    }
+
+    // Mettre à jour les points d'intérêt
+    residence.nearbyPlaces = nearbyPlaces;
+    await residence.save();
+
+    res.status(200).json({
+        success: true,
+        data: residence.nearbyPlaces
+    });
+});
+
+// @desc    Mettre à jour le nombre d'étoiles d'une résidence
+// @route   PUT /api/residences/:id/stars
+// @access  Private (Admin only)
+exports.updateStars = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { stars } = req.body;
+
+    // Validation des données
+    if (stars === undefined || stars < 0 || stars > 5) {
+        throw new ApiError('Veuillez fournir un nombre d\'étoiles valide (entre 0 et 5)', 400);
+    }
+
+    // Vérifier que l'utilisateur est un administrateur
+    if (req.user.role !== 'admin') {
+        throw new ApiError('Seuls les administrateurs peuvent mettre à jour le nombre d\'étoiles', 403);
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Mettre à jour le nombre d'étoiles
+    residence.stars = stars;
+    await residence.save();
+
+    res.status(200).json({
+        success: true,
+        data: { stars: residence.stars }
+    });
+});
+
+// @desc    Ajouter ou mettre à jour les notations d'une résidence
+// @route   PUT /api/residences/:id/ratings
+// @access  Private (Les clients authentifiés avec une réservation confirmée)
+exports.updateRatings = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { overall, cleanliness, comfort, facilities } = req.body;
+
+    // Validation des données
+    if (overall === undefined || overall < 0 || overall > 5) {
+        throw new ApiError('Veuillez fournir une note globale valide (entre 0 et 5)', 400);
+    }
+
+    // Validation des notes optionnelles
+    if ((cleanliness !== undefined && (cleanliness < 0 || cleanliness > 5)) ||
+        (comfort !== undefined && (comfort < 0 || comfort > 5)) ||
+        (facilities !== undefined && (facilities < 0 || facilities > 5))) {
+        throw new ApiError('Toutes les notes doivent être comprises entre 0 et 5', 400);
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // TODO: Vérifier que l'utilisateur a bien une réservation confirmée pour cette résidence
+    // Cette vérification nécessiterait un accès au modèle Reservation
+    // Pour le moment, nous autorisons tous les utilisateurs authentifiés
+
+    // Initialiser le champ rating s'il n'existe pas
+    if (!residence.rating) {
+        residence.rating = {
+            overall: 0,
+            cleanliness: 0,
+            comfort: 0,
+            facilities: 0,
+            reviewCount: 0
+        };
+    }
+
+    // Calculer les nouvelles moyennes
+    const currentCount = residence.rating.reviewCount || 0;
+    const newCount = currentCount + 1;
+
+    // Mettre à jour chaque note
+    residence.rating.overall = ((residence.rating.overall * currentCount) + overall) / newCount;
+    
+    if (cleanliness !== undefined) {
+        residence.rating.cleanliness = ((residence.rating.cleanliness * currentCount) + cleanliness) / newCount;
+    }
+    
+    if (comfort !== undefined) {
+        residence.rating.comfort = ((residence.rating.comfort * currentCount) + comfort) / newCount;
+    }
+    
+    if (facilities !== undefined) {
+        residence.rating.facilities = ((residence.rating.facilities * currentCount) + facilities) / newCount;
+    }
+
+    // Incrémenter le nombre d'avis
+    residence.rating.reviewCount = newCount;
+
+    await residence.save();
+
+    res.status(200).json({
+        success: true,
+        data: residence.rating
+    });
+});
+
+// @desc    Mettre à jour la liste complète des FAQs d'une résidence
+// @route   PUT /api/residences/:id/faqs
+// @access  Private (Partner only)
+exports.updateFaqs = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { faqs } = req.body;
+
+    // Validation des données
+    if (!faqs || !Array.isArray(faqs)) {
+        throw new ApiError('Veuillez fournir un tableau de FAQs', 400);
+    }
+
+    // Valider chaque FAQ
+    for (const faq of faqs) {
+        if (!faq.question || !faq.answer) {
+            throw new ApiError('Chaque FAQ doit avoir une question et une réponse', 400);
+        }
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la résidence
+    if (residence.partner.toString() !== req.user.id) {
+        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+    }
+
+    // Mettre à jour les FAQs
+    residence.faqs = faqs;
+    await residence.save();
+
+    res.status(200).json({
+        success: true,
+        data: residence.faqs
+    });
+});

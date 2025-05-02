@@ -47,6 +47,15 @@ app.get("/api/test", (req, res) => {
   });
 });
 
+// Route de vérification de santé (health check)
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Importer les contrôleurs de promotion directement pour les routes publiques
 const {
   getPromotions,

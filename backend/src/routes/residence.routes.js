@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const upload = require('../middlewares/upload.middleware');
+const residenceController = require('../controllers/residence/residence.controller');
 const {
     createResidence,
     getResidences,
@@ -11,7 +12,7 @@ const {
     searchResidences,
     uploadImages,
     getAllResidences
-} = require('../controllers/residence/residence.controller');
+} = residenceController;
 const Residence = require('../models/residence.model');
 
 // Routes publiques
@@ -95,5 +96,15 @@ router.delete('/:id', deleteResidence);
 
 // Route pour l'upload d'images
 router.post('/:id/images', upload.residence.array('images', 5), uploadImages);
+
+// Routes pour les nouvelles fonctionnalités
+router.post('/:id/nearby-places', protect, authorize('partner'), residenceController.addNearbyPlace);
+router.put('/:id/nearby-places', protect, authorize('partner'), residenceController.updateNearbyPlaces);
+router.post('/:id/faqs', protect, authorize('partner'), residenceController.addFaq);
+router.put('/:id/faqs', protect, authorize('partner'), residenceController.updateFaqs);
+router.put('/:id/payment-methods', protect, authorize('partner'), residenceController.updatePaymentMethods);
+router.put('/:id/enhanced-amenities', protect, authorize('partner'), residenceController.updateEnhancedAmenities);
+router.put('/:id/stars', protect, authorize('admin'), residenceController.updateStars);
+router.put('/:id/ratings', protect, residenceController.updateRatings);
 
 module.exports = router;
