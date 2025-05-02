@@ -100,10 +100,10 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Client (Dev)',
-              'apiUrl': 'http://192.168.1.78:4000/api',
-              'apiBaseUrl': 'http://192.168.1.78:4000',
-              'mediaBaseUrl': 'http://192.168.1.78:4000/media',
-              'wsUrl': 'ws://192.168.1.78:4000/ws',
+              'apiUrl': 'http://192.168.1.66:4000/api',
+              'apiBaseUrl': 'http://192.168.1.66:4000',
+              'mediaBaseUrl': 'http://192.168.1.66:4000/media',
+              'wsUrl': 'ws://192.168.1.66:4000/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -185,10 +185,10 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Client (Fallback)',
-        'apiUrl': 'http://192.168.1.78:4000/api',
-        'apiBaseUrl': 'http://192.168.1.78:4000',
-        'mediaBaseUrl': 'http://192.168.1.78:4000/media',
-        'wsUrl': 'ws://192.168.1.78:4000/ws',
+        'apiUrl': 'http://192.168.1.66:4000/api',
+        'apiBaseUrl': 'http://192.168.1.66:4000',
+        'mediaBaseUrl': 'http://192.168.1.66:4000/media',
+        'wsUrl': 'ws://192.168.1.66:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -201,10 +201,10 @@ class AppConfigManager {
 
   /// Accesseurs de la configuration
   static String get appName => _config['appName'] as String;
-  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.78:4000/api';
-  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.78:4000';
-  static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'http://192.168.1.78:4000/media';
-  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.78:4000/ws';
+  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.66:4000/api';
+  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.66:4000';
+  static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'http://192.168.1.66:4000/media';
+  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.66:4000/ws';
   static String get apiVersion => _config['apiVersion'] as String;
   static int get apiTimeout => _config['apiTimeout'] as int;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int;
@@ -293,7 +293,7 @@ class AppConfigManager {
   }
 
   /// Obtient l'adresse IP actuelle du serveur
-  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.78';
+  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.66';
 
   /// Obtient le port actuel du serveur
   static int get serverPort => _ipDetectionService?.serverPort ?? 4000;

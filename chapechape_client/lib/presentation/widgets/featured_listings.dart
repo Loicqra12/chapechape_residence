@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/intl.dart'; // Importer Intl pour utiliser NumberFormat
 
 import '../../core/models/listing_model.dart';
 import '../../core/models/residence_model.dart';
@@ -616,7 +617,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         ],
       ),
       child: Text(
-        _formatPrice(price),
+        _formatPrice(price ?? 0), // Utiliser 0 par défaut si price est null
         style: const TextStyle(
           color: Colors.white,
           fontSize: 14,
@@ -914,16 +915,13 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     );
   }
 
-  String _formatPrice(double? price) {
-    if (price == null) {
-      return 'Sur demande';
-    } else if (price >= 1000000) {
-      return '${(price / 1000000).toStringAsFixed(1)} M';
-    } else if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(0)} K';
-    } else {
-      return price.toStringAsFixed(0);
-    }
+  String _formatPrice(double price) {
+    // Utiliser NumberFormat pour un affichage complet et cohérent
+    return NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: 'FCFA',
+      decimalDigits: 0,
+    ).format(price);
   }
 
   String _getCategoryName(String? categoryId) {

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:carousel_slider/carousel_slider.dart' as carousel;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart'; // Importer la bibliothèque intl
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/constants/app_assets.dart';
@@ -409,12 +410,10 @@ class _HeroWidgetState extends State<HeroWidget> {
   
   // Formatage du prix
   String _formatPrice(num price) {
-    if (price >= 1000000) {
-      return '${(price / 1000000).toStringAsFixed(1)}M CFA';
-    } else if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(0)}K CFA';
-    } else {
-      return '$price CFA';
-    }
+    return NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: 'FCFA',
+      decimalDigits: 0,
+    ).format(price);
   }
 }

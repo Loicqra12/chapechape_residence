@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart'; // Importer la bibliothèque intl pour utiliser NumberFormat
 
 import '../../core/models/residence_model.dart';
 import '../../core/models/listing_model.dart';
@@ -760,12 +761,12 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
   String _formatPrice(double? price) {
     if (price == null) {
       return 'Sur demande';
-    } else if (price >= 1000000) {
-      return '${(price / 1000000).toStringAsFixed(1)} M';
-    } else if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(0)} K';
     } else {
-      return price.toStringAsFixed(0);
+      return NumberFormat.currency(
+        locale: 'fr_FR',
+        symbol: 'FCFA',
+        decimalDigits: 0,
+      ).format(price);
     }
   }
 }

@@ -38,10 +38,28 @@ class ResidenceCard extends StatelessWidget {
   // Utilitaire de formatage de devise
   String _formatCurrency(double value) {
     return NumberFormat.currency(
+      locale: 'fr_FR',
       symbol: 'FCFA',
       decimalDigits: 0,
-      locale: 'fr_FR',
     ).format(value);
+  }
+  
+  // Obtient le libellé de la période de prix (par jour, par mois, etc.)
+  String _getPeriodLabel(String period) {
+    switch (period.toLowerCase()) {
+      case 'hour':
+        return '/heure';
+      case 'day':
+        return '/jour';
+      case 'week':
+        return '/semaine';
+      case 'month':
+        return '/mois';
+      case 'year':
+        return '/an';
+      default:
+        return '';
+    }
   }
 
   @override
@@ -167,7 +185,7 @@ class ResidenceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Text(
-                      '${_formatCurrency(residence.price)}',
+                      '${_formatCurrency(residence.price)}${_getPeriodLabel(residence.pricePeriod)}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
