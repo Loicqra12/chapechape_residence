@@ -118,16 +118,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'ChapeChape Résidences',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: goldColor,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
                       'Votre résidence idéale vous attend',
                       style: TextStyle(
                         fontSize: 16,

@@ -47,17 +47,21 @@ class AppRouter {
 
   // Rediriger vers la connexion avec une alerte
   static void _redirectToLogin(BuildContext context) {
-    // D'abord rediriger vers la page de connexion
-    context.go('/login');
-    
-    // Puis afficher le SnackBar après la fin de la construction
+    // Déplacer TOUTE la navigation après la phase de construction
+    // pour éviter les erreurs "setState during build"
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vous devez vous connecter pour accéder à cette fonctionnalité'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      if (context.mounted) {
+        // Navigation après la fin de la phase de construction
+        context.go('/login');
+        
+        // Afficher un message explicatif
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vous devez vous connecter pour accéder à cette fonctionnalité'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     });
   }
 
