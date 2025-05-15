@@ -12,6 +12,15 @@ const userSchema = new mongoose.Schema({
             'Veuillez fournir un email valide'
         ]
     },
+    // Identifiants pour l'authentification sociale
+    googleId: {
+        type: String,
+        sparse: true
+    },
+    facebookId: {
+        type: String,
+        sparse: true
+    },
     password: {
         type: String,
         required: [true, 'Veuillez fournir un mot de passe'],
@@ -51,7 +60,39 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: 'default.jpg'
     },
-    lastLogin: Date
+    profilePicture: {
+        type: String
+    },
+    lastLogin: Date,
+    // Champs pour OneSignal
+    deviceTokens: {
+        type: [String],
+        default: []
+    },
+    notificationSettings: {
+        pushEnabled: {
+            type: Boolean,
+            default: true
+        },
+        emailEnabled: {
+            type: Boolean,
+            default: true
+        },
+        categories: {
+            bookings: {
+                type: Boolean,
+                default: true
+            },
+            promotions: {
+                type: Boolean,
+                default: true
+            },
+            system: {
+                type: Boolean,
+                default: true
+            }
+        }
+    }
 }, {
     timestamps: true
 });

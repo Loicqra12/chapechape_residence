@@ -1,5 +1,5 @@
 const Residence = require('../../models/residence.model');
-const ApiError = require('../../utils/apiError');
+const apiError = require('../../utils/apiError');
 const asyncHandler = require('../../middlewares/async');
 const fs = require('fs');
 const path = require('path');
@@ -31,7 +31,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
             console.log(`Partenaire assigné: ${req.user.id}`);
         } catch (error) {
             console.error('Erreur de parsing JSON:', error);
-            throw new ApiError('Format de données invalide: ' + error.message, 400);
+            throw new apiError('Format de données invalide: ' + error.message, 400);
         }
     } else {
         // Approche traditionnelle (champs individuels)
@@ -47,7 +47,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
     
     if (missingFields.length > 0) {
         console.error('Champs manquants:', missingFields);
-        throw new ApiError(`Champs requis manquants: ${missingFields.join(', ')}`, 400);
+        throw new apiError(`Champs requis manquants: ${missingFields.join(', ')}`, 400);
     }
 
     try {
@@ -79,7 +79,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         console.error('Erreur lors de la création de la résidence:', error);
-        throw new ApiError(`Échec de la création de la résidence: ${error.message}`, 500);
+        throw new apiError(`Échec de la création de la résidence: ${error.message}`, 500);
     }
 });
 
@@ -150,7 +150,7 @@ exports.getResidence = asyncHandler(async (req, res) => {
         .lean();
 
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     console.log('Résidence récupérée - ID:', req.params.id);
@@ -169,12 +169,12 @@ exports.updateResidence = asyncHandler(async (req, res) => {
     let residence = await Residence.findById(req.params.id);
 
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier si l'utilisateur est le propriétaire
     if (residence.partner.toString() !== req.user.id && req.user.role !== 'admin') {
-        throw new ApiError('Non autorisé à modifier cette résidence', 403);
+        throw new apiError('Non autorisé à modifier cette résidence', 403);
     }
 
     residence = await Residence.findByIdAndUpdate(
@@ -200,11 +200,11 @@ exports.deleteResidence = asyncHandler(async (req, res) => {
     const residence = await Residence.findById(req.params.id);
 
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     if (residence.partner.toString() !== req.user.id && req.user.role !== 'admin') {
-        throw new ApiError('Non autorisé à supprimer cette résidence', 403);
+        throw new apiError('Non autorisé à supprimer cette résidence', 403);
     }
 
     // Faire une suppression douce au lieu d'une suppression réelle
@@ -318,7 +318,7 @@ exports.uploadImages = asyncHandler(async (req, res) => {
                 fs.unlinkSync(file.path);
             });
         }
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     if (residence.partner.toString() !== req.user.id && req.user.role !== 'admin') {
@@ -328,11 +328,11 @@ exports.uploadImages = asyncHandler(async (req, res) => {
                 fs.unlinkSync(file.path);
             });
         }
-        throw new ApiError('Non autorisé à modifier cette résidence', 403);
+        throw new apiError('Non autorisé à modifier cette résidence', 403);
     }
 
     if (!req.files) {
-        throw new ApiError('Veuillez télécharger des images', 400);
+        throw new apiError('Veuillez télécharger des images', 400);
     }
 
     const images = req.files.map(file => `/uploads/residences/${file.filename}`);
@@ -355,24 +355,24 @@ exports.addNearbyPlace = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (!name || !type || !distance) {
-        throw new ApiError('Veuillez fournir le nom, le type et la distance du lieu à proximité', 400);
+        throw new apiError('Veuillez fournir le nom, le type et la distance du lieu à proximité', 400);
     }
 
     // Vérifier que le type est valide
     const validTypes = ['restaurant', 'bar', 'shop', 'market', 'other'];
     if (!validTypes.includes(type)) {
-        throw new ApiError(`Type invalide. Les types valides sont: ${validTypes.join(', ')}`, 400);
+        throw new apiError(`Type invalide. Les types valides sont: ${validTypes.join(', ')}`, 400);
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier que l'utilisateur est le propriétaire de la résidence
     if (residence.partner.toString() !== req.user.id) {
-        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+        throw new apiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
     }
 
     // Créer le nouveau lieu à proximité
@@ -403,18 +403,18 @@ exports.addFaq = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (!question || !answer) {
-        throw new ApiError('Veuillez fournir la question et la réponse', 400);
+        throw new apiError('Veuillez fournir la question et la réponse', 400);
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier que l'utilisateur est le propriétaire de la résidence
     if (residence.partner.toString() !== req.user.id) {
-        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+        throw new apiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
     }
 
     // Créer la nouvelle FAQ
@@ -452,12 +452,12 @@ exports.updateEnhancedAmenities = asyncHandler(async (req, res) => {
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier que l'utilisateur est le propriétaire de la résidence
     if (residence.partner.toString() !== req.user.id) {
-        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+        throw new apiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
     }
 
     // Initialiser les équipements améliorés si nécessaire
@@ -489,25 +489,25 @@ exports.updatePaymentMethods = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (!paymentMethods || !Array.isArray(paymentMethods)) {
-        throw new ApiError('Veuillez fournir un tableau de méthodes de paiement', 400);
+        throw new apiError('Veuillez fournir un tableau de méthodes de paiement', 400);
     }
 
     // Vérifier que les méthodes de paiement sont valides
     const validMethods = ['cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer'];
     const invalidMethods = paymentMethods.filter(method => !validMethods.includes(method));
     if (invalidMethods.length > 0) {
-        throw new ApiError(`Méthodes de paiement invalides: ${invalidMethods.join(', ')}. Les méthodes valides sont: ${validMethods.join(', ')}`, 400);
+        throw new apiError(`Méthodes de paiement invalides: ${invalidMethods.join(', ')}. Les méthodes valides sont: ${validMethods.join(', ')}`, 400);
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier que l'utilisateur est le propriétaire de la résidence
     if (residence.partner.toString() !== req.user.id) {
-        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+        throw new apiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
     }
 
     // Mettre à jour les méthodes de paiement
@@ -529,30 +529,30 @@ exports.updateNearbyPlaces = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (!nearbyPlaces || !Array.isArray(nearbyPlaces)) {
-        throw new ApiError('Veuillez fournir un tableau de points d\'intérêt', 400);
+        throw new apiError('Veuillez fournir un tableau de points d\'intérêt', 400);
     }
 
     // Valider chaque point d'intérêt
     const validTypes = ['restaurant', 'bar', 'shop', 'market', 'other'];
     for (const place of nearbyPlaces) {
         if (!place.name || !place.type || place.distance === undefined) {
-            throw new ApiError('Chaque point d\'intérêt doit avoir un nom, un type et une distance', 400);
+            throw new apiError('Chaque point d\'intérêt doit avoir un nom, un type et une distance', 400);
         }
         
         if (!validTypes.includes(place.type)) {
-            throw new ApiError(`Type de point d'intérêt invalide: ${place.type}. Les types valides sont: ${validTypes.join(', ')}`, 400);
+            throw new apiError(`Type de point d'intérêt invalide: ${place.type}. Les types valides sont: ${validTypes.join(', ')}`, 400);
         }
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier que l'utilisateur est le propriétaire de la résidence
     if (residence.partner.toString() !== req.user.id) {
-        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+        throw new apiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
     }
 
     // Mettre à jour les points d'intérêt
@@ -574,18 +574,18 @@ exports.updateStars = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (stars === undefined || stars < 0 || stars > 5) {
-        throw new ApiError('Veuillez fournir un nombre d\'étoiles valide (entre 0 et 5)', 400);
+        throw new apiError('Veuillez fournir un nombre d\'étoiles valide (entre 0 et 5)', 400);
     }
 
     // Vérifier que l'utilisateur est un administrateur
     if (req.user.role !== 'admin') {
-        throw new ApiError('Seuls les administrateurs peuvent mettre à jour le nombre d\'étoiles', 403);
+        throw new apiError('Seuls les administrateurs peuvent mettre à jour le nombre d\'étoiles', 403);
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Mettre à jour le nombre d'étoiles
@@ -607,20 +607,20 @@ exports.updateRatings = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (overall === undefined || overall < 0 || overall > 5) {
-        throw new ApiError('Veuillez fournir une note globale valide (entre 0 et 5)', 400);
+        throw new apiError('Veuillez fournir une note globale valide (entre 0 et 5)', 400);
     }
 
     // Validation des notes optionnelles
     if ((cleanliness !== undefined && (cleanliness < 0 || cleanliness > 5)) ||
         (comfort !== undefined && (comfort < 0 || comfort > 5)) ||
         (facilities !== undefined && (facilities < 0 || facilities > 5))) {
-        throw new ApiError('Toutes les notes doivent être comprises entre 0 et 5', 400);
+        throw new apiError('Toutes les notes doivent être comprises entre 0 et 5', 400);
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // TODO: Vérifier que l'utilisateur a bien une réservation confirmée pour cette résidence
@@ -677,25 +677,25 @@ exports.updateFaqs = asyncHandler(async (req, res) => {
 
     // Validation des données
     if (!faqs || !Array.isArray(faqs)) {
-        throw new ApiError('Veuillez fournir un tableau de FAQs', 400);
+        throw new apiError('Veuillez fournir un tableau de FAQs', 400);
     }
 
     // Valider chaque FAQ
     for (const faq of faqs) {
         if (!faq.question || !faq.answer) {
-            throw new ApiError('Chaque FAQ doit avoir une question et une réponse', 400);
+            throw new apiError('Chaque FAQ doit avoir une question et une réponse', 400);
         }
     }
 
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
-        throw new ApiError('Résidence non trouvée', 404);
+        throw new apiError('Résidence non trouvée', 404);
     }
 
     // Vérifier que l'utilisateur est le propriétaire de la résidence
     if (residence.partner.toString() !== req.user.id) {
-        throw new ApiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
+        throw new apiError('Vous n\'êtes pas autorisé à modifier cette résidence', 403);
     }
 
     // Mettre à jour les FAQs

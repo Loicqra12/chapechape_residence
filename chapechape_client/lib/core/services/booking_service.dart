@@ -3,18 +3,35 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/models/cancellation_policy_model.dart';
 import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
+import 'package:chapechape_client/core/services/booking_cache_service.dart';
 import 'package:flutter/foundation.dart';
 
 class BookingService {
   final ApiService _apiService;
+  final BookingCacheService _cacheService;
+  bool _isOfflineMode = false;
 
-  BookingService._({
+  BookingService._({ 
     required ApiService apiService,
-  }) : _apiService = apiService;
+    required BookingCacheService cacheService,
+  }) : 
+    _apiService = apiService,
+    _cacheService = cacheService;
 
   static Future<BookingService> initialize() async {
     final apiService = await ApiService.initialize();
-    return BookingService._(apiService: apiService);
+    final cacheService = BookingCacheService();
+    await cacheService.initialize();
+    return BookingService._(
+      apiService: apiService,
+      cacheService: cacheService
+    );
+  }
+  
+  /// Active ou désactive le mode hors ligne
+  void setOfflineMode(bool isOffline) {
+    _isOfflineMode = isOffline;
+    debugPrint('${isOffline ? "🔌" : "🌐"} Mode ${isOffline ? "hors ligne" : "en ligne"} activé');
   }
 
   // Créer une nouvelle réservation
@@ -26,22 +43,29 @@ class BookingService {
     String? specialRequests,
   }) async {
     try {
-      // Vérifier que l'ID de résidence n'est pas un ID temporaire
-      if (residenceId.startsWith('temp_')) {
-        debugPrint('⚠️ ATTENTION: Utilisation d\'un ID temporaire pour la création de réservation');
-        // Utiliser l'ID de résidence qui fonctionne dans Postman
-        residenceId = "67cb2f6acb3b4423a99c32c8"; // ID valide de MongoDB
+      // Valider les paramètres d'entrée
+      if (residenceId.isEmpty) {
+        throw Exception('L\'ID de résidence ne peut pas être vide');
+      }
+      if (checkIn.isAfter(checkOut)) {
+        throw Exception('La date d\'arrivée doit être antérieure à la date de départ');
+      }
+      if (checkIn.isBefore(DateTime.now())) {
+        throw Exception('La date d\'arrivée ne peut pas être dans le passé');
+      }
+      if (numberOfGuests <= 0) {
+        throw Exception('Le nombre d\'invités doit être supérieur à zéro');
       }
       
-      // Formater les dates au format YYYY-MM-DD comme attendu par l'API
-      final formattedCheckIn = "${checkIn.year}-${checkIn.month.toString().padLeft(2, '0')}-${checkIn.day.toString().padLeft(2, '0')}";
-      final formattedCheckOut = "${checkOut.year}-${checkOut.month.toString().padLeft(2, '0')}-${checkOut.day.toString().padLeft(2, '0')}";
+      // Formater les dates au format ISO 8601 comme attendu par l'API
+      final formattedCheckIn = checkIn.toIso8601String().split('T')[0]; // YYYY-MM-DD
+      final formattedCheckOut = checkOut.toIso8601String().split('T')[0]; // YYYY-MM-DD
       
-      debugPrint('⚠️ TENTATIVE DE CRÉATION DE RÉSERVATION AVEC DATES RÉELLES');
+      debugPrint('📅 Création de réservation: $formattedCheckIn → $formattedCheckOut pour $numberOfGuests invités');
       
-      // Créer un Map avec les valeurs réelles fournies par l'utilisateur
+      // Créer un Map avec les valeurs fournies par l'utilisateur
       final Map<String, dynamic> requestData = {
-        'residenceId': residenceId,
+        'residence': residenceId,
         'checkIn': formattedCheckIn,
         'checkOut': formattedCheckOut,
         'numberOfGuests': numberOfGuests,
@@ -85,7 +109,12 @@ class BookingService {
         throw Exception('Format des données de réservation inattendu: $data');
       }
 
-      return Booking.fromJson(data as Map<String, dynamic>);
+      final booking = Booking.fromJson(data as Map<String, dynamic>);
+      
+      // Mettre en cache pour les futures requêtes
+      await _cacheService.cacheBooking(booking);
+      
+      return booking;
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
@@ -98,7 +127,19 @@ class BookingService {
   // Récupérer une réservation par son ID
   Future<Booking> getBookingById(String id) async {
     try {
-      debugPrint('Tentative de récupération de la réservation avec ID: $id');
+      // Essayer de récupérer du cache d'abord
+      final cachedBooking = await _cacheService.getBooking(id);
+      if (cachedBooking != null) {
+        debugPrint('📦 Réservation $id récupérée du cache');
+        return cachedBooking;
+      }
+      
+      // Mode hors ligne activé et pas de données en cache
+      if (_isOfflineMode) {
+        throw Exception('Impossible de récupérer les données en mode hors ligne');
+      }
+      
+      debugPrint('🔍 Récupération de la réservation $id depuis l\'API');
       // Utiliser exclusivement l'endpoint reservations
       final response = await _apiService.get('reservations/$id');
       
@@ -112,15 +153,18 @@ class BookingService {
       }
       
       final responseData = response.data as Map<String, dynamic>;
-      final data = responseData['data'];
-      
-      if (data == null) {
-        throw Exception('Données de réservation manquantes dans la réponse');
+      if (!responseData.containsKey('data')) {
+        throw Exception('Données manquantes dans la réponse');
       }
+
+      final data = responseData['data'];
+      final booking = Booking.fromJson(data as Map<String, dynamic>);
       
-      return Booking.fromJson(data as Map<String, dynamic>);
+      // Mettre en cache pour les futures requêtes
+      await _cacheService.cacheBooking(booking);
+      
+      return booking;
     } on DioException catch (e) {
-      debugPrint('Erreur lors de la récupération de la réservation: ${e.message}');
       throw _handleDioError(e);
     }
   }
@@ -128,14 +172,34 @@ class BookingService {
   // Récupérer toutes les réservations de l'utilisateur
   Future<List<Booking>> getUserBookings({String? status}) async {
     try {
-      final response = await _apiService.get(
-        'reservations/my-reservations',
-        queryParameters: status != null ? {'status': status} : null,
-      );
-
-      return (response.data['data'] as List)
-          .map((json) => Booking.fromJson(json))
-          .toList();
+      // Essayer de récupérer du cache d'abord
+      final cachedBookings = await _cacheService.getUserBookings();
+      if (cachedBookings != null) {
+        debugPrint('📦 Liste de réservations récupérée du cache');
+        
+        // Si un filtre de statut est demandé, filtrer les résultats du cache
+        if (status != null) {
+          return cachedBookings.where((booking) => booking.status == status).toList();
+        }
+        return cachedBookings;
+      }
+      
+      // Mode hors ligne activé et pas de données en cache
+      if (_isOfflineMode) {
+        throw Exception('Impossible de récupérer les données en mode hors ligne');
+      }
+      
+      debugPrint('🔍 Récupération des réservations depuis l\'API');
+      final queryParams = status != null ? {'status': status} : null;
+      final response = await _apiService.get('reservations/user-bookings', queryParameters: queryParams);
+      final List<dynamic> data = response.data['data'];
+      
+      final bookings = data.map((item) => Booking.fromJson(item)).toList();
+      
+      // Mettre en cache pour les futures requêtes
+      await _cacheService.cacheUserBookings(bookings);
+      
+      return bookings;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -144,10 +208,28 @@ class BookingService {
   // Récupérer les réservations d'une résidence
   Future<List<Booking>> getResidenceReservations(String residenceId) async {
     try {
+      // Essayer de récupérer du cache d'abord
+      final cachedBookings = await _cacheService.getResidenceReservations(residenceId);
+      if (cachedBookings != null) {
+        debugPrint('📦 Liste de réservations récupérée du cache');
+        return cachedBookings;
+      }
+      
+      // Mode hors ligne activé et pas de données en cache
+      if (_isOfflineMode) {
+        throw Exception('Impossible de récupérer les données en mode hors ligne');
+      }
+      
+      debugPrint('🔍 Récupération des réservations depuis l\'API');
       final response = await _apiService.get('reservations/residence/$residenceId');
-      return (response.data['data'] as List)
-          .map((json) => Booking.fromJson(json))
-          .toList();
+      final List<dynamic> data = response.data['data'];
+      
+      final bookings = data.map((item) => Booking.fromJson(item)).toList();
+      
+      // Mettre en cache pour les futures requêtes
+      await _cacheService.cacheResidenceReservations(residenceId, bookings);
+      
+      return bookings;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -159,9 +241,20 @@ class BookingService {
     String? reason,
   }) async {
     try {
-      await _apiService.patch('reservations/$id/cancel', data: {
-        if (reason != null) 'reason': reason,
+      if (_isOfflineMode) {
+        throw Exception('Impossible d\'annuler une réservation en mode hors ligne');
+      }
+      
+      await _apiService.put('reservations/$id/cancel', data: {
+        'reason': reason ?? 'Aucune raison spécifiée'
       });
+      
+      // Invalider le cache pour cette réservation
+      await _cacheService.invalidateBooking(id);
+      // Invalider aussi la liste des réservations car elle a changé
+      await _cacheService.invalidateAllBookings();
+      
+      debugPrint('🗑️ Réservation $id annulée et cache invalidé');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -309,6 +402,28 @@ class BookingService {
       throw _handleDioError(e);
     }
   }
+  
+  /// Version simplifiée de checkAvailability qui retourne directement un booléen
+  /// Cette méthode doit être utilisée quand seul le statut de disponibilité est nécessaire
+  Future<bool> isAvailable({
+    required String residenceId,
+    required DateTime checkIn,
+    required DateTime checkOut,
+  }) async {
+    try {
+      final result = await checkAvailability(
+        residenceId: residenceId,
+        checkIn: checkIn,
+        checkOut: checkOut,
+      );
+      
+      // Extraire le booléen de la map retournée
+      return result['isAvailable'] == true;
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la vérification de disponibilité: $e');
+      return false;
+    }
+  }
 
   // Vérification des conflits de dates (implémentation côté client)
   bool _checkDateConflicts(List<Map<String, dynamic>> reservations, DateTime checkIn, DateTime checkOut) {
@@ -452,6 +567,8 @@ class BookingService {
 
   // Gestionnaire d'erreurs Dio
   Exception _handleDioError(DioException e) {
+    debugPrint('🔴 Erreur API: ${e.message}');
+    
     if (e.response != null) {
       final statusCode = e.response!.statusCode;
       final responseData = e.response!.data;
@@ -464,24 +581,38 @@ class BookingService {
       
       // Sinon, utiliser un message par défaut basé sur le statut HTTP
       switch (statusCode) {
-      case 400:
-          return Exception('Données invalides');
-      case 401:
-        return Exception('Non autorisé');
+        case 400:
+          return Exception('Données invalides. Veuillez vérifier les informations saisies.');
+        case 401:
+          return Exception('Session expirée. Veuillez vous reconnecter.');
         case 403:
-          return Exception('Accès interdit');
-      case 404:
-          return Exception('Ressource non trouvée');
-      case 409:
-          return Exception('Conflit avec une réservation existante');
-      case 500:
-        return Exception('Erreur serveur');
-      default:
+          return Exception('Vous n\'avez pas les droits nécessaires pour effectuer cette action.');
+        case 404:
+          return Exception('Cette réservation n\'existe pas ou a été supprimée.');
+        case 409:
+          return Exception('Cette période est déjà réservée. Veuillez choisir d\'autres dates.');
+        case 422:
+          return Exception('Données incorrectes. Veuillez vérifier les champs obligatoires.');
+        case 429:
+          return Exception('Trop de requêtes. Veuillez réessayer dans quelques instants.');
+        case 500:
+        case 502:
+        case 503:
+          return Exception('Le service est temporairement indisponible. Veuillez réessayer plus tard.');
+        default:
           return Exception('Erreur $statusCode: ${e.message}');
       }
     }
     
     // Erreur de connexion ou autre erreur Dio
+    if (e.type == DioExceptionType.connectionTimeout) {
+      return Exception('La connexion au serveur a expiré. Veuillez vérifier votre connexion internet.');
+    } else if (e.type == DioExceptionType.receiveTimeout) {
+      return Exception('Le serveur met trop de temps à répondre. Veuillez réessayer plus tard.');
+    } else if (e.type == DioExceptionType.connectionError) {
+      return Exception('Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet.');
+    }
+    
     return Exception('Erreur de connexion: ${e.message}');
   }
 }

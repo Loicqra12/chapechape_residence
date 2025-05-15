@@ -83,10 +83,10 @@ class _BookingScreenState extends State<BookingScreen> {
     context.read<BookingBloc>().add(
       booking_events.CreateBooking(
         bookingData: {
-          'residenceId': widget.residenceId,
+          'residence': widget.residenceId,
           'checkIn': _checkInDate,
           'checkOut': _checkOutDate,
-          'numberOfGuests': _guestsController.text,
+          'numberOfGuests': int.parse(_guestsController.text),
           'specialRequests': '',
         },
       ),

@@ -279,14 +279,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           _socialLoginButton(
                             icon: 'logos/google_logo.png',
                             onPressed: () {
-                              // Implémenter la connexion avec Google
+                              context.read<AuthBloc>().add(
+                                const GoogleLoginRequested(),
+                              );
                             },
                           ),
                           const SizedBox(width: 20),
                           _socialLoginButton(
                             icon: 'logos/facebook_logo.png',
                             onPressed: () {
-                              // Implémenter la connexion avec Facebook
+                              context.read<AuthBloc>().add(
+                                const FacebookLoginRequested(),
+                              );
                             },
                           ),
                           const SizedBox(width: 20),

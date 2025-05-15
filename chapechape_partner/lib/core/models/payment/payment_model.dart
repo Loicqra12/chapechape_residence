@@ -11,6 +11,9 @@ class PaymentModel extends Equatable {
   final DateTime date;
   final String status; // 'pending', 'completed', 'cancelled', 'failed'
   final String? sourceId; // ID de la réservation associée, si applicable
+  final double? commissionRate; // Taux de commission appliqué (ex: 0.10 pour 10%)
+  final double? commissionAmount; // Montant de la commission
+  final double? originalAmount; // Montant avant commission
   
   const PaymentModel({
     required this.id,
@@ -20,10 +23,16 @@ class PaymentModel extends Equatable {
     required this.date,
     required this.status,
     this.sourceId,
+    this.commissionRate,
+    this.commissionAmount,
+    this.originalAmount,
   });
   
   @override
-  List<Object?> get props => [id, amount, type, source, date, status, sourceId];
+  List<Object?> get props => [
+    id, amount, type, source, date, status, 
+    sourceId, commissionRate, commissionAmount, originalAmount
+  ];
   
   PaymentModel copyWith({
     String? id,
@@ -33,6 +42,9 @@ class PaymentModel extends Equatable {
     DateTime? date,
     String? status,
     String? sourceId,
+    double? commissionRate,
+    double? commissionAmount,
+    double? originalAmount,
   }) {
     return PaymentModel(
       id: id ?? this.id,
@@ -42,6 +54,9 @@ class PaymentModel extends Equatable {
       date: date ?? this.date,
       status: status ?? this.status,
       sourceId: sourceId ?? this.sourceId,
+      commissionRate: commissionRate ?? this.commissionRate,
+      commissionAmount: commissionAmount ?? this.commissionAmount,
+      originalAmount: originalAmount ?? this.originalAmount,
     );
   }
   
@@ -54,6 +69,15 @@ class PaymentModel extends Equatable {
       date: DateTime.parse(json['date'] as String),
       status: json['status'] as String,
       sourceId: json['source_id'] as String?,
+      commissionRate: json['commission_rate'] != null 
+          ? (json['commission_rate'] as num).toDouble() 
+          : null,
+      commissionAmount: json['commission_amount'] != null 
+          ? (json['commission_amount'] as num).toDouble() 
+          : null,
+      originalAmount: json['original_amount'] != null 
+          ? (json['original_amount'] as num).toDouble() 
+          : null,
     );
   }
   
@@ -66,6 +90,9 @@ class PaymentModel extends Equatable {
       'date': date.toIso8601String(),
       'status': status,
       'source_id': sourceId,
+      if (commissionRate != null) 'commission_rate': commissionRate,
+      if (commissionAmount != null) 'commission_amount': commissionAmount,
+      if (originalAmount != null) 'original_amount': originalAmount,
     };
   }
   
@@ -88,6 +115,41 @@ class PaymentModel extends Equatable {
     final formatter = DateFormat('dd MMMM yyyy à HH:mm', 'fr_FR');
     return formatter.format(date);
   }
+  
+  // Formatage du montant original (avant commission)
+  String get formattedOriginalAmount {
+    if (originalAmount == null) return formattedAmount;
+    
+    final formatter = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: 'FCFA',
+      decimalDigits: 0,
+    );
+    
+    return formatter.format(originalAmount);
+  }
+  
+  // Formatage du montant de la commission
+  String get formattedCommissionAmount {
+    if (commissionAmount == null) return '';
+    
+    final formatter = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: 'FCFA',
+      decimalDigits: 0,
+    );
+    
+    return formatter.format(commissionAmount);
+  }
+  
+  // Formatage du pourcentage de la commission
+  String get formattedCommissionRate {
+    if (commissionRate == null) return '';
+    return '${(commissionRate! * 100).toStringAsFixed(0)}%';
+  }
+  
+  // Vérifier si une commission a été appliquée
+  bool get hasCommission => commissionRate != null && commissionAmount != null;
   
   bool get isPending => status == 'pending';
   bool get isCompleted => status == 'completed';
@@ -120,4 +182,4 @@ class TransactionResult {
       totalWithdrawals: (json['total_withdrawals'] as num).toDouble(),
     );
   }
-} 
+}

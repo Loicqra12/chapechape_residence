@@ -34,9 +34,12 @@ if (flutterRoot == null) {
 apply from: "fix_plugin.gradle"
 
 android {
-    namespace = "com.chapechape.chapechape_client"
+    namespace = "com.chapechape.client"
     compileSdk = 35
     ndkVersion = project.hasProperty('ndkVersion') ? project.ndkVersion : "25.1.8937393"
+    
+    // Force all Android libraries to use SDK 23 as minimum
+    buildToolsVersion = "33.0.2"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -52,13 +55,26 @@ android {
         checkReleaseBuilds false
         abortOnError false
     }
+    
+    // Ajout pour résoudre les problèmes de manifest merger
+    aaptOptions {
+        noCompress "tflite"
+    }
 
     defaultConfig {
-        applicationId = "com.chapechape.chapechape_client"
-        minSdk = project.hasProperty('minSdkVersion') ? project.minSdkVersion : 21
-        targetSdk = project.hasProperty('targetSdkVersion') ? project.targetSdkVersion : 34
-        versionCode = 1
-        versionName = "1.0.0"
+        applicationId "com.chapechape.client"
+        minSdkVersion project.hasProperty('minSdkVersion') ? project.minSdkVersion : 23
+        targetSdkVersion project.hasProperty('targetSdkVersion') ? project.targetSdkVersion : 34
+        versionCode 1
+        versionName "1.0.0"
+        
+        // Configuration OneSignal
+        manifestPlaceholders = [
+            onesignal_app_id: '43531899-4645-4f52-a2bf-f4e4a4095513',
+            onesignal_channel_id: "b80d5093-5e1f-480e-a42f-a0ccb009e3f2",
+            onesignal_firebase_default_notification_icon: "@mipmap/ic_launcher",
+            applicationName: "io.flutter.app.FlutterApplication"
+        ]
     }
 
     buildTypes {
@@ -71,6 +87,7 @@ android {
         resolutionStrategy {
             force 'androidx.annotation:annotation:1.7.0'
             force 'androidx.core:core:1.12.0'
+            force 'androidx.activity:activity:1.8.2'
             force 'com.google.android.gms:play-services-base:18.2.0'
             force 'com.google.android.gms:play-services-tasks:18.0.2'
             force 'com.google.android.gms:play-services-basement:18.2.0'
@@ -90,6 +107,7 @@ android {
 dependencies {
     implementation 'androidx.annotation:annotation:1.7.0'
     implementation 'androidx.core:core:1.12.0'
+    implementation 'androidx.activity:activity:1.8.2'
     // Ne pas implémenter directement flutter_plugin_android_lifecycle comme dans le projet partenaire
     implementation 'androidx.lifecycle:lifecycle-common:2.6.2'
     implementation 'androidx.lifecycle:lifecycle-runtime:2.6.2'
@@ -98,3 +116,6 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+// Appliquer le plugin Google Services à la fin
+apply plugin: 'com.google.gms.google-services'

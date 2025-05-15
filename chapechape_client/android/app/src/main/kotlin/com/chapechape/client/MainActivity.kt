@@ -1,4 +1,4 @@
-package com.chapechape.chapechape_client
+package com.chapechape.client
 
 import io.flutter.embedding.android.FlutterActivity
 

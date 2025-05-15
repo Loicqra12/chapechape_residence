@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth/auth.controller');
+const googleAuthController = require('../controllers/auth/google-auth.controller');
+const facebookAuthController = require('../controllers/auth/facebook-auth.controller');
 const validate = require('../middlewares/validate.middleware');
 const authValidation = require('../validations/auth.validation');
 const {
@@ -186,5 +188,85 @@ router.post('/refresh-token', validateRefreshToken, refreshToken);
 
 // Routes protégées
 router.get('/me', protect, getMe);
+
+/**
+ * @swagger
+ * /api/auth/google:
+ *   post:
+ *     summary: Authentification avec Google
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Token ID fourni par Google
+ *               email:
+ *                 type: string
+ *                 description: Email de l'utilisateur
+ *               displayName:
+ *                 type: string
+ *                 description: Nom complet
+ *               photoUrl:
+ *                 type: string
+ *                 description: URL de la photo de profil
+ *               uid:
+ *                 type: string
+ *                 description: ID unique Google
+ *     responses:
+ *       200:
+ *         description: Authentification réussie
+ *       400:
+ *         description: Token manquant ou invalide
+ *       401:
+ *         description: Authentification échouée
+ */
+router.post('/google', googleAuthController.googleAuth);
+
+/**
+ * @swagger
+ * /api/auth/facebook:
+ *   post:
+ *     summary: Authentification avec Facebook
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accessToken
+ *             properties:
+ *               accessToken:
+ *                 type: string
+ *                 description: Token d'accès fourni par Facebook
+ *               email:
+ *                 type: string
+ *                 description: Email de l'utilisateur
+ *               displayName:
+ *                 type: string
+ *                 description: Nom complet
+ *               photoUrl:
+ *                 type: string
+ *                 description: URL de la photo de profil
+ *               uid:
+ *                 type: string
+ *                 description: ID unique Facebook
+ *     responses:
+ *       200:
+ *         description: Authentification réussie
+ *       400:
+ *         description: Token manquant ou invalide
+ *       401:
+ *         description: Authentification échouée
+ */
+router.post('/facebook', facebookAuthController.handleFacebookAuth);
 
 module.exports = router;

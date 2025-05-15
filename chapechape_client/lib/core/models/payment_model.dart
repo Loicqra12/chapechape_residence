@@ -3,9 +3,14 @@ import 'package:flutter/material.dart' show Colors, Color;
 /// Énumération des méthodes de paiement disponibles
 enum PaymentMethod {
   mobileMoney,
+  orangeMoney,   // Nouveau: Orange Money
+  moovMoney,     // Nouveau: Moov Money
+  mtnMoney,      // Nouveau: MTN Money
+  wave,
   visa,
   mastercard,
-  wave,
+  creditCard,    // Nouveau: Carte de crédit générique
+  bankTransfer,  // Nouveau: Virement bancaire
   paypal,
   stripe,
   cash,
@@ -28,12 +33,22 @@ extension PaymentMethodExtension on PaymentMethod {
     switch (this) {
       case PaymentMethod.mobileMoney:
         return 'Mobile Money';
+      case PaymentMethod.orangeMoney:
+        return 'Orange Money';
+      case PaymentMethod.moovMoney:
+        return 'Moov Money';
+      case PaymentMethod.mtnMoney:
+        return 'MTN Money';
+      case PaymentMethod.wave:
+        return 'Wave';
       case PaymentMethod.visa:
         return 'Visa';
       case PaymentMethod.mastercard:
         return 'Mastercard';
-      case PaymentMethod.wave:
-        return 'Wave';
+      case PaymentMethod.creditCard:
+        return 'Carte de crédit';
+      case PaymentMethod.bankTransfer:
+        return 'Virement bancaire';
       case PaymentMethod.paypal:
         return 'PayPal';
       case PaymentMethod.stripe:
@@ -49,12 +64,22 @@ extension PaymentMethodExtension on PaymentMethod {
     switch (this) {
       case PaymentMethod.mobileMoney:
         return 'assets/icons/momo.png';
+      case PaymentMethod.orangeMoney:
+        return 'assets/icons/orange_money.png';
+      case PaymentMethod.moovMoney:
+        return 'assets/icons/moov_money.png';
+      case PaymentMethod.mtnMoney:
+        return 'assets/icons/mtn_money.png';
+      case PaymentMethod.wave:
+        return 'assets/icons/wave.png';
       case PaymentMethod.visa:
         return 'assets/icons/visa.png';
       case PaymentMethod.mastercard:
         return 'assets/icons/mastercard.png';
-      case PaymentMethod.wave:
-        return 'assets/icons/wave.png';
+      case PaymentMethod.creditCard:
+        return 'assets/icons/credit_card.png';
+      case PaymentMethod.bankTransfer:
+        return 'assets/icons/bank_transfer.png';
       case PaymentMethod.paypal:
         return 'assets/icons/paypal.png';
       case PaymentMethod.stripe:
@@ -104,6 +129,57 @@ extension PaymentStatusExtension on PaymentStatus {
   }
 }
 
+/// Modèle pour la commission de paiement
+class PaymentCommission {
+  /// Taux de commission (par défaut 10%)
+  final double rate;
+  
+  /// Montant total de la transaction
+  final double totalAmount;
+  
+  /// Montant de la commission calculé
+  final double commissionAmount;
+  
+  /// Montant que recevra le partenaire
+  final double partnerAmount;
+  
+  /// Constructeur avec calcul automatique des montants
+  PaymentCommission({
+    this.rate = 0.10,
+    required this.totalAmount,
+  }) : 
+    commissionAmount = totalAmount * rate,
+    partnerAmount = totalAmount * (1 - rate);
+  
+  /// Constructeur avec tous les champs
+  const PaymentCommission.withAmounts({
+    required this.rate,
+    required this.totalAmount,
+    required this.commissionAmount,
+    required this.partnerAmount,
+  });
+  
+  /// Création depuis un objet JSON
+  factory PaymentCommission.fromJson(Map<String, dynamic> json) {
+    return PaymentCommission.withAmounts(
+      rate: (json['rate'] as num).toDouble(),
+      totalAmount: (json['totalAmount'] as num).toDouble(),
+      commissionAmount: (json['commissionAmount'] as num).toDouble(),
+      partnerAmount: (json['partnerAmount'] as num).toDouble(),
+    );
+  }
+  
+  /// Conversion en JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'rate': rate,
+      'totalAmount': totalAmount,
+      'commissionAmount': commissionAmount,
+      'partnerAmount': partnerAmount,
+    };
+  }
+}
+
 class Payment {
   final String id;
   final String bookingId;
@@ -120,8 +196,16 @@ class Payment {
   final DateTime? updatedAt;
   final String? bookingResidenceName; // Propriété manquante pour le nom de la résidence
   
-  // Getter pour garantir la compatibilité avec les nouveaux noms
+  // Nouvelle propriété pour la commission
+  final PaymentCommission? commission;
+  
+  // Getters pour garantir la compatibilité avec les nouveaux noms
   String get reservationId => bookingId;
+  
+  // Getters pour la commission avec valeurs par défaut
+  double get commissionRate => commission?.rate ?? 0.10;
+  double get commissionAmount => commission?.commissionAmount ?? (amount * commissionRate);
+  double get partnerAmount => commission?.partnerAmount ?? (amount - commissionAmount);
   
   const Payment({
     required this.id,
@@ -138,6 +222,7 @@ class Payment {
     required this.createdAt,
     this.updatedAt,
     this.bookingResidenceName,
+    this.commission,
   });
   
   // Méthode copyWith pour créer une copie modifiée
@@ -156,6 +241,7 @@ class Payment {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? bookingResidenceName,
+    PaymentCommission? commission,
   }) {
     return Payment(
       id: id ?? this.id,
@@ -172,13 +258,24 @@ class Payment {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       bookingResidenceName: bookingResidenceName ?? this.bookingResidenceName,
+      commission: commission ?? this.commission,
     );
   }
   
+  /// Calcule une commission en fonction du taux spécifié
+  PaymentCommission calculateCommission({double? rate}) {
+    final effectiveRate = rate ?? commissionRate;
+    return PaymentCommission(
+      rate: effectiveRate,
+      totalAmount: amount,
+    );
+  }
+  
+  /// Crée un paiement à partir d'un objet JSON
   factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
       id: json['id'] as String,
-      bookingId: json['bookingId'] as String,
+      bookingId: json['bookingId'] ?? json['reservationId'] as String,
       userId: json['userId'] as String,
       amount: (json['amount'] as num).toDouble(),
       method: _parsePaymentMethod(json['method']),
@@ -191,9 +288,13 @@ class Payment {
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
       bookingResidenceName: json['bookingResidenceName'] as String?,
+      commission: json['commission'] != null 
+          ? PaymentCommission.fromJson(json['commission'] as Map<String, dynamic>)
+          : null,
     );
   }
   
+  /// Convertit le paiement en objet JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -210,6 +311,7 @@ class Payment {
       'createdAt': createdAt.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (bookingResidenceName != null) 'bookingResidenceName': bookingResidenceName,
+      if (commission != null) 'commission': commission!.toJson(),
     };
   }
 }
@@ -355,12 +457,27 @@ PaymentMethod _parsePaymentMethod(String value) {
     case 'mobileMoney':
     case 'momo':
       return PaymentMethod.mobileMoney;
+    case 'orangeMoney':
+    case 'orange_money':
+      return PaymentMethod.orangeMoney;
+    case 'moovMoney':
+    case 'moov_money':
+      return PaymentMethod.moovMoney;
+    case 'mtnMoney':
+    case 'mtn_money':
+      return PaymentMethod.mtnMoney;
+    case 'wave':
+      return PaymentMethod.wave;
     case 'visa':
       return PaymentMethod.visa;
     case 'mastercard':
       return PaymentMethod.mastercard;
-    case 'wave':
-      return PaymentMethod.wave;
+    case 'creditCard':
+    case 'credit_card':
+      return PaymentMethod.creditCard;
+    case 'bankTransfer':
+    case 'bank_transfer':
+      return PaymentMethod.bankTransfer;
     case 'paypal':
       return PaymentMethod.paypal;
     case 'stripe':

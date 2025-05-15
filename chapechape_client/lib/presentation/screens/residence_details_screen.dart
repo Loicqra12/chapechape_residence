@@ -7,6 +7,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
+import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../screens/booking_screen.dart';
@@ -945,8 +946,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
   bool _isUserAuthenticated(BuildContext context) {
     try {
       final authBloc = context.read<AuthBloc>();
-      // Cette vérification peut être adaptée selon l'implémentation réelle
-      return authBloc.state != null && authBloc.state.toString().contains('Auth');
+      return authBloc.state is Authenticated;
     } catch (e) {
       return false;
     }

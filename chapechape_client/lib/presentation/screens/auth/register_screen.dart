@@ -72,6 +72,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Widget _socialLoginButton({required String icon, required VoidCallback onPressed}) {
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Icon(
+                  icon == 'logos/google_logo.png' ? Icons.g_mobiledata : 
+                  icon == 'logos/facebook_logo.png' ? Icons.facebook : 
+                  Icons.apple,
+                  size: 24,
+                  color: icon == 'logos/google_logo.png' ? Colors.red : 
+                         icon == 'logos/facebook_logo.png' ? Colors.blue : 
+                         Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
@@ -346,6 +389,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: Colors.grey.withOpacity(0.3),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Ou inscrivez-vous avec',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: Colors.grey.withOpacity(0.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _socialLoginButton(
+                            icon: 'logos/google_logo.png',
+                            onPressed: () {
+                              context.read<AuthBloc>().add(
+                                const GoogleLoginRequested(),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 20),
+                          _socialLoginButton(
+                            icon: 'logos/facebook_logo.png',
+                            onPressed: () {
+                              context.read<AuthBloc>().add(
+                                const FacebookLoginRequested(),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 20),
+                          _socialLoginButton(
+                            icon: 'logos/apple_logo.png',
+                            onPressed: () {
+                              // Implémenter la connexion avec Apple
+                            },
                           ),
                         ],
                       ),

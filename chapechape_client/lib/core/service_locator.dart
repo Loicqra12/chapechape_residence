@@ -15,6 +15,7 @@ import 'services/logger_service.dart';
 import 'services/type_sync_service.dart';
 import 'services/category_cache_service.dart';
 import 'services/favorite_service.dart';
+import 'services/connectivity/connection_quality_service.dart';
 
 import 'repositories/auth_repository.dart';
 import 'repositories/favorite_repository.dart';
@@ -104,6 +105,10 @@ Future<void> setupServiceLocator() async {
     cacheService: sl<CacheService>(),
     logger: sl<LoggerService>(),
   ));
+  
+  // Ajout du service de qualité de connexion 
+  sl.registerSingleton<ConnectionQualityService>(ConnectionQualityService());
+  await sl<ConnectionQualityService>().initialize();
   
   // Repositories
   sl.registerSingleton<AuthRepository>(AuthRepository(

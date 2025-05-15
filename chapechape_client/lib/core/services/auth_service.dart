@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
 
@@ -165,6 +168,109 @@ class AuthService {
       });
     } on DioException catch (e) {
       throw _handleDioError(e);
+    }
+  }
+
+  // Gérer les erreurs Dio
+  // Connexion avec Google
+  Future<User> signInWithGoogle() async {
+    try {
+      // Démarrer le processus de connexion avec Google
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: '150162865149-m6q57o1f68t73o8lfiumb0671qcj55da.apps.googleusercontent.com',
+        scopes: ['email', 'profile'],
+      );
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        throw Exception('Connexion Google annulée par l\'utilisateur');
+      }
+      
+      // Obtenir les détails d'authentification de la demande Google
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // Créer un nouvel identifiant d'authentification Firebase à partir du token
+      final firebase_auth.AuthCredential credential = firebase_auth.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      
+      // Connecter l'utilisateur avec Firebase
+      final firebase_auth.UserCredential userCredential = 
+          await firebase_auth.FirebaseAuth.instance.signInWithCredential(credential);
+      
+      final firebase_auth.User? firebaseUser = userCredential.user;
+      
+      if (firebaseUser == null) {
+        throw Exception('Échec de l\'authentification avec Google');
+      }
+      
+      // Envoyer les informations Google à notre API pour authentifier/enregistrer l'utilisateur
+      final response = await _apiService.post('/auth/google', data: {
+        'idToken': googleAuth.idToken,
+        'email': firebaseUser.email,
+        'displayName': firebaseUser.displayName,
+        'photoUrl': firebaseUser.photoURL,
+        'uid': firebaseUser.uid
+      });
+      
+      // Sauvegarder le token JWT de notre backend
+      await _storage.write(key: 'token', value: response.data['token']);
+      
+      return User.fromJson(response.data['user']);
+    } catch (e) {
+      if (e is DioException) {
+        throw _handleDioError(e);
+      }
+      rethrow;
+    }
+  }
+
+  // Connexion avec Facebook
+  Future<User> signInWithFacebook() async {
+    try {
+      // Démarrer le processus de connexion avec Facebook
+      final LoginResult loginResult = await FacebookAuth.instance.login(permissions: ['email', 'public_profile']);
+      
+      if (loginResult.status != LoginStatus.success) {
+        throw Exception('Connexion Facebook annulée ou échouée');
+      }
+      
+      // Obtenir les informations de l'utilisateur
+      final userData = await FacebookAuth.instance.getUserData(fields: 'name,email,picture');
+      
+      // Obtenir les crédentials pour Firebase
+      final firebase_auth.OAuthCredential facebookAuthCredential = 
+          firebase_auth.FacebookAuthProvider.credential(loginResult.accessToken!.token);
+      
+      // Connexion avec Firebase
+      final firebase_auth.UserCredential userCredential = 
+          await firebase_auth.FirebaseAuth.instance.signInWithCredential(facebookAuthCredential);
+      
+      final firebase_auth.User? firebaseUser = userCredential.user;
+      
+      if (firebaseUser == null) {
+        throw Exception('Échec de l\'authentification avec Facebook');
+      }
+      
+      // Envoyer les informations Facebook à notre API
+      final response = await _apiService.post('/auth/facebook', data: {
+        'accessToken': loginResult.accessToken!.token,
+        'email': firebaseUser.email ?? userData['email'],
+        'displayName': firebaseUser.displayName ?? userData['name'],
+        'photoUrl': firebaseUser.photoURL ?? userData['picture']['data']['url'],
+        'uid': firebaseUser.uid
+      });
+      
+      // Sauvegarder le token JWT de notre backend
+      await _storage.write(key: 'token', value: response.data['token']);
+      
+      return User.fromJson(response.data['user']);
+    } catch (e) {
+      if (e is DioException) {
+        throw _handleDioError(e);
+      }
+      rethrow;
     }
   }
 

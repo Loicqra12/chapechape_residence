@@ -4,30 +4,35 @@ const {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    deleteReadNotifications
+    deleteReadNotifications,
+    getUnreadCount
 } = require('../controllers/notification.controller');
 
 const router = express.Router();
-const { protect } = require('../middlewares/auth.middleware');
+const { protect, authorize } = require('../middlewares/auth.middleware');
 
 router.use(protect); // Toutes les routes nécessitent une authentification
 
 // Routes principales
 router.route('/')
-    .get(getNotifications);
+    .get(authorize('admin', 'partenaire', 'client'), getNotifications);
 
 // Routes spéciales (doivent être avant les routes avec :id)
 router.route('/read-all')
-    .put(markAllAsRead);
+    .put(authorize('admin', 'partenaire', 'client'), markAllAsRead);
 
 router.route('/read')
-    .delete(deleteReadNotifications);
+    .delete(authorize('admin', 'partenaire', 'client'), deleteReadNotifications);
+
+// Route pour compter les notifications non lues
+router.route('/unread/count')
+    .get(authorize('admin', 'partenaire', 'client'), getUnreadCount);
 
 // Routes avec paramètres
 router.route('/:id/read')
-    .put(markAsRead);
+    .put(authorize('admin', 'partenaire', 'client'), markAsRead);
 
 router.route('/:id')
-    .delete(deleteNotification);
+    .delete(authorize('admin', 'partenaire', 'client'), deleteNotification);
 
 module.exports = router;

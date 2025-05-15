@@ -4,7 +4,7 @@ const jwt = require('../../utils/jwt');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const asyncHandler = require('../../middlewares/async.middleware');
-const ApiError = require('../../utils/apiError');
+const apiError = require('../../utils/apiError');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -16,7 +16,7 @@ exports.register = asyncHandler(async (req, res) => {
         // Vérifier si l'utilisateur existe déjà
         const userExists = await User.findOne({ email });
         if (userExists) {
-            throw new ApiError('Un utilisateur avec cet email existe déjà', 400);
+            throw new apiError('Un utilisateur avec cet email existe déjà', 400);
         }
 
         // Créer l'utilisateur
@@ -48,7 +48,7 @@ exports.register = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        throw new ApiError('Erreur lors de l\'inscription', 500);
+        throw new apiError('Erreur lors de l\'inscription', 500);
     }
 });
 
@@ -61,19 +61,19 @@ exports.login = asyncHandler(async (req, res) => {
 
         // Vérifier si l'email et le mot de passe sont fournis
         if (!email || !password) {
-            throw new ApiError('Veuillez fournir un email et un mot de passe', 400);
+            throw new apiError('Veuillez fournir un email et un mot de passe', 400);
         }
 
         // Trouver l'utilisateur et inclure le mot de passe
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
-            throw new ApiError('Email ou mot de passe incorrect', 401);
+            throw new apiError('Email ou mot de passe incorrect', 401);
         }
 
         // Vérifier le mot de passe
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
-            throw new ApiError('Email ou mot de passe incorrect', 401);
+            throw new apiError('Email ou mot de passe incorrect', 401);
         }
 
         // Mettre à jour la dernière connexion
@@ -100,7 +100,7 @@ exports.login = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        throw new ApiError('Erreur lors de la connexion', 500);
+        throw new apiError('Erreur lors de la connexion', 500);
     }
 });
 
@@ -112,7 +112,7 @@ exports.getMe = asyncHandler(async (req, res) => {
         const user = await User.findById(req.user.id);
         
         if (!user) {
-            throw new ApiError('Utilisateur non trouvé', 404);
+            throw new apiError('Utilisateur non trouvé', 404);
         }
 
         res.json({
@@ -129,7 +129,7 @@ exports.getMe = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        throw new ApiError('Erreur lors de la récupération du profil', 500);
+        throw new apiError('Erreur lors de la récupération du profil', 500);
     }
 });
 
@@ -142,7 +142,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            throw new ApiError('Aucun utilisateur trouvé avec cet email', 404);
+            throw new apiError('Aucun utilisateur trouvé avec cet email', 404);
         }
 
         // Générer le token de réinitialisation
@@ -164,10 +164,10 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
             user.resetPasswordExpire = undefined;
             await user.save();
             
-            throw new ApiError('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.', 500);
+            throw new apiError('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.', 500);
         }
     } catch (error) {
-        throw new ApiError('Erreur lors de la réinitialisation du mot de passe', 500);
+        throw new apiError('Erreur lors de la réinitialisation du mot de passe', 500);
     }
 });
 
@@ -188,7 +188,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
         });
 
         if (!user) {
-            throw new ApiError('Token invalide ou expiré', 400);
+            throw new apiError('Token invalide ou expiré', 400);
         }
 
         // Set new password
@@ -202,7 +202,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
             message: 'Mot de passe réinitialisé avec succès'
         });
     } catch (error) {
-        throw new ApiError('Erreur lors de la réinitialisation du mot de passe', 500);
+        throw new apiError('Erreur lors de la réinitialisation du mot de passe', 500);
     }
 });
 
@@ -214,7 +214,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
         const { refreshToken } = req.body;
 
         if (!refreshToken) {
-            throw new ApiError('Token de rafraîchissement non fourni', 400);
+            throw new apiError('Token de rafraîchissement non fourni', 400);
         }
 
         // Vérifier le refresh token
@@ -222,13 +222,13 @@ exports.refreshToken = asyncHandler(async (req, res) => {
         try {
             decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
         } catch (error) {
-            throw new ApiError('Token de rafraîchissement invalide ou expiré', 401);
+            throw new apiError('Token de rafraîchissement invalide ou expiré', 401);
         }
 
         // Vérifier si l'utilisateur existe toujours
         const user = await User.findById(decoded.id);
         if (!user) {
-            throw new ApiError('Utilisateur non trouvé', 404);
+            throw new apiError('Utilisateur non trouvé', 404);
         }
 
         // Générer un nouveau token d'accès
@@ -258,7 +258,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        throw new ApiError('Erreur lors du rafraîchissement du token', 500);
+        throw new apiError('Erreur lors du rafraîchissement du token', 500);
     }
 });
 
@@ -278,7 +278,7 @@ exports.logout = asyncHandler(async (req, res) => {
             message: 'Déconnexion réussie'
         });
     } catch (error) {
-        throw new ApiError('Erreur lors de la déconnexion', 500);
+        throw new apiError('Erreur lors de la déconnexion', 500);
     }
 });
 

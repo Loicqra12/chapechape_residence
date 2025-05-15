@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
-const { ApiError } = require('../utils/apiError');
+const apiError = require('../utils/apiError');
 const Reservation = require('../models/reservation.model');
 const Residence = require('../models/residence.model');
 const Availability = require('../models/availability.model');
 const User = require('../models/user.model');
 const CancellationPolicy = require('../models/cancellationPolicy.model');
 const emailService = require('./email.service');
+const availabilityService = require('./availability.service');
 
 /**
  * Créer une nouvelle réservation
@@ -21,11 +22,29 @@ const createReservation = async (reservationBody) => {
       .populate('cancellationPolicy');
 
     if (!residence) {
-      throw new ApiError('Résidence non trouvée', 404);
+      throw new apiError('Résidence non trouvée', 404);
     }
 
+    // Si la résidence n'a pas de politique d'annulation, créer une politique par défaut
+    let cancellationPolicyId;
     if (!residence.cancellationPolicy) {
-      throw new ApiError('La résidence n\'a pas de politique d\'annulation définie', 400);
+      // Utiliser une politique d'annulation par défaut (stricte)
+      const defaultPolicy = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'Politique par défaut',
+        description: 'Politique d\'annulation par défaut (stricte)',
+        refundPercentages: [
+          { hoursBeforeCheckIn: 168, percentage: 50 }, // 7 jours avant: 50% de remboursement
+          { hoursBeforeCheckIn: 72, percentage: 25 },  // 3 jours avant: 25% de remboursement
+          { hoursBeforeCheckIn: 24, percentage: 0 }    // 1 jour avant: aucun remboursement
+        ],
+        modificationFeePercentage: 10
+      };
+      
+      cancellationPolicyId = defaultPolicy._id;
+      console.log('INFO: Utilisation d\'une politique d\'annulation par défaut pour la résidence', residence._id);
+    } else {
+      cancellationPolicyId = residence.cancellationPolicy._id;
     }
 
     // Vérifier la disponibilité
@@ -35,7 +54,7 @@ const createReservation = async (reservationBody) => {
     );
 
     if (!isAvailable) {
-      throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
+      throw new apiError('La résidence n\'est pas disponible pour ces dates', 400);
     }
 
     // Calculer le prix total
@@ -44,47 +63,64 @@ const createReservation = async (reservationBody) => {
       reservationBody.checkOut
     );
 
-    // Créer la réservation
+    // Créer la réservation avec tous les champs requis
     const reservation = await Reservation.create([{
       ...reservationBody,
+      partner: residence.partner, // Ajouter le partenaire (propriétaire) de la résidence
+      user: reservationBody.user || reservationBody.client, // Assurer la compatibilité entre user/client
       totalPrice,
-      cancellationPolicy: residence.cancellationPolicy._id,
+      cancellationPolicy: cancellationPolicyId,
       status: 'pending'
     }], { session });
 
     // Mettre à jour la disponibilité
-    await Availability.updateAvailabilityForReservation(
+    await availabilityService.updateAvailabilityForReservation(
       residence._id,
-      reservation[0]._id,
       reservationBody.checkIn,
       reservationBody.checkOut,
-      'reserved',
-      session
+      reservation[0]._id,
+      'reserved'
     );
 
+    // Valider la transaction
     await session.commitTransaction();
+    
+    // Fermer la session avant de poursuivre avec les opérations non transactionnelles
+    session.endSession();
 
-    // Envoyer les emails de confirmation
+    // Envoyer les emails de confirmation (hors transaction)
     const [user, partner] = await Promise.all([
       User.findById(reservation[0].client),
       User.findById(residence.owner)
     ]);
 
-    await Promise.all([
-      emailService.sendBookingConfirmation(user.email, reservation[0]),
-      emailService.sendPartnerNotification(partner, 'new_booking', {
-        checkIn: reservation[0].checkIn,
-        checkOut: reservation[0].checkOut,
-        guests: reservation[0].numberOfGuests
-      })
-    ]);
+    try {
+      await Promise.all([
+        emailService.sendBookingConfirmation(user.email, reservation[0]),
+        emailService.sendPartnerNotification(partner, 'new_booking', {
+          checkIn: reservation[0].checkIn,
+          checkOut: reservation[0].checkOut,
+          guests: reservation[0].numberOfGuests
+        })
+      ]);
+    } catch (emailError) {
+      console.error('Erreur lors de l\'envoi des emails de confirmation:', emailError);
+      // Ne pas faire échouer la réservation si l'envoi d'email échoue
+    }
 
     return reservation[0];
   } catch (error) {
-    await session.abortTransaction();
+    // Seulement abandonner la transaction si elle est encore active
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    
+    // S'assurer que la session est fermée dans tous les cas
+    if (session) {
+      session.endSession();
+    }
+    
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
@@ -107,13 +143,13 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
       });
 
     if (!reservation) {
-      throw new ApiError('Réservation non trouvée', 404);
+      throw new apiError('Réservation non trouvée', 404);
     }
 
     // Vérifier si l'annulation est possible
     const canCancel = await reservation.canBeCancelled();
     if (!canCancel) {
-      throw new ApiError('Cette réservation ne peut plus être annulée', 400);
+      throw new apiError('Cette réservation ne peut plus être annulée', 400);
     }
 
     // Vérifier les permissions
@@ -121,7 +157,7 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
       reservation.client.toString() !== userId &&
       reservation.residence.owner.toString() !== userId
     ) {
-      throw new ApiError('Non autorisé', 403);
+      throw new apiError('Non autorisé', 403);
     }
 
     // Calculer le remboursement
@@ -145,18 +181,21 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
     await reservation.save({ session });
 
     // Libérer la disponibilité
-    await Availability.updateAvailabilityForReservation(
+    await availabilityService.updateAvailabilityForReservation(
       reservation.residence._id,
-      reservation._id,
       reservation.checkIn,
       reservation.checkOut,
-      'available',
-      session
+      reservation._id,
+      'available'
     );
 
+    // Valider la transaction
     await session.commitTransaction();
+    
+    // Fermer la session avant de poursuivre avec les opérations non transactionnelles
+    session.endSession();
 
-    // Envoyer les emails de notification
+    // Envoyer les emails de notification (hors transaction)
     const [user, partner] = await Promise.all([
       User.findById(reservation.client),
       User.findById(reservation.residence.owner)
@@ -172,10 +211,17 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
 
     return reservation;
   } catch (error) {
-    await session.abortTransaction();
+    // Seulement abandonner la transaction si elle est encore active
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    
+    // S'assurer que la session est fermée dans tous les cas
+    if (session) {
+      session.endSession();
+    }
+    
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
@@ -198,18 +244,18 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       });
 
     if (!reservation) {
-      throw new ApiError('Réservation non trouvée', 404);
+      throw new apiError('Réservation non trouvée', 404);
     }
 
     // Vérifier si la modification est possible
     const canModify = await reservation.canBeModified();
     if (!canModify) {
-      throw new ApiError('Cette réservation ne peut plus être modifiée', 400);
+      throw new apiError('Cette réservation ne peut plus être modifiée', 400);
     }
 
     // Vérifier les permissions
     if (reservation.client.toString() !== userId) {
-      throw new ApiError('Non autorisé', 403);
+      throw new apiError('Non autorisé', 403);
     }
 
     // Vérifier la disponibilité pour les nouvelles dates
@@ -221,7 +267,7 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       );
 
       if (!isAvailable) {
-        throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
+        throw new apiError('La résidence n\'est pas disponible pour ces dates', 400);
       }
     }
 
@@ -266,19 +312,22 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
 
     // Mettre à jour la disponibilité si les dates ont changé
     if (updateBody.checkIn || updateBody.checkOut) {
-      await Availability.updateAvailabilityForReservation(
+      await availabilityService.updateAvailabilityForReservation(
         reservation.residence._id,
-        reservation._id,
         updateBody.checkIn || reservation.checkIn,
         updateBody.checkOut || reservation.checkOut,
-        'reserved',
-        session
+        reservation._id,
+        'reserved'
       );
     }
 
+    // Valider la transaction
     await session.commitTransaction();
+    
+    // Fermer la session avant de poursuivre avec les opérations non transactionnelles
+    session.endSession();
 
-    // Envoyer les notifications par email
+    // Envoyer les notifications par email (hors transaction)
     const [user, partner] = await Promise.all([
       User.findById(reservation.client),
       User.findById(reservation.residence.owner)
@@ -307,10 +356,17 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
 
     return reservation;
   } catch (error) {
-    await session.abortTransaction();
+    // Seulement abandonner la transaction si elle est encore active
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    
+    // S'assurer que la session est fermée dans tous les cas
+    if (session) {
+      session.endSession();
+    }
+    
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 

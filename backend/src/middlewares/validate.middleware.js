@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const ApiError = require('../utils/apiError');
+const apiError = require('../utils/apiError');
 
 const validate = (schema) => (req, res, next) => {
     const validSchema = pick(schema, ['params', 'query', 'body']);
@@ -12,7 +12,7 @@ const validate = (schema) => (req, res, next) => {
         const errorMessage = error.details
             .map((details) => details.message)
             .join(', ');
-        return next(new ApiError(errorMessage, 400));
+        return next(new apiError(errorMessage, 400));
     }
     Object.assign(req, value);
     return next();

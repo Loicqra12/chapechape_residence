@@ -60,7 +60,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     try {
       emit(const BookingLoading());
       final booking = await _bookingService.createBooking(
-        residenceId: event.bookingData['residenceId'],
+        residenceId: event.bookingData['residence'] ?? event.bookingData['residenceId'],
         checkIn: event.bookingData['checkIn'],
         checkOut: event.bookingData['checkOut'],
         numberOfGuests: event.bookingData['numberOfGuests'],

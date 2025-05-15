@@ -76,3 +76,17 @@ exports.deleteReadNotifications = asyncHandler(async (req, res) => {
         message: 'Toutes les notifications lues ont été supprimées'
     });
 });
+
+// @desc    Get unread notifications count
+// @route   GET /api/notifications/unread/count
+// @access  Private
+exports.getUnreadCount = asyncHandler(async (req, res) => {
+    const count = await notificationService.countUnreadNotifications(req.user.id);
+    
+    res.status(200).json({
+        success: true,
+        data: {
+            count
+        }
+    });
+});

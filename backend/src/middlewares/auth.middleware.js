@@ -1,4 +1,5 @@
 const jwt = require('../utils/jwt');
+const apiError = require('../utils/apiError');
 const User = require('../models/user.model');
 const logger = require('../utils/logger');
 
@@ -14,10 +15,9 @@ exports.protect = async (req, res, next) => {
 
         // Vérifier si le token existe
         if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: 'Non autorisé à accéder à cette route'
-            });
+            return next(
+                new apiError('Non autorisé - Token non fourni', 401)
+            );
         }
 
         try {
@@ -25,30 +25,37 @@ exports.protect = async (req, res, next) => {
             const decoded = jwt.verifyToken(token, 'JWT_SECRET');
 
             // Ajouter l'utilisateur à la requête
-            req.user = await User.findById(decoded.id);
+            const user = await User.findById(decoded.id);
             
             // Vérifier si l'utilisateur existe
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'L\'utilisateur associé à ce token n\'existe plus'
-                });
+            if (!user) {
+                return next(
+                    new apiError('L\'utilisateur associé à ce token n\'existe plus', 401)
+                );
             }
             
+            // Vérification du changement de mot de passe désactivée temporairement
+            // car la méthode hasPasswordChangedAfter n'existe pas dans le modèle User
+            // if (user.hasPasswordChangedAfter(decoded.iat)) {
+            //     return next(
+            //         new apiError('L\'utilisateur a récemment changé de mot de passe, veuillez vous reconnecter', 401)
+            //     );
+            // }
+
+            // Tout est OK, passer l'utilisateur dans la requête
+            req.user = user;
             next();
         } catch (error) {
-            logger.error(`Erreur d'authentification: ${error.message}`);
-            return res.status(401).json({
-                success: false,
-                message: 'Token invalide ou expiré'
-            });
+            logger.error('Erreur d\'authentification:', error);
+            return next(
+                new apiError('Erreur d\'authentification: ' + error.message, 401)
+            );
         }
     } catch (error) {
         logger.error('Auth middleware error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de l\'authentification'
-        });
+        return next(
+            new apiError('Erreur lors de l\'authentification', 500)
+        );
     }
 };
 
@@ -56,17 +63,15 @@ exports.protect = async (req, res, next) => {
 exports.authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Authentification requise'
-            });
+            return next(
+                new apiError('Authentification requise', 401)
+            );
         }
         
         if (!roles.includes(req.user.role)) {
-            return res.status(403).json({
-                success: false,
-                message: `Le rôle ${req.user.role} n'est pas autorisé à accéder à cette route`
-            });
+            return next(
+                new apiError(`Le rôle ${req.user.role} n'est pas autorisé à accéder à cette route`, 403)
+            );
         }
         
         next();
@@ -79,10 +84,9 @@ exports.validateRefreshToken = async (req, res, next) => {
         const { refreshToken } = req.body;
         
         if (!refreshToken) {
-            return res.status(400).json({
-                success: false,
-                message: 'Refresh token non fourni'
-            });
+            return next(
+                new apiError('Refresh token non fourni', 400)
+            );
         }
         
         try {
@@ -93,10 +97,9 @@ exports.validateRefreshToken = async (req, res, next) => {
             const user = await User.findById(decoded.id);
             
             if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Utilisateur non trouvé'
-                });
+                return next(
+                    new apiError('Utilisateur non trouvé', 401)
+                );
             }
             
             // Ajouter l'utilisateur à la requête
@@ -106,16 +109,14 @@ exports.validateRefreshToken = async (req, res, next) => {
             next();
         } catch (error) {
             logger.error(`Erreur de validation du refresh token: ${error.message}`);
-            return res.status(401).json({
-                success: false,
-                message: 'Refresh token invalide ou expiré'
-            });
+            return next(
+                new apiError('Refresh token invalide ou expiré', 401)
+            );
         }
     } catch (error) {
         logger.error('Refresh token middleware error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la validation du refresh token'
-        });
+        return next(
+            new apiError('Erreur lors de la validation du refresh token', 500)
+        );
     }
 };

@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/locale/locale_cubit.dart';
@@ -20,6 +21,7 @@ import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/user_service.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:chapechape_client/core/services/notification_service.dart';
+import 'package:chapechape_client/core/services/onesignal_service.dart';
 import 'package:chapechape_client/core/services/favorite_service.dart';
 import 'package:chapechape_client/core/services/currency_service.dart';
 import 'package:chapechape_client/core/services/exchange_rate_service.dart';
@@ -34,134 +36,167 @@ import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/router/app_router.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_bloc.dart';
+import 'package:chapechape_client/core/services/firebase_service.dart';
 import 'core/service_locator.dart';
+// Nouveaux imports pour la gestion d'erreurs
+import 'package:chapechape_client/core/utils/app_bloc_observer.dart';
+import 'package:chapechape_client/core/services/error_reporting_service.dart';
 
 void main() async {
-  // Assurer que les liaisons Flutter sont initialisées
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialiser les configurations
-  await AppConfig.initialize();
-  debugPrint('✅ Configuration de l\'application initialisée avec succès');
-  
-  // Configurer le service locator (GetIt)
-  await setupServiceLocator();
-  debugPrint('✅ Service locator initialisé avec succès');
-  
-  // Initialiser les services
-  await _initializeServices();
-  
-  // Initialiser Hive
-  await Hive.initFlutter();
-  await Hive.openBox('settings');
-  await Hive.openBox('cache');
+  // Envelopper l'application dans un gestionnaire d'erreurs global
+  runZonedGuarded(() async {
+    // Assurer que les liaisons Flutter sont initialisées
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialiser le service de rapport d'erreurs
+    await ErrorReportingService().initialize();
+    
+    // Configurer l'observateur Bloc pour surveiller les erreurs
+    Bloc.observer = AppBlocObserver();
+    
+    // Initialiser Firebase
+    await FirebaseService.initialize();
+    debugPrint('✅ Firebase initialisé au démarrage');
+    
+    // Initialiser OneSignal
+    OneSignal.initialize("43531899-4645-4f52-a2bf-f4e4a4095513");
+    OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+    OneSignal.Notifications.requestPermission(true);
+    
+    // Ajouter un tag pour identifier qu'il s'agit d'un client
+    OneSignal.User.addTags({"userType": "client"});
+    
+    // Initialiser les configurations
+    await AppConfig.initialize();
+    debugPrint('✅ Configuration de l\'application initialisée avec succès');
+    
+    // Configurer le service locator (GetIt)
+    await setupServiceLocator();
+    debugPrint('✅ Service locator initialisé avec succès');
+    
+    // Initialiser les services
+    await _initializeServices();
+    
+    // Initialiser Hive
+    await Hive.initFlutter();
+    await Hive.openBox('settings');
+    await Hive.openBox('cache');
 
-  // Initialiser le service de cache
-  await CacheService.initialize();
-  debugPrint('✅ Service de cache initialisé avec succès');
+    // Initialiser le service de cache
+    await CacheService.initialize();
+    debugPrint('✅ Service de cache initialisé avec succès');
 
-  // Initialiser tous les services et repositories
-  final authService = await AuthService.initialize();
-  final apiService = await ApiService.initialize();
-  final chatService = ChatService(apiService: apiService);
-  final notificationRepository = await NotificationRepository.initialize();
-  final favoriteRepository = await FavoriteRepository.initialize();
-  final userService = await UserService.initialize();
-  final residenceService = await ResidenceService.initialize();
-  final bookingService = await BookingService.initialize();
-  final paymentService = await PaymentService.initialize();
-  final typeSyncService = await TypeSyncService.initialize();
+    // Initialiser tous les services et repositories
+    final authService = await AuthService.initialize();
+    final apiService = await ApiService.initialize();
+    final chatService = ChatService(apiService: apiService);
+    final notificationRepository = await NotificationRepository.initialize();
+    final favoriteRepository = await FavoriteRepository.initialize();
+    final userService = await UserService.initialize();
+    final residenceService = await ResidenceService.initialize();
+    final bookingService = await BookingService.initialize();
+    final paymentService = await PaymentService.initialize();
+    final typeSyncService = await TypeSyncService.initialize();
+    
+    // Initialiser le service OneSignal
+    final oneSignalService = OneSignalService();
+    oneSignalService.init(authService);
+    debugPrint('✅ Service OneSignal initialisé avec succès');
 
-  // Initialiser le router avec les services nécessaires
-  await AppRouter.initialize(
-    chatServiceInstance: chatService,
-    apiServiceInstance: apiService,
-  );
+    // Initialiser le router avec les services nécessaires
+    await AppRouter.initialize(
+      chatServiceInstance: chatService,
+      apiServiceInstance: apiService,
+    );
 
-  runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc(
-            authService: authService,
-          )..add(AuthCheckRequested()),
-        ),
-        BlocProvider<LocaleCubit>(
-          create: (context) => LocaleCubit(
-            defaultLocale: const Locale('fr'), // Utiliser une valeur par défaut directe
+    runApp(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (context) => AuthBloc(
+              authService: authService,
+            )..add(AuthCheckRequested()),
           ),
-        ),
-        BlocProvider<ResidenceBloc>(
-          create: (context) => ResidenceBloc(
-            residenceService: residenceService,
-            favoriteService: favoriteRepository.favoriteService,
-            typeSyncService: typeSyncService,
-          ),
-        ),
-        BlocProvider<ChatBloc>(
-          create: (context) => ChatBloc(
-            chatService: chatService,
-          ),
-        ),
-        BlocProvider<UserBloc>(
-          create: (context) => UserBloc(
-            userService: userService,
-          ),
-        ),
-        BlocProvider<NotificationBloc>(
-          create: (context) => NotificationBloc(
-            notificationRepository: notificationRepository,
-          ),
-        ),
-        BlocProvider<FavoriteBloc>(
-          create: (context) => FavoriteBloc(
-            favoriteRepository: favoriteRepository,
-          ),
-        ),
-        BlocProvider<BookingBloc>(
-          create: (context) => BookingBloc(
-            bookingService: bookingService,
-          ),
-        ),
-        BlocProvider<PaymentBloc>(
-          create: (context) => PaymentBloc(
-            paymentService: paymentService,
-          ),
-        ),
-      ],
-      child: BlocBuilder<LocaleCubit, LocaleState>(
-        builder: (context, localeState) {
-          return Directionality(
-            textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
-            child: FlutterEasyLoading(
-              child: MaterialApp.router(
-                title: AppConfig.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: ThemeMode.system,
-                locale: localeState?.locale ?? const Locale('fr'),
-                routerConfig: AppRouter.router,
-                localizationsDelegates: const [
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('fr', ''),
-                  Locale('en', ''),
-                ],
-                builder: EasyLoading.init(), // Initialiser EasyLoading
-              ),
+          BlocProvider<LocaleCubit>(
+            create: (context) => LocaleCubit(
+              defaultLocale: const Locale('fr'), // Utiliser une valeur par défaut directe
             ),
-          );
-        }
+          ),
+          BlocProvider<ResidenceBloc>(
+            create: (context) => ResidenceBloc(
+              residenceService: residenceService,
+              favoriteService: favoriteRepository.favoriteService,
+              typeSyncService: typeSyncService,
+            ),
+          ),
+          BlocProvider<ChatBloc>(
+            create: (context) => ChatBloc(
+              chatService: chatService,
+            ),
+          ),
+          BlocProvider<UserBloc>(
+            create: (context) => UserBloc(
+              userService: userService,
+            ),
+          ),
+          BlocProvider<NotificationBloc>(
+            create: (context) => NotificationBloc(
+              notificationRepository: notificationRepository,
+            ),
+          ),
+          BlocProvider<FavoriteBloc>(
+            create: (context) => FavoriteBloc(
+              favoriteRepository: favoriteRepository,
+            ),
+          ),
+          BlocProvider<BookingBloc>(
+            create: (context) => BookingBloc(
+              bookingService: bookingService,
+            ),
+          ),
+          BlocProvider<PaymentBloc>(
+            create: (context) => PaymentBloc(
+              paymentService: paymentService,
+            ),
+          ),
+        ],
+        child: BlocBuilder<LocaleCubit, LocaleState>(
+          builder: (context, localeState) {
+            return Directionality(
+              textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
+              child: FlutterEasyLoading(
+                child: MaterialApp.router(
+                  title: AppConfig.appName,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: ThemeMode.system,
+                  locale: localeState?.locale ?? const Locale('fr'),
+                  routerConfig: AppRouter.router,
+                  localizationsDelegates: const [
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [
+                    Locale('fr', ''),
+                    Locale('en', ''),
+                  ],
+                  builder: EasyLoading.init(), // Initialiser EasyLoading
+                ),
+              ),
+            );
+          }
+        ),
       ),
-    ),
-  );
-  
-  // Configurer EasyLoading avec un style moderne
-  _configureEasyLoading();
+    );
+    
+    // Configurer EasyLoading avec un style moderne
+    _configureEasyLoading();
+  }, (error, stack) {
+    // Capturer et rapporter les erreurs non gérées au niveau de l'application
+    ErrorReportingService().reportError(error, stack);
+  });
 }
 
 /// Initialise tous les services nécessaires au démarrage de l'application
@@ -178,6 +213,7 @@ Future<void> _initializeServices() async {
     print('Services de devises initialisés avec succès');
   } catch (e) {
     print('Erreur lors de l\'initialisation des services de devises: $e');
+    ErrorReportingService().reportError(e, StackTrace.current);
   }
 }
 

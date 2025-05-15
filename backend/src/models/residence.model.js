@@ -251,12 +251,27 @@ residenceSchema.virtual('location').get(function() {
 // Méthodes d'instance
 residenceSchema.methods.isAvailableForDates = async function(startDate, endDate) {
   const Availability = mongoose.model('Availability');
-  return Availability.checkAvailability(this._id, startDate, endDate);
+  return Availability.isPeriodAvailable(this._id, startDate, endDate);
 };
 
 residenceSchema.methods.calculateTotalPrice = async function(startDate, endDate) {
-  const Availability = mongoose.model('Availability');
-  return Availability.calculateTotalPrice(this._id, startDate, endDate);
+  // Implémentation simplifiée: calculer le nombre de jours entre les dates
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+  
+  // Utiliser le prix par jour/mois de la résidence
+  let pricePerDay;
+  if (this.pricePeriod === 'day') {
+    pricePerDay = this.price;
+  } else if (this.pricePeriod === 'month') {
+    pricePerDay = this.price / 30; // Prix par jour estimé
+  } else {
+    pricePerDay = this.price; // Utiliser le prix directement
+  }
+  
+  // Calculer le prix total
+  return days * pricePerDay;
 };
 
 const Residence = mongoose.model('Residence', residenceSchema);

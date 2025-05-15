@@ -162,118 +162,168 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
   
   void _showTransactionDetails(PaymentModel transaction) {
-    final dateFormat = DateFormat('dd MMMM yyyy à HH:mm', 'fr_FR');
-    final theme = Theme.of(context);
-
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      builder: (context) => AlertDialog(
+        title: Text(
+          transaction.type == PaymentType.credit 
+              ? 'Détails du paiement reçu'
+              : 'Détails du retrait',
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Détails de la transaction',
-                  style: theme.textTheme.titleLarge,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
+            _buildDetailRow('ID Transaction', transaction.id),
+            _buildDetailRow('Statut', _getStatusText(transaction.status)),
+            _buildDetailRow('Date', DateFormat('dd MMMM yyyy à HH:mm', 'fr_FR').format(transaction.date)),
+            
+            // Si c'est un crédit, on affiche la source (réservation)
+            if (transaction.type == PaymentType.credit)
+              _buildDetailRow('Source', transaction.source),
+            
+            // Si la transaction a un ID source (réservation), on l'affiche
+            if (transaction.sourceId != null)
+              _buildDetailRow('ID Réservation', transaction.sourceId!),
+            
+            const SizedBox(height: 8),
             const Divider(),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  NumberFormat.currency(
-                    locale: 'fr_FR',
-                    symbol: 'FCFA',
-                    decimalDigits: 0,
-                  ).format(transaction.amount),
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: transaction.type == PaymentType.credit
-                        ? Colors.green
-                        : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 8),
+            
+            // Section financière
+            Text(
+              'Détails financiers',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 24),
-            _buildDetailRow('ID de transaction', transaction.id),
-            _buildDetailRow('Type', transaction.type == PaymentType.credit ? 'Crédit' : 'Débit'),
-            _buildDetailRow('Source', transaction.source),
-            _buildDetailRow('Date', dateFormat.format(transaction.date)),
-            _buildDetailRow('Statut', transaction.status.toUpperCase()),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            if (transaction.type == PaymentType.withdrawal && 
-                transaction.status == 'pending')
-              ElevatedButton(
-                onPressed: () {
-                  context.read<PaymentBloc>().add(
-                    CancelWithdrawal(transactionId: transaction.id),
-                  );
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('Annuler le retrait'),
+            const SizedBox(height: 8),
+            
+            // Afficher le montant original si disponible
+            if (transaction.originalAmount != null)
+              _buildDetailRow(
+                'Montant brut', 
+                _formatCurrency(transaction.originalAmount!),
+                valueStyle: const TextStyle(fontWeight: FontWeight.bold),
               ),
-            if (transaction.type == PaymentType.credit && 
-                transaction.source.contains('Réservation'))
-              ElevatedButton(
-                onPressed: () {
-                  // Ouvrir les détails de la réservation associée
-                  final reservationId = transaction.sourceId;
-                  if (reservationId != null) {
-                    // Naviguer vers les détails de la réservation
-                    Navigator.pop(context);
-                    Navigator.pushNamed(
-                      context,
-                      '/reservations/details/$reservationId',
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('Voir la réservation'),
+            
+            // Afficher la commission si disponible
+            if (transaction.commissionRate != null && transaction.commissionAmount != null)
+              _buildDetailRow(
+                'Commission ChapeChape (${(transaction.commissionRate! * 100).toStringAsFixed(0)}%)',
+                '- ${_formatCurrency(transaction.commissionAmount!)}',
+                valueStyle: const TextStyle(color: Colors.red),
               ),
+              
+            // Ajouter un séparateur si commission
+            if (transaction.commissionRate != null) 
+              const Divider(height: 16, indent: 100, endIndent: 20),
+            
+            // Montant net (toujours affiché)
+            _buildDetailRow(
+              transaction.commissionRate != null ? 'Montant net reçu' : 'Montant',
+              _formatCurrency(transaction.amount),
+              valueStyle: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: transaction.commissionRate != null ? Colors.green.shade700 : null,
+              ),
+            ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Fermer'),
+          ),
+          if (transaction.type == PaymentType.withdrawal && transaction.status == 'pending')
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Demander confirmation avant d'annuler
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Confirmer l\'annulation'),
+                    content: const Text('Êtes-vous sûr de vouloir annuler cette demande de retrait ?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Non'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // Annuler le retrait
+                          context.read<PaymentBloc>().add(
+                            CancelWithdrawal(transactionId: transaction.id),
+                          );
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Oui, annuler'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: const Text('Annuler le retrait'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+            ),
+        ],
       ),
     );
   }
   
-  Widget _buildDetailRow(String label, String value) {
+  // Formater un montant en devise
+  String _formatCurrency(double amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: 'FCFA',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount);
+  }
+  
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'pending':
+        return 'En attente';
+      case 'completed':
+        return 'Complété';
+      case 'cancelled':
+        return 'Annulé';
+      case 'failed':
+        return 'Échoué';
+      default:
+        return status;
+    }
+  }
+
+  Widget _buildDetailRow(
+    String label, 
+    String value, {
+    TextStyle? labelStyle,
+    TextStyle? valueStyle,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: labelStyle ?? const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Expanded(
+            child: Text(
+              value,
+              style: valueStyle,
+            ),
           ),
         ],
       ),
@@ -591,6 +641,9 @@ class PaymentModel {
   final DateTime date;
   final String status;
   final String? sourceId;
+  final double? originalAmount;
+  final double? commissionRate;
+  final double? commissionAmount;
   
   PaymentModel({
     required this.id,
@@ -600,6 +653,9 @@ class PaymentModel {
     required this.date,
     required this.status,
     this.sourceId,
+    this.originalAmount,
+    this.commissionRate,
+    this.commissionAmount,
   });
 }
 

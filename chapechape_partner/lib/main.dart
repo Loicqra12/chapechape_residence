@@ -16,6 +16,7 @@ import 'core/services/api/dashboard_service.dart';
 import 'core/services/api/message_service.dart';
 import 'core/services/api/reservation_service.dart';
 import 'core/services/api/notification_service.dart';
+import 'core/services/onesignal_service.dart';
 import 'core/blocs/auth/auth_bloc.dart';
 import 'core/blocs/residence/residence_bloc.dart';
 import 'core/blocs/dashboard/dashboard_bloc.dart';
@@ -40,11 +41,20 @@ import 'core/blocs/payment/payment_bloc.dart';
 import 'core/blocs/help/help_bloc.dart';
 import 'core/blocs/theme/theme_bloc.dart';
 import 'core/blocs/settings/settings_bloc.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 // Temporairement désactivé pour résoudre les problèmes de build
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialiser OneSignal
+  OneSignal.initialize("43531899-4645-4f52-a2bf-f4e4a4095513");
+  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+  OneSignal.Notifications.requestPermission(true);
+  
+  // Ajouter un tag pour identifier qu'il s'agit d'un partenaire
+  OneSignal.User.addTags({"userType": "partner"});
 
   // Configurer le système de logging
   _setupLogging();
@@ -97,6 +107,12 @@ Future<void> main() async {
   
   final authService = AuthService(dio);
   final residenceService = ResidenceService(baseUrl: apiConfig.baseUrl, storage: storage);
+  
+  // Initialiser le service OneSignal
+  final oneSignalService = OneSignalService();
+  oneSignalService.init(authService);
+  debugPrint('✅ Service OneSignal initialisé avec succès pour les partenaires');
+
   final availabilityService = AvailabilityService(dio);
   final dashboardService = DashboardService(dio);
   final messageService = MessageService(dio);

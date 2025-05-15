@@ -4,7 +4,7 @@
  */
 
 const csrf = require("csurf");
-const ApiError = require("../utils/apiError");
+const apiError = require("../utils/apiError");
 const errorCodes = require("../utils/errorCodes");
 // Commenté temporairement car il pourrait ne pas être correctement initialisé
 // const { logger } = require("../utils/logger");
@@ -48,7 +48,7 @@ const csrfMiddleware = (req, res, next) => {
       );
 
       return next(
-        ApiError.forbidden(
+        apiError.forbidden(
           "Accès invalide: jeton CSRF manquant ou incorrect",
           errorCodes.GENERAL.CSRF_ERROR,
           { originalError: err.message }

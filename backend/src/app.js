@@ -35,16 +35,116 @@ const adminRoutes = require("./routes/admin.routes");
 const superAdminRoutes = require("./routes/superadmin.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const promotionRoutes = require("./routes/promotion.routes");
+// Import des routes de test
+const testRoutes = require("./routes/test.routes");
+// Import des routes de gestion des appareils
+const deviceRoutes = require("./routes/device.routes");
 
 const app = express();
 
-// Routes publiques de test et promotions (AVANT les middlewares de sécurité)
+// IMPORTANT: Configurer les middlewares de base AVANT toute définition de route
+app.use(express.json()); // Pour parser les requêtes avec JSON payloads
+app.use(express.urlencoded({ extended: true })); // Pour parser les requêtes avec URL-encoded payloads
+app.use(cookieParser(process.env.COOKIE_SECRET || "chapechape-secret-key"));
+
+// Routes publiques de test et promotions (APRÈS les middlewares de parsing mais AVANT la sécurité)
 // Route de test simple
 app.get("/api/test", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Cette route de test fonctionne correctement"
   });
+});
+
+// Route de test pour l'email - directement accessible sans middleware
+app.post("/api/public-test/email", async (req, res) => {
+  try {
+    const emailService = require('./services/email.service');
+    const { email, subject, content } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "L'adresse email est requise"
+      });
+    }
+    
+    console.log(`Envoi d'un email de test à : ${email}`);
+    
+    // Utiliser le service d'email avec API Brevo
+    const result = await emailService.sendEmail({
+      email,
+      subject: subject || 'Test de l\'intégration Brevo',
+      html: content || `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #4A6BD8;">Test d'email ChapeChape</h1>
+          <p style="font-size: 16px; line-height: 1.5;">
+            Ceci est un email de test envoyé via l'API Brevo.
+          </p>
+          <p style="font-size: 16px; line-height: 1.5;">
+            Si vous recevez cet email, l'intégration entre ChapeChape et Brevo fonctionne correctement!
+          </p>
+          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;">
+            <p style="margin: 0; color: #666;">
+              Date et heure d'envoi: ${new Date().toLocaleString()}
+            </p>
+          </div>
+        </div>
+      `
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email de test envoyé avec succès',
+      result
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'email de test:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'envoi de l\'email',
+      error: error.message
+    });
+  }
+});
+
+// Route de test pour OneSignal - directement accessible sans middleware
+app.post("/api/public-test/notification", async (req, res) => {
+  try {
+    const oneSignalService = require('./services/onesignal.service');
+    const { title, message, segment } = req.body;
+    
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "Titre et message sont requis"
+      });
+    }
+    
+    console.log(`Envoi d'une notification de test: ${title}`);
+    
+    let result;
+    if (segment) {
+      // Envoyer à un segment spécifique
+      result = await oneSignalService.sendToSegment(segment, title, message);
+    } else {
+      // Envoyer à tous les appareils
+      result = await oneSignalService.sendToAll(title, message);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Notification envoyée avec succès',
+      result
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de la notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'envoi de la notification',
+      error: error.message
+    });
+  }
 });
 
 // Route de vérification de santé (health check)
@@ -108,11 +208,6 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Middleware de base
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser(process.env.COOKIE_SECRET || "chapechape-secret-key"));
-
-// Compression
 app.use(compression());
 
 // Middlewares
@@ -193,6 +288,15 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/messages", messageRoutes); // Routes de messagerie
 app.use("/api", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
+app.use("/api/devices", deviceRoutes); // Ajout des routes pour la gestion des appareils
+
+// Routes de test (uniquement en environnement de développement)
+if (process.env.NODE_ENV === 'development') {
+  // Ajouter les routes de test AVANT le middleware d'authentification pour permettre un accès sans authentification
+  console.log('Routes de test activées en environnement de développement');
+  // S'assurer que ces routes sont accessibles sans authentification
+  app.use("/api/test", testRoutes);
+}
 
 // Route de test
 app.get("/", (req, res) => {

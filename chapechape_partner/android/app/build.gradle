@@ -10,7 +10,7 @@ apply from: 'fix_plugin.gradle'
 
 android {
     namespace = "com.chapechape.chapechape_partner"
-    compileSdk = 34 // Retour à SDK 34 car le SDK 35 est corrompu
+    compileSdkVersion = 34 // Format explicite pour éviter les problèmes 
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -38,6 +38,14 @@ android {
         targetSdk = 34 // Cibler une version récente mais stable d'Android
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Configuration OneSignal
+        manifestPlaceholders = [
+            onesignal_app_id: '43531899-4645-4f52-a2bf-f4e4a4095513',
+            onesignal_channel_id: "b80d5093-5e1f-480e-a42f-a0ccb009e3f2",
+            onesignal_firebase_default_notification_icon: "@mipmap/ic_launcher",
+            applicationName: "androidx.multidex.MultiDexApplication" // Classe d'application valide pour gérer multidex
+        ]
     }
 
     buildTypes {
@@ -75,6 +83,7 @@ android {
 dependencies {
     implementation 'androidx.annotation:annotation:1.7.0'
     implementation 'androidx.core:core:1.12.0'
+    implementation 'androidx.multidex:multidex:2.0.1'  // Ajout de la dépendance multidex
 }
 
 flutter {

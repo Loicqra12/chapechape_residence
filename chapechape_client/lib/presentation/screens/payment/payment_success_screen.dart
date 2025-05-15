@@ -182,26 +182,71 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            _buildDetailRow('Montant', currencyFormatter.format(_payment!.amount)),
+            
+            // Informations de base du paiement
+            _buildDetailRow('Référence', _payment!.id),
             _buildDetailRow('Méthode', _payment!.method.displayName),
             _buildDetailRow('Statut', _getStatusText(_payment!.status)),
-            _buildDetailRow('Date', DateFormat('dd/MM/yyyy HH:mm').format(_payment!.createdAt)),
+            _buildDetailRow('Date', DateFormat('dd/MM/yyyy à HH:mm').format(_payment!.createdAt)),
             if (_payment!.transactionId != null)
-              _buildDetailRow('Référence', _payment!.transactionId!),
+              _buildDetailRow('ID Transaction', _payment!.transactionId!),
+            if (_payment!.bookingId != null)
+              _buildDetailRow('Réservation', _payment!.bookingId!),
             if (_payment!.bookingResidenceName != null)
               _buildDetailRow('Résidence', _payment!.bookingResidenceName!),
+              
+            // Séparateur
             const SizedBox(height: 16),
-            _buildDetailRow('Référence', _payment!.id),
-            _buildDetailRow('Date', DateFormat('dd/MM/yyyy à HH:mm').format(_payment!.createdAt)),
-            if (_payment!.bookingId != null)
-              _buildDetailRow('Réservation', _payment!.bookingId),
+            const Divider(),
+            const SizedBox(height: 8),
+              
+            // Section détaillée des montants
+            Text(
+              'Récapitulatif financier',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Montant total
+            _buildDetailRow(
+              'Montant total', 
+              currencyFormatter.format(_payment!.amount),
+              valueStyle: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            
+            // Ajout de la commission si elle est disponible
+            if (_payment!.commission != null) ...[
+              const SizedBox(height: 8),
+              _buildDetailRow(
+                'Frais de service (${(_payment!.commission!.rate * 100).toStringAsFixed(0)}%)', 
+                '- ${currencyFormatter.format(_payment!.commission!.commissionAmount)}',
+                valueStyle: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 4),
+              const Divider(indent: 100, endIndent: 16, height: 16),
+              _buildDetailRow(
+                'Montant au partenaire', 
+                currencyFormatter.format(_payment!.commission!.partnerAmount),
+                valueStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade700,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(
+    String label, 
+    String value, {
+    TextStyle? labelStyle,
+    TextStyle? valueStyle,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -211,11 +256,14 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
             width: 100,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: labelStyle ?? const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(
+              value,
+              style: valueStyle,
+            ),
           ),
         ],
       ),
@@ -351,4 +399,4 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
         return 'Inconnu';
     }
   }
-} 
+}
