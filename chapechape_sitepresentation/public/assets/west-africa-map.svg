@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Contours simplifiés des pays d'Afrique de l'Ouest -->
+  <path d="M165 190 L275 210 L320 190 L385 180 L420 250 L490 290 L560 330 L615 390 L670 480 L630 550 L590 605 L520 630 L470 610 L420 580 L350 540 L290 510 L240 460 L190 410 L150 350 L130 270 L165 190Z" fill="none" stroke="#D4AF3720" stroke-width="2"/>
+  
+  <!-- Mauritanie -->
+  <path d="M165 190 L275 210 L230 300 L190 350 L150 350 L130 270 L165 190Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Mali -->
+  <path d="M275 210 L320 190 L385 180 L420 250 L380 330 L350 400 L300 430 L230 300 L275 210Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Niger -->
+  <path d="M385 180 L420 250 L490 290 L480 370 L420 420 L380 330 L385 180Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Nigeria -->
+  <path d="M480 370 L560 330 L615 390 L630 450 L590 490 L520 510 L480 450 L420 420 L480 370Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Bénin et Togo -->
+  <path d="M420 420 L480 450 L470 520 L440 580 L400 540 L380 490 L350 440 L380 410 L420 420Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Ghana -->
+  <path d="M380 410 L350 440 L310 500 L290 550 L330 570 L400 540 L380 490 L350 440 L380 410Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Côte d'Ivoire -->
+  <path d="M300 430 L350 400 L380 410 L350 440 L310 500 L270 520 L240 460 L300 430Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Burkina Faso -->
+  <path d="M350 400 L380 330 L420 420 L380 410 L350 400Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Guinée -->
+  <path d="M190 350 L230 300 L300 430 L240 460 L190 410 L190 350Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Sénégal et Gambie -->
+  <path d="M150 350 L190 350 L190 410 L150 390 L120 370 L120 350 L150 350Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Cameroun -->
+  <path d="M520 510 L590 490 L630 550 L590 605 L520 630 L470 610 L470 520 L520 510Z" fill="none" stroke="#D4AF3730" stroke-width="1.5"/>
+  
+  <!-- Océan Atlantique -->
+  <path d="M120 370 L150 390 L190 410 L240 460 L270 520 L290 550 L330 570 L400 540 L440 580 L470 610 L420 580 L350 540 L290 510 L240 460 L190 410 L150 390 L120 370Z" fill="#F5F5F510" stroke="#D4AF3710" stroke-width="1"/>
+  
+  <!-- Points de repère -->
+  <circle cx="180" cy="380" r="3" fill="#D4AF3720"/> <!-- Dakar -->
+  <circle cx="310" cy="290" r="3" fill="#D4AF3720"/> <!-- Bamako -->
+  <circle cx="400" cy="350" r="3" fill="#D4AF3720"/> <!-- Ouagadougou -->
+  <circle cx="200" cy="390" r="3" fill="#D4AF3720"/> <!-- Conakry -->
+  <circle cx="380" cy="200" r="3" fill="#D4AF3720"/> <!-- Niamey -->
+  <circle cx="360" cy="430" r="3" fill="#D4AF3720"/> <!-- Lomé -->
+  <circle cx="400" cy="430" r="3" fill="#D4AF3720"/> <!-- Cotonou -->
+  <circle cx="330" cy="520" r="3" fill="#D4AF3720"/> <!-- Accra -->
+  <circle cx="390" cy="420" r="3" fill="#D4AF3720"/> <!-- Abidjan -->
+  <circle cx="360" cy="350" r="3" fill="#D4AF3720"/> <!-- Yamoussoukro -->
+  <circle cx="480" cy="410" r="3" fill="#D4AF3720"/> <!-- Lagos -->
+  <circle cx="550" cy="550" r="3" fill="#D4AF3720"/> <!-- Douala -->
+  <circle cx="550" cy="600" r="3" fill="#D4AF3720"/> <!-- Libreville -->
+</svg> 
