@@ -28,6 +28,7 @@ enum ResidenceType {
   villaMeublee,
   // Types spéciaux
   penthouse,
+  loft,
   coworking,
   // Types hôteliers
   hotelDePassage,
@@ -91,6 +92,8 @@ extension ResidenceTypeExtension on ResidenceType {
         return 'Villa Meublée';
       case ResidenceType.penthouse:
         return 'Penthouse';
+      case ResidenceType.loft:
+        return 'Loft';
       case ResidenceType.coworking:
         return 'Espace Coworking';
       case ResidenceType.hotelDePassage:

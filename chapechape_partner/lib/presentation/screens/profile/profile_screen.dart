@@ -16,10 +16,150 @@ import '../../../core/blocs/help/help_bloc.dart';
 import '../residences/residences_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
-import 'dart:io' show Platform;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isOffline = false;
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Vérifier l'état de la connectivité au démarrage
+    _checkConnectivity();
+    // Écouter les changements de connectivité
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+      setState(() {
+        _isOffline = result == ConnectivityResult.none;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkConnectivity() async {
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (mounted) {
+        setState(() {
+          _isOffline = connectivityResult == ConnectivityResult.none;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de la vérification de la connectivité: $e');
+    }
+  }
+  
+  // Méthode pour construire une image de profil mise en cache et optimisée
+  // Liste blanche des images qui existent réellement sur le serveur
+  final List<String> validProfileImages = [
+    'profile-1742920321396-732109780.jpg'
+  ];
+  
+  Widget _buildCachedProfileImage(String imageUrl, ThemeData theme, String fullName) {
+    // Vérifier si l'URL est dans la liste blanche des images valides
+    bool isValidImage = false;
+    for (final validImage in validProfileImages) {
+      if (imageUrl.contains(validImage)) {
+        isValidImage = true;
+        break;
+      }
+    }
+    
+    // Validation et nettoyage de l'URL
+    // Si l'URL n'est pas dans la liste blanche ou contient des motifs problématiques, utiliser l'avatar par défaut
+    if (!isValidImage ||
+        imageUrl.isEmpty ||
+        imageUrl.contains('placeholder.com') ||
+        imageUrl.contains('undefined') ||
+        imageUrl.contains('images-') ||
+        !Uri.tryParse(imageUrl)!.hasAuthority) {
+      
+      debugPrint('URL d\'image non valide ou non autorisée: $imageUrl. Utilisation de l\'avatar par défaut.');
+      return CircleAvatar(
+        radius: 60,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Text(
+          fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
+          style: TextStyle(
+            fontSize: 48,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+      );
+    }
+
+    // Gérer les tentatives de chargement et les erreurs
+    try {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        imageBuilder: (context, imageProvider) => CircleAvatar(
+          radius: 60,
+          backgroundImage: imageProvider,
+        ),
+        // NE PAS utiliser progressIndicatorBuilder et placeholder en même temps
+        // car cela génère une erreur d'assertion dans octo_image
+        placeholder: (context, url) => CircleAvatar(
+          radius: 60,
+          backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.5),
+          child: const CircularProgressIndicator(),
+        ),
+        errorWidget: (context, url, error) {
+          debugPrint('Erreur de chargement d\'image: $error, URL: $url');
+          // Fallback à l'initiale du nom en cas d'erreur
+          return CircleAvatar(
+            radius: 60,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            child: Text(
+              fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
+              style: TextStyle(
+                fontSize: 48,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ),
+          );
+        },
+        // Optimisation pour réseaux africains à débit limité
+        memCacheHeight: 300,
+        memCacheWidth: 300,
+        maxHeightDiskCache: 600,
+        maxWidthDiskCache: 600,
+        // Timeouts adaptés aux réseaux lents
+        fadeOutDuration: const Duration(milliseconds: 200),
+        fadeInDuration: const Duration(milliseconds: 300),
+        // Configuration du cache et de la politique de rechargement
+        cacheKey: 'profile_${fullName.replaceAll(' ', '_').toLowerCase()}',
+        useOldImageOnUrlChange: true,
+      );
+    } catch (e) {
+      debugPrint('Exception lors de la création de CachedNetworkImage: $e');
+      // Fallback en cas d'exception
+      return CircleAvatar(
+        radius: 60,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Text(
+          fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
+          style: TextStyle(
+            fontSize: 48,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,62 +179,79 @@ class ProfileScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
+      body: Column(
+        children: [
+          // Indicateur de mode hors ligne
+          if (_isOffline)
+            Container(
+              color: Colors.orange.shade700,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: const Center(
+                child: Text(
+                  'Mode hors ligne - Photos et données en cache',
+                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
           ScreenAppBars.getProfileAppBar(context),
           SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -60),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    // Photo de profil et bouton d'édition
-                    Stack(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const EditProfileScreen(),
+            // Utilisez un padding négatif au lieu de Transform.translate pour éviter le rognage
+            child: Padding(
+              // Padding négatif uniquement en bas pour garder l'espace sur les côtés
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: Column(
+                children: [
+                  // Espace pour que l'avatar apparaisse partiellement superposé à l'app bar
+                  const SizedBox(height: 20),
+                  
+                  // Photo de profil et bouton d'édition
+                  Stack(
+                    clipBehavior: Clip.none, // Empêche que les enfants soient rognés
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const EditProfileScreen(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
+                            ],
+                          ),
+                          child: Hero(
+                            tag: 'profile_photo',
+                            child: partner?.profilePictureUrl != null && partner?.profilePictureUrl?.isNotEmpty == true
+                              ? _buildCachedProfileImage(partner!.profilePictureUrl!, theme, partner.fullName)
+                              : CircleAvatar(
+                                  radius: 60,
+                                  backgroundColor: theme.colorScheme.primaryContainer,
+                                  child: Text(
+                                    partner?.fullName.substring(0, 1).toUpperCase() ?? 'P',
+                                    style: TextStyle(
+                                      fontSize: 48,
+                                      color: theme.colorScheme.onPrimaryContainer,
+                                    ),
+                                  ),
                                 ),
-                              ],
-                            ),
-                            child: Hero(
-                              tag: 'profile_photo',
-                              child: CircleAvatar(
-                                radius: 60,
-                                backgroundColor: theme.colorScheme.primaryContainer,
-                                backgroundImage: partner?.profilePictureUrl != null && partner?.profilePictureUrl?.isNotEmpty == true
-                                    ? NetworkImage(partner!.profilePictureUrl!)
-                                    : const AssetImage('assets/images/placeholders/profile_placeholder.png'),
-                                child: partner?.profilePictureUrl == null || partner?.profilePictureUrl?.isEmpty == true
-                                    ? Text(
-                                        partner?.fullName.substring(0, 1).toUpperCase() ?? 'P',
-                                        style: TextStyle(
-                                          fontSize: 48,
-                                          color: theme.colorScheme.onPrimaryContainer,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                            ),
                           ),
                         ),
+                      ),
                         Positioned(
                           right: 0,
                           bottom: 0,
@@ -470,12 +627,13 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-
+    ],
+    ));
+  } // Fin de la méthode build
+   
   Widget _buildInfoTile({
     required IconData icon,
     required String title,

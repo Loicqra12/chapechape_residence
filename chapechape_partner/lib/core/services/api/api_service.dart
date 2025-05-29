@@ -4,6 +4,7 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:flutter/foundation.dart';
 import '../../config/app_config.dart';
 import './interceptors/auth_interceptor.dart';
+import './interceptors/image_url_interceptor.dart';
 import '../../utils/error_handler.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
@@ -32,17 +33,21 @@ class ApiService {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'x-mobile-app': 'true',  // Permet de contourner la protection CSRF pour les apps mobiles
         },
         validateStatus: (status) {
           return status != null && status < 500;
         },
-        connectTimeout: const Duration(seconds: 60),
-        receiveTimeout: const Duration(seconds: 60),
-        sendTimeout: const Duration(seconds: 60),
+        connectTimeout: const Duration(seconds: 120),
+        receiveTimeout: const Duration(seconds: 120),
+        sendTimeout: const Duration(seconds: 120),
         followRedirects: true,
         maxRedirects: 5,
       ),
     );
+
+    // Ajouter l'intercepteur d'URL d'images pour corriger les chemins d'images problématiques
+    _dio.interceptors.add(ImageUrlInterceptor());
 
     // Ajouter l'intercepteur d'authentification
     _dio.interceptors.add(

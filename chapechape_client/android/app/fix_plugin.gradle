@@ -41,10 +41,23 @@ if (connectivityPlusVersion != null) {
     }
 }
 
-// Solution pour le problème spécifique de geolocator_android
+// Solution spécifique pour les plugins problématiques
 // Définir tôt une extension pour être sûr qu'elle est disponible au moment de l'évaluation
 allprojects {
     afterEvaluate { project ->
+        // Solution pour le plugin disk_space
+        if (project.name == 'disk_space') {
+            if (project.hasProperty('android')) {
+                project.android {
+                    if (!project.android.hasProperty('namespace')) {
+                        namespace "com.example.disk_space"
+                        println "✅ Namespace ajouté pour le plugin disk_space"
+                    }
+                }
+            }
+        }
+        
+        // Solution pour le plugin geolocator_android
         if (project.name == 'geolocator_android') {
             // S'assurer que le projet est bien un plugin Android
             if (project.hasProperty('android')) {

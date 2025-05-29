@@ -3,6 +3,7 @@ import '../models/notification_model.dart';
 import 'api_service.dart';
 import '../utils/logger.dart';
 
+
 class NotificationService {
   final ApiService _apiService;
   final AppLogger _logger = AppLogger('NotificationService');
@@ -75,35 +76,205 @@ class NotificationService {
     }
   }
   
-  // Supprimer une notification
+  // Marquer une notification comme supprimée
   Future<bool> deleteNotification(String notificationId) async {
     try {
       final response = await _apiService.delete('/notifications/$notificationId');
       return response.data['success'] == true;
     } on DioException catch (e) {
       _logger.error('Erreur lors de la suppression de la notification', e);
+      return false;
+    }
+  }
+  
+  // Mapper les données JSON en modèle de notification
+  NotificationModel _mapToNotificationModel(Map<String, dynamic> json) {
+    return NotificationModel.fromJson(json);
+  }
+
+  // ================= FONCTIONNALITÉS SMS (TWILIO) =================
+  
+  /// Demander l'envoi d'un SMS de confirmation pour une réservation
+  ///
+  /// [bookingId] L'identifiant de la réservation
+  Future<bool> requestBookingSmsConfirmation(String bookingId) async {
+    try {
+      final response = await _apiService.post(
+        '/bookings/$bookingId/request-sms',
+        data: {
+          'type': 'confirmation'
+        },
+      );
+      return response.data['success'] == true;
+    } catch (e) {
+      _logger.error('Erreur lors de la demande de SMS de confirmation', e);
+      return false;
+    }
+  }
+
+  /// Demander l'envoi d'un SMS de rappel pour une réservation
+  ///
+  /// [bookingId] L'identifiant de la réservation
+  Future<bool> requestBookingSmsReminder(String bookingId) async {
+    try {
+      final response = await _apiService.post(
+        '/bookings/$bookingId/request-sms',
+        data: {
+          'type': 'reminder'
+        },
+      );
+      return response.data['success'] == true;
+    } catch (e) {
+      _logger.error('Erreur lors de la demande de SMS de rappel', e);
+      return false;
+    }
+  }
+
+  /// Vérifier si un numéro de téléphone est valide pour l'Afrique de l'Ouest
+  ///
+  /// Cette méthode valide les formats de numéros pour les pays d'Afrique de l'Ouest
+  /// comme la Côte d'Ivoire, le Sénégal, etc.
+  bool isValidPhoneNumber(String phoneNumber) {
+    // Supprime les espaces, tirets et parenthèses
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Vérifie les formats suivants:
+    // 1. Numéro international complet commençant par + (ex: +22501234567)
+    // 2. Numéro avec code pays sans + (ex: 22501234567)
+    // 3. Numéro local (ex: 01234567)
+    final regexInternational = RegExp(r'^\+[0-9]{10,15}$');
+    final regexWithCountryCode = RegExp(r'^[0-9]{11,15}$');
+    final regexLocal = RegExp(r'^[0-9]{8,10}$');
+    
+    return regexInternational.hasMatch(cleanPhone) || 
+           regexWithCountryCode.hasMatch(cleanPhone) ||
+           regexLocal.hasMatch(cleanPhone);
+  }
+
+  /// Formater un numéro de téléphone pour l'API
+  String formatPhoneNumber(String phoneNumber) {
+    // Supprime les espaces, tirets et parenthèses
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Si le numéro commence par +, c'est déjà un format international
+    if (cleanPhone.startsWith('+')) {
+      return cleanPhone;
+    }
+    
+    // Si le numéro commence par 225, 221, etc. (codes pays), ajouter le +
+    if (RegExp(r'^(225|221|226|227|228|229|233|234)').hasMatch(cleanPhone)) {
+      return '+$cleanPhone';
+    }
+    
+    // Sinon, supposer que c'est un numéro ivoirien (remplacer par le pays par défaut)
+    return '+225$cleanPhone';
+  }
+  
+  // ================= VÉRIFICATION DU NUMÉRO DE TÉLÉPHONE PAR SMS =================
+  
+  /// Demander un code de vérification par SMS
+  /// 
+  /// [phoneNumber] Le numéro de téléphone à vérifier
+  /// 
+  /// Retourne un map contenant codeId et expiresAt en cas de succès
+  Future<Map<String, dynamic>?> requestVerificationCode(String phoneNumber) async {
+    try {
+      final formattedNumber = formatPhoneNumber(phoneNumber);
+      
+      final response = await _apiService.post(
+        '/api/auth/request-verification-code',
+        data: {
+          'phoneNumber': formattedNumber
+        },
+      );
+      
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return {
+          'codeId': response.data['data']['codeId'],
+          'expiresAt': response.data['data']['expiresAt'],
+        };
+      }
+      
+      _logger.error('Erreur lors de la demande de code de vérification: ${response.data['message']}');
+      return null;
+    } catch (e) {
+      _logger.error('Erreur lors de la demande de code de vérification', e);
       rethrow;
     }
   }
   
-  // Convertir les données du backend en modèle NotificationModel
-  NotificationModel _mapToNotificationModel(Map<String, dynamic> json) {
+  /// Vérifier un code reçu par SMS
+  /// 
+  /// [phoneNumber] Le numéro de téléphone à vérifier
+  /// [code] Le code reçu par SMS
+  /// [codeId] L'identifiant du code (optionnel)
+  Future<bool> verifyCode(String phoneNumber, String code, {String? codeId}) async {
     try {
-      return NotificationModel(
-        id: json['_id'] ?? '',
-        title: _getTitleFromType(json['type']),
-        message: json['message'] ?? '',
-        timestamp: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
-          : DateTime.now(),
-        isRead: json['read'] ?? false,
-        type: json['type'],
-        actionUrl: json['data']?['actionUrl'],
-        imageUrl: json['data']?['imageUrl'],
+      final formattedNumber = formatPhoneNumber(phoneNumber);
+      
+      final Map<String, dynamic> data = {
+        'phoneNumber': formattedNumber,
+        'code': code,
+      };
+      
+      if (codeId != null) {
+        data['codeId'] = codeId;
+      }
+      
+      final response = await _apiService.post(
+        '/api/auth/verify-code',
+        data: data,
       );
+      
+      return response.data['success'] == true;
     } catch (e) {
-      _logger.error('Erreur lors de la conversion des données de notification', e);
-      rethrow;
+      _logger.error('Erreur lors de la vérification du code', e);
+      return false;
+    }
+  }
+  
+  /// Renvoyer un code de vérification
+  /// 
+  /// [phoneNumber] Le numéro de téléphone
+  Future<bool> resendVerificationCode(String phoneNumber) async {
+    try {
+      final formattedNumber = formatPhoneNumber(phoneNumber);
+      
+      final response = await _apiService.post(
+        '/api/auth/resend-verification-code',
+        data: {
+          'phoneNumber': formattedNumber
+        },
+      );
+      
+      return response.data['success'] == true;
+    } catch (e) {
+      _logger.error('Erreur lors du renvoi du code de vérification', e);
+      return false;
+    }
+  }
+  
+  /// Envoyer un SMS personnalisé à un numéro de téléphone
+  ///
+  /// [phoneNumber] Le numéro de téléphone du destinataire
+  /// [message] Le contenu du message à envoyer
+  Future<bool> sendCustomSms({required String phoneNumber, required String message}) async {
+    try {
+      final formattedNumber = formatPhoneNumber(phoneNumber);
+      
+      final response = await _apiService.post(
+        '/api/sms/send',
+        data: {
+          'phoneNumber': formattedNumber,
+          'message': message,
+          'type': 'custom'
+        },
+      );
+      
+      return response.data['success'] == true;
+    } catch (e) {
+      _logger.error('Erreur lors de l\'envoi du SMS personnalisé', e);
+      return false;
     }
   }
   

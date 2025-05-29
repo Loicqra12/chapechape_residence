@@ -38,6 +38,7 @@ import SettingsPage from './pages/settings/SettingsPage';
 import SecurityPage from './pages/settings/SecurityPage';
 import MaintenancePage from './pages/settings/MaintenancePage';
 import ClientsPage from './pages/users/ClientsPage';
+import HttpToggle from './components/HttpToggle';
 
 const PrivateRoute = ({ children }) => {
   return isAuthenticated() ? children : <Navigate to="/login" />;
@@ -49,6 +50,8 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <FavoritesProvider>
+            {/* Composant pour basculer entre HTTP et HTTPS en développement */}
+            <HttpToggle />
             <Router>
               <AnimatePresence mode="wait">
                 <Routes>

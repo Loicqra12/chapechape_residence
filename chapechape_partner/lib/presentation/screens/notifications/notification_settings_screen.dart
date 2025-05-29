@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/repositories/notification_repository.dart';
 import '../../../core/models/notification/notification_preference.dart';
 import '../../../core/config/twilio_config.dart';
@@ -38,8 +39,21 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     });
     
     try {
-      // TODO: Récupérer l'ID de l'utilisateur depuis le stockage
-      _userId = 'user_123'; // Temporaire pour la démo
+      // Récupérer l'ID de l'utilisateur depuis le stockage sécurisé
+      final storage = const FlutterSecureStorage();
+      _userId = await storage.read(key: 'userId');
+      
+      // Si l'ID utilisateur n'est pas trouvé, afficher une erreur
+      if (_userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Utilisateur non connecté. Veuillez vous connecter.')),
+        );
+        setState(() {
+          _isLoading = false;
+          _preferences = NotificationPreference.defaultForUser('unknown');
+        });
+        return;
+      }
       
       final repository = Provider.of<NotificationRepository>(context, listen: false);
       _preferences = await repository.getUserPreferences(_userId!);

@@ -123,6 +123,12 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // Ajout de logs pour le débogage
+      print('🔍 URL API de base: ${_dio.options.baseUrl}');
+      print('🔍 URL complète: ${_dio.options.baseUrl}/auth/login');
+      print('🔍 Headers: ${_dio.options.headers}');
+      print('🔍 Timeout configuré: ${_dio.options.connectTimeout}');
+      
       final response = await _dio.post(
         '/auth/login',
         data: {
@@ -274,6 +280,74 @@ class AuthService {
     } finally {
       // Toujours supprimer le token localement même si la déconnexion échoue
       await removeToken();
+    }
+  }
+
+  /// Demande une réinitialisation de mot de passe
+  Future<bool> requestPasswordReset(String email) async {
+    try {
+      final response = await _dio.post(
+        '/auth/reset-password-request',
+        data: {'email': email},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Erreur lors de la demande de réinitialisation: $e');
+      throw ErrorHandler.handleError(e);
+    }
+  }
+  
+  /// Réinitialise le mot de passe avec un token
+  Future<bool> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/reset-password',
+        data: {
+          'token': token,
+          'newPassword': newPassword,
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Erreur lors de la réinitialisation du mot de passe: $e');
+      throw ErrorHandler.handleError(e);
+    }
+  }
+  
+  /// Supprime le compte de l'utilisateur
+  Future<bool> deleteAccount(String password) async {
+    try {
+      final response = await _dio.delete(
+        '/partners/account',
+        data: {'password': password},
+      );
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['success'] == true) {
+          // Supprimer toutes les données locales
+          await removeToken();
+          await _storage.deleteAll();
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('❌ Erreur lors de la suppression du compte: $e');
+      throw ErrorHandler.handleError(e);
     }
   }
 }

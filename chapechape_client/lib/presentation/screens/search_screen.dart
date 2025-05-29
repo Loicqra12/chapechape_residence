@@ -9,7 +9,14 @@ import '../../config/theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final String? category;
+  final String? types;
+  
+  const SearchScreen({
+    super.key,
+    this.category,
+    this.types,
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -24,9 +31,29 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     
-    // Charger les résidences au démarrage avec des filtres vides
+    // Vérifier si nous avons des paramètres de recherche depuis les arguments du widget
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ResidenceBloc>().add(const SearchResidencesEvent(filters: {}));
+      if (widget.types != null && widget.types!.isNotEmpty) {
+        // Extraire la liste des types
+        final typesList = widget.types!.split(',');
+        final category = widget.category ?? 'Résultats';
+        
+        print('🔍 Recherche par catégorie: $category, types: $typesList');
+        
+        // Mettre à jour le titre de l'app bar et les filtres
+        setState(() {
+          _filters = {
+            'typesList': typesList,
+            'category': category,
+          };
+        });
+        
+        // Lancer la recherche avec ces types
+        context.read<ResidenceBloc>().add(SearchResidencesEvent(filters: _filters));
+      } else {
+        // Recherche standard sans filtre
+        context.read<ResidenceBloc>().add(const SearchResidencesEvent(filters: {}));
+      }
     });
   }
 

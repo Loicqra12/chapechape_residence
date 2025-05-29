@@ -311,40 +311,40 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
     final bool isMobile = context.screenWidth <= 600;
     
     return Container(
-      width: isMobile ? 180 : 220,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      width: isMobile ? 100 : 120, // Réduction de la largeur pour un design plus compact
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4), // Marges réduites
       child: InkWell(
         onTap: () {
           _onCategoryTap(type);
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         splashColor: AppTheme.primaryColor.withOpacity(0.1),
         highlightColor: AppTheme.primaryColor.withOpacity(0.05),
         child: Card(
-          elevation: 6,
-          shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+          elevation: 2, // Ombre plus légère
+          shadowColor: AppTheme.primaryColor.withOpacity(0.2),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             side: BorderSide(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              width: 1.0,
+              color: AppTheme.primaryColor.withOpacity(0.05),
+              width: 0.5, // Bordure plus fine
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8), // Padding réduit
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 50, // Taille de l'icône réduite
+                  height: 50,
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     icon,
-                    size: 40,
+                    size: 28, // Icône plus petite
                     color: AppTheme.primaryColor,
                   ),
                 )
@@ -369,7 +369,7 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: context.responsiveFontSize(16),
+                    fontSize: context.responsiveFontSize(14), // Police plus petite
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),

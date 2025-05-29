@@ -148,27 +148,63 @@ class ReservationService {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-mobile-app': 'true',  // Contourne la protection CSRF
           },
         ),
       );
     } catch (e) {
+      // Gestion améliorée des erreurs spécifiques
+      if (e is DioException) {
+        final statusCode = e.response?.statusCode;
+        final responseData = e.response?.data;
+        
+        if (statusCode == 400) {
+          final message = responseData?['message'] ?? 'Impossible de mettre à jour le statut de cette réservation';
+          throw Exception(message);
+        } else if (statusCode == 403) {
+          throw Exception('Vous n\'\u00eates pas autorisé à modifier cette réservation');
+        } else if (statusCode == 404) {
+          throw Exception('Réservation introuvable');
+        } else if (statusCode == 500) {
+          throw Exception('Erreur serveur. Veuillez réessayer plus tard ou contacter le support.');
+        }
+      }
       throw Exception('Erreur lors de la mise à jour du statut: ${e.toString()}');
     }
   }
 
   Future<void> cancelReservation(String id, String reason) async {
     try {
-      await _dio.post(
+      // Utiliser la méthode PATCH qui correspond à l'API backend
+      await _dio.patch(
         '$baseUrl/api/reservations/$id/cancel',
         data: {'reason': reason},
         options: Options(
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-mobile-app': 'true',  // Contourne la protection CSRF
           },
         ),
       );
     } catch (e) {
+      // Gestion améliorée des erreurs spécifiques
+      if (e is DioException) {
+        final statusCode = e.response?.statusCode;
+        final responseData = e.response?.data;
+        
+        if (statusCode == 400) {
+          // Erreur métier (réservation ne peut pas être annulée)
+          final message = responseData?['message'] ?? 'Cette réservation ne peut plus être annulée';
+          throw Exception(message);
+        } else if (statusCode == 403) {
+          throw Exception('Vous n\'êtes pas autorisé à annuler cette réservation');
+        } else if (statusCode == 404) {
+          throw Exception('Réservation introuvable ou déjà traitée');
+        } else if (statusCode == 500) {
+          throw Exception('Erreur serveur. Veuillez réessayer plus tard ou contacter le support.');
+        }
+      }
       throw Exception('Erreur lors de l\'annulation de la réservation: ${e.toString()}');
     }
   }
@@ -182,6 +218,7 @@ class ReservationService {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-mobile-app': 'true',  // Contourne la protection CSRF
           },
         ),
       );

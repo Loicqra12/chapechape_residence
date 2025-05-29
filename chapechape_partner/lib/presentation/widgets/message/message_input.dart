@@ -8,11 +8,13 @@ import '../../../core/models/message/message.dart';
 class MessageInput extends StatefulWidget {
   final Function(String content, List<MessageAttachment>? attachments) onSendMessage;
   final Function(String filePath, String? name) onAttachmentSelected;
+  final bool enabled;
 
   const MessageInput({
     Key? key,
     required this.onSendMessage,
     required this.onAttachmentSelected,
+    this.enabled = true,
   }) : super(key: key);
 
   @override
@@ -90,8 +92,40 @@ class _MessageInputState extends State<MessageInput> {
     }
   }
 
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.attach_file),
+              title: Text('Joindre un fichier'),
+              onTap: _pickFile,
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_camera),
+              title: Text('Prendre une photo'),
+              onTap: () => _pickImage(ImageSource.camera),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo),
+              title: Text('Sélectionner une photo'),
+              onTap: () => _pickImage(ImageSource.gallery),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!widget.enabled) {
+      return _buildDisabledInput();
+    }
+    
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -99,7 +133,7 @@ class _MessageInputState extends State<MessageInput> {
           BoxShadow(
             offset: const Offset(0, -2),
             blurRadius: 4,
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.05),
           ),
         ],
       ),
@@ -110,29 +144,29 @@ class _MessageInputState extends State<MessageInput> {
             children: [
               IconButton(
                 icon: const Icon(Icons.attach_file),
-                onPressed: _pickFile,
-              ),
-              IconButton(
-                icon: const Icon(Icons.photo_camera),
-                onPressed: () => _pickImage(ImageSource.camera),
-              ),
-              IconButton(
-                icon: const Icon(Icons.photo),
-                onPressed: () => _pickImage(ImageSource.gallery),
+                onPressed: () {
+                  _showAttachmentOptions();
+                },
               ),
               Expanded(
                 child: TextField(
                   controller: _controller,
-                  onChanged: (String text) {
+                  onChanged: (text) {
                     setState(() {
-                      _isComposing = text.trim().isNotEmpty;
+                      _isComposing = text.isNotEmpty;
                     });
                   },
-                  onSubmitted: _isComposing ? _handleSubmitted : null,
-                  decoration: const InputDecoration(
-                    hintText: 'Votre message...',
-                    border: InputBorder.none,
+                  decoration: InputDecoration(
+                    hintText: 'Écrire un message...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25.0),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   ),
+                  textCapitalization: TextCapitalization.sentences,
                 ),
               ),
               IconButton(
@@ -145,6 +179,26 @@ class _MessageInputState extends State<MessageInput> {
           ),
         ),
       ),
+    );
+  }
+  
+  Widget _buildDisabledInput() {
+    return Row(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+            child: Text(
+              'La messagerie n\'est pas encore activée pour cette réservation',
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+          ),
+        ),
+        IconButton(
+          icon: Icon(Icons.lock_outline, color: Colors.grey[500]),
+          onPressed: null,
+        ),
+      ],
     );
   }
 }

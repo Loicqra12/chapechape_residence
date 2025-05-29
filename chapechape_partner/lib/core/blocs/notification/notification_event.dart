@@ -41,3 +41,20 @@ class DeleteNotification extends NotificationEvent {
 }
 
 class RefreshNotifications extends NotificationEvent {} 
+
+class FilterNotifications extends NotificationEvent {
+  final String? type;
+  final bool? isRead;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const FilterNotifications({
+    this.type,
+    this.isRead,
+    this.startDate,
+    this.endDate,
+  });
+
+  @override
+  List<Object?> get props => [type, isRead, startDate, endDate];
+}

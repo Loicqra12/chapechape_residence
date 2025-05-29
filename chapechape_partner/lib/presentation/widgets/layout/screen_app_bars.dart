@@ -10,6 +10,8 @@ import 'package:chapechape_partner/core/blocs/residence/residence_bloc.dart';
 import 'package:chapechape_partner/core/blocs/message/message_bloc.dart';
 import 'package:chapechape_partner/core/blocs/reservation/reservation_bloc.dart';
 import 'package:chapechape_partner/presentation/screens/residences/edit_residence_screen.dart';
+import 'package:chapechape_partner/presentation/widgets/dashboard/dashboard_filter_sheet.dart';
+import 'package:chapechape_partner/presentation/widgets/messages/message_search_sheet.dart';
 import 'custom_sliver_app_bar.dart';
 
 class ScreenAppBars {
@@ -28,7 +30,8 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir les notifications
+            // Naviguer vers l'écran des notifications
+            context.go('/notifications');
           },
         ),
         IconButton(
@@ -56,7 +59,30 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir le filtre du tableau de bord
+            // Obtenir l'état actuel du dashboard
+            final dashboardState = context.read<DashboardBloc>().state;
+            
+            // Vérifier si l'état est DashboardLoaded
+            if (dashboardState is DashboardLoaded) {
+              // Afficher la feuille modale du filtre
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (context) => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  child: DashboardFilterSheet(
+                    currentPeriod: dashboardState.period,
+                    startDate: dashboardState.startDate,
+                    endDate: dashboardState.endDate,
+                  ),
+                ),
+              );
+            }
           },
         ),
       ],
@@ -406,7 +432,20 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir la recherche de messages
+            // Afficher la feuille modale de recherche de messages
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (context) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: const MessageSearchSheet(),
+              ),
+            );
           },
         ),
         IconButton(

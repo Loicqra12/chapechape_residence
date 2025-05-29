@@ -1,10 +1,21 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
+import 'package:chapechape_client/core/services/logger_service.dart';
+
+/// Classe 
+///  l'état de la connexion
+class ConnectionStatus {
+  final bool isSlowConnection;
+  final bool isOffline;
+  
+  ConnectionStatus({required this.isSlowConnection, required this.isOffline});
+}
 
 /// Service pour optimiser et gérer les images des résidences
 class ImageOptimizationService {
@@ -12,6 +23,21 @@ class ImageOptimizationService {
   static final ImageOptimizationService _instance = ImageOptimizationService._internal();
   
   late final BaseCacheManager _cacheManager;
+  final LoggerService _logger = LoggerService();
+  
+  // Paramètres de gestion du cache
+  static const int _maxCacheSize = 200 * 1024 * 1024; // 200 MB maximum
+  static const double _minDiskSpaceRequired = 500; // 500 MB d'espace libre minimum
+  static const int _defaultMaxCacheObjects = 200;
+  static const int _maxPreloadImages = 5; // Nombre maximum d'images à précharger
+  
+  // Drapeau pour savoir si le cache a été initialisé
+  bool _isInitialized = false;
+  
+  // Gestion des événements de changement de connexion
+  final StreamController<ConnectionStatus> _connectionStatusController = 
+      StreamController<ConnectionStatus>.broadcast();
+  Stream<ConnectionStatus> get connectionStatusStream => _connectionStatusController.stream;
   
   // État de la connexion (mis à jour par ConnectionQualityService)
   bool _isSlowConnection = false;
@@ -22,54 +48,150 @@ class ImageOptimizationService {
   
   /// Constructeur privé
   ImageOptimizationService._internal() {
-    _cacheManager = CacheManager(
-      Config(
-        _cacheKey,
-        stalePeriod: const Duration(days: 14), // Augmenté à 14 jours pour un meilleur support hors ligne
-        maxNrOfCacheObjects: 200, // Augmenté pour stocker plus d'images en cache
-        repo: JsonCacheInfoRepository(databaseName: _cacheKey),
-        fileService: HttpFileService(),
-      ),
-    );
+    _initializeCacheManager();
   }
   
-  /// Met à jour l'état de la connexion
+  /// Initialise le gestionnaire de cache avec les paramètres appropriés
+  Future<void> _initializeCacheManager() async {
+    try {
+      // Vérifier l'espace disque disponible
+      final availableDiskSpace = await _getAvailableDiskSpace();
+      
+      // Ajuster le nombre d'objets en cache en fonction de l'espace disponible
+      int maxObjects = _defaultMaxCacheObjects;
+      if (availableDiskSpace < _minDiskSpaceRequired) {
+        // Réduire la taille du cache si l'espace est limité
+        _logger.warning('💾 Espace disque limité (${availableDiskSpace.toStringAsFixed(2)} MB), réduction du cache d\'images');
+        maxObjects = _defaultMaxCacheObjects ~/ 2; // Réduire de moitié
+      }
+      
+      _cacheManager = CacheManager(
+        Config(
+          _cacheKey,
+          stalePeriod: const Duration(days: 14), // Support hors ligne étendu
+          maxNrOfCacheObjects: maxObjects,
+          repo: JsonCacheInfoRepository(databaseName: _cacheKey),
+          fileService: HttpFileService(),
+        ),
+      );
+      
+      _logger.info('💾 Gestionnaire de cache d\'images initialisé avec $maxObjects objets maximum');
+      
+      // Nettoyer le cache si nécessaire lors de l'initialisation
+      _performCacheMaintenanceIfNeeded();
+      
+      // Marquer comme initialisé
+      _isInitialized = true;
+    } catch (e) {
+      _logger.error('❌ Erreur lors de l\'initialisation du gestionnaire de cache', e, StackTrace.current);
+      
+      // Fallback sur une configuration par défaut en cas d'erreur
+      _cacheManager = CacheManager(
+        Config(
+          _cacheKey,
+          stalePeriod: const Duration(days: 7),
+          maxNrOfCacheObjects: 100,
+          repo: JsonCacheInfoRepository(databaseName: _cacheKey),
+          fileService: HttpFileService(),
+        ),
+      );
+    }
+  }
+  
+  /// Met à jour l'état de la connexion et notifie les observateurs
   void updateConnectionStatus({bool isSlowConnection = false, bool isOffline = false}) {
-    _isSlowConnection = isSlowConnection;
-    _isOffline = isOffline;
-    debugPrint('🌐 État de connexion mis à jour: lent=$_isSlowConnection, hors ligne=$_isOffline');
+    // Ne mettre à jour que si l'état a changé
+    if (_isSlowConnection != isSlowConnection || _isOffline != isOffline) {
+      _isSlowConnection = isSlowConnection;
+      _isOffline = isOffline;
+      
+      // Notifier les observateurs du changement
+      _connectionStatusController.add(ConnectionStatus(
+        isSlowConnection: _isSlowConnection,
+        isOffline: _isOffline,
+      ));
+      
+      _logger.info('🌍 État de connexion mis à jour: lent=$_isSlowConnection, hors ligne=$_isOffline');
+      
+      // Si la connexion s'améliore, précharger les images importantes
+      if (!_isOffline && !_isSlowConnection) {
+        _preloadCriticalImages();
+      }
+    }
+  }
+  
+  /// Précharge les images critiques lorsque la connexion s'améliore
+  Future<void> _preloadCriticalImages() async {
+    // Implémentation à compléter selon les besoins de l'application
+    // Par exemple, précharger les images de la page d'accueil
   }
   
   /// Précharge une liste d'images pour une résidence avec différentes résolutions
   Future<void> preloadResidenceImages(List<String> imageUrls) async {
     if (imageUrls.isEmpty) return;
     
-    // Limite le nombre d'images préchargées pour économiser de la bande passante
-    final imagesToPreload = imageUrls.length > 3 ? imageUrls.sublist(0, 3) : imageUrls;
-    
-    // Si connexion lente, ne précharger que des versions basse résolution
-    if (_isSlowConnection) {
-      await Future.wait(
-        imagesToPreload.map((url) async {
-          final optimizedUrl = await getOptimizedImageUrl(url, width: 300, quality: 60);
-          return _cacheManager.getSingleFile(optimizedUrl);
-        }).toList(),
-      );
-      debugPrint('🖼️ ${imagesToPreload.length} images préchargées en basse résolution (connexion lente)');
-    } else {
-      // Sinon, précharger des versions standard
-      await Future.wait(
-        imagesToPreload.map((url) async {
-          final optimizedUrl = await getOptimizedImageUrl(url);
-          return _cacheManager.getSingleFile(optimizedUrl);
-        }).toList(),
-      );
-      debugPrint('🖼️ ${imagesToPreload.length} images préchargées en résolution standard');
+    _logger.info('📸 Préchargement de ${imageUrls.length} images de résidence');
+
+    try {
+      // Vérifier l'espace disque disponible avant le préchargement
+      final hasEnoughSpace = await _hasEnoughDiskSpace();
+      if (!hasEnoughSpace) {
+        _logger.warning('⚠️ Espace disque insuffisant pour le préchargement d\'images, nettoyage du cache...');
+        await cleanupUnusedImages();
+        
+        // Revérifier l'espace après le nettoyage
+        final spaceAfterCleanup = await _hasEnoughDiskSpace();
+        if (!spaceAfterCleanup) {
+          _logger.error('❌ Espace disque toujours insuffisant après nettoyage, abandon du préchargement');
+          return;
+        }
+      }
+
+      // Adapter la stratégie de préchargement en fonction de la connexion
+      // Limiter le nombre d'images à précharger
+      final limitedUrls = imageUrls.take(_maxPreloadImages).toList();
+      
+      // Si la connexion est lente, nous préchargeons uniquement des images de basse qualité
+      if (_isSlowConnection) {
+        _logger.info('📡 Connexion lente détectée, préchargement d\'images basse résolution');
+        for (final url in limitedUrls) {
+          if (url.isEmpty || !isImageUrlValid(url)) continue;
+          final optimizedUrl = getOptimizedImageUrl(url, width: 100, quality: 30);
+          await _cacheManager.getSingleFile(optimizedUrl);
+        }
+      } else if (_isOffline) {
+        // En mode hors ligne, nous ne préchargeons rien de nouveau
+        _logger.info('📰 Mode hors ligne, aucun préchargement d\'images');
+        return;
+      } else {
+        // Pour une connexion normale, nous préchargeons des images de résolution moyenne
+        for (final url in limitedUrls) {
+          if (url.isEmpty || !isImageUrlValid(url)) continue;
+          final optimizedUrl = getOptimizedImageUrl(url, width: 300);
+          await _cacheManager.getSingleFile(optimizedUrl);
+        }
+        
+        // Et la première image est préchargée en haute qualité (pour l'affichage détaillé)
+        if (limitedUrls.isNotEmpty) {
+          final firstUrl = limitedUrls.first;
+          if (firstUrl.isNotEmpty && isImageUrlValid(firstUrl)) {
+            final optimizedUrl = getOptimizedImageUrl(firstUrl, width: 600);
+            await _cacheManager.getSingleFile(optimizedUrl);
+          }
+        }
+
+        // Effectuer une maintenance du cache après le préchargement si nécessaire
+        _performCacheMaintenanceIfNeeded();
+      }
+      
+      _logger.info('✅ Préchargement des images terminé');
+    } catch (e) {
+      _logger.error('🖼️ Erreur lors du préchargement des images', e, StackTrace.current);
     }
   }
   
   /// Récupère une image optimisée avec des paramètres de redimensionnement adaptés à la qualité de connexion
-  Future<String> getOptimizedImageUrl(String originalUrl, {int? width, int? quality}) async {
+  String getOptimizedImageUrl(String originalUrl, {int? width, int? quality}) {
     // Si l'URL est déjà une URL d'image optimisée, la retourner telle quelle
     if (originalUrl.contains('?width=') || originalUrl.contains('&quality=')) {
       return originalUrl;
@@ -88,29 +210,47 @@ class ImageOptimizationService {
   
   /// Supprime le cache des images
   Future<void> clearImageCache() async {
-    await _cacheManager.emptyCache();
-    debugPrint('🖼️ Cache d\'images vidé');
+    try {
+      await _cacheManager.emptyCache();
+      _logger.info('🖼️ Cache d\'images vidé avec succès');
+    } catch (e) {
+      _logger.error('🖼️ Erreur lors du vidage du cache d\'images', e, StackTrace.current);
+    }
   }
   
-  /// Obtient la taille du cache des images
-  Future<String> getImageCacheSize() async {
-    final directory = await getTemporaryDirectory();
-    final cacheDir = Directory('${directory.path}/$_cacheKey');
-    
-    if (!await cacheDir.exists()) {
-      return '0 Mo';
-    }
-    
-    int totalSize = 0;
-    await for (final file in cacheDir.list(recursive: true, followLinks: false)) {
-      if (file is File) {
-        totalSize += await file.length();
+  /// Obtient la taille du cache des images en octets
+  Future<int> getImageCacheSize() async {
+    try {
+      if (!_isInitialized) return 0;
+      if (kIsWeb) return 0; // Pas de cache sur le web
+      
+      final tempDir = await getTemporaryDirectory();
+      final cachePath = '${tempDir.path}/$_cacheKey';
+      final cacheDir = Directory(cachePath);
+      
+      if (!await cacheDir.exists()) return 0;
+      
+      int totalSize = 0;
+      await for (final file in cacheDir.list(recursive: true, followLinks: false)) {
+        if (file is File) {
+          totalSize += await file.length();
+        }
       }
+      
+      // Log la taille en Mo pour information, mais retourne la taille en octets
+      final sizeInMb = totalSize / (1024 * 1024);
+      _logger.info('🖼️ Taille actuelle du cache d\'images: ${sizeInMb.toStringAsFixed(2)} Mo');
+      return totalSize;
+    } catch (e) {
+      _logger.error('🖼️ Erreur lors de la récupération de la taille du cache', e, StackTrace.current);
+      return 0;
     }
-    
-    // Convertir en Mo
-    final sizeInMb = totalSize / (1024 * 1024);
-    return '${sizeInMb.toStringAsFixed(2)} Mo';
+  }
+  
+  /// Formate la taille du cache en texte lisible
+  Future<String> getFormattedCacheSize() async {
+    final size = await getImageCacheSize();
+    return '${size.toStringAsFixed(2)} Mo';
   }
   
   /// Construit un widget d'image optimisé pour les résidences avec chargement progressif
@@ -168,24 +308,154 @@ class ImageOptimizationService {
     }
   }
   
-  /// Détermine si une URL d'image est valide
-  Future<bool> isImageUrlValid(String url) async {
+  /// Détermine si une URL d'image est valide (vérification simple sans appel réseau)
+  bool isImageUrlValid(String url) {
     try {
-      final response = await http.head(Uri.parse(url));
-      return response.statusCode >= 200 && response.statusCode < 300;
+      // Vérification simple et rapide, sans appel réseau
+      final uri = Uri.parse(url);
+      return uri.isAbsolute && 
+             (url.toLowerCase().endsWith('.jpg') ||
+              url.toLowerCase().endsWith('.jpeg') ||
+              url.toLowerCase().endsWith('.png') ||
+              url.toLowerCase().endsWith('.webp') ||
+              url.toLowerCase().endsWith('.gif') ||
+              url.contains('image'));
     } catch (e) {
-      debugPrint('🖼️ Erreur lors de la validation de l\'URL d\'image: $e');
+      _logger.error('🖼️ URL d\'image invalide: $url', e, StackTrace.current);
       return false;
     }
   }
   
-  /// Nettoie les images anciennes et inutilisées du cache
+  /// Vérifie de manière approfondie si une URL d'image est valide (avec appel réseau)
+  Future<bool> isImageUrlValidWithNetworkCheck(String url) async {
+    try {
+      final response = await http.head(Uri.parse(url));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      _logger.error('🖼️ URL d\'image invalide: $url', e, StackTrace.current);
+      return false;
+    }
+  }
+  
+  /// Nettoie les images anciennes et inutilisées du cache avec une stratégie intelligente
   Future<void> cleanupUnusedImages() async {
     try {
-      await _cacheManager.emptyCache();
-      debugPrint('🧹 Nettoyage des images inutilisées terminé');
+      final cacheSize = await getImageCacheSize();
+      final availableSpace = await _getAvailableDiskSpace();
+      
+      // Ne nettoyer que si le cache est trop grand ou l'espace disque est limité
+      if (cacheSize > _maxCacheSize / 2 || availableSpace < _minDiskSpaceRequired) {
+        _logger.info('🧹 Nettoyage intelligent du cache d\'images (taille actuelle: ${cacheSize.toStringAsFixed(2)} Mo)');
+        
+        // Utiliser la stratégie LRU (Least Recently Used) du CacheManager
+        // Garder seulement la moitié des objets en cas de problème d'espace
+        if (availableSpace < _minDiskSpaceRequired) {
+          // Nettoyage agressif si l'espace est très limité
+          await _cacheManager.emptyCache();
+          _logger.warning('🧹 Nettoyage complet du cache d\'images en raison d\'un espace disque limité');
+        } else {
+          // Supprime les fichiers les plus anciens (au moins 1/3 du cache)
+          await _cleanupOldestFiles();
+          _logger.info('🧹 Suppression sélective des images les moins récemment utilisées');
+        }
+        
+        // Vérifier la nouvelle taille du cache
+        final newSize = await getImageCacheSize();
+        _logger.info('🧹 Nettoyage terminé, nouvelle taille: ${newSize.toStringAsFixed(2)} Mo');
+      } else {
+        _logger.info('✅ Aucun nettoyage du cache d\'images nécessaire (taille: ${cacheSize.toStringAsFixed(2)} Mo)');
+      }
     } catch (e) {
-      debugPrint('❌ Erreur lors du nettoyage des images inutilisées: $e');
+      _logger.error('❌ Erreur lors du nettoyage des images inutilisées', e, StackTrace.current);
+    }
+  }
+  
+  /// Vérifie régulièrement l'état du cache et effectue une maintenance si nécessaire
+  Future<void> _performCacheMaintenanceIfNeeded() async {
+    try {
+      if (!_isInitialized) return; // Éviter les appels avant initialisation complète
+      
+      final cacheSize = await getImageCacheSize();
+      final availableSpace = await _getAvailableDiskSpace();
+      
+      // Vérifier si le cache est trop grand ou si l'espace disque est limité
+      if (cacheSize > (_maxCacheSize ~/ 2) || availableSpace < _minDiskSpaceRequired) {
+        await cleanupUnusedImages();
+      }
+    } catch (e) {
+      _logger.error('❌ Erreur lors de la maintenance du cache', e, StackTrace.current);
+    }
+  }
+  
+  /// Récupère l'espace disque disponible en Mo
+  Future<double> _getAvailableDiskSpace() async {
+    try {
+      if (kIsWeb) return double.infinity; // Pas de limite sur le web
+      
+      // Méthode simple pour estimer l'espace disponible
+      final directory = await getTemporaryDirectory();
+      final stat = directory.statSync();
+      
+      // Si nous ne pouvons pas accéder aux statistiques, nous supposons un espace suffisant
+      if (stat.type == FileSystemEntityType.notFound) {
+        return _minDiskSpaceRequired * 2;
+      }
+      
+      // Créer un fichier test pour vérifier si nous pouvons écrire
+      try {
+        final testFile = File('${directory.path}/disk_space_test.tmp');
+        await testFile.writeAsString('test');
+        await testFile.delete();
+        
+        // Si nous pouvons écrire, nous supposons un espace suffisant
+        return _minDiskSpaceRequired * 2;
+      } catch (e) {
+        // Si nous ne pouvons pas écrire, nous supposons un espace insuffisant
+        return _minDiskSpaceRequired / 2;
+      }
+    } catch (e) {
+      _logger.error('💾 Erreur lors de la vérification de l\'espace disque', e, StackTrace.current);
+      return _minDiskSpaceRequired; // Valeur par défaut en cas d'erreur
+    }
+  }
+  
+  /// Vérifie s'il y a assez d'espace disque disponible pour les opérations de cache
+  Future<bool> _hasEnoughDiskSpace() async {
+    final availableSpace = await _getAvailableDiskSpace();
+    return availableSpace >= _minDiskSpaceRequired;
+  }
+  
+  /// Supprime les fichiers les plus anciens du cache
+  Future<void> _cleanupOldestFiles() async {
+    try {
+      // Récupérer le répertoire du cache
+      final directory = await getTemporaryDirectory();
+      final cacheDir = Directory('${directory.path}/$_cacheKey');
+      
+      if (!await cacheDir.exists()) return;
+      
+      // Liste tous les fichiers de cache et trie-les par date de modification
+      final files = await cacheDir
+          .list(recursive: true, followLinks: false)
+          .where((entity) => entity is File)
+          .cast<File>()
+          .toList();
+          
+      // Trier les fichiers par date de modification (du plus ancien au plus récent)
+      files.sort((a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()));
+      
+      // Nombre de fichiers à supprimer (environ 1/3 des fichiers)
+      final filesToDeleteCount = (files.length / 3).round();
+      if (filesToDeleteCount <= 0) return;
+      
+      _logger.info('🧹 Suppression de $filesToDeleteCount fichiers les plus anciens');
+      
+      // Supprimer les fichiers les plus anciens
+      for (int i = 0; i < filesToDeleteCount && i < files.length; i++) {
+        await files[i].delete();
+      }
+    } catch (e) {
+      _logger.error('❌ Erreur lors de la suppression des fichiers les plus anciens', e, StackTrace.current);
     }
   }
 }

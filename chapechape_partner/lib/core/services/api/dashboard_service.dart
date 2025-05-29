@@ -15,7 +15,15 @@ class DashboardService extends ApiService {
   final Map<String, dynamic> _responseCache = {};
   final event_bus.ResidenceEventBus _eventBus = event_bus.ResidenceEventBus();
 
-  DashboardService(Dio dio) : super(dio);
+  DashboardService(Dio dio) : super(dio) {
+    // Configurer un timeout plus long pour éviter les erreurs de timeout
+    dio.options.connectTimeout = const Duration(seconds: 30);
+    dio.options.receiveTimeout = const Duration(seconds: 30);
+    dio.options.sendTimeout = const Duration(seconds: 30);
+    
+    // Logger les configurations pour le débogage
+    debugPrint('🔧 Dashboard Service - Timeouts configurés: 30s');
+  }
   
   // Méthode de journalisation qui remplace print()
   void _log(String message) {

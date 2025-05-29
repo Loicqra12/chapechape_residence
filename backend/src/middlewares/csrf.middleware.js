@@ -26,8 +26,13 @@ const csrfProtection = csrf({
  * À utiliser sur les routes sensibles nécessitant une protection CSRF
  */
 const csrfMiddleware = (req, res, next) => {
-  // Bypass de la vérification pour les routes API utilisées par les applications mobiles
-  if (req.path.startsWith("/api/mobile/")) {
+  // Bypass pour les applications mobiles (détection par header ou route)
+  if (
+    req.path.startsWith("/api/mobile/") ||
+    req.headers["x-mobile-app"] === "true" ||
+    req.headers["user-agent"]?.includes("ChapeChapeApp") ||
+    (req.path.startsWith("/api/auth/") && req.headers["content-type"]?.includes("application/json"))
+  ) {
     return next();
   }
 
@@ -64,6 +69,16 @@ const csrfMiddleware = (req, res, next) => {
  * À utiliser sur les routes qui renvoient des formulaires ou des pages
  */
 const generateCsrfToken = (req, res, next) => {
+  // Bypass pour les applications mobiles (détection par header ou route)
+  if (
+    req.path.startsWith("/api/mobile/") ||
+    req.headers["x-mobile-app"] === "true" ||
+    req.headers["user-agent"]?.includes("ChapeChapeApp") ||
+    (req.path.startsWith("/api/auth/") && req.headers["content-type"]?.includes("application/json"))
+  ) {
+    return next();
+  }
+
   // Appliquer directement csrfProtection sans vérification d'authentification
   csrfProtection(req, res, (err) => {
     if (err) {

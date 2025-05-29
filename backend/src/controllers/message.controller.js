@@ -4,6 +4,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const Reservation = require('../models/reservation.model');
+const notificationService = require('../services/notification.service');
+const socketService = require('../services/socket.service');
+const User = require('../models/user.model');
 
 // Création du dossier uploads/messages s'il n'existe pas
 const ensureUploadDirExists = async () => {
@@ -164,6 +167,51 @@ exports.sendMessage = asyncHandler(async (req, res) => {
     await conversation.save();
 
     await message.populate('sender', 'name avatar');
+
+    // 1. Notifications WebSocket en temps réel
+    try {
+        await socketService.notifyNewMessage(message, conversation);
+    } catch (socketError) {
+        console.error('Erreur lors de la notification WebSocket:', socketError);
+        // On continue même en cas d'erreur
+    }
+
+    // 2. Notifications push pour les participants qui ne sont pas l'expéditeur
+    try {
+        // Récupérer le sender pour avoir son nom
+        const sender = await User.findById(req.user.id, 'name');
+        const senderName = sender ? sender.name : 'Utilisateur';
+
+        // Préparer le message et les données pour la notification
+        const notificationMessage = `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`;
+        const notificationData = {
+            type: 'NEW_MESSAGE',
+            conversationId: conversationId,
+            messageId: message._id.toString(),
+            senderId: req.user.id
+        };
+
+        // Pour chaque participant (sauf l'expéditeur) qui n'est pas en ligne (WebSocket)
+        for (const participantId of conversation.participants) {
+            const participantIdStr = participantId.toString();
+            if (participantIdStr !== req.user.id) {
+                // Vérifier si l'utilisateur est en ligne avant d'envoyer une notification push
+                const isOnline = socketService.isUserOnline(participantIdStr);
+                if (!isOnline) {
+                    // Envoyer notification push via le service de notification
+                    await notificationService.createNotification(
+                        participantIdStr,
+                        'message',
+                        notificationMessage,
+                        notificationData
+                    );
+                }
+            }
+        }
+    } catch (notifError) {
+        console.error('Erreur lors de l\'envoi des notifications push:', notifError);
+        // On continue même en cas d'erreur
+    }
 
     res.status(201).json({ success: true, data: message });
 });

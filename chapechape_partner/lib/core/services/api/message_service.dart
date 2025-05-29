@@ -33,10 +33,19 @@ class MessageService {
     }
     return null;
   }
+  
+  // Getter pour accéder à l'instance Dio
+  Dio get dio => _dio;
+  
+  // Retourne l'instance Dio pour les requêtes externes
+  Dio getDio() {
+    return _dio;
+  }
 
   /// Récupère toutes les conversations de l'utilisateur
   Future<List<Conversation>> getConversations() async {
     try {
+      // Suppression du préfixe /api/ pour éviter la duplication avec l'URL de base qui contient déjà /api
       final response = await _dio.get('/messages/conversations');
       
       if (response.statusCode == 200 || response.statusCode == 304) {
@@ -158,7 +167,7 @@ class MessageService {
   /// Récupère une conversation
   Future<Conversation?> getConversation(String conversationId) async {
     try {
-      final response = await _dio.get('/messages/conversations/$conversationId');
+      final response = await _dio.get('/api/messages/conversations/$conversationId');
       final data = response.data['data'];
       
       // Adapter le format de la réponse pour inclure residenceId et residenceName

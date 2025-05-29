@@ -4,6 +4,7 @@ import '../../../core/blocs/notification/notification_bloc.dart';
 import '../../../core/blocs/notification/notification_event.dart';
 import '../../../core/blocs/notification/notification_state.dart';
 import '../../../core/models/notification/notification_model.dart';
+import '../../../presentation/widgets/notifications/notification_filter_sheet.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -47,6 +48,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.offset;
     return currentScroll >= (maxScroll * 0.9);
+  }
+
+  // Affiche la feuille de filtre des notifications
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => const NotificationFilterSheet(),
+    );
   }
 
   void _handleNotificationTap(NotificationModel notification) {
@@ -117,6 +130,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           appBar: AppBar(
             title: const Text('Notifications'),
             actions: [
+              // Bouton de filtre
+              IconButton(
+                icon: Icon(
+                  Icons.filter_list,
+                  color: state is NotificationLoaded && state.activeFilters 
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                onPressed: () {
+                  _showFilterSheet(context);
+                },
+                tooltip: 'Filtrer les notifications',
+              ),
+              // Bouton pour tout marquer comme lu
               if (state is NotificationLoaded && state.totalUnread > 0)
                 TextButton(
                   onPressed: () {

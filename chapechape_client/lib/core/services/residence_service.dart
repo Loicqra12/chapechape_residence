@@ -7,11 +7,13 @@ import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/models/residence_type_enum.dart'; 
 import 'package:chapechape_client/core/services/api_service.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
+import 'package:chapechape_client/core/services/logger_service.dart';
 import 'package:http/http.dart' as http;
 
 class ResidenceService {
   final ApiService _apiService;
   final CacheService _cacheService;
+  final LoggerService _logger = LoggerService();
   static ResidenceService? _instance;
 
   ResidenceService._({
@@ -47,7 +49,7 @@ class ResidenceService {
     bool forceRefresh = false,
   }) async {
     try {
-      print('📋 DÉBUT getAllResidences - forceRefresh: $forceRefresh');
+      _logger.info('📋 DÉBUT getAllResidences - forceRefresh: $forceRefresh');
       
       // Construire une clé de cache basée sur les paramètres
       final cacheKey = 'residences_all_${filters ?? ''}_page${page ?? 1}_limit${limit ?? 10}';
@@ -57,7 +59,7 @@ class ResidenceService {
         final cachedData = await _cacheService.get(cacheKey);
         if (cachedData != null) {
           final List<Residence> cachedResidences = (cachedData as List).cast<Residence>();
-          print('📋 Utilisation des résidences en cache (${cachedResidences.length})');
+          _logger.info('📋 Utilisation des résidences en cache (${cachedResidences.length})');
           return cachedResidences;
         }
       }
@@ -68,7 +70,7 @@ class ResidenceService {
       
       // 1. D'abord récupérer les résidences générales
       try {
-        print('📋 Récupération des résidences générales...');
+        _logger.info('📋 Récupération des résidences générales...');
         final response = await _apiService.get(
           '/residences',
           queryParameters: {
@@ -79,58 +81,56 @@ class ResidenceService {
         );
         
         if (response.data['data'] is List) {
-          print('📋 ${(response.data['data'] as List).length} résidences générales trouvées');
+          _logger.info('📋 ${(response.data['data'] as List).length} résidences générales trouvées');
           final residences = (response.data['data'] as List)
               .map((json) => _adaptBackendResidenceToClient(json))
               .toList();
           
           allResidences.addAll(residences);
-          print('📋 Résidences générales ajoutées: ${residences.length}');
+          _logger.info('📋 Résidences générales ajoutées: ${residences.length}');
           hasLocalResidences = residences.isNotEmpty;
         } else {
-          print('📋 Aucune résidence générale trouvée');
+          _logger.warning('📋 Aucune résidence générale trouvée');
         }
       } catch (e) {
-        print('📋 ERREUR lors de la récupération des résidences générales: $e');
+        _logger.error('📋 ERREUR lors de la récupération des résidences générales', e);
         // Continuer même en cas d'erreur pour tenter de récupérer les résidences partenaires
       }
       
-      // 2. Ensuite récupérer les résidences partenaires
-      // Ajouter un délai avant d'appeler l'API partenaire pour éviter l'erreur 429
-      await Future.delayed(const Duration(milliseconds: 500));
-      
+      // 2. Ensuite récupérer les résidences partenaires avec stratégie anti-429
+      // Au lieu d'un délai fixe, utiliser un mécanisme de retry via notre interceptor
       try {
-        print('📋 Récupération des résidences partenaires...');
+        _logger.info('📋 Récupération des résidences partenaires...');
         final response = await _apiService.get('/residences/all');
         
         if (response.statusCode == 200 && response.data is List) {
-          print('📋 ${(response.data as List).length} résidences partenaires trouvées');
+          _logger.info('📋 ${(response.data as List).length} résidences partenaires trouvées');
           final partnerResidences = (response.data as List)
               .map((json) => _adaptBackendResidenceToClient(json))
               .toList();
           
           allResidences.addAll(partnerResidences);
-          print('📋 Résidences partenaires ajoutées: ${partnerResidences.length}');
+          _logger.info('📋 Résidences partenaires ajoutées: ${partnerResidences.length}');
         } else {
-          print('📋 Aucune résidence partenaire trouvée ou format de réponse incorrect');
+          _logger.warning('📋 Aucune résidence partenaire trouvée ou format de réponse incorrect');
         }
       } catch (e) {
         if (e is DioException && e.response?.statusCode == 429) {
-          print('📋 ERREUR lors de la récupération des résidences partenaires: Limite de taux (429) - Trop de requêtes');
+          _logger.error('📋 ERREUR lors de la récupération des résidences partenaires: Limite de taux (429)', e);
           // Si on n'a pas de résidences locales, essayer de récupérer du cache
           if (allResidences.isEmpty && !hasLocalResidences) {
             try {
               final cachedData = await _cacheService.get(cacheKey);
               if (cachedData != null) {
-                print('📋 Utilisation du cache comme secours après erreur 429');
+                _logger.info('📋 Utilisation du cache comme secours après erreur 429');
                 return (cachedData as List).cast<Residence>();
               }
             } catch (cacheError) {
-              print('📋 Impossible d\'accéder au cache: $cacheError');
+              _logger.error('📋 Impossible d\'accéder au cache', cacheError);
             }
           }
         } else {
-          print('📋 ERREUR lors de la récupération des résidences partenaires: $e');
+          _logger.error('📋 ERREUR lors de la récupération des résidences partenaires', e);
         }
         // On continue avec les résidences locales uniquement
       }
@@ -138,13 +138,13 @@ class ResidenceService {
       // Mettre en cache toutes les résidences obtenues (même si partielles)
       if (allResidences.isNotEmpty) {
         await _cacheService.put(cacheKey, allResidences, expiryInMinutes: 5);
-        print('📋 ${allResidences.length} résidences mises en cache pour 5 minutes');
+        _logger.info('📋 ${allResidences.length} résidences mises en cache pour 5 minutes');
       }
       
-      print('📋 FIN getAllResidences - ${allResidences.length} résidences au total');
+      _logger.info('📋 FIN getAllResidences - ${allResidences.length} résidences au total');
       return allResidences;
     } catch (e) {
-      print('📋 ERREUR GÉNÉRALE dans getAllResidences: $e');
+      _logger.error('📋 ERREUR GÉNÉRALE dans getAllResidences', e);
       return [];
     }
   }

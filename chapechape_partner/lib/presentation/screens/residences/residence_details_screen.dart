@@ -3,15 +3,31 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../../../core/blocs/residence/residence_bloc.dart';
+import '../../../core/blocs/review/review_bloc.dart';
+import '../../../core/blocs/review/review_event.dart';
+import '../../../core/blocs/review/review_state.dart';
+import '../../../core/blocs/favorite/favorite_bloc.dart';
+import '../../../core/blocs/favorite/favorite_event.dart';
+import '../../../core/blocs/promotion/promotion_bloc.dart';
+import '../../../core/blocs/promotion/promotion_event.dart';
 import '../../../core/models/residence/residence.dart';
-import '../../../core/models/residence/residence_extensions.dart';
+import '../../../core/models/residence/nearby_place.dart';
+import '../../../core/models/residence/faq.dart';
+import '../../../core/models/promotion/promotion_model.dart';
 import '../../../core/services/api/residence_service.dart';
+import '../../../core/services/api/review_service.dart';
+import '../../../core/services/api/favorite_service.dart';
+import '../../../core/services/api/promotion_service.dart';
+import '../../../core/services/api/api_service.dart';
 import '../../../core/config/app_config_manager.dart';
-import '../../../core/constants/app_images.dart';
 import 'edit_residence_screen.dart';
-import '../../widgets/layout/screen_app_bars.dart';
+import 'nearby_places_edit_screen.dart';
+import 'faq_edit_screen.dart';
+import '../../widgets/review/review_item_widget.dart';
+import '../../widgets/favorite/favorite_button_widget.dart';
+import '../../widgets/promotion/promotions_list_widget.dart';
+import '../../widgets/promotion/promotion_form_dialog.dart';
 import '../../../core/services/currency_service.dart';
-import '../../../core/utils/formatters.dart';
 import '../../widgets/currency_selector_widget.dart';
 
 class ResidenceDetailsScreen extends StatelessWidget {
@@ -24,33 +40,58 @@ class ResidenceDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ResidenceBloc(
-        ResidenceService(baseUrl: AppConfigManager.apiUrl),
-      )..add(CheckResidenceExists(residence.id, 
-          onSuccess: (exists) {
-            if (exists) {
-              context.read<ResidenceBloc>().add(LoadResidenceDetails(residence.id));
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cette résidence n\'existe plus'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              Navigator.of(context).pop();
-            }
-          },
-          onError: (errorMessage) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Erreur: $errorMessage'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            Navigator.of(context).pop();
-          }
-        )),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ResidenceBloc>(
+          create: (context) => ResidenceBloc(
+            ResidenceService(baseUrl: AppConfigManager.apiUrl),
+          )..add(CheckResidenceExists(residence.id, 
+              onSuccess: (exists) {
+                if (exists) {
+                  context.read<ResidenceBloc>().add(LoadResidenceDetails(residence.id));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Cette résidence n\'existe plus'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+              onError: (errorMessage) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Erreur: $errorMessage'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                Navigator.of(context).pop();
+              }
+            )),
+        ),
+        BlocProvider<ReviewBloc>(
+          create: (context) => ReviewBloc(
+            reviewService: ReviewService.withApiService(
+              apiService: ApiService(authBloc: null),
+            ),
+          )..add(LoadReviews(residence.id)),
+        ),
+        BlocProvider<FavoriteBloc>(
+          create: (context) => FavoriteBloc(
+            favoriteService: FavoriteService.withApiService(
+              apiService: ApiService(authBloc: null),
+            ),
+          )..add(CheckFavoriteStatus(residenceId: residence.id)),
+        ),
+        BlocProvider<PromotionBloc>(
+          create: (context) => PromotionBloc(
+            promotionService: PromotionService(
+              apiService: context.read<ApiService>(),
+            ),
+          ),
+        ),
+      ],
       child: BlocConsumer<ResidenceBloc, ResidenceState>(
         listener: (context, state) {
           if (state is ResidenceError) {
@@ -73,7 +114,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
           }
           
           return DefaultTabController(
-            length: 4,
+            length: 5,
             child: Scaffold(
               body: NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -92,6 +133,14 @@ class ResidenceDetailsScreen extends StatelessWidget {
                         ),
                       ),
                       actions: [
+                        // Bouton de favori
+                        FavoriteButtonWidget(
+                          residenceId: residence.id,
+                          activeColor: Colors.red,
+                          inactiveColor: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
+                          size: 26.0,
+                        ),
+                        // Bouton d'édition
                         IconButton(
                           icon: Icon(
                             Icons.edit,
@@ -166,6 +215,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                             Tab(icon: Icon(Icons.calendar_month_outlined), text: 'Disponibilités'),
                             Tab(icon: Icon(Icons.photo_library_outlined), text: 'Galerie'),
                             Tab(icon: Icon(Icons.star_outline), text: 'Avis'),
+                            Tab(icon: Icon(Icons.local_offer_outlined), text: 'Promotions'),
                   ],
                 ),
               ),
@@ -189,6 +239,8 @@ class ResidenceDetailsScreen extends StatelessWidget {
                       _EnhancedGalleryTab(residence: residence),
                     // Onglet Avis
                       _EnhancedReviewsTab(residence: residence),
+                    // Onglet Promotions
+                      _EnhancedPromotionsTab(residence: residence),
                   ],
                 ),
               ),
@@ -1008,10 +1060,27 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
                           IconButton(
                             icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
                             onPressed: () {
-                              // TODO: Navigation vers l'écran d'édition des points d'intérêt
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Édition des points d\'intérêt bientôt disponible')),
-                              );
+                              // Convertir les Map en objets NearbyPlace
+                              final places = residence.nearbyPlaces
+                                  .map((map) => NearbyPlace.fromJson(map))
+                                  .toList();
+                              
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NearbyPlacesEditScreen(
+                                    residenceId: residence.id,
+                                    initialPlaces: places,
+                                  ),
+                                ),
+                              ).then((updatedPlaces) {
+                                if (updatedPlaces != null) {
+                                  // Recharger les détails de la résidence pour voir les modifications
+                                  context.read<ResidenceBloc>().add(
+                                    LoadResidenceDetails(residence.id),
+                                  );
+                                }
+                              });
                             },
                             tooltip: 'Modifier les points d\'intérêt',
                           ),
@@ -1048,10 +1117,29 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
                           IconButton(
                             icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
                             onPressed: () {
-                              // TODO: Navigation vers l'écran d'édition des FAQ
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Édition des FAQ bientôt disponible')),
-                              );
+                              // Convertir les Map en objets Faq
+                              final faqs = residence.faqs
+                                  .map((map) => Faq.fromJson(map))
+                                  .toList();
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => FaqEditScreen(
+                                    residenceId: residence.id,
+                                    initialFaqs: faqs,
+                                  ),
+                                ),
+                              ).then((updatedFaqs) {
+                                if (updatedFaqs != null) {
+                                  // Recharger les détails de la résidence pour voir les modifications
+                                  setState(() {});
+                                  // Rafraîchir les données
+                                  context.read<ResidenceBloc>().add(
+                                    LoadResidenceDetails(residence.id),
+                                  );
+                                }
+                              });
                             },
                             tooltip: 'Modifier les FAQ',
                           ),
@@ -1776,6 +1864,7 @@ class _EnhancedReviewsTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Section de la note globale
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -1820,9 +1909,17 @@ class _EnhancedReviewsTab extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                'Basé sur ${residence.reviewCount} avis',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                              BlocBuilder<ReviewBloc, ReviewState>(
+                                builder: (context, state) {
+                                  int reviewCount = residence.reviewCount;
+                                  if (state is ReviewsLoaded) {
+                                    reviewCount = state.reviews.length;
+                                  }
+                                  return Text(
+                                    'Basé sur $reviewCount avis',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -1834,70 +1931,213 @@ class _EnhancedReviewsTab extends StatelessWidget {
               ),
             ),
             
-            // Nouvelle section pour les notes détaillées par catégorie
-            if (residence.stars > 0)
-              Card(
-                margin: const EdgeInsets.only(top: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Notes détaillées',
-                        style: Theme.of(context).textTheme.titleMedium,
+            // Section des statistiques par catégorie
+            BlocBuilder<ReviewBloc, ReviewState>(
+              builder: (context, state) {
+                // On affiche les stats uniquement si nous avons les statistiques chargées
+                if (state is ReviewStatsLoaded) {
+                  return Card(
+                    margin: const EdgeInsets.only(top: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Notes détaillées',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildRatingCategory(context, 'Propreté', 
+                              state.stats['cleanliness']?.toDouble() ?? 0.0),
+                          _buildRatingCategory(context, 'Confort', 
+                              state.stats['comfort']?.toDouble() ?? 0.0),
+                          _buildRatingCategory(context, 'Équipements', 
+                              state.stats['facilities']?.toDouble() ?? 0.0),
+                          _buildRatingCategory(context, 'Rapport qualité/prix', 
+                              state.stats['value']?.toDouble() ?? 0.0),
+                          _buildRatingCategory(context, 'Emplacement', 
+                              state.stats['location']?.toDouble() ?? 0.0),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      _buildRatingCategory(context, 'Propreté', 4.7),
-                      _buildRatingCategory(context, 'Communication', 4.5),
-                      _buildRatingCategory(context, 'Arrivée', 4.2),
-                      _buildRatingCategory(context, 'Précision', 4.6),
-                      _buildRatingCategory(context, 'Emplacement', 4.3),
-                      _buildRatingCategory(context, 'Qualité-prix', 4.1),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
+                  );
+                } else if (residence.stars > 0) {
+                  // Sinon, on utilise les valeurs statiques comme auparavant
+                  return Card(
+                    margin: const EdgeInsets.only(top: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Notes détaillées',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildRatingCategory(context, 'Propreté', 4.7),
+                          _buildRatingCategory(context, 'Confort', 4.5),
+                          _buildRatingCategory(context, 'Équipements', 4.2),
+                          _buildRatingCategory(context, 'Rapport qualité/prix', 4.6),
+                          _buildRatingCategory(context, 'Emplacement', 4.3),
+                        ],
+                      ),
+                    ),
+                  );
+                } else {
+                  return const SizedBox.shrink();
+                }
+              },
+            ),
             
             const SizedBox(height: 16),
             
-            if (residence.reviewCount > 0)
-              Text(
-                'Avis récents',
-                style: Theme.of(context).textTheme.titleLarge,
-              )
-            else
-              Container(
-                height: 200, // Hauteur fixe raisonnable
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
+            // Section de la liste des avis
+            BlocBuilder<ReviewBloc, ReviewState>(
+              builder: (context, state) {
+                // État de chargement des avis
+                if (state is ReviewsLoading) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                
+                // État d'erreur de chargement
+                if (state is ReviewsLoadFailure) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 16),
+                          Text('Erreur: ${state.error}'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<ReviewBloc>().add(
+                                RefreshReviews(residence.id),
+                              );
+                            },
+                            child: const Text('Réessayer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                
+                // État des avis chargés avec succès
+                if (state is ReviewsLoaded) {
+                  if (state.reviews.isEmpty) {
+                    // Aucun avis disponible
+                    return Container(
+                      height: 200,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.rate_review_outlined,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Aucun avis pour le moment',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Les avis de vos clients apparaîtront ici',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  // Affichage de la liste des avis
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.rate_review_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Avis récents (${state.reviews.length})',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          if (state.hasMore)
+                            TextButton(
+                              onPressed: () {
+                                context.read<ReviewBloc>().add(
+                                  LoadMoreReviews(
+                                    residence.id,
+                                    page: state.page + 1,
+                                  ),
+                                );
+                              },
+                              child: const Text('Voir plus'),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        'Aucun avis pour le moment',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey[600],
+                      
+                      // Liste des avis avec possibilité de réponse
+                      ...state.reviews.map((review) {
+                        return ReviewItemWidget(
+                          review: review,
+                        );
+                      }).toList(),
+                      
+                      // Chargement de plus d'avis
+                      if (state is ReviewsLoadingMore)
+                        const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Les avis de vos clients apparaîtront ici',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
                     ],
+                  );
+                }
+                
+                // État par défaut (initial)
+                return Container(
+                  height: 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Chargement des avis...',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
             
             const SizedBox(height: 80), // Espace pour le floating action button
           ],
@@ -1906,7 +2146,7 @@ class _EnhancedReviewsTab extends StatelessWidget {
     );
   }
   
-  // Nouvelle méthode pour afficher une catégorie de notation
+  // Méthode pour afficher une catégorie de notation
   Widget _buildRatingCategory(BuildContext context, String category, double rating) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -1998,5 +2238,158 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
     return tabBar != oldDelegate.tabBar;
+  }
+}
+
+/// Onglet de gestion des promotions pour une résidence
+class _EnhancedPromotionsTab extends StatefulWidget {
+  final Residence residence;
+
+  const _EnhancedPromotionsTab({required this.residence});
+
+  @override
+  State<_EnhancedPromotionsTab> createState() => _EnhancedPromotionsTabState();
+}
+
+class _EnhancedPromotionsTabState extends State<_EnhancedPromotionsTab> {
+  late PromotionBloc _promotionBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Obtenir et stocker l'instance du PromotionBloc pour une utilisation ultérieure
+    _promotionBloc = context.read<PromotionBloc>();
+    
+    // Charger les promotions de cette résidence au démarrage
+    _promotionBloc.add(LoadResidencePromotions(widget.residence.id));
+  }
+  
+  /// Afficher le formulaire de création/édition de promotion
+  void _showPromotionForm(BuildContext context, {PromotionModel? promotion}) {
+    // Récupérer le bloc depuis le contexte racine pour éviter l'erreur
+    final promotionBloc = context.read<PromotionBloc>();
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => BlocProvider.value(
+        value: promotionBloc, // Utiliser l'instance récupérée précédemment
+        child: PromotionFormDialog(
+          residenceId: widget.residence.id,
+          promotion: promotion,
+        ),
+      ),
+    ).then((result) {
+      if (result == true) {
+        // Rafraîchir la liste des promotions après création/modification
+        promotionBloc.add(LoadResidencePromotions(widget.residence.id));
+      }
+    });
+  }
+  
+  /// Afficher la confirmation de suppression d'une promotion
+  void _showDeleteConfirmation(BuildContext context, PromotionModel promotion) {
+    // Récupérer le bloc depuis le contexte racine pour éviter l'erreur
+    final promotionBloc = context.read<PromotionBloc>();
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Supprimer la promotion'),
+        content: Text(
+          'Êtes-vous sûr de vouloir supprimer la promotion "${promotion.title}" ? Cette action est irréversible.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              promotionBloc.add(DeletePromotion(promotion.id));
+              Navigator.of(dialogContext).pop(true);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    ).then((result) {
+      if (result == true) {
+        // Rafraîchir la liste après suppression
+        promotionBloc.add(LoadResidencePromotions(widget.residence.id));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          // En-tête avec titre et bouton d'ajout (non scrollable)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Promotions et offres spéciales',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showPromotionForm(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Ajouter'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Contenu scrollable
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0), // Ajouter un grand padding en bas pour éviter le FAB
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Description
+                  Text(
+                    'Créez des promotions pour attirer plus de clients et augmenter vos réservations. '
+                    'Vous pouvez offrir des réductions, des offres spéciales ou des packages exclusifs.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Liste des promotions
+                  BlocProvider.value(
+                    value: context.read<PromotionBloc>(),
+                    child: PromotionsListWidget(
+                      residenceId: widget.residence.id,
+                      showControls: true,
+                      showEmptyMessage: true,
+                      physics: const NeverScrollableScrollPhysics(), // Désactiver le défilement interne
+                      emptyMessage: 'Aucune promotion n\'a été créée pour cette résidence',
+                      onPromotionEdit: (promotion) => _showPromotionForm(context, promotion: promotion),
+                      onPromotionDelete: (promotion) => _showDeleteConfirmation(context, promotion),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

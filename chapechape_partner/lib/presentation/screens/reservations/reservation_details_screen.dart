@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import '../../../core/adapters/booking_adapter.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
 import '../../../core/models/reservation/reservation.dart';
 import '../../../core/services/api/reservation_service.dart';
+import '../../widgets/booking/booking_sms_widget.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/shimmer_loading.dart';
 
@@ -376,6 +378,12 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
               ),
             ),
           ),
+          
+          const SizedBox(height: 24),
+          
+          // Communication SMS
+          _buildSectionTitle(context, 'Communication SMS'),
+          BookingSmsWidget(booking: BookingAdapter.fromReservation(reservation)),
           
           const SizedBox(height: 24),
           

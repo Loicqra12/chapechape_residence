@@ -39,61 +39,95 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   final _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
   
-  // Liste des catégories populaires avec leurs images et icônes
+  // Liste des catégories populaires avec leurs types associés, images et icônes
   final List<Map<String, dynamic>> _popularCategories = [
     {
-      'type': ResidenceType.villa,
-      'title': 'Villas de luxe',
-      'description': 'Espaces spacieux et élégants',
-      'icon': Icons.villa,
-      'image': 'assets/images/residences/luxury/images (3).jpg',
-      'gradient': [Colors.blueAccent, Colors.lightBlueAccent],
-      'count': '157',
-    },
-    {
-      'type': ResidenceType.apartment,
-      'title': 'Appartements',
-      'description': 'Confort et praticité',
+      'title': 'Résidences meublées',
+      'description': 'Confort et élégance',
       'icon': Icons.apartment,
       'image': 'assets/images/residences/premium1.png',
       'gradient': [Colors.orange, Colors.amber],
       'count': '243',
+      'categoryTypes': [
+        ResidenceType.studioMeuble,
+        ResidenceType.appartementMeuble,
+        ResidenceType.villaMeublee,
+        ResidenceType.penthouse,
+        ResidenceType.loft,
+        ResidenceType.grenier,
+      ],
     },
     {
-      'type': ResidenceType.studio,
-      'title': 'Studios',
-      'description': 'Parfait pour les célibataires',
-      'icon': Icons.single_bed,
-      'image': 'assets/images/residences/promo1.png',
-      'gradient': [Colors.teal, Colors.tealAccent],
-      'count': '189',
-    },
-    {
-      'type': ResidenceType.hotelDePassage,
-      'title': 'Court séjour',
-      'description': 'Location à l\'heure',
-      'icon': Icons.timer,
-      'image': 'assets/images/residences/promo2.png',
-      'gradient': [Colors.purple, Colors.deepPurple],
-      'count': '95',
-    },
-    {
-      'type': ResidenceType.residenceHoteliere,
-      'title': 'Résidences hôt.',
-      'description': 'Services hôteliers inclus',
+      'title': 'Hôtels & Hébergements',
+      'description': 'Services hôteliers',
       'icon': Icons.hotel,
       'image': 'assets/images/residences/premium2.png',
       'gradient': [Colors.red, Colors.redAccent],
       'count': '78',
+      'categoryTypes': [
+        ResidenceType.hotelDePassage,
+        ResidenceType.motel,
+        ResidenceType.boutiqueHotel,
+        ResidenceType.hotelDeLuxe,
+        ResidenceType.aubergeEtMaisonDHotes,
+        ResidenceType.residenceHoteliere,
+      ],
     },
     {
-      'type': ResidenceType.house,
-      'title': 'Maisons',
-      'description': 'Pour toute la famille',
+      'title': 'Hébergements insolites',
+      'description': 'Expériences uniques',
+      'icon': Icons.landscape,
+      'image': 'assets/images/residences/luxury/images (3).jpg',
+      'gradient': [Colors.blueAccent, Colors.lightBlueAccent],
+      'count': '89',
+      'categoryTypes': [
+        ResidenceType.bungalow,
+        ResidenceType.lodgeEtEcolodge,
+        ResidenceType.caseTraditionnelle,
+        ResidenceType.maisonFlottante,
+        ResidenceType.campementTouristique,
+      ],
+    },
+    {
+      'title': 'Colocation & partage',
+      'description': 'Vivre ensemble',
+      'icon': Icons.people,
+      'image': 'assets/images/residences/promo1.png',
+      'gradient': [Colors.teal, Colors.tealAccent],
+      'count': '189',
+      'categoryTypes': [
+        ResidenceType.chambreEnColocation,
+        ResidenceType.cohabitation,
+        ResidenceType.residenceUniversitaire,
+        ResidenceType.citeDortoir,
+      ],
+    },
+    {
+      'title': 'Résidences longue durée',
+      'description': 'Pour s\'installer',
       'icon': Icons.home,
       'image': 'assets/images/backgrounds/city_skyline.png',
       'gradient': [Colors.green, Colors.lightGreen],
       'count': '122',
+      'categoryTypes': [
+        ResidenceType.appartementNonMeuble,
+        ResidenceType.villaNonMeublee,
+        ResidenceType.immeuble,
+        ResidenceType.courCommune,
+      ],
+    },
+    {
+      'title': 'Hébergements économiques',
+      'description': 'Budget raisonnable',
+      'icon': Icons.monetization_on,
+      'image': 'assets/images/residences/promo2.png',
+      'gradient': [Colors.purple, Colors.deepPurple],
+      'count': '95',
+      'categoryTypes': [
+        ResidenceType.maisonDHotesEconomique,
+        ResidenceType.residenceFamilialeEnLocation,
+        ResidenceType.chambresDePassage,
+      ],
     },
   ];
   
@@ -247,7 +281,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
       onEnter: (_) => setState(() => _hoveredIndex = index),
       onExit: (_) => setState(() => _hoveredIndex = -1),
       child: GestureDetector(
-        onTap: () => _navigateToCategory(category['type']),
+        onTap: () => _navigateToCategory(category),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -528,7 +562,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
       onEnter: (_) => setState(() => _hoveredIndex = index),
       onExit: (_) => setState(() => _hoveredIndex = -1),
       child: GestureDetector(
-        onTap: () => _navigateToCategory(category['type']),
+        onTap: () => _navigateToCategory(category),
         child: Container(
           height: 80,
           decoration: BoxDecoration(
@@ -643,8 +677,18 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   }
   
   // Navigation vers la page de catégorie
-  void _navigateToCategory(ResidenceType type) {
-    final typeCode = type.typeCode;
-    context.push('/residences?type=$typeCode');
+  void _navigateToCategory(Map<String, dynamic> category) {
+    // Navigation vers la page de recherche avec tous les types de la catégorie
+    final categoryTypes = category['categoryTypes'] as List<ResidenceType>;
+    final typeCodes = categoryTypes.map((type) => type.typeCode).join(',');
+    
+    print('📱 Navigation vers la catégorie: ${category['title']} avec types: $typeCodes');
+    context.pushNamed(
+      'search_results',
+      queryParameters: {
+        'category': category['title'],
+        'types': typeCodes,
+      },
+    );
   }
 }

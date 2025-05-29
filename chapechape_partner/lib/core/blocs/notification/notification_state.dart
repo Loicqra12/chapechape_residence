@@ -17,12 +17,14 @@ class NotificationLoaded extends NotificationState {
   final bool hasReachedMax;
   final int currentPage;
   final int totalUnread;
+  final bool activeFilters;
 
   const NotificationLoaded({
     required this.notifications,
     required this.hasReachedMax,
     required this.currentPage,
     required this.totalUnread,
+    this.activeFilters = false,
   });
 
   NotificationLoaded copyWith({
@@ -30,17 +32,19 @@ class NotificationLoaded extends NotificationState {
     bool? hasReachedMax,
     int? currentPage,
     int? totalUnread,
+    bool? activeFilters,
   }) {
     return NotificationLoaded(
       notifications: notifications ?? this.notifications,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
       currentPage: currentPage ?? this.currentPage,
       totalUnread: totalUnread ?? this.totalUnread,
+      activeFilters: activeFilters ?? this.activeFilters,
     );
   }
 
   @override
-  List<Object> get props => [notifications, hasReachedMax, currentPage, totalUnread];
+  List<Object> get props => [notifications, hasReachedMax, currentPage, totalUnread, activeFilters];
 }
 
 class NotificationError extends NotificationState {

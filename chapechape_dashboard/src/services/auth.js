@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
+import { API_URL } from '../config';
 
 // Configuration d'Axios avec l'URL de base
 const api = axios.create({

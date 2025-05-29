@@ -117,6 +117,12 @@ reservationSchema.methods.canBeCancelled = async function() {
         return false;
     }
     
+    // Vérifier que policy et policy.rules sont définis avant d'utiliser .some()
+    if (!policy || !policy.rules || !Array.isArray(policy.rules)) {
+        // Si pas de règles définies, par défaut permettre l'annulation
+        return true;
+    }
+    
     return policy.rules.some(rule => rule.timeBeforeCheckIn <= hoursBeforeCheckIn);
 };
 
@@ -127,6 +133,12 @@ reservationSchema.methods.canBeModified = async function() {
     
     if (['cancelled', 'completed', 'refunded'].includes(this.status)) {
         return false;
+    }
+    
+    // Vérifier que policy et policy.rules sont définis avant d'utiliser .some()
+    if (!policy || !policy.rules || !Array.isArray(policy.rules)) {
+        // Si pas de règles définies, par défaut permettre la modification
+        return true;
     }
     
     return policy.isModificationAllowed(hoursBeforeCheckIn);

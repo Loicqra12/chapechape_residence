@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import { WS_URL } from '../config';
 
 const NotificationContext = createContext();
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:4000';
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_URL);
+    const newSocket = io(WS_URL);
     setSocket(newSocket);
 
     return () => newSocket.close();

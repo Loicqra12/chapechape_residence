@@ -16,6 +16,12 @@ const {
 } = require('../controllers/auth/auth.controller');
 const { protect, authorize, validateRefreshToken } = require('../middlewares/auth.middleware');
 
+const {
+    requestVerificationCode,
+    verifyCode,
+    resendVerificationCode
+} = require('../controllers/auth/verification.controller');
+
 /**
  * @swagger
  * /api/auth/register:
@@ -268,5 +274,10 @@ router.post('/google', googleAuthController.googleAuth);
  *         description: Authentification échouée
  */
 router.post('/facebook', facebookAuthController.handleFacebookAuth);
+
+// Vérification de numéro de téléphone par SMS
+router.post('/request-verification-code', requestVerificationCode);
+router.post('/verify-code', verifyCode);
+router.post('/resend-verification-code', resendVerificationCode);
 
 module.exports = router;

@@ -16,16 +16,20 @@ class UpdateUserProfile extends UserEvent {
   final String? lastName;
   final String? phoneNumber;
   final String? profilePicture;
+  final bool? isPhoneVerified;
+  final Map<String, dynamic>? metadata;
 
   const UpdateUserProfile({
     this.firstName,
     this.lastName,
     this.phoneNumber,
     this.profilePicture,
+    this.isPhoneVerified,
+    this.metadata,
   });
 
   @override
-  List<Object?> get props => [firstName, lastName, phoneNumber, profilePicture];
+  List<Object?> get props => [firstName, lastName, phoneNumber, profilePicture, isPhoneVerified, metadata];
 }
 
 class ChangeUserPassword extends UserEvent {

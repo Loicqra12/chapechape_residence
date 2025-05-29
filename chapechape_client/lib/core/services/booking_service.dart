@@ -245,9 +245,20 @@ class BookingService {
         throw Exception('Impossible d\'annuler une réservation en mode hors ligne');
       }
       
-      await _apiService.put('reservations/$id/cancel', data: {
-        'reason': reason ?? 'Aucune raison spécifiée'
+      // Utiliser la méthode PATCH pour l'annulation conforme aux standards REST
+      final options = Options(headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-mobile-app': 'true'  // Contourne la protection CSRF
       });
+      
+      // Utiliser patchSimple pour respecter la norme REST
+      await _apiService.patchSimple('reservations/$id/cancel', 
+        data: {
+          'reason': reason ?? 'Aucune raison spécifiée'
+        },
+        options: options
+      );
       
       // Invalider le cache pour cette réservation
       await _cacheService.invalidateBooking(id);
@@ -256,6 +267,19 @@ class BookingService {
       
       debugPrint('🗑️ Réservation $id annulée et cache invalidé');
     } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final responseData = e.response?.data;
+      
+      if (statusCode == 400) {
+        // Cas spécifique: réservation qui ne peut plus être annulée
+        final message = responseData?['message'] ?? 'Cette réservation ne peut plus être annulée';
+        throw Exception(message);
+      } else if (statusCode == 403) {
+        throw Exception('Vous n\'avez pas les droits nécessaires pour annuler cette réservation');
+      } else if (statusCode == 404) {
+        throw Exception('Réservation introuvable');
+      }
+      
       throw _handleDioError(e);
     }
   }
@@ -268,6 +292,12 @@ class BookingService {
     int? numberOfGuests,
   }) async {
     try {
+      final options = Options(headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-mobile-app': 'true'  // Contourne la protection CSRF
+      });
+      
       final response = await _apiService.put(
         'reservations/$id',
         data: {
@@ -275,10 +305,26 @@ class BookingService {
           if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
           if (numberOfGuests != null) 'numberOfGuests': numberOfGuests,
         },
+        options: options
       );
 
       return Booking.fromJson(response.data);
     } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final responseData = e.response?.data;
+      
+      if (statusCode == 400) {
+        // Validation d'erreurs spécifiques
+        final message = responseData?['message'] ?? 'Impossible de modifier cette réservation';
+        throw Exception(message);
+      } else if (statusCode == 403) {
+        throw Exception('Vous n\'avez pas les droits nécessaires pour modifier cette réservation');
+      } else if (statusCode == 404) {
+        throw Exception('Réservation introuvable');
+      } else if (statusCode == 422) {
+        throw Exception('Les dates demandées ne sont pas disponibles');
+      }
+      
       throw _handleDioError(e);
     }
   }
@@ -290,12 +336,19 @@ class BookingService {
     String? paymentId,
   }) async {
     try {
+      final options = Options(headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-mobile-app': 'true'  // Contourne la protection CSRF
+      });
+      
       await _apiService.patch(
         'reservations/$id/status',
         data: {
           'status': status,
           if (paymentId != null) 'paymentId': paymentId,
         },
+        options: options
       );
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -402,7 +455,7 @@ class BookingService {
       throw _handleDioError(e);
     }
   }
-  
+
   /// Version simplifiée de checkAvailability qui retourne directement un booléen
   /// Cette méthode doit être utilisée quand seul le statut de disponibilité est nécessaire
   Future<bool> isAvailable({

@@ -21,8 +21,14 @@ class AppConfigManager {
   // Service de détection d'IP
   static IpDetectionService? _ipDetectionService;
   
-  // Clé pour stocker l'URL personnalisée du serveur
+  // Clés pour les préférences
   static const String _customServerUrlKey = 'custom_server_url_enabled';
+  static const String _useSecureConnectionKey = 'use_secure_connection';
+  
+  // Indique si les connexions sécurisées (HTTPS) doivent être utilisées
+  static bool _useSecureConnection = false;
+  static bool get useSecureConnection => _useSecureConnection;
+  static set useSecureConnection(bool value) => _setUseSecureConnection(value);
   
   // Indique si une URL personnalisée est utilisée
   static bool _useCustomServerUrl = false;
@@ -41,6 +47,7 @@ class AppConfigManager {
     // Charger la configuration depuis les préférences
     final prefs = await SharedPreferences.getInstance();
     _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
+    _useSecureConnection = prefs.getBool(_useSecureConnectionKey) ?? false;
     
     // Charger la configuration selon l'environnement
     _loadConfig();
@@ -62,6 +69,20 @@ class AppConfigManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_customServerUrlKey, value);
     _loadConfig(); // Recharger la configuration
+  }
+  
+  /// Active ou désactive l'utilisation des connexions sécurisées (HTTPS)
+  static Future<void> _setUseSecureConnection(bool value) async {
+    _useSecureConnection = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_useSecureConnectionKey, value);
+    _loadConfig(); // Recharger la configuration
+    debugPrint('🔒 Connexions sécurisées (HTTPS): ${value ? 'activées' : 'désactivées'}');
+  }
+  
+  /// Change le protocole de connexion (HTTP/HTTPS)
+  static Future<void> toggleSecureConnection() async {
+    await _setUseSecureConnection(!_useSecureConnection);
   }
   
   /// Définit une nouvelle adresse IP pour le serveur
@@ -100,10 +121,10 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Client (Dev)',
-              'apiUrl': 'http://192.168.1.66:4000/api',
-              'apiBaseUrl': 'http://192.168.1.66:4000',
-              'mediaBaseUrl': 'http://192.168.1.66:4000/media',
-              'wsUrl': 'ws://192.168.1.66:4000/ws',
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000/api',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
+              'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000/media',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.66:4000/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -166,10 +187,10 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Client',
-              'apiUrl': 'https://api.chapechape.com/api',
-              'apiBaseUrl': 'https://api.chapechape.com',
-              'mediaBaseUrl': 'https://api.chapechape.com/media',
-              'wsUrl': 'wss://api.chapechape.com/ws',
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/api',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com',
+              'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/media',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://api.chapechaperesidence.com/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -185,10 +206,10 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Client (Fallback)',
-        'apiUrl': 'http://192.168.1.66:4000/api',
-        'apiBaseUrl': 'http://192.168.1.66:4000',
-        'mediaBaseUrl': 'http://192.168.1.66:4000/media',
-        'wsUrl': 'ws://192.168.1.66:4000/ws',
+        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000/api',
+        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
+        'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000/media',
+        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.66:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,

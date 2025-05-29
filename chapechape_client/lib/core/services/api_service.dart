@@ -11,8 +11,10 @@ import 'package:chapechape_client/core/models/api_response.dart';
 import 'package:chapechape_client/core/services/api/interceptors/auth_interceptor.dart';
 import 'package:chapechape_client/core/services/api/interceptors/csrf_interceptor.dart';
 import 'package:chapechape_client/core/services/api/interceptors/logging_interceptor.dart';
+import 'package:chapechape_client/core/services/api/interceptors/retry_interceptor.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/connectivity_service.dart';
+import 'package:chapechape_client/core/services/logger_service.dart';
 
 /// Service d'accès à l'API
 class ApiService {
@@ -21,6 +23,7 @@ class ApiService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final CacheService _cacheService = CacheService();
   final ConnectivityService _connectivityService = ConnectivityService();
+  final LoggerService _logger = LoggerService();
   
   bool _isConnected = true;
   
@@ -41,6 +44,8 @@ class ApiService {
   }
   
   Future<void> _initialize() async {
+    _logger.info('Initialisation du service API');
+    
     // Initialisation de Dio
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiUrl,
@@ -52,17 +57,28 @@ class ApiService {
       },
     ));
     
-    // Ajouter les intercepteurs
-    // L'intercepteur de logging pour déboguer les requêtes/réponses
+    // Ajouter les intercepteurs dans le bon ordre
+    
+    // 1. L'intercepteur de logging pour déboguer les requêtes/réponses
     _dio.interceptors.add(LoggingInterceptor.create(isProduction: AppConfig.isProduction));
     
-    // Ajouter l'intercepteur d'authentification
+    // 2. Ajouter l'intercepteur de retry (doit être avant l'auth pour gérer les erreurs d'authentification)
+    _dio.interceptors.add(RetryInterceptor(
+      dio: _dio,
+      maxRetries: 3,
+      initialDelay: const Duration(milliseconds: 500),
+      maxDelay: const Duration(seconds: 30),
+      // Inclure le 401 pour réessayer avec un token rafraîchi
+      retryStatusCodes: [401, 408, 429, 500, 502, 503, 504],
+    ));
+    
+    // 3. Ajouter l'intercepteur d'authentification
     _dio.interceptors.add(AuthInterceptor(
       dio: _dio,
       storage: _storage,
     ));
     
-    // Ajouter l'intercepteur CSRF pour la protection contre les attaques CSRF
+    // 4. Ajouter l'intercepteur CSRF pour la protection contre les attaques CSRF
     _dio.interceptors.add(CsrfInterceptor());
     
     // Configurer les certificats pour les environnements de développement
@@ -90,7 +106,7 @@ class ApiService {
     // Vérifier l'état de la connectivité initial et s'abonner aux changements
     _connectivityService.connectivityStream.listen((isConnected) {
       _isConnected = isConnected;
-      debugPrint('État de connexion changé: ${_isConnected ? 'Connecté' : 'Déconnecté'}');
+      _logger.info('État de connexion changé: ${_isConnected ? 'Connecté' : 'Déconnecté'}');
       
       // Si la connexion est rétablie, traiter la file d'attente hors ligne
       if (_isConnected) {
@@ -100,7 +116,9 @@ class ApiService {
     
     // Vérifier l'état de connectivité initial
     _isConnected = await _connectivityService.checkConnectivity();
-    debugPrint('🌍 État de connexion initial: ${_isConnected ? 'Connecté' : 'Déconnecté'}');
+    _logger.info('🌍 État de connexion initial: ${_isConnected ? 'Connecté' : 'Déconnecté'}');
+    
+    _logger.info('✅ Service API initialisé avec succès');
   }
   
   // File d'attente pour les requêtes en mode hors ligne
@@ -113,7 +131,7 @@ class ApiService {
     Map<String, dynamic>? data,
     Map<String, dynamic>? queryParameters,
   ) async {
-    debugPrint('📱 Mode hors ligne: Mise en file d\'attente de la requête $method $path');
+    _logger.info('📱 Mode hors ligne: Mise en file d\'attente de la requête $method $path');
     
     // Ajouter la requête à la file d'attente
     _offlineQueue.add({
@@ -129,12 +147,12 @@ class ApiService {
     
     // Afficher une notification à l'utilisateur
     // Vous pouvez utiliser un service de notification ici
-    debugPrint('�� Requête enregistrée pour synchronisation future');
+    _logger.info('📝 Requête enregistrée pour synchronisation future');
   }
   
   // Traiter la file d'attente des requêtes hors ligne lorsque la connexion est rétablie
   Future<void> _processOfflineQueue() async {
-    debugPrint('🔄 Traitement de la file d\'attente hors ligne (${_offlineQueue.length} requêtes)');
+    _logger.info('🔄 Traitement de la file d\'attente hors ligne (${_offlineQueue.length} requêtes)');
     
     // Récupérer les requêtes sauvegardées si la file d'attente est vide
     if (_offlineQueue.isEmpty) {
@@ -147,7 +165,7 @@ class ApiService {
     }
     
     if (_offlineQueue.isEmpty) {
-      debugPrint('✅ Aucune requête en attente à synchroniser');
+      _logger.info('✅ Aucune requête en attente à synchroniser');
       return;
     }
     
@@ -165,7 +183,7 @@ class ApiService {
         final data = request['data'] as Map<String, dynamic>?;
         final queryParameters = request['queryParameters'] as Map<String, dynamic>?;
         
-        debugPrint('🔄 Synchronisation de la requête $method $path');
+        _logger.info('🔄 Synchronisation de la requête $method $path');
         
         // Exécuter la requête
         switch (method.toUpperCase()) {
@@ -182,14 +200,14 @@ class ApiService {
             await _dio.delete(path, data: data, queryParameters: queryParameters);
             break;
           default:
-            debugPrint('⚠️ Méthode HTTP non prise en charge: $method');
+            _logger.warning('⚠️ Méthode HTTP non prise en charge: $method');
         }
         
         // Si la requête réussit, la retirer de la file d'attente
         _offlineQueue.remove(request);
-        debugPrint('✅ Requête $method $path synchronisée avec succès');
+        _logger.info('✅ Requête $method $path synchronisée avec succès');
       } catch (e) {
-        debugPrint('❌ Échec de la synchronisation: $e');
+        _logger.error('❌ Échec de la synchronisation: $e');
         // Laisser la requête dans la file d'attente pour une tentative ultérieure
       }
     }
@@ -198,9 +216,9 @@ class ApiService {
     await _cacheService.put('offline_queue', _offlineQueue);
     
     if (_offlineQueue.isEmpty) {
-      debugPrint('✅ Toutes les requêtes ont été synchronisées');
+      _logger.info('✅ Toutes les requêtes ont été synchronisées');
     } else {
-      debugPrint('⚠️ ${_offlineQueue.length} requêtes restent à synchroniser');
+      _logger.warning('⚠️ ${_offlineQueue.length} requêtes restent à synchroniser');
     }
   }
   
@@ -480,6 +498,8 @@ class ApiService {
     }
   }
 
+
+
   Future<ApiResponse<T>> deleteData<T>(
     String path, {
     dynamic data,
@@ -573,6 +593,33 @@ class ApiService {
         );
       }
       return ApiResponse.error(e.toString());
+    }
+  }
+
+  // Méthode raccourcie pour les requêtes PATCH
+  Future<dynamic> patchSimple(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final response = await patchData<dynamic>(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+    
+    if (response.isSuccess) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Erreur inconnue');
     }
   }
 

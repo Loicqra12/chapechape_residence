@@ -49,17 +49,17 @@ class MediaService {
         throw Exception('Format de fichier non pris en charge');
       }
 
-      // Utiliser l'URL complète au lieu du chemin relatif
-      const String url = 'http://192.168.1.66:4000/api/partners/profile';
+      // Utiliser l'URL dynamique à partir du gestionnaire de configuration
+      final String apiBaseUrl = _dio.options.baseUrl;
+      final String url = '$apiBaseUrl/partners/profile';
       print('📤 Envoi vers: $url');
       
-      final response = await Dio().put(
-        url,
+      final response = await _dio.put(
+        '/partners/profile',
         data: formData,
         options: Options(
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Authorization': await _getAuthHeader(),
           },
         ),
       );
@@ -73,10 +73,20 @@ class MediaService {
         if (data['success'] == true) {
           print('✅ Profil mis à jour avec succès');
           // Retourner l'URL de l'image si disponible
-          if (data['data'] != null && data['data']['profileImage'] != null) {
-            return data['data']['profileImage'];
+          String imageUrl = '';
+          if (data['data'] != null && data['data']['profilePictureUrl'] != null) {
+            imageUrl = data['data']['profilePictureUrl'];
+          } else if (data['data'] != null && data['data']['profileImage'] != null) {
+            imageUrl = data['data']['profileImage'];
           }
-          return '';
+          
+          // S'assurer que l'URL est complète
+          if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+            imageUrl = _buildCompleteUrl(imageUrl);
+          }
+          
+          print('🖼️ URL d\'image finale: $imageUrl');
+          return imageUrl;
         } else {
           print('❌ Erreur retournée par le serveur: ${data['message']}');
           throw Exception(data['message'] ?? 'Erreur lors du téléchargement de l\'image');
@@ -91,6 +101,48 @@ class MediaService {
     }
   }
   
+  // Méthode utilitaire pour construire une URL complète
+  String _buildCompleteUrl(String url) {
+    if (url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    
+    // Vérifier les URLs problématiques
+    if (url.contains('images-')) {
+      // Corriger le format en remplaçant 'images-' par 'profile-'
+      String correctedUrl = url.replaceAll('images-', 'profile-');
+      
+      // S'assurer que le chemin pointe vers le bon répertoire
+      if (!correctedUrl.contains('/profiles/')) {
+        correctedUrl = correctedUrl.replaceAll('/uploads/', '/uploads/profiles/');
+        correctedUrl = correctedUrl.replaceAll('uploads/', '/uploads/profiles/');
+      }
+      
+      // S'assurer que le chemin commence par un slash
+      if (!correctedUrl.startsWith('/')) {
+        correctedUrl = '/$correctedUrl';
+      }
+      
+      print('⚠️ URL corrigée: $url -> $correctedUrl');
+      url = correctedUrl;
+    }
+    
+    // S'assurer que les images de profil sont dans le bon dossier
+    if (url.contains('profile-') && !url.contains('/profiles/')) {
+      url = url.replaceAll('/uploads/', '/uploads/profiles/');
+      url = url.replaceAll('uploads/', '/uploads/profiles/');
+      if (!url.startsWith('/')) {
+        url = '/$url';
+      }
+    }
+    
+    final baseUrl = _dio.options.baseUrl.replaceAll('/api', '');
+    if (url.startsWith('/')) {
+      return '$baseUrl$url';
+    } else {
+      return '$baseUrl/$url';
+    }
+  }
+
   /// Obtient le header d'authentification
   Future<String> _getAuthHeader() async {
     try {

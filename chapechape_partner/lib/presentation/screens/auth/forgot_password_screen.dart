@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
 import '../../widgets/common/buttons/primary_button.dart';
 import '../../widgets/common/inputs/text_input.dart';
 
@@ -25,7 +26,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _onResetPasswordPressed() {
     if (_formKey.currentState?.validate() ?? false) {
-      // TODO: Implémenter la réinitialisation du mot de passe
+      // Dispatch l'événement pour la réinitialisation du mot de passe
+      final authBloc = BlocProvider.of<AuthBloc>(context);
+      authBloc.add(ForgotPasswordRequested(email: _emailController.text));
+      
       setState(() {
         _isEmailSent = true;
       });

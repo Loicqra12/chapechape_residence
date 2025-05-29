@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/models/residence_type_enum.dart';
 import '../../core/constants/app_assets.dart' as assets;
 import '../../core/services/promotion_service.dart';
+import '../../core/services/logger_service.dart';
 import '../widgets/featured_listings.dart';
 import '../widgets/categories_menu_widget.dart';
 import '../widgets/advanced_search_widget.dart';
@@ -23,30 +24,51 @@ import '../widgets/home_banner_carousel.dart';
 import '../widgets/popular_categories_widget.dart';
 import '../widgets/around_me_widget.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Initialiser le chargement des résidences après le rendu initial
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // Service de journalisation pour les logs structurés
+  final LoggerService _logger = LoggerService();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Initialiser le chargement des données dès la création du widget
+    _initializeData();
+  }
+  
+  // Méthode pour initialiser les données de manière ordonnée
+  Future<void> _initializeData() async {
+    _logger.info('🚀 HomeScreen - Initialisation du chargement des données');
+    
+    // Déclencher le chargement des résidences de manière non-bloquante
+    // sans attendre le rendu initial, évitant ainsi le double rendu
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('🚀 HomeScreen - Initialisation du chargement des résidences');
-      
-      // IMPORTANT: Forcer le rafraîchissement des résidences au démarrage
-      context.read<ResidenceBloc>().add(const RefreshResidencesEvent());
-      
-      // Initialiser le service de promotions pour le pré-chargement
-      PromotionService.initialize();
-      
-      // Afficher des informations de débogage après un délai
-      Future.delayed(const Duration(seconds: 3), () {
-        final state = context.read<ResidenceBloc>().state;
-        print('🏠 État du bloc Residence après 3 secondes: ${state.runtimeType}');
-        if (state is ResidencesLoaded) {
-          print('✅ ${state.residences.length} résidences chargées');
-        }
-      });
+      // Utiliser un bloc au lieu d'un événement direct pour éviter les problèmes de timing
+      final bloc = context.read<ResidenceBloc>();
+      if (bloc.state is! ResidencesLoaded) {
+        _logger.info('🏠 Chargement initial des résidences');
+        bloc.add(const RefreshResidencesEvent());
+      }
     });
+    
+    // Pré-initialiser les autres services en parallèle
+    try {
+      await PromotionService.initialize();
+      _logger.info('✅ Service de promotions initialisé');
+    } catch (e) {
+      _logger.error('⚠️ Erreur lors de l\'initialisation du service de promotions', e, StackTrace.current);
+      // Continuer même en cas d'erreur pour ne pas bloquer l'UI
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
     
     return LayoutBuilder(
       builder: (context, constraints) {

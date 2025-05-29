@@ -91,6 +91,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UploadProfilePictureRequested>(_onUploadProfilePictureRequested);
     on<UploadDocumentRequested>(_onUploadDocumentRequested);
     on<AuthDeleteAccountRequested>(_onDeleteAccount);
+    on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<ResetPasswordRequested>(_onResetPasswordRequested);
 
     // Vérifier l'état d'authentification au démarrage
     add(AuthCheckRequested());
@@ -318,16 +320,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final imageUrl = await _mediaService.uploadProfilePicture(event.imageFile);
         print('Mise à jour du profil avec les données: {profilePictureUrl: $imageUrl}');
         
-        // Mettre à jour le profil avec la nouvelle URL de l'image
-        final updatedPartner = currentState.partner.copyWith(
-          profilePictureUrl: imageUrl,
-        );
+        // Au lieu de mettre à jour le profil localement,
+        // récupérer le profil complet depuis le serveur
+        final updatedPartner = await _authService.getProfile();
         
-        // Mettre à jour le profil sur le serveur - désormais déjà fait par l'API lors de l'upload
-        // Si nous appelons updateProfile ici, nous risquons d'écraser d'autres champs
-        // await _authService.updateProfile({
-        //   'profilePictureUrl': imageUrl,
-        // });
+        print('Profil récupéré après upload: ${updatedPartner.profilePictureUrl}');
         
         emit(AuthAuthenticated(
           token: currentState.token,
@@ -370,23 +367,79 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onDeleteAccount(AuthDeleteAccountRequested event, Emitter<AuthState> emit) async {
     if (state is AuthAuthenticated) {
-      final currentState = state as AuthAuthenticated;
-      emit(AuthLoading());
-      
+      emit(state.copyWith(isLoading: true, errorMessage: null));
       try {
-        // Implémentation de la suppression du compte
-        // TODO: Ajouter la logique de suppression du compte avec vérification du mot de passe
+        // Utiliser le service d'authentification pour supprimer le compte
+        final success = await _authService.deleteAccount(event.password);
         
-        // Simuler la suppression du compte - nettoyer le stockage
-        await storage.delete(key: 'token');
-        await storage.delete(key: 'refresh_token');
-        await storage.delete(key: 'token_expiry');
-        await storage.delete(key: 'userId');
-        
-        emit(AuthUnauthenticated());
+        if (success) {
+          // Le nettoyage du stockage est déjà géré dans la méthode deleteAccount
+          emit(AuthUnauthenticated());
+        } else {
+          emit(state.copyWith(
+            isLoading: false,
+            errorMessage: 'La suppression du compte a échoué. Veuillez réessayer.',
+          ));
+        }
       } catch (e) {
-        emit(AuthFailure(e.toString()));
+        emit(state.copyWith(
+          isLoading: false,
+          errorMessage: 'Erreur: ${e.toString()}',
+        ));
       }
+    }
+  }
+  
+  // Gérer l'événement de demande de réinitialisation de mot de passe
+  Future<void> _onForgotPasswordRequested(ForgotPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    try {
+      final success = await _authService.requestPasswordReset(event.email);
+      
+      if (success) {
+        emit(state.copyWith(
+          isLoading: false,
+          errorMessage: null,
+        ));
+      } else {
+        emit(state.copyWith(
+          isLoading: false,
+          errorMessage: 'La demande de réinitialisation a échoué. Vérifiez votre email.',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        errorMessage: 'Erreur: ${e.toString()}',
+      ));
+    }
+  }
+  
+  // Gérer l'événement de réinitialisation de mot de passe
+  Future<void> _onResetPasswordRequested(ResetPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    try {
+      final success = await _authService.resetPassword(
+        token: event.token,
+        newPassword: event.newPassword,
+      );
+      
+      if (success) {
+        emit(state.copyWith(
+          isLoading: false,
+          errorMessage: null,
+        ));
+      } else {
+        emit(state.copyWith(
+          isLoading: false,
+          errorMessage: 'La réinitialisation du mot de passe a échoué. Vérifiez le token.',
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        errorMessage: 'Erreur: ${e.toString()}',
+      ));
     }
   }
 }

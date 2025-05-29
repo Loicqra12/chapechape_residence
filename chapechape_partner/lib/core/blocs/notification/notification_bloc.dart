@@ -15,6 +15,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<MarkAllNotificationsAsRead>(_onMarkAllAsRead);
     on<DeleteNotification>(_onDeleteNotification);
     on<RefreshNotifications>(_onRefreshNotifications);
+    on<FilterNotifications>(_onFilterNotifications);
   }
 
   Future<void> _onLoadNotifications(
@@ -166,5 +167,58 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     add(const LoadNotifications(page: 1));
+  }
+
+  Future<void> _onFilterNotifications(
+    FilterNotifications event,
+    Emitter<NotificationState> emit,
+  ) async {
+    try {
+      if (state is NotificationLoaded) {
+        // Récupérer toutes les notifications pour ensuite les filtrer
+        final allNotifications = await _repository.getNotifications();
+        
+        // Appliquer les filtres
+        final filteredNotifications = allNotifications.where((notification) {
+          // Filtre par type
+          if (event.type != null && event.type != 'all' && notification.type != event.type) {
+            return false;
+          }
+          
+          // Filtre par statut de lecture
+          if (event.isRead != null && notification.isRead != event.isRead) {
+            return false;
+          }
+          
+          // Filtre par date
+          if (event.startDate != null && notification.timestamp.isBefore(event.startDate!)) {
+            return false;
+          }
+          
+          if (event.endDate != null) {
+            // Ajouter un jour pour inclure toute la journée de fin
+            final endDatePlusOne = event.endDate!.add(const Duration(days: 1));
+            if (notification.timestamp.isAfter(endDatePlusOne)) {
+              return false;
+            }
+          }
+          
+          return true;
+        }).toList();
+        
+        // Calculer le nombre de notifications non lues
+        final unreadCount = filteredNotifications.where((n) => !n.isRead).length;
+        
+        emit(NotificationLoaded(
+          notifications: filteredNotifications,
+          hasReachedMax: true,
+          currentPage: 1,
+          totalUnread: unreadCount,
+          activeFilters: event.type != null || event.isRead != null || event.startDate != null || event.endDate != null,
+        ));
+      }
+    } catch (error) {
+      emit(NotificationError(error.toString()));
+    }
   }
 } 

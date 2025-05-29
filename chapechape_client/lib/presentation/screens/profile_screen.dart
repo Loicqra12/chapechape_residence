@@ -8,6 +8,7 @@ import 'package:chapechape_client/core/blocs/user/user_event.dart';
 import 'package:chapechape_client/core/blocs/user/user_state.dart';
 import 'package:chapechape_client/core/constants/app_assets.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -28,6 +29,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _phoneController;
   
   bool _isEditing = false;
+  bool _isVerifyingPhone = false;
+  bool _phoneVerified = false;
+  
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -56,6 +60,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _lastNameController.text = state.user.lastName;
     _emailController.text = state.user.email;
     _phoneController.text = state.user.phoneNumber;
+    
+    // Déterminer si le téléphone est déjà vérifié
+    setState(() {
+      _phoneVerified = state.user.isPhoneVerified ?? false;
+    });
   }
 
   void _toggleEdit() {
@@ -66,15 +75,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _saveProfile() {
     if (_formKey.currentState!.validate()) {
-      context.read<UserBloc>().add(
-        UpdateUserProfile(
-          firstName: _firstNameController.text,
-          lastName: _lastNameController.text,
-          phoneNumber: _phoneController.text,
-        ),
-      );
-      _toggleEdit();
+      // Vérifier si le numéro de téléphone a changé
+      final currentState = context.read<UserBloc>().state;
+      String? oldPhoneNumber;
+      
+      if (currentState is UserProfileLoaded) {
+        oldPhoneNumber = currentState.user.phoneNumber;
+      }
+      
+      // Si le numéro a changé, demander une vérification
+      if (oldPhoneNumber != _phoneController.text) {
+        setState(() {
+          _isVerifyingPhone = true;
+          _phoneVerified = false;
+        });
+        return;
+      }
+      
+      // Sinon, sauvegarder le profil normalement
+      _updateUserProfile();
     }
+  }
+  
+  void _updateUserProfile() {
+    context.read<UserBloc>().add(
+      UpdateUserProfile(
+        firstName: _firstNameController.text,
+        lastName: _lastNameController.text,
+        phoneNumber: _phoneController.text,
+        isPhoneVerified: _phoneVerified,
+      ),
+    );
+    
+    setState(() {
+      _isEditing = false;
+      _isVerifyingPhone = false;
+    });
+  }
+  
+  void _startPhoneVerification() {
+    setState(() {
+      _isVerifyingPhone = true;
+    });
+  }
+  
+  void _onPhoneVerified(String phoneNumber) {
+    setState(() {
+      _phoneVerified = true;
+      _isVerifyingPhone = false;
+      _phoneController.text = phoneNumber; // Mettre à jour avec le numéro vérifié
+    });
+    
+    // Mettre à jour le profil avec le numéro vérifié
+    _updateUserProfile();
+    
+    // Afficher un message de succès
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Numéro de téléphone vérifié avec succès')),
+    );
+  }
+  
+  void _cancelPhoneVerification() {
+    setState(() {
+      _isVerifyingPhone = false;
+    });
   }
 
   Future<void> _pickImage() async {
@@ -212,13 +276,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Informations personnelles',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  if (_isVerifyingPhone) ...[  
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Vérification du numéro de téléphone',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Pour garantir la sécurité de votre compte et recevoir des notifications, veuillez vérifier votre numéro de téléphone.',
+                    ),
+                    const SizedBox(height: 16),
+                    PhoneVerificationWidget(
+                      initialPhoneNumber: _phoneController.text,
+                      onVerificationSuccess: _onPhoneVerified,
+                    ),
+                  ] else ...[  
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Informations personnelles',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   const SizedBox(height: 20),
                   
                   // Prénom
@@ -276,22 +357,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 15),
                   
                   // Téléphone
-                  TextFormField(
-                    controller: _phoneController,
-                    decoration: InputDecoration(
-                      labelText: 'Téléphone',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _phoneController,
+                          enabled: _isEditing,
+                          decoration: InputDecoration(
+                            labelText: 'Téléphone',
+                            prefixIcon: const Icon(Icons.phone),
+                            suffixIcon: _phoneVerified
+                                ? const Icon(Icons.verified, color: Colors.green)
+                                : null,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Veuillez entrer votre numéro de téléphone';
+                            }
+                            return null;
+                          },
+                        ),
                       ),
-                      prefixIcon: const Icon(Icons.phone),
-                    ),
-                    enabled: _isEditing,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre numéro de téléphone';
-                      }
-                      return null;
-                    },
+                      if (_isEditing && !_phoneVerified) ...[  
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _startPhoneVerification,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                          ),
+                          child: const Text('Vérifier'),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 30),
                   
@@ -428,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   
                   const SizedBox(height: 30),
                 ],
-              ),
+              ]),
             ),
           ),
         ],

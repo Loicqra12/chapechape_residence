@@ -11,11 +11,10 @@ import 'core/config/environment.dart';
 import 'core/services/api/api_service.dart';
 import 'core/services/api/auth_service.dart';
 import 'core/services/api/residence_service.dart';
-import 'core/services/api/availability_service.dart';
 import 'core/services/api/dashboard_service.dart';
 import 'core/services/api/message_service.dart';
 import 'core/services/api/reservation_service.dart';
-import 'core/services/api/notification_service.dart';
+// import 'core/services/api/notification_service.dart'; // Non utilisé
 import 'core/services/onesignal_service.dart';
 import 'core/blocs/auth/auth_bloc.dart';
 import 'core/blocs/residence/residence_bloc.dart';
@@ -33,10 +32,15 @@ import 'core/services/sync_service.dart';
 import 'package:logging/logging.dart';
 import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
 import 'core/services/notification/twilio_service.dart';
+import 'core/services/notification/sms_service.dart';
 import 'core/services/currency_service.dart';
 import 'core/blocs/auth/auth_event.dart';
 import 'core/services/api/payment_service.dart';
 import 'core/services/api/help_service.dart';
+// Ces services seront importés uniquement dans les fichiers où ils sont utilisés
+// import 'core/services/api/favorite_service.dart';
+// import 'core/services/api/promotion_service.dart';
+// import 'core/services/api/review_service.dart';
 import 'core/blocs/payment/payment_bloc.dart';
 import 'core/blocs/help/help_bloc.dart';
 import 'core/blocs/theme/theme_bloc.dart';
@@ -94,6 +98,11 @@ Future<void> main() async {
     baseUrl: apiConfig.baseUrl,
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'x-mobile-app': 'true',  // Contourne la protection CSRF pour les applications mobiles
+    },
   ));
 
   // Create AuthBloc first since it's needed for the router
@@ -113,10 +122,12 @@ Future<void> main() async {
   oneSignalService.init(authService);
   debugPrint('✅ Service OneSignal initialisé avec succès pour les partenaires');
 
-  final availabilityService = AvailabilityService(dio);
+  // Initialiser les services
   final dashboardService = DashboardService(dio);
   final messageService = MessageService(dio);
   final reservationService = ReservationService(dio);
+  
+  // Note: AvailabilityService est initialisé dans le provider au besoin
 
   // Create the router with authBloc
   final appRouter = AppRouter(authBloc);
@@ -189,6 +200,11 @@ Future<void> main() async {
           create: (_) => residenceService,
           lazy: false, // Charger immédiatement pour éviter les problèmes de chargement paresseux
         ),
+        Provider<ApiService>(
+          create: (_) => apiService,
+          lazy: false, // Assurer que l'instance est disponible immédiatement
+        ),
+        Provider<SmsService>(create: (_) => SmsService(apiService: apiService)),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -305,7 +321,15 @@ Future<void> _initializeServices() async {
     
     print('Services de devises initialisés avec succès');
     
-    // ... autres initialisations de services ...
+    // Les nouveaux services (favoris, promotions, avis) seront initialisés au besoin
+    // via leur constructeur avec apiService quand ils seront utilisés
+    // dans les écrans ou composants appropriés
+    print('Services API prêts pour favoris, promotions et avis');
+    
+    // Exemple d'utilisation d'un service :
+    // final favoriteService = FavoriteService.withApiService(apiService: apiService);
+    // final promotionService = PromotionService.withApiService(apiService: apiService);
+    // final reviewService = ReviewService.withApiService(apiService: apiService);
   } catch (e) {
     print('Erreur lors de l\'initialisation des services: $e');
   }

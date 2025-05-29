@@ -39,6 +39,8 @@ const promotionRoutes = require("./routes/promotion.routes");
 const testRoutes = require("./routes/test.routes");
 // Import des routes de gestion des appareils
 const deviceRoutes = require("./routes/device.routes");
+// Import des routes SMS
+const smsRoutes = require("./routes/sms.routes");
 
 const app = express();
 
@@ -289,6 +291,8 @@ app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/messages", messageRoutes); // Routes de messagerie
 app.use("/api", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
 app.use("/api/devices", deviceRoutes); // Ajout des routes pour la gestion des appareils
+app.use("/api/sms", smsRoutes); // Ajout des routes pour l'envoi de SMS via Twilio
+app.use("/api/promotions", promotionRoutes); // Ajout des routes pour la gestion des promotions
 
 // Routes de test (uniquement en environnement de développement)
 if (process.env.NODE_ENV === 'development') {

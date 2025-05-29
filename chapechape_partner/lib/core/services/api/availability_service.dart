@@ -9,7 +9,7 @@ class AvailabilityService {
   // Récupérer les disponibilités d'une résidence
   Future<List<Availability>> getAvailabilities(String residenceId) async {
     try {
-      final response = await _dio.get('/residences/$residenceId/availabilities');
+      final response = await _dio.get('/api/residences/$residenceId/availabilities');
       final List<dynamic> data = response.data['availabilities'];
       return data.map((json) => Availability.fromJson(json)).toList();
     } catch (e) {
@@ -21,7 +21,7 @@ class AvailabilityService {
   Future<Availability> createAvailability(String residenceId, Map<String, dynamic> data) async {
     try {
       final response = await _dio.post(
-        '/residences/$residenceId/availabilities',
+        '/api/residences/$residenceId/availabilities',
         data: data,
       );
       return Availability.fromJson(response.data['availability']);
@@ -38,7 +38,7 @@ class AvailabilityService {
   ) async {
     try {
       final response = await _dio.put(
-        '/residences/$residenceId/availabilities/$availabilityId',
+        '/api/residences/$residenceId/availabilities/$availabilityId',
         data: data,
       );
       return Availability.fromJson(response.data['availability']);
@@ -50,7 +50,7 @@ class AvailabilityService {
   // Supprimer une disponibilité
   Future<void> deleteAvailability(String residenceId, String availabilityId) async {
     try {
-      await _dio.delete('/residences/$residenceId/availabilities/$availabilityId');
+      await _dio.delete('/api/residences/$residenceId/availabilities/$availabilityId');
     } catch (e) {
       rethrow;
     }
@@ -64,7 +64,7 @@ class AvailabilityService {
   ) async {
     try {
       final response = await _dio.patch(
-        '/residences/$residenceId/availabilities/$availabilityId/status',
+        '/api/residences/$residenceId/availabilities/$availabilityId/status',
         data: {'status': status.toString().split('.').last},
       );
       return Availability.fromJson(response.data['availability']);
@@ -81,7 +81,7 @@ class AvailabilityService {
   ) async {
     try {
       final response = await _dio.patch(
-        '/residences/$residenceId/availabilities/$availabilityId/price',
+        '/api/residences/$residenceId/availabilities/$availabilityId/price',
         data: {'price': price},
       );
       return Availability.fromJson(response.data['availability']);
@@ -97,7 +97,7 @@ class AvailabilityService {
   ) async {
     try {
       final response = await _dio.post(
-        '/residences/$residenceId/availabilities/bulk',
+        '/api/residences/$residenceId/availabilities/bulk',
         data: {'availabilities': availabilities},
       );
       final List<dynamic> data = response.data['availabilities'];

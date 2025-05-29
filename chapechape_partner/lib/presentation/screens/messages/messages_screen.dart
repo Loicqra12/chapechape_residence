@@ -6,6 +6,7 @@ import '../../../core/constants/app_icons.dart';
 import '../../../core/models/message/conversation.dart';
 import '../../../core/models/message/message.dart';
 import '../../../core/services/api/message_service.dart';
+import '../../../core/services/socket_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../widgets/layout/custom_sliver_app_bar.dart';
@@ -13,7 +14,7 @@ import '../../widgets/message/message_bubble.dart';
 import '../../widgets/message/message_input.dart';
 
 class MessagesScreen extends StatefulWidget {
-  const MessagesScreen({Key? key}) : super(key: key);
+  const MessagesScreen({super.key});
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -23,18 +24,59 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final ScrollController _scrollController = ScrollController();
   Conversation? _selectedConversation;
   bool _isLoadingMore = false;
+  bool _isMessagingEnabled = true;
   int _currentPage = 1;
   static const int _pageSize = 20;
+
+  final SocketService _socketService = SocketService();
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
     _scrollController.addListener(_onScroll);
+    
+    // Initialiser le service WebSocket
+    _initializeSocketService();
+  }
+  
+  // Initialisation du service WebSocket
+  Future<void> _initializeSocketService() async {
+    await _socketService.initialize();
+    
+    // Configuration du callback pour les nouveaux messages
+    _socketService.onNewMessage = (data) {
+      if (data['conversationId'] == _selectedConversation?.id) {
+        // Un nouveau message a été reçu pour la conversation actuelle
+        debugPrint('📩 Nouveau message reçu via WebSocket: ${data.toString()}');
+        
+        // Actualiser les messages
+        _loadMessages(_selectedConversation!.id);
+        
+        // Faire défiler automatiquement jusqu'au nouveau message
+        Future.delayed(Duration(milliseconds: 300), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    };
   }
 
   @override
   void dispose() {
+    // Quitter la conversation actuelle via WebSocket
+    if (_selectedConversation != null) {
+      _socketService.leaveConversation(_selectedConversation!.id);
+    }
+    
+    // Déconnecter le WebSocket
+    _socketService.disconnect();
+    
     _scrollController.dispose();
     super.dispose();
   }
@@ -49,9 +91,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
       _currentPage = 1;
     });
     _loadMessages(conversation.id);
+    _checkMessagingStatus(conversation);
+    
+    // Rejoindre la conversation via WebSocket pour recevoir les mises à jour en temps réel
+    _socketService.joinConversation(conversation.id);
   }
 
   void _goBackToConversations() {
+    // Quitter la conversation actuelle via WebSocket
+    if (_selectedConversation != null) {
+      _socketService.leaveConversation(_selectedConversation!.id);
+    }
+    
     setState(() {
       _selectedConversation = null;
     });
@@ -86,10 +137,48 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _onScroll() {
-    if (_selectedConversation != null && 
-        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoadingMore) {
-      _loadMoreMessages();
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      // Load more messages when reaching the end of the scroll view
+      if (_selectedConversation != null && !_isLoadingMore) {
+        _loadMoreMessages();
+      }
+    }
+  }
+  
+  // Vérifie si la messagerie est activée pour cette conversation
+  void _checkMessagingStatus(Conversation conversation) async {
+    if (conversation.booking != null && conversation.booking!.id.isNotEmpty) {
+      try {
+        final messageService = context.read<MessageService>();
+        final response = await messageService.dio.get('/reservations/${conversation.booking!.id}');
+        if (response.statusCode == 200 && response.data != null) {
+          setState(() {
+            _isMessagingEnabled = response.data['messagingEnabled'] ?? false;
+          });
+          
+          if (!_isMessagingEnabled) {
+            // Afficher un message pour indiquer que la messagerie n'est pas encore activée
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('La messagerie sera activée après confirmation du paiement.'),
+                backgroundColor: Colors.amber[700],
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        print('Erreur lors de la vérification du statut de messagerie: $e');
+        // En cas d'erreur, on laisse la messagerie active par défaut
+        setState(() {
+          _isMessagingEnabled = true;
+        });
+      }
+    } else {
+      // Si pas de réservation associée, la messagerie est activée par défaut
+      setState(() {
+        _isMessagingEnabled = true;
+      });
     }
   }
 
@@ -489,9 +578,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
               },
             ),
           ),
-          MessageInput(
+                  MessageInput(
             onSendMessage: _sendMessage,
             onAttachmentSelected: _handleAttachmentSelected,
+            enabled: _isMessagingEnabled,
           ),
         ],
       ),

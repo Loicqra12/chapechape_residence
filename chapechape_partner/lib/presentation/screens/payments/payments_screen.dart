@@ -6,6 +6,7 @@ import '../../../core/models/payment/payment_model.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/error_state_widget.dart';
 import '../../../core/services/api/payment_service.dart';
+import './payments_methods_tab.dart';
 import 'package:dio/dio.dart';
 
 class PaymentsScreen extends StatefulWidget {
@@ -33,12 +34,17 @@ class PaymentsScreen extends StatefulWidget {
   }
 }
 
-class _PaymentsScreenState extends State<PaymentsScreen> {
+class _PaymentsScreenState extends State<PaymentsScreen> with SingleTickerProviderStateMixin {  
+  // TabController pour gérer les onglets
+  late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
   
   @override
   void initState() {
     super.initState();
+    // Initialiser le TabController
+    _tabController = TabController(length: 2, vsync: this);
+    
     // Charger les données de paiement au démarrage
     context.read<PaymentBloc>().add(const LoadPayments());
     
@@ -49,6 +55,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
   
@@ -354,7 +361,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paiements'),
-            actions: [
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Transactions', icon: Icon(Icons.account_balance_wallet)),
+            Tab(text: 'Méthodes de paiement', icon: Icon(Icons.payment)),
+          ],
+        ),
+        actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
                 onPressed: () {
@@ -363,13 +377,19 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
             ],
           ),
-          body: _buildBody(context, state),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildTransactionsTab(context, state),
+              _buildPaymentMethodsTab(context),
+            ],
+          ),
         );
       },
     );
   }
   
-  Widget _buildBody(BuildContext context, PaymentState state) {
+  Widget _buildTransactionsTab(BuildContext context, PaymentState state) {
     if (state is PaymentInitial || (state is PaymentLoading && state is! PaymentsLoaded)) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -594,6 +614,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildPaymentMethodsTab(BuildContext context) {
+    return const PaymentMethodsTab();
   }
 }
 

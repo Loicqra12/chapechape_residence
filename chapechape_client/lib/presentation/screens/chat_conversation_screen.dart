@@ -5,6 +5,7 @@ import '../../core/blocs/chat/chat_bloc.dart' as chat;
 import '../../core/models/chat_model.dart';
 import '../../core/services/chat_service.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/socket_service.dart';
 import '../widgets/chat/message_bubble.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,15 +33,46 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   String? _selectedImagePath;
   bool _isMessagingEnabled = false;
 
+  final SocketService _socketService = SocketService();
+
   @override
   void initState() {
     super.initState();
     // Vérifier si la messagerie est activée pour cette conversation
     _checkMessagingStatus();
+    
+    // Initialiser le service WebSocket pour les messages en temps réel
+    _initializeSocketService();
+  }
+  
+  // Initialisation du service WebSocket
+  Future<void> _initializeSocketService() async {
+    await _socketService.initialize();
+    
+    // Rejoindre la conversation actuelle
+    _socketService.joinConversation(widget.conversation.id);
+    
+    // Configuration du callback pour les nouveaux messages
+    _socketService.onNewMessage = (data) {
+      if (data['conversationId'] == widget.conversation.id) {
+        // Actualiser les messages
+        context.read<chat.ChatBloc>().add(
+          chat.LoadMessages(conversationId: widget.conversation.id),
+        );
+        
+        // Faire défiler jusqu'au dernier message
+        _scrollToBottom();
+      }
+    };
   }
 
   @override
   void dispose() {
+    // Quitter la conversation WebSocket
+    _socketService.leaveConversation(widget.conversation.id);
+    // Déconnecter le WebSocket
+    _socketService.disconnect();
+    
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

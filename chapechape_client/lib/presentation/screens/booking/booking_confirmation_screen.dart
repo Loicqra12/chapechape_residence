@@ -8,10 +8,16 @@ import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as book
 import 'package:chapechape_client/core/blocs/payment/payment_bloc.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_event.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_state.dart';
+import 'package:chapechape_client/core/blocs/user/user_bloc.dart';
+import 'package:chapechape_client/core/blocs/user/user_state.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
+import 'package:chapechape_client/core/models/user_model.dart';
+import 'package:chapechape_client/core/services/notification_service.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
+import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:chapechape_client/config/theme.dart';
+import 'package:provider/provider.dart';
 
 class BookingConfirmationScreen extends StatefulWidget {
   final String bookingId;
@@ -28,6 +34,11 @@ class BookingConfirmationScreen extends StatefulWidget {
 class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   Booking? _booking;
   bool _isLoading = false;
+  bool _isSendingSms = false;
+  bool _showPhoneVerification = false;
+  bool _smsSuccess = false;
+  bool _smsError = false;
+  String? _smsErrorMessage;
 
   @override
   void initState() {
@@ -51,6 +62,108 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       );
     }
   }
+  
+  Future<void> _sendBookingDetailsBySms() async {
+    // Vérifier si l'utilisateur a un numéro de téléphone vérifié
+    final userState = context.read<UserBloc>().state;
+    User? currentUser;
+    bool isPhoneVerified = false;
+    
+    if (userState is UserProfileLoaded) {
+      currentUser = userState.user;
+      isPhoneVerified = currentUser.isPhoneVerified ?? false;
+    }
+    
+    // Si le numéro n'est pas vérifié, montrer le widget de vérification
+    if (!isPhoneVerified) {
+      setState(() {
+        _showPhoneVerification = true;
+      });
+      return;
+    }
+    
+    // Sinon, envoyer le SMS directement
+    _sendSmsDirectly();
+  }
+  
+  Future<void> _sendSmsDirectly() async {
+    if (_booking == null) return;
+    
+    setState(() {
+      _isSendingSms = true;
+      _smsSuccess = false;
+      _smsError = false;
+      _smsErrorMessage = null;
+    });
+    
+    try {
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      
+      // Créer le contenu du SMS
+      final dateFormat = DateFormat('dd/MM/yyyy');
+      final message = "Confirmation de réservation: ${_booking!.residenceName}\n" +
+          "Du ${dateFormat.format(_booking!.checkIn)} au ${dateFormat.format(_booking!.checkOut)}\n" +
+          "${_booking!.nights} nuits, ${_booking!.numberOfGuests} personnes\n" +
+          "Total: ${_booking!.totalPrice.toStringAsFixed(0)} FCFA\n" +
+          "Statut: ${_getStatusText(_booking!.status)}\n" +
+          "Référence: ${_booking!.id}";
+      
+      // Obtenir le numéro de téléphone de l'utilisateur
+      final userState = context.read<UserBloc>().state;
+      String phoneNumber = '';
+      
+      if (userState is UserProfileLoaded) {
+        phoneNumber = userState.user.phoneNumber;
+      }
+      
+      if (phoneNumber.isEmpty) {
+        throw Exception('Numéro de téléphone non disponible');
+      }
+      
+      // Envoyer le SMS
+      await notificationService.sendCustomSms(
+        phoneNumber: phoneNumber,
+        message: message,
+      );
+      
+      setState(() {
+        _isSendingSms = false;
+        _smsSuccess = true;
+      });
+      
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Détails de réservation envoyés par SMS')),
+      );
+    } catch (e) {
+      setState(() {
+        _isSendingSms = false;
+        _smsError = true;
+        _smsErrorMessage = e.toString();
+      });
+      
+      // Afficher un message d'erreur
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de l\'envoi du SMS: ${e.toString()}')),
+      );
+    }
+  }
+  
+  void _onPhoneVerified(String phoneNumber) {
+    setState(() {
+      _showPhoneVerification = false;
+    });
+    
+    // Envoyer directement le SMS maintenant que le téléphone est vérifié
+    _sendSmsDirectly();
+  }
+  
+  // Méthode appelée lorsque l'utilisateur annule la vérification de téléphone
+  void _cancelPhoneVerification() {
+    setState(() {
+      _showPhoneVerification = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +173,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         elevation: 0,
       ),
       body: LoadingOverlay(
-        isLoading: _isLoading,
+        isLoading: _isLoading || _isSendingSms,
         child: MultiBlocListener(
           listeners: [
             BlocListener<BookingBloc, booking_states.BookingState>(
@@ -108,16 +221,41 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   Widget _buildBookingConfirmation() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildSuccessHeader(),
-          const SizedBox(height: 24),
-          _buildBookingDetails(),
-          const SizedBox(height: 24),
-          _buildPaymentSection(),
-        ],
-      ),
+      child: _showPhoneVerification
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
+                const Text(
+                  'Vérification du numéro de téléphone',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Pour recevoir les détails de votre réservation par SMS, veuillez vérifier votre numéro de téléphone.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                PhoneVerificationWidget(
+                  initialPhoneNumber: '',
+                  onVerificationSuccess: _onPhoneVerified,
+                  onCancel: _cancelPhoneVerification,
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildSuccessHeader(),
+                const SizedBox(height: 24),
+                _buildBookingDetails(),
+                const SizedBox(height: 24),
+                _buildSmsSection(),
+                const SizedBox(height: 24),
+                _buildPaymentSection(),
+              ],
+            ),
     );
   }
 
@@ -183,9 +321,20 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Détails de la réservation',
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Détails de la réservation',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                if (_smsSuccess)
+                  const Icon(
+                    Icons.message,
+                    color: Colors.green,
+                    size: 24,
+                  ),
+              ],
             ),
             const Divider(),
             const SizedBox(height: 8),
@@ -317,5 +466,67 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
   String _getPaymentStatusText(bool isPaid) {
     return isPaid ? 'Payé' : 'Non payé';
+  }
+  
+  Widget _buildSmsSection() {
+    if (_booking == null) {
+      return const SizedBox.shrink();
+    }
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.message, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Recevoir par SMS',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Recevez les détails de votre réservation par SMS pour y accéder facilement, même sans connexion internet.',
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.phone_android),
+                    label: const Text('Détails de réservation'),
+                    onPressed: _isSendingSms ? null : _sendBookingDetailsBySms,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (!_booking!.isPaid)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.payment),
+                      label: const Text('Instructions de paiement'),
+                      onPressed: _isSendingSms ? null : () {
+                        // TODO: Implémenter l'envoi des instructions de paiement par SMS
+                      },
+                    ),
+                  ),
+              ],
+            ),
+            if (_smsError && _smsErrorMessage != null) ...[  
+              const SizedBox(height: 12),
+              Text(
+                'Erreur: $_smsErrorMessage',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 } 

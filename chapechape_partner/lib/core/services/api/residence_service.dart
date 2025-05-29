@@ -11,6 +11,8 @@ import 'package:path/path.dart' as path;
 import '../../config/api_config.dart';
 import '../../models/residence/residence.dart';
 import '../../models/residence/residence_image.dart';
+import '../../models/residence/nearby_place.dart';
+import '../../models/residence/faq.dart';
 import '../../exceptions/api_exception.dart';
 import '../media/media_service.dart';
 import 'package:dio/dio.dart';
@@ -134,7 +136,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/residences/my-residences'),
+        Uri.parse('$baseUrl/api/residences/my-residences'),
         headers: headers,
       );
 
@@ -181,7 +183,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/residences/my-residences').replace(queryParameters: filters),
+        Uri.parse('$baseUrl/api/residences/my-residences').replace(queryParameters: filters),
         headers: headers,
       );
 
@@ -296,7 +298,7 @@ class ResidenceService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
       final response = await client.get(
-        Uri.parse('$baseUrl/residences/$id?_t=$timestamp'),
+        Uri.parse('$baseUrl/api/residences/$id?_t=$timestamp'),
         headers: headers,
       );
 
@@ -751,7 +753,7 @@ class ResidenceService {
       print('Envoi de la requête avec ${images.length} images');
 
       // Utiliser http.MultipartRequest pour créer une requête multipart
-      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/residences/$id'));
+      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/api/residences/$id'));
       
       // Ajouter le token d'authentification
       request.headers['Authorization'] = 'Bearer $token';
@@ -885,7 +887,7 @@ class ResidenceService {
       final token = await storage.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
       );
 
       // Ajouter tous les headers nécessaires
@@ -1018,7 +1020,7 @@ class ResidenceService {
       print("🗑️ Début de la suppression de la résidence $id");
       final headers = await _getAuthHeaders();
       final response = await client.delete(
-        Uri.parse('$baseUrl/residences/$id'),
+        Uri.parse('$baseUrl/api/residences/$id'),
         headers: headers,
       );
 
@@ -1092,7 +1094,7 @@ class ResidenceService {
       try {
         final headers = await _getAuthHeaders();
         final response = await client.get(
-          Uri.parse('$baseUrl/residences/partner'),
+          Uri.parse('$baseUrl/api/residences/partner'),
           headers: headers,
         );
 
@@ -1120,7 +1122,7 @@ class ResidenceService {
         );
       } catch (e) {
         // Si la première tentative échoue, essayons une méthode alternative
-        debugPrint('⚠️ Erreur lors de la récupération des résidences via /residences/partner: $e');
+        debugPrint('⚠️ Erreur lors de la récupération des résidences via /api/residences/partner: $e');
         debugPrint('🔄 Tentative via endpoint alternatif /partners/stats/residences...');
         
         // 2. Essayer l'endpoint alternatif
@@ -1212,6 +1214,36 @@ class ResidenceService {
       }
     }
     
+    // Vérifier l'image principale aussi
+    if (json.containsKey('mainImage') && json['mainImage'] is String && json['mainImage'].isNotEmpty) {
+      String mainImageUrl = json['mainImage'];
+      if (!mainImageUrl.startsWith('http')) {
+        // Supprimer les doubles slashes potentiels
+        while (mainImageUrl.startsWith('/')) {
+          mainImageUrl = mainImageUrl.substring(1);
+        }
+        
+        // Construire l'URL complète
+        String serverUrl = baseUrl.replaceAll('/api', '');
+        // S'assurer que serverUrl se termine par un slash
+        if (!serverUrl.endsWith('/')) {
+          serverUrl = '$serverUrl/';
+        }
+        
+        String fullMainImageUrl = '$serverUrl$mainImageUrl';
+        print("URL d'image principale complète: $fullMainImageUrl");
+        
+        // Ajouter l'image principale aux URLs si elle n'y est pas déjà
+        if (!imageUrls.contains(fullMainImageUrl)) {
+          imageUrls.add(fullMainImageUrl);
+        }
+        
+        // Mettre à jour la propriété mainImage dans le json pour qu'elle soit utilisée avec l'URL complète
+        json['mainImage'] = fullMainImageUrl;
+      }
+    }
+    
+    print("Total d'images extraites: ${imageUrls.length}");
     return imageUrls;
   }
 
@@ -1281,7 +1313,7 @@ class ResidenceService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
       final response = await client.get(
-        Uri.parse('$baseUrl/residences/my-residences?_t=$timestamp'),
+        Uri.parse('$baseUrl/api/residences/my-residences?_t=$timestamp'),
         headers: headers,
       );
 
@@ -1394,7 +1426,7 @@ class ResidenceService {
       final headers = await _getAuthHeaders();
       
       final response = await client.delete(
-        Uri.parse('$baseUrl/residences/$residenceId/images/$imageName'),
+        Uri.parse('$baseUrl/api/residences/$residenceId/images/$imageName'),
         headers: headers,
       );
       
@@ -1430,7 +1462,7 @@ class ResidenceService {
       }
 
       final response = await _dio.post(
-        '/residences/$residenceId/nearby-places',
+        '/api/residences/$residenceId/nearby-places',
         data: nearbyPlace,
         options: Options(
           headers: {
@@ -1465,7 +1497,7 @@ class ResidenceService {
       }
 
       final response = await _dio.post(
-        '/residences/$residenceId/faqs',
+        '/api/residences/$residenceId/faqs',
         data: faq,
         options: Options(
           headers: {
@@ -1500,7 +1532,7 @@ class ResidenceService {
       }
 
       final response = await _dio.put(
-        '/residences/$residenceId/enhanced-amenities',
+        '/api/residences/$residenceId/enhanced-amenities',
         data: enhancedAmenities,
         options: Options(
           headers: {
@@ -1535,7 +1567,7 @@ class ResidenceService {
       }
 
       final response = await _dio.put(
-        '/residences/$residenceId/payment-methods',
+        '/api/residences/$residenceId/payment-methods',
         data: {'paymentMethods': paymentMethods},
         options: Options(
           headers: {
@@ -1558,6 +1590,74 @@ class ResidenceService {
       throw ApiException('Erreur lors de la mise à jour des méthodes de paiement: $message', statusCode, data);
     } catch (e) {
       throw ApiException('Erreur lors de la mise à jour des méthodes de paiement: $e', 500, {});
+    }
+  }
+  
+  /// Met à jour les points d'intérêt à proximité d'une résidence
+  Future<bool> updateNearbyPlaces({
+    required String residenceId,
+    required List<NearbyPlace> places,
+  }) async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw ApiException('Token non trouvé. Veuillez vous reconnecter.', 401, {});
+      }
+      
+      final response = await _dio.put(
+        '/api/residences/$residenceId/nearby-places',
+        data: {
+          'nearbyPlaces': places.map((place) => place.toJson()).toList(),
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      debugPrint('Erreur lors de la mise à jour des points d\'intérêt: ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('Erreur lors de la mise à jour des points d\'intérêt: $e');
+      return false;
+    }
+  }
+  
+  /// Met à jour les FAQ d'une résidence
+  Future<bool> updateFaqs({
+    required String residenceId,
+    required List<Faq> faqs,
+  }) async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw ApiException('Token non trouvé. Veuillez vous reconnecter.', 401, {});
+      }
+      
+      final response = await _dio.put(
+        '/api/residences/$residenceId/faqs',
+        data: {
+          'faqs': faqs.map((faq) => faq.toJson()).toList(),
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      debugPrint('Erreur lors de la mise à jour des FAQ: ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('Erreur lors de la mise à jour des FAQ: $e');
+      return false;
     }
   }
 }

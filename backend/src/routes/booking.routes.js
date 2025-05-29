@@ -17,8 +17,11 @@ router.route('/')
 // Route pour obtenir, modifier ou annuler une réservation spécifique
 router.route('/:bookingId')
     .get(validate(bookingValidation.getBooking), bookingController.getBooking)
-    .put(validate(bookingValidation.updateBooking), bookingController.updateBooking)
-    .delete(validate(bookingValidation.deleteBooking), bookingController.cancelBooking);
+    .put(validate(bookingValidation.updateBooking), bookingController.updateBooking);
+    
+// Route d'annulation séparée utilisant PATCH (plus conforme aux standards REST)
+router.route('/:bookingId/cancel')
+    .patch(validate(bookingValidation.deleteBooking), bookingController.cancelBooking);
 
 // Routes pour les opérations spécifiques sur une réservation
 router.route('/:bookingId/status')

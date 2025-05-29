@@ -7,6 +7,9 @@ import 'dart:typed_data';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/auth/auth_event.dart';
 import 'package:chapechape_partner/core/config/app_config_manager.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:path/path.dart' as path;
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -23,6 +26,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _phoneController;
   bool _isLoading = false;
   File? _profileImage;
+  bool _isCompressing = false;
+  double _compressionProgress = 0.0;
   
   @override
   void initState() {
@@ -49,31 +54,119 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _pickImage() async {
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        // On limite déjà la qualité lors de la sélection pour réduire la taille
+        imageQuality: 85,
+      );
       
       if (image != null) {
+        // Afficher un indicateur de progression
+        setState(() {
+          _isCompressing = true;
+          _compressionProgress = 0.1; // Début du processus
+        });
+        
         if (kIsWeb) {
           // Pour le web, nous ne pouvons pas utiliser File
           final bytes = await image.readAsBytes();
+          
+          // Mise à jour de l'indicateur
+          setState(() {
+            _compressionProgress = 0.3;
+          });
+          
+          // Compresser les bytes (Web)
+          final compressedBytes = await FlutterImageCompress.compressWithList(
+            bytes,
+            quality: 75, // Qualité adaptée au contexte africain (économie de données)
+            minHeight: 800,
+            minWidth: 800,
+          );
+          
           setState(() {
             _profileImage = null; // Car nous ne pouvons pas utiliser File sur le web
+            _compressionProgress = 0.7;
           });
           
-          // Upload directement les bytes de l'image
-          context.read<AuthBloc>().add(UploadProfilePictureRequested(bytes));
+          // Afficher le taux de compression
+          final compressionRate = 100 - ((compressedBytes.length / bytes.length) * 100);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image compressée : ${compressionRate.toStringAsFixed(1)}% d\'économie'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          
+          // Upload l'image compressée
+          context.read<AuthBloc>().add(UploadProfilePictureRequested(compressedBytes));
         } else {
-          // Pour mobile, utiliser File
+          // Pour mobile, compresser le fichier
           setState(() {
-            _profileImage = File(image.path);
+            _compressionProgress = 0.3;
           });
           
-          // Upload directement l'image
-          context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
+          // Obtenir un chemin temporaire pour l'image compressée
+          final tempDir = await path_provider.getTemporaryDirectory();
+          final targetPath = path.join(tempDir.path, 'compressed_${path.basename(image.path)}');
+          
+          // Compresser l'image
+          final compressedFile = await FlutterImageCompress.compressAndGetFile(
+            image.path,
+            targetPath,
+            quality: 75, // Qualité adaptée au contexte africain
+            minHeight: 800,
+            minWidth: 800,
+          );
+          
+          if (compressedFile != null) {
+            // Calculer le taux de compression
+            final originalFile = File(image.path);
+            final originalSize = await originalFile.length();
+            final compressedSize = await compressedFile.length();
+            final compressionRate = 100 - ((compressedSize / originalSize) * 100);
+            
+            setState(() {
+              _profileImage = File(compressedFile.path);
+              _compressionProgress = 0.7;
+            });
+            
+            // Afficher le taux de compression
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Image compressée : ${compressionRate.toStringAsFixed(1)}% d\'économie'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            
+            // Upload l'image compressée
+            context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
+          } else {
+            // Si la compression échoue, utiliser l'original
+            setState(() {
+              _profileImage = File(image.path);
+            });
+            context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
+          }
         }
+        
+        // Fin du processus
+        setState(() {
+          _isCompressing = false;
+          _compressionProgress = 1.0;
+        });
       }
     } catch (e) {
+      setState(() {
+        _isCompressing = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la sélection de l\'image: $e')),
+        SnackBar(
+          content: Text('Erreur lors du traitement de l\'image: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -99,13 +192,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   /// Construit l'URL complète d'une image de profil à partir d'un chemin relatif
   String _buildProfileImageUrl(String url) {
+    // Validation et nettoyage de l'URL
     if (url.isEmpty) return '';
     
-    // Si l'URL est déjà complète, la retourner telle quelle
-    if (url.startsWith('http')) return url;
+    // Détection des URLs problématiques
+    if (url.contains('placeholder.com') || url.contains('undefined')) {
+      debugPrint('URL d\'image problématique détectée: $url - Elle sera ignorée');
+      return '';
+    }
     
-    // Utiliser AppConfigManager pour construire l'URL
-    return AppConfigManager.getProfileImageUrl(url);
+    // Si l'URL est déjà complète, la retourner telle quelle
+    if (url.startsWith('http')) {
+      debugPrint('URL d\'image déjà complète: $url');
+      return url;
+    }
+    
+    // Gérer les différents formats de chemins relatifs pour éviter les 404
+    final String baseUrl = AppConfigManager.apiBaseUrl;
+    
+    // Construire l'URL complète selon différents formats de chemins possibles
+    String completeUrl;
+    if (url.startsWith('/uploads/')) {
+      // Le chemin commence par /uploads/
+      completeUrl = '$baseUrl$url';
+    } else if (url.startsWith('/')) {
+      // Autre chemin absolu
+      completeUrl = '$baseUrl$url';
+    } else if (url.startsWith('uploads/')) {
+      // Chemin relatif sans slash initial
+      completeUrl = '$baseUrl/$url';
+    } else {
+      // Autre format (probablement juste un nom de fichier)
+      completeUrl = '$baseUrl/uploads/$url';
+    }
+    
+    debugPrint('URL d\'image construite: $completeUrl');
+    return completeUrl;
   }
 
   Future<void> _uploadDocument(String type) async {
@@ -126,7 +248,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           );
         } else {
-          // Pour mobile, utiliser File
+          // Pour mobile, utiliser File en convertissant XFile en File
           final documentFile = File(document.path);
           
           // Upload le document
@@ -200,54 +322,92 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 // Photo de profil
                 Center(
-                  child: Stack(
+                  child: Column(
                     children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: theme.colorScheme.primaryContainer,
-                          image: _profileImage != null
-                              ? DecorationImage(
-                                  image: FileImage(_profileImage!),
-                                  fit: BoxFit.cover,
-                                )
-                              : partner?.profilePictureUrl != null
+                      // Indicateur de compression
+                      if (_isCompressing)
+                        Column(
+                          children: [
+                            const Text(
+                              'Optimisation de l\'image...',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 120,
+                                  child: LinearProgressIndicator(
+                                    value: _compressionProgress,
+                                    backgroundColor: Colors.grey.shade200,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                Text(
+                                  '${(_compressionProgress * 100).toStringAsFixed(0)}%',
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Économie de données mobiles en cours',
+                              style: TextStyle(fontSize: 10, color: Colors.green),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      Stack(
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: theme.colorScheme.primaryContainer,
+                              image: _profileImage != null
                                   ? DecorationImage(
-                                      image: NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!)),
+                                      image: FileImage(_profileImage!),
                                       fit: BoxFit.cover,
                                     )
-                                  : null,
-                        ),
-                        child: _profileImage == null && partner?.profilePictureUrl == null
-                            ? Icon(
-                                Icons.person,
-                                size: 60,
-                                color: theme.colorScheme.onPrimaryContainer,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Material(
-                          color: theme.colorScheme.primary,
-                          shape: const CircleBorder(),
-                          elevation: 4,
-                          child: InkWell(
-                            onTap: _pickImage,
-                            customBorder: const CircleBorder(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.camera_alt,
-                                size: 20,
-                                color: theme.colorScheme.onPrimary,
+                                  : partner?.profilePictureUrl != null
+                                      ? DecorationImage(
+                                          image: NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!)),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                            ),
+                            child: _profileImage == null && partner?.profilePictureUrl == null
+                                ? Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Material(
+                              color: theme.colorScheme.primary,
+                              shape: const CircleBorder(),
+                              elevation: 4,
+                              child: InkWell(
+                                onTap: _pickImage,
+                                customBorder: const CircleBorder(),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    size: 20,
+                                    color: theme.colorScheme.onPrimary,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),

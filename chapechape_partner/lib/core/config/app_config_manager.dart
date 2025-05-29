@@ -21,8 +21,14 @@ class AppConfigManager {
   // Service de détection d'IP
   static IpDetectionService? _ipDetectionService;
   
-  // Clé pour stocker l'URL personnalisée du serveur
+  // Clés pour les préférences
   static const String _customServerUrlKey = 'custom_server_url_enabled';
+  static const String _useSecureConnectionKey = 'use_secure_connection';
+  
+  // Indique si les connexions sécurisées (HTTPS) doivent être utilisées
+  static bool _useSecureConnection = false;
+  static bool get useSecureConnection => _useSecureConnection;
+  static set useSecureConnection(bool value) => _setUseSecureConnection(value);
   
   // Indique si une URL personnalisée est utilisée
   static bool _useCustomServerUrl = false;
@@ -41,6 +47,7 @@ class AppConfigManager {
     // Charger la configuration depuis les préférences
     final prefs = await SharedPreferences.getInstance();
     _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
+    _useSecureConnection = prefs.getBool(_useSecureConnectionKey) ?? false;
     
     // Charger la configuration selon l'environnement
     _loadConfig();
@@ -62,6 +69,20 @@ class AppConfigManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_customServerUrlKey, value);
     _loadConfig(); // Recharger la configuration
+  }
+  
+  /// Active ou désactive l'utilisation des connexions sécurisées (HTTPS)
+  static Future<void> _setUseSecureConnection(bool value) async {
+    _useSecureConnection = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_useSecureConnectionKey, value);
+    _loadConfig(); // Recharger la configuration
+    debugPrint('🔒 Connexions sécurisées (HTTPS): ${value ? 'activées' : 'désactivées'}');
+  }
+  
+  /// Change le protocole de connexion (HTTP/HTTPS)
+  static Future<void> toggleSecureConnection() async {
+    await _setUseSecureConnection(!_useSecureConnection);
   }
   
   /// Définit une nouvelle adresse IP pour le serveur
@@ -98,9 +119,10 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Partner (Dev)',
-              'apiUrl': 'http://192.168.1.66:4000/api',
-              'apiBaseUrl': 'http://192.168.1.66:4000',
-              'wsUrl': 'ws://192.168.1.66:4000/ws',
+              // Suppression du suffixe /api pour éviter les problèmes de chemin
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.66:4000/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -156,9 +178,9 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Partner',
-              'apiUrl': 'https://api.chapechape.com/api',
-              'apiBaseUrl': 'https://api.chapechape.com',
-              'wsUrl': 'wss://api.chapechape.com/ws',
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/api',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://api.chapechaperesidence.com/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -173,9 +195,9 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Partner (Fallback)',
-        'apiUrl': 'http://192.168.1.66:4000/api',
-        'apiBaseUrl': 'http://192.168.1.66:4000',
-        'wsUrl': 'ws://192.168.1.66:4000/ws',
+        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000/api',
+        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
+        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.66:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -246,27 +268,58 @@ class AppConfigManager {
   
   /// Construit une URL d'image de profil complète
   static String getProfileImageUrl(String path) {
+    // Si l'URL est vide ou invalide, retourner une chaîne vide
+    if (path.isEmpty || path.contains('placeholder.com') || path.contains('undefined')) {
+      debugPrint('URL d\'image problématique détectée: $path - Elle sera ignorée');
+      return '';
+    }
+    
+    // Déjà une URL complète
     if (path.startsWith('http')) {
-      return path; // Déjà une URL complète
+      debugPrint('URL d\'image déjà complète: $path');
+      return path;
     }
     
     final baseUrl = apiBaseUrl;
+    String result;
     
+    // CORRECTION IMPORTANTE: rediriger les requêtes /uploads/images-* vers /uploads/profiles/
+    if (path.contains('/uploads/images-') || path.contains('uploads/images-')) {
+      // Remplacer 'images-' par 'profile-' pour pointer vers le bon dossier
+      String correctedPath = path.replaceAll('images-', 'profile-');
+      // Remplacer '/uploads/' par '/uploads/profiles/' pour corriger le chemin du dossier
+      correctedPath = correctedPath.replaceAll('/uploads/', '/uploads/profiles/');
+      correctedPath = correctedPath.replaceAll('uploads/', '/uploads/profiles/');
+      
+      // Assurer que le chemin commence par /
+      if (!correctedPath.startsWith('/')) {
+        correctedPath = '/$correctedPath';
+      }
+      
+      result = '$baseUrl$correctedPath';
+      debugPrint('URL d\'image corrigée de $path vers $result');
+      return result;
+    }
+    
+    // Gestion normale des chemins
     if (path.startsWith('/uploads/profiles/')) {
       // Chemin déjà complet avec le sous-dossier profiles
-      return '$baseUrl$path';
+      result = '$baseUrl$path';
     } else if (path.startsWith('/uploads/')) {
       // Ajouter 'profiles/' après '/uploads/'
-      return path.replaceFirst('/uploads/', '$baseUrl/uploads/profiles/');
+      result = path.replaceFirst('/uploads/', '$baseUrl/uploads/profiles/');
     } else if (path.startsWith('/')) {
       // URL relative mais sans uploads, ajouter le chemin uploads/profiles
-      return '$baseUrl/uploads/profiles$path';
+      result = '$baseUrl/uploads/profiles$path';
     } else if (path.startsWith('uploads/profiles/')) {
-      return '$baseUrl/$path';
+      result = '$baseUrl/$path';
     } else {
       // URL sans slash initial, ajouter le chemin complet avec slash
-      return '$baseUrl/uploads/profiles/$path';
+      result = '$baseUrl/uploads/profiles/$path';
     }
+    
+    debugPrint('URL d\'image construite: $result');
+    return result;
   }
   
   /// Vérifie si le serveur est accessible

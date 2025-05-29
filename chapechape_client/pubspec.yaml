@@ -23,6 +23,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   get_it: ^7.6.4
+  socket_io_client: ^2.0.2
 
   # UI et design
   cupertino_icons: ^1.0.6
@@ -89,6 +90,7 @@ dependencies:
   firebase_auth: ^5.5.3
   firebase_core: ^3.13.0
   flutter_facebook_auth: ^6.0.3
+  # disk_space: ^0.2.1  # Temporairement désactivé en raison de problèmes de compatibilité avec Android Gradle Plugin
 
 dev_dependencies:
   flutter_test:

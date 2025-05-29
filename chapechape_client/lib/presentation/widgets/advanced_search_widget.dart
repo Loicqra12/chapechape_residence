@@ -34,19 +34,12 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
   City? _selectedCity;
   LocationSelection? _selectedLocation;
   DateTimeRange? _selectedDateRange;
-  String _selectedResidenceType = 'Tous';
+  String? _selectedCategoryId;
+  ResidenceType? _selectedResidenceType;
   RangeValues _priceRange = const RangeValues(5000, 500000);
   
-  // Options pour les types de résidences
-  final List<String> _residenceTypes = [
-    'Tous', 
-    'Appartement', 
-    'Maison', 
-    'Villa', 
-    'Studio', 
-    'Hôtel', 
-    'Hôtel de passe/Court séjour'
-  ];
+  // Utilisation des catégories définies dans le ResidenceTypeSelectorWidget
+  final List<ResidenceCategory> _residenceCategories = availableResidenceCategories;
   
   // Contrôleur pour le champ de recherche
   final TextEditingController _searchController = TextEditingController();
@@ -67,7 +60,8 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
       'city': _selectedCity,
       'location': _selectedLocation?.toMap(),
       'dateRange': _selectedDateRange,
-      'residenceType': _selectedResidenceType,
+      'residenceType': _selectedResidenceType?.modelType != null ? _selectedResidenceType?.modelType.toString() : _selectedResidenceType?.id,
+      'categoryId': _selectedCategoryId,
       'priceRange': _priceRange,
       'searchTerm': _searchController.text,
     };
@@ -243,7 +237,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         
         const SizedBox(height: 12),
         
-        // Liste horizontale de filtres
+        // Liste horizontale de filtres basée sur les catégories
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -252,71 +246,35 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
               AnimatedFilterOption(
                 label: 'Toutes',
                 icon: Icons.home,
-                isActive: _selectedResidenceType == 'Tous',
+                isActive: _selectedCategoryId == null && _selectedResidenceType == null,
                 onTap: () {
                   setState(() {
-                    _selectedResidenceType = 'Tous';
+                    _selectedCategoryId = null;
+                    _selectedResidenceType = null;
                   });
                 },
               ),
               
               const SizedBox(width: 8),
               
-              // Option "Appartements"
-              AnimatedFilterOption(
-                label: 'Appartements',
-                icon: Icons.apartment,
-                isActive: _selectedResidenceType == 'Appartement',
-                onTap: () {
-                  setState(() {
-                    _selectedResidenceType = 'Appartement';
-                  });
-                },
-              ),
-              
-              const SizedBox(width: 8),
-              
-              // Option "Villas"
-              AnimatedFilterOption(
-                label: 'Villas',
-                icon: Icons.villa,
-                isActive: _selectedResidenceType == 'Villa',
-                onTap: () {
-                  setState(() {
-                    _selectedResidenceType = 'Villa';
-                  });
-                },
-              ),
-              
-              const SizedBox(width: 8),
-              
-              // Option "Studios"
-              AnimatedFilterOption(
-                label: 'Studios',
-                icon: Icons.single_bed,
-                isActive: _selectedResidenceType == 'Studio',
-                onTap: () {
-                  setState(() {
-                    _selectedResidenceType = 'Studio';
-                  });
-                },
-              ),
-              
-              const SizedBox(width: 8),
-              
-              // Option "Court séjour"
-              AnimatedFilterOption(
-                label: 'Court séjour',
-                subtitle: 'Réservation à l\'heure',
-                icon: Icons.timelapse,
-                isActive: _selectedResidenceType == 'Hôtel de passe/Court séjour',
-                onTap: () {
-                  setState(() {
-                    _selectedResidenceType = 'Hôtel de passe/Court séjour';
-                  });
-                },
-                color: Colors.purple,
-              ),
+              // Options basées sur nos catégories
+              ..._residenceCategories.map((category) {
+                // Pour chaque catégorie, créer une option de filtre rapide
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: AnimatedFilterOption(
+                    label: category.name,
+                    icon: category.icon,
+                    isActive: _selectedCategoryId == category.id,
+                    onTap: () {
+                      setState(() {
+                        _selectedCategoryId = category.id;
+                        _selectedResidenceType = null; // Réinitialiser le type
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
             ],
           ),
         ),
@@ -432,7 +390,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Sélection de types plus complète
+        // Intégration de notre widget de sélection à deux niveaux
         Text(
           'Type de résidence',
           style: TextStyle(
@@ -444,32 +402,23 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         
         const SizedBox(height: 12),
         
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedResidenceType,
-              isExpanded: true,
-              icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
-              items: _residenceTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedResidenceType = newValue;
-                  });
+        // Utiliser directement notre widget ResidenceTypeSelectorWidget
+        ResidenceTypeSelectorWidget(
+          categories: _residenceCategories,
+          initialCategoryId: _selectedCategoryId,
+          initialType: _selectedResidenceType,
+          onTypeSelected: (type) {
+            setState(() {
+              _selectedResidenceType = type;
+              // Trouver la catégorie correspondante
+              for (var category in _residenceCategories) {
+                if (category.types.contains(type)) {
+                  _selectedCategoryId = category.id;
+                  break;
                 }
-              },
-            ),
-          ),
+              }
+            });
+          },
         ),
         
         const SizedBox(height: 24),

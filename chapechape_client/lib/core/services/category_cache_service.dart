@@ -93,29 +93,47 @@ class CategoryCacheService {
   List<CategoryData> _getFallbackCategories() {
     logger.debug('Utilisation des catégories factices');
     return [
+      // 1. Résidences meublées
       CategoryData(
-        id: 'apartment',
-        type: ResidenceType.apartment,
-        title: 'Appartements',
-        features: ['Moderne', 'Familial', 'Services inclus'],
+        id: 'residences_meublees',
+        type: ResidenceType.appartementMeuble,
+        title: 'Résidences meublées',
+        features: ['Confort', 'Élégance', 'Prêt à vivre'],
       ),
+      // 2. Hôtels & Hébergements
       CategoryData(
-        id: 'villa',
-        type: ResidenceType.villa,
-        title: 'Villas',
-        features: ['Spacieux', 'Jardin', 'Piscine'],
+        id: 'hotels_hebergements',
+        type: ResidenceType.hotel,
+        title: 'Hôtels & Hébergements',
+        features: ['Services', 'Court séjour', 'Confort'],
       ),
+      // 3. Hébergements insolites
       CategoryData(
-        id: 'studio',
-        type: ResidenceType.studio,
-        title: 'Studios',
-        features: ['Compact', 'Économique', 'Pratique'],
+        id: 'hebergements_insolites',
+        type: ResidenceType.bungalow,
+        title: 'Hébergements insolites',
+        features: ['Expériences uniques', 'Nature', 'Découverte'],
       ),
+      // 4. Colocation & partage
       CategoryData(
-        id: 'luxury',
-        type: ResidenceType.luxury,
-        title: 'Luxe',
-        features: ['Premium', 'Services VIP', 'Emplacement exclusif'],
+        id: 'colocation_partage',
+        type: ResidenceType.chambreEnColocation,
+        title: 'Colocation & partage',
+        features: ['Vivre ensemble', 'Économique', 'Social'],
+      ),
+      // 5. Résidences longue durée
+      CategoryData(
+        id: 'residences_longue_duree',
+        type: ResidenceType.appartementNonMeuble,
+        title: 'Résidences longue durée',
+        features: ['Pour s\'installer', 'Bail long', 'Stabilité'],
+      ),
+      // 6. Hébergements économiques
+      CategoryData(
+        id: 'hebergements_economiques',
+        type: ResidenceType.chambresDePassage,
+        title: 'Hébergements économiques',
+        features: ['Budget raisonnable', 'Pratique', 'Accessible'],
       ),
     ];
   }
