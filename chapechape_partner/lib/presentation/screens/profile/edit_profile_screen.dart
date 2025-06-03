@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'documents_screen.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
@@ -10,6 +11,7 @@ import 'package:chapechape_partner/core/config/app_config_manager.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:path/path.dart' as path;
+import '../../../core/utils/validators/form_validators.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -28,6 +30,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File? _profileImage;
   bool _isCompressing = false;
   double _compressionProgress = 0.0;
+  bool _uploadFailed = false;
+  String _errorMessage = '';
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
   
   @override
   void initState() {
@@ -53,121 +59,221 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickImage() async {
     try {
+      // Réinitialiser les indicateurs d'erreur
+      setState(() {
+        _uploadFailed = false;
+        _errorMessage = '';
+        _retryCount = 0;
+      });
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
         // On limite déjà la qualité lors de la sélection pour réduire la taille
         imageQuality: 85,
       );
-      
+
       if (image != null) {
-        // Afficher un indicateur de progression
-        setState(() {
-          _isCompressing = true;
-          _compressionProgress = 0.1; // Début du processus
-        });
-        
-        if (kIsWeb) {
-          // Pour le web, nous ne pouvons pas utiliser File
-          final bytes = await image.readAsBytes();
-          
-          // Mise à jour de l'indicateur
-          setState(() {
-            _compressionProgress = 0.3;
-          });
-          
-          // Compresser les bytes (Web)
-          final compressedBytes = await FlutterImageCompress.compressWithList(
-            bytes,
-            quality: 75, // Qualité adaptée au contexte africain (économie de données)
-            minHeight: 800,
-            minWidth: 800,
-          );
-          
-          setState(() {
-            _profileImage = null; // Car nous ne pouvons pas utiliser File sur le web
-            _compressionProgress = 0.7;
-          });
-          
-          // Afficher le taux de compression
-          final compressionRate = 100 - ((compressedBytes.length / bytes.length) * 100);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Image compressée : ${compressionRate.toStringAsFixed(1)}% d\'économie'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          
-          // Upload l'image compressée
-          context.read<AuthBloc>().add(UploadProfilePictureRequested(compressedBytes));
-        } else {
-          // Pour mobile, compresser le fichier
-          setState(() {
-            _compressionProgress = 0.3;
-          });
-          
-          // Obtenir un chemin temporaire pour l'image compressée
-          final tempDir = await path_provider.getTemporaryDirectory();
-          final targetPath = path.join(tempDir.path, 'compressed_${path.basename(image.path)}');
-          
-          // Compresser l'image
-          final compressedFile = await FlutterImageCompress.compressAndGetFile(
-            image.path,
-            targetPath,
-            quality: 75, // Qualité adaptée au contexte africain
-            minHeight: 800,
-            minWidth: 800,
-          );
-          
-          if (compressedFile != null) {
-            // Calculer le taux de compression
-            final originalFile = File(image.path);
-            final originalSize = await originalFile.length();
-            final compressedSize = await compressedFile.length();
-            final compressionRate = 100 - ((compressedSize / originalSize) * 100);
-            
-            setState(() {
-              _profileImage = File(compressedFile.path);
-              _compressionProgress = 0.7;
-            });
-            
-            // Afficher le taux de compression
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Image compressée : ${compressionRate.toStringAsFixed(1)}% d\'économie'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-            
-            // Upload l'image compressée
-            context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
-          } else {
-            // Si la compression échoue, utiliser l'original
-            setState(() {
-              _profileImage = File(image.path);
-            });
-            context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
-          }
-        }
-        
-        // Fin du processus
-        setState(() {
-          _isCompressing = false;
-          _compressionProgress = 1.0;
-        });
+        await _processAndUploadImage(image);
       }
     } catch (e) {
+      _handleImageError('Erreur lors de la sélection de l\'image', e);
+    }
+  }
+
+  // Nouvelle méthode pour traiter et uploader l'image
+  Future<void> _processAndUploadImage(XFile image) async {
+    try {
+      // Afficher un indicateur de progression
+      setState(() {
+        _isCompressing = true;
+        _compressionProgress = 0.1; // Début du processus
+      });
+
+      if (kIsWeb) {
+        await _processWebImage(image);
+      } else {
+        await _processMobileImage(image);
+      }
+
+      // Fin du processus
       setState(() {
         _isCompressing = false;
+        _compressionProgress = 1.0;
       });
+    } catch (e) {
+      _handleImageError('Erreur lors du traitement de l\'image', e);
+    }
+  }
+
+  // Traitement des images sur Web
+  Future<void> _processWebImage(XFile image) async {
+    try {
+      // Pour le web, nous ne pouvons pas utiliser File
+      final bytes = await image.readAsBytes();
+
+      // Mise à jour de l'indicateur
+      setState(() {
+        _compressionProgress = 0.3;
+      });
+
+      // Compresser les bytes (Web)
+      final compressedBytes = await FlutterImageCompress.compressWithList(
+        bytes,
+        quality: 75, // Qualité adaptée au contexte africain (économie de données)
+        minHeight: 800,
+        minWidth: 800,
+      );
+
+      setState(() {
+        _profileImage = null; // Car nous ne pouvons pas utiliser File sur le web
+        _compressionProgress = 0.7;
+      });
+
+      // Afficher le taux de compression
+      final compressionRate = 100 - ((compressedBytes.length / bytes.length) * 100);
+      _showCompressionSuccessMessage(compressionRate);
+
+      // Upload l'image compressée
+      context.read<AuthBloc>().add(UploadProfilePictureRequested(compressedBytes));
+    } catch (e) {
+      _handleImageError('Erreur lors du traitement de l\'image web', e);
+    }
+  }
+
+  // Traitement des images sur Mobile
+  Future<void> _processMobileImage(XFile image) async {
+    try {
+      // Pour mobile, compresser le fichier
+      setState(() {
+        _compressionProgress = 0.3;
+      });
+
+      // Obtenir un chemin temporaire pour l'image compressée
+      final tempDir = await path_provider.getTemporaryDirectory();
+      final targetPath = path.join(tempDir.path, 'compressed_${path.basename(image.path)}');
+
+      // Compresser l'image
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        image.path,
+        targetPath,
+        quality: 75, // Qualité adaptée au contexte africain
+        minHeight: 800,
+        minWidth: 800,
+      );
+
+      if (compressedFile != null) {
+        // Calculer le taux de compression
+        final originalFile = File(image.path);
+        final originalSize = await originalFile.length();
+        final compressedSize = await compressedFile.length();
+        final compressionRate = 100 - ((compressedSize / originalSize) * 100);
+
+        setState(() {
+          _profileImage = File(compressedFile.path);
+          _compressionProgress = 0.7;
+        });
+
+        _showCompressionSuccessMessage(compressionRate);
+
+        // Upload l'image compressée
+        context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
+      } else {
+        // Si la compression échoue, utiliser l'original
+        setState(() {
+          _profileImage = File(image.path);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Compression impossible, utilisation de l\'image originale'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
+      }
+    } catch (e) {
+      _handleImageError('Erreur lors de la compression de l\'image mobile', e);
+    }
+  }
+
+  // Affiche un message de succès pour la compression
+  void _showCompressionSuccessMessage(double compressionRate) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Image compressée : ${compressionRate.toStringAsFixed(1)}% d\'économie'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Gestion des erreurs d'image avec retry
+  void _handleImageError(String errorContext, dynamic error) {
+    setState(() {
+      _isCompressing = false;
+      _uploadFailed = true;
+      _errorMessage = '$errorContext: ${error.toString()}';
+    });
+    
+    ScaffoldMessenger.of(this.context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(_errorMessage)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: _retryCount < _maxRetries ? SnackBarAction(
+          label: 'Réessayer',
+          textColor: Colors.white,
+          onPressed: () {
+            if (_errorMessage.contains('image') || _errorMessage.contains('photo')) {
+              _retryImageUpload();
+            } else {
+              _saveProfile(); // Réessayer l'enregistrement du profil
+            }
+            
+            // Indiquer que nous ne sommes plus en erreur
+            setState(() {
+              _uploadFailed = false;
+            });
+          },
+        ) : null,
+      ),
+    );
+  }
+
+  // Fonction pour réessayer l'upload
+  Future<void> _retryImageUpload() async {
+    if (_retryCount >= _maxRetries) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors du traitement de l\'image: $e'),
+        const SnackBar(
+          content: Text('Nombre maximum de tentatives atteint. Veuillez réessayer plus tard.'),
           backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
+
+    setState(() {
+      _retryCount++;
+      _uploadFailed = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Nouvelle tentative ${_retryCount}/$_maxRetries...'),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+
+    if (_profileImage != null) {
+      // Réessayer avec l'image existante
+      context.read<AuthBloc>().add(UploadProfilePictureRequested(_profileImage));
     }
   }
 
@@ -282,16 +388,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         } else if (state is AuthAuthenticated) {
           setState(() {
             _isLoading = false;
+            _uploadFailed = false;
+            _errorMessage = '';
+            _retryCount = 0;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profil mis à jour avec succès')),
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Profil mis à jour avec succès'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
           );
         } else if (state is AuthFailure) {
           setState(() {
             _isLoading = false;
+            _uploadFailed = true;
+            _errorMessage = state.message;
           });
+          
+          // Message d'erreur détaillé avec possibilité de retry
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: ${state.message}')),
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Erreur: ${state.message}')),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+              action: _retryCount < _maxRetries ? SnackBarAction(
+                label: 'Réessayer',
+                textColor: Colors.white,
+                onPressed: () {
+                  if (_errorMessage.contains('image') || _errorMessage.contains('photo')) {
+                    _retryImageUpload();
+                  } else {
+                    _saveProfile(); // Réessayer l'enregistrement du profil
+                  }
+                },
+              ) : null,
+            ),
           );
         }
       },
@@ -360,21 +504,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       Stack(
                         children: [
+                          // Image avec indication visuelle en cas d'erreur
                           Container(
                             width: 120,
                             height: 120,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: theme.colorScheme.primaryContainer,
+                              border: _uploadFailed 
+                                ? Border.all(color: Colors.red, width: 3) 
+                                : null,
                               image: _profileImage != null
                                   ? DecorationImage(
                                       image: FileImage(_profileImage!),
                                       fit: BoxFit.cover,
+                                      colorFilter: _uploadFailed 
+                                          ? ColorFilter.mode(Colors.red.withOpacity(0.2), BlendMode.srcATop)
+                                          : null,
                                     )
                                   : partner?.profilePictureUrl != null
                                       ? DecorationImage(
                                           image: NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!)),
                                           fit: BoxFit.cover,
+                                          colorFilter: _uploadFailed 
+                                              ? ColorFilter.mode(Colors.red.withOpacity(0.2), BlendMode.srcATop)
+                                              : null,
                                         )
                                       : null,
                             ),
@@ -382,9 +536,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 ? Icon(
                                     Icons.person,
                                     size: 60,
-                                    color: theme.colorScheme.onPrimaryContainer,
+                                    color: _uploadFailed
+                                        ? Colors.red
+                                        : theme.colorScheme.onPrimaryContainer,
                                   )
-                                : null,
+                                : _uploadFailed
+                                    ? Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.error_outline,
+                                          color: Colors.red,
+                                          size: 40,
+                                        ),
+                                      )
+                                    : null,
                           ),
                           Positioned(
                             right: 0,
@@ -414,6 +582,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 const SizedBox(height: 32),
 
+                // Bouton d'enregistrement
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24.0),
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveProfile,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('Enregistrer les modifications'),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
                 // Informations personnelles
                 Text(
                   'Informations personnelles',
@@ -425,28 +611,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Prénom',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
                   ),
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Ce champ est requis';
-                    }
-                    return null;
-                  },
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) => FormValidators.validateName(value, fieldName: 'Le prénom'),
                 ),
+
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _lastNameController,
                   decoration: const InputDecoration(
                     labelText: 'Nom',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Ce champ est requis';
-                    }
-                    return null;
-                  },
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) => FormValidators.validateName(value, fieldName: 'Le nom'),
                 ),
+
                 const SizedBox(height: 32),
 
                 // Contact
@@ -460,31 +642,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
+                    hintText: 'exemple@domaine.com',
                   ),
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Ce champ est requis';
-                    }
-                    if (!value!.contains('@')) {
-                      return 'Email invalide';
-                    }
-                    return null;
-                  },
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  validator: FormValidators.validateEmail,
                 ),
+
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _phoneController,
                   decoration: const InputDecoration(
                     labelText: 'Téléphone',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
+                    hintText: '+XXX XXXXXXXXX',
                   ),
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Ce champ est requis';
-                    }
-                    return null;
-                  },
+                  keyboardType: TextInputType.phone,
+                  validator: FormValidators.validatePhoneNumber,
                 ),
+
                 const SizedBox(height: 32),
 
                 // Documents
@@ -512,6 +690,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   subtitle: 'Format JPG ou PDF, max 5MB',
                   onUpload: () => _uploadDocument('professional'),
                   isUploaded: partner?.documents?.any((doc) => doc.type == 'professional') ?? false,
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Bouton pour voir tous les documents et statuts
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DocumentsScreen(),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 46),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.assignment_outlined),
+                  label: const Text('Voir tous les documents et statuts de vérification'),
                 ),
               ],
             ),

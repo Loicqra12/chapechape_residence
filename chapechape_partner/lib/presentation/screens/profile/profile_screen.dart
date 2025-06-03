@@ -10,6 +10,7 @@ import '../notifications/notifications_screen.dart';
 import '../help/help_screen.dart' hide HelpBloc;
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import 'documents_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import '../../../core/blocs/payment/payment_bloc.dart';
 import '../../../core/blocs/help/help_bloc.dart';
@@ -19,6 +20,7 @@ import 'package:flutter/rendering.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
+import '../../../core/config/app_config_manager.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -66,28 +68,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Méthode pour construire une image de profil mise en cache et optimisée
   // Liste blanche des images qui existent réellement sur le serveur
   final List<String> validProfileImages = [
-    'profile-1742920321396-732109780.jpg'
+    // Priorité aux URLs Cloudinary
+    'res.cloudinary.com',
+    'cloudinary.com',
+    
+    // Patterns pour les images locales
+    'profile-', // Préfixe pour toutes les images de profil valides
+    
+    // Extensions de fichiers
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp'
   ];
-  
-  Widget _buildCachedProfileImage(String imageUrl, ThemeData theme, String fullName) {
-    // Vérifier si l'URL est dans la liste blanche des images valides
-    bool isValidImage = false;
-    for (final validImage in validProfileImages) {
-      if (imageUrl.contains(validImage)) {
-        isValidImage = true;
+
+  // Méthode pour valider l'URL d'une image
+  bool _isValidImageUrl(String imageUrl) {
+    // Si l'URL est vide, invalide
+    if (imageUrl.isEmpty) {
+      return false;
+    }
+    
+    // Valider la structure de l'URL
+    bool isValidUrl = Uri.tryParse(imageUrl)?.hasAuthority ?? false;
+    
+    // Rechercher des termes problématiques
+    bool hasProblematicTerms = imageUrl.contains('placeholder') || 
+                               imageUrl.contains('undefined') ||
+                               imageUrl.contains('null');
+
+    // Vérifier si c'est une URL Cloudinary
+    bool isCloudinaryUrl = imageUrl.contains('cloudinary.com') || 
+                           imageUrl.contains('res.cloudinary.com');
+    
+    // Si c'est une URL Cloudinary, considérer comme valide
+    if (isCloudinaryUrl) {
+      return isValidUrl && !hasProblematicTerms;
+    }
+    
+    // Vérifier si l'URL correspond à un pattern de la liste blanche
+    bool matchesWhitelist = false;
+    for (final validPattern in validProfileImages) {
+      if (imageUrl.contains(validPattern)) {
+        matchesWhitelist = true;
         break;
       }
     }
     
-    // Validation et nettoyage de l'URL
-    // Si l'URL n'est pas dans la liste blanche ou contient des motifs problématiques, utiliser l'avatar par défaut
-    if (!isValidImage ||
-        imageUrl.isEmpty ||
-        imageUrl.contains('placeholder.com') ||
-        imageUrl.contains('undefined') ||
-        imageUrl.contains('images-') ||
-        !Uri.tryParse(imageUrl)!.hasAuthority) {
-      
+    // Vérifier l'extension de fichier
+    bool hasValidExtension = imageUrl.toLowerCase().endsWith('.jpg') ||
+                            imageUrl.toLowerCase().endsWith('.jpeg') ||
+                            imageUrl.toLowerCase().endsWith('.png') ||
+                            imageUrl.toLowerCase().endsWith('.webp');
+    
+    return isValidUrl && !hasProblematicTerms && (matchesWhitelist || hasValidExtension);
+  }
+  
+  Widget _buildCachedProfileImage(String originalImageUrl, ThemeData theme, String fullName) {
+    // Corriger l'URL de l'image en utilisant AppConfigManager
+    String imageUrl = originalImageUrl;
+    
+    // Vérifier si c'est une URL Cloudinary
+    bool isCloudinaryUrl = originalImageUrl.contains('cloudinary.com') || 
+                         originalImageUrl.contains('res.cloudinary.com');
+    
+    // Si ce n'est pas une URL Cloudinary, utiliser AppConfigManager pour obtenir l'URL complète
+    if (!isCloudinaryUrl) {
+      imageUrl = AppConfigManager.getProfileImageUrl(originalImageUrl);
+    }
+    
+    // Log pour déboguer les URLs d'images
+    debugPrint('Image URL originale: $originalImageUrl');
+    debugPrint('Image URL corrigée: $imageUrl');
+    
+    // Utiliser la nouvelle méthode de validation d'URL d'image
+    bool isValidImage = _isValidImageUrl(imageUrl);
+    
+    // Si l'URL n'est pas valide, utiliser l'avatar par défaut
+    if (!isValidImage) {
       debugPrint('URL d\'image non valide ou non autorisée: $imageUrl. Utilisation de l\'avatar par défaut.');
       return CircleAvatar(
         radius: 60,
@@ -110,12 +168,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           radius: 60,
           backgroundImage: imageProvider,
         ),
-        // NE PAS utiliser progressIndicatorBuilder et placeholder en même temps
-        // car cela génère une erreur d'assertion dans octo_image
-        placeholder: (context, url) => CircleAvatar(
+        // Utiliser progressIndicatorBuilder au lieu de placeholder
+        // pour éviter les problèmes d'assertion dans octo_image
+        progressIndicatorBuilder: (context, url, progress) => CircleAvatar(
           radius: 60,
           backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.5),
-          child: const CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            value: progress.progress,
+            color: theme.colorScheme.primary,
+          ),
         ),
         errorWidget: (context, url, error) {
           debugPrint('Erreur de chargement d\'image: $error, URL: $url');
@@ -141,8 +202,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         fadeOutDuration: const Duration(milliseconds: 200),
         fadeInDuration: const Duration(milliseconds: 300),
         // Configuration du cache et de la politique de rechargement
-        cacheKey: 'profile_${fullName.replaceAll(' ', '_').toLowerCase()}',
-        useOldImageOnUrlChange: true,
+        cacheKey: 'profile_${DateTime.now().millisecondsSinceEpoch}',
+        useOldImageOnUrlChange: false,
+        // Ne pas mettre en cache pour éviter les 404 sur les anciennes images
+        cacheManager: null,
       );
     } catch (e) {
       debugPrint('Exception lors de la création de CachedNetworkImage: $e');
@@ -580,6 +643,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const Divider(height: 1),
                           _buildMenuTile(
+                            icon: Icons.verified_user_outlined,
+                            title: 'Documents et vérification',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const DocumentsScreen(),
+                                ),
+                              );
+                            },
+                            theme: theme,
+                            trailing: partner?.isVerified == true
+                                ? const Icon(Icons.verified, color: Colors.green, size: 20)
+                                : Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text(
+                                      'Non vérifié',
+                                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                                    ),
+                                  ),
+                          ),
+                          const Divider(height: 1),
+                          _buildMenuTile(
                             icon: Icons.payment_outlined,
                             title: 'Paiements',
                             onTap: () {
@@ -733,6 +823,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required VoidCallback onTap,
     required ThemeData theme,
+    Widget? trailing,
   }) {
     return ListTile(
       leading: Container(
@@ -747,7 +838,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       title: Text(title),
-      trailing: Icon(
+      trailing: trailing ?? Icon(
         Icons.chevron_right,
         color: theme.colorScheme.outline,
       ),

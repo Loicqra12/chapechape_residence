@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_extensions.dart';
@@ -58,10 +59,31 @@ class _ResidencesViewState extends State<_ResidencesView> {
   String _sortBy = 'date'; // Par défaut, tri par date de création
   String _viewMode = 'list'; // Par défaut, vue en liste
   String _filterStatus = 'all'; // Par défaut, toutes les résidences
+  StreamSubscription? _eventBusSubscription;
 
   void _loadResidences() {
     // Utiliser RefreshResidences pour forcer un rafraîchissement complet
     context.read<ResidenceBloc>().add(RefreshResidences());
+  }
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // S'abonner au bus d'événements pour les résidences
+    _eventBusSubscription = ResidenceEventBus().stream.listen((event) {
+      debugPrint('🔔 ResidencesScreen: Événement reçu: $event');
+      
+      // Rafraîchir la liste des résidences lorsqu'un événement est reçu
+      _loadResidences();
+    });
+  }
+  
+  @override
+  void dispose() {
+    // Se désabonner du bus d'événements pour éviter les fuites mémoire
+    _eventBusSubscription?.cancel();
+    super.dispose();
   }
 
   @override

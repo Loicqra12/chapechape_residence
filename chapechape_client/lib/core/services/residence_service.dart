@@ -526,7 +526,11 @@ class ResidenceService {
         return data as Residence;
       }
       
-      print('✅ Adaptation de la résidence: ${data['title'] ?? data['name'] ?? 'Sans titre'} (${data['_id'] ?? data['id'] ?? 'ID manquant'})');
+      final String residenceTitle = data['title'] ?? data['name'] ?? 'Sans titre';
+      final String residenceId = data['_id'] ?? data['id'] ?? '';
+      
+      print('✅ Adaptation de la résidence: $residenceTitle ($residenceId)');
+      print('✅ Structure de données reçue: ${data.keys.join(', ')}');
       
       // Extraire et formater les images
       final List<String> images = _extractImages(data['images']);
@@ -552,21 +556,149 @@ class ResidenceService {
       String typeStr = (data['type'] ?? 'apartment').toString();
       final residenceType = _mapBackendTypeToClientType(typeStr);
       
+      // Convertir de façon sécurisée les valeurs numériques
+      int _safeParseInt(dynamic value, [int defaultValue = 0]) {
+        if (value == null) return defaultValue;
+        if (value is int) return value;
+        try {
+          return int.parse(value.toString());
+        } catch (e) {
+          print('❌ Erreur conversion int: $e pour valeur: $value');
+          return defaultValue;
+        }
+      }
+      
+      double _safeParseDouble(dynamic value, [double defaultValue = 0.0]) {
+        if (value == null) return defaultValue;
+        if (value is double) return value;
+        if (value is int) return value.toDouble();
+        try {
+          return double.parse(value.toString());
+        } catch (e) {
+          print('❌ Erreur conversion double: $e pour valeur: $value');
+          return defaultValue;
+        }
+      }
+      
+      // Extraire les règles de la résidence
+      List<String> _extractRules(Map<String, dynamic> data) {
+        if (data['rules'] == null) return [];
+        
+        if (data['rules'] is List) {
+          return (data['rules'] as List).map((e) => e.toString()).toList();
+        } else if (data['rules'] is Map) {
+          // Si les règles sont fournies comme un objet, extraire les valeurs
+          final Map<String, dynamic> rulesMap = data['rules'] as Map<String, dynamic>;
+          List<String> rules = [];
+          rulesMap.forEach((key, value) {
+            if (value == true) {
+              rules.add(key);
+            } else if (value is String && value.isNotEmpty) {
+              rules.add(value);
+            }
+          });
+          return rules;
+        }
+        return [];
+      }
+      
+      // Extraire les points d'intérêt à proximité
+      List<String> _extractNearbyPlaces(Map<String, dynamic> data) {
+        if (data['nearbyPlaces'] == null) return [];
+        
+        if (data['nearbyPlaces'] is List) {
+          return (data['nearbyPlaces'] as List)
+            .map((place) => place is Map ? place['name']?.toString() ?? '' : place.toString())
+            .where((name) => name.isNotEmpty)
+            .toList();
+        }
+        return [];
+      }
+      
+      // Extraire et formater les FAQ
+      List<Map<String, String>> _extractFaqs(Map<String, dynamic> data) {
+        if (data['faqs'] == null) return [];
+        
+        if (data['faqs'] is List) {
+          return (data['faqs'] as List)
+            .map((faq) {
+              if (faq is Map) {
+                return {
+                  'question': faq['question']?.toString() ?? '',
+                  'answer': faq['answer']?.toString() ?? '',
+                };
+              }
+              return <String, String>{};
+            })
+            .where((faq) => faq.isNotEmpty && faq['question']?.isNotEmpty == true)
+            .toList();
+        }
+        return [];
+      }
+      
+      // Extraire les équipements améliorés
+      Map<String, dynamic> _extractEnhancedAmenities(Map<String, dynamic> data) {
+        if (data['enhancedAmenities'] == null) return {};
+        
+        if (data['enhancedAmenities'] is Map) {
+          return data['enhancedAmenities'] as Map<String, dynamic>;
+        }
+        return {};
+      }
+      
+      // Extraire les méthodes de paiement acceptées
+      List<String> _extractPaymentMethods(Map<String, dynamic> data) {
+        if (data['paymentMethods'] == null) return [];
+        
+        if (data['paymentMethods'] is List) {
+          return (data['paymentMethods'] as List).map((e) => e.toString()).toList();
+        }
+        return [];
+      }
+      
+      // Extraction des tarifs
+      double hourlyRate = _safeParseDouble(data['hourlyRate']);
+      double halfDayRate = _safeParseDouble(data['halfDayRate']);
+      double fullDayRate = _safeParseDouble(data['fullDayRate']);
+      double weekendRate = _safeParseDouble(data['weekendRate']);
+      
+      // Si les tarifs sont fournis sous forme d'objets
+      if (data['hourlyRates'] is Map) {
+        hourlyRate = _safeParseDouble(data['hourlyRates']['oneHour'], hourlyRate);
+      }
+      
+      if (data['dailyRates'] is Map) {
+        halfDayRate = _safeParseDouble(data['dailyRates']['halfDay'], halfDayRate);
+        fullDayRate = _safeParseDouble(data['dailyRates']['fullDay'], fullDayRate);
+        weekendRate = _safeParseDouble(data['dailyRates']['weekend'], weekendRate);
+      }
+      
+      // Extraire les règles, points d'intérêt et autres nouvelles propriétés
+      final List<String> rules = _extractRules(data);
+      final List<String> nearbyPlaces = _extractNearbyPlaces(data);
+      final List<Map<String, String>> faqs = _extractFaqs(data);
+      final Map<String, dynamic> enhancedAmenities = _extractEnhancedAmenities(data);
+      final List<String> paymentMethods = _extractPaymentMethods(data);
+      
+      // Récupérer les informations sur les étoiles/classification
+      final int stars = _safeParseInt(data['stars'], 0);
+      
+      print('✅ Règles extraites: ${rules.join(', ')}');
+      print('✅ Équipements améliorés: ${enhancedAmenities.keys.join(', ')}');
+      
       return Residence(
-        id: data['_id'] ?? data['id'] ?? '',
-        title: data['title'] ?? data['name'] ?? 'Sans titre',
+        id: residenceId,
+        title: residenceTitle,
         description: data['description'] ?? 'Aucune description disponible',
         shortDescription: data['shortDescription'] ?? '',
         images: images,
-        price: data['price'] != null ? double.parse(data['price'].toString()) : 0.0,
+        price: _safeParseDouble(data['price']),
         location: locationMap,
-        bedrooms: data['bedrooms'] != null ? int.parse(data['bedrooms'].toString()) : 0,
-        bathrooms: data['bathrooms'] != null ? int.parse(data['bathrooms'].toString()) : 0,
+        bedrooms: _safeParseInt(data['bedrooms']),
+        bathrooms: _safeParseInt(data['bathrooms']),
         squareMeters: data['surface'] != null 
-          ? double.parse(data['surface'].toString()) 
-          : data['area'] != null 
-            ? double.parse(data['area'].toString()) 
-            : 0.0,
+          ? _safeParseDouble(data['surface']) 
+          : _safeParseDouble(data['area']),
         amenities: data['amenities'] is List 
           ? (data['amenities'] as List).map((e) => e.toString()).toList() 
           : _extractAmenities(data['features'] ?? {}, data),
@@ -579,13 +711,32 @@ class ResidenceService {
         isPopular: data['isPopular'] == true,
         isVerified: data['isVerified'] == true,
         isNew: data['isNew'] == true,
-        rating: data['rating'] != null ? double.parse(data['rating'].toString()) : 0.0,
-        reviewCount: data['reviews'] != null ? int.parse(data['reviews'].toString()) : 0,
+        rating: _safeParseDouble(data['rating']),
+        reviewCount: _safeParseInt(data['reviews']),
         currency: data['currency']?.toString() ?? 'XOF',
         type: residenceType,
-        maxOccupancy: data['maxOccupancy'] != null ? int.parse(data['maxOccupancy'].toString()) : 2,
+        maxOccupancy: _safeParseInt(data['maxOccupancy'], 2),
         owner: data['owner'] ?? data['ownerId'] ?? '',
         pricePeriod: data['pricePeriod']?.toString() ?? 'month',
+        // Nouveaux champs ajoutés
+        rules: rules,
+        allowsPets: data['allowsPets'] == true || (rules.contains('pets') || rules.contains('allowsPets')),
+        allowsSmoking: data['allowsSmoking'] == true || (rules.contains('smoking') || rules.contains('allowsSmoking')),
+        allowsParties: data['allowsParties'] == true || (rules.contains('parties') || rules.contains('allowsParties')),
+        nearbyAttractions: nearbyPlaces,
+        hourlyRate: hourlyRate,
+        halfDayRate: halfDayRate,
+        fullDayRate: fullDayRate,
+        weekendRate: weekendRate,
+        isVip: data['isVip'] == true || stars >= 4,
+        // Stocker les nouvelles propriétés étendues dans priceDetails pour compatibilité
+        priceDetails: {
+          'enhancedAmenities': enhancedAmenities,
+          'paymentMethods': paymentMethods,
+          'faqs': faqs,
+          'stars': stars,
+          'isFavorite': data['isFavorite'] == true,
+        },
       );
     } catch (e, stackTrace) {
       print('❌ ERREUR lors de l\'adaptation de la résidence: $e');
@@ -621,6 +772,15 @@ class ResidenceService {
         maxOccupancy: 1,
         owner: '',
         pricePeriod: 'month',
+        rules: [],
+        allowsPets: false,
+        allowsSmoking: false,
+        allowsParties: false,
+        hourlyRate: 0,
+        halfDayRate: 0,
+        fullDayRate: 0,
+        weekendRate: 0,
+        isVip: false,
       );
     }
   }
@@ -660,8 +820,17 @@ class ResidenceService {
       baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
     
-    // Nettoyer la baseUrl pour éviter les duplications de '/api'
-    final cleanBaseUrl = baseUrl.replaceAll('/api', '');
+    // Nettoyer la baseUrl et s'assurer qu'elle ne contient pas de '/api' à la fin
+    String cleanBaseUrl = baseUrl;
+    if (cleanBaseUrl.endsWith('/api')) {
+      cleanBaseUrl = cleanBaseUrl.substring(0, cleanBaseUrl.length - 4);
+    } else {
+      // Simplifier la logique pour éviter les problèmes de remplacements multiples
+      final apiIndex = cleanBaseUrl.lastIndexOf('/api');
+      if (apiIndex != -1) {
+        cleanBaseUrl = cleanBaseUrl.substring(0, apiIndex);
+      }
+    }
     
     print("Base URL utilisée pour les images: $cleanBaseUrl");
     print("Images data brut: $imagesData");
@@ -673,60 +842,121 @@ class ResidenceService {
         String imageUrl = '';
         print("Traitement de l'image #$index: $img (type: ${img.runtimeType})");
         
+        // Extraction de l'URL selon différents formats possibles
         if (img is String) {
           imageUrl = img;
         } else if (img is Map) {
-          if (img['url'] != null) {
-            imageUrl = img['url'].toString();
-          } else if (img['path'] != null) {
-            imageUrl = img['path'].toString();
+          // Chercher des clés courantes pour les URLs d'images
+          final possibleKeys = ['url', 'path', 'src', 'source', 'file', 'image'];
+          for (final key in possibleKeys) {
+            if (img[key] != null) {
+              imageUrl = img[key].toString();
+              print("✅ URL trouvée via la clé '$key': $imageUrl");
+              break;
+            }
           }
         }
         
         // Ajouter le domaine si c'est un chemin relatif
         if (imageUrl.isNotEmpty) {
-          if (!imageUrl.startsWith('http')) {
-            // Extraire le nom du fichier pour différents cas de chemins relatifs
-            if (imageUrl.startsWith('/uploads/')) {
-              // Ajouter '/residences/' si ce n'est pas déjà présent
-              if (!imageUrl.startsWith('/uploads/residences/')) {
-                imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
-              }
-              imageUrl = '$cleanBaseUrl$imageUrl';
-            } else if (imageUrl.startsWith('uploads/')) {
-              // Ajouter '/residences/' si ce n'est pas déjà présent
-              if (!imageUrl.startsWith('uploads/residences/')) {
+          if (imageUrl.startsWith('http')) {
+            // C'est déjà une URL complète, vérifier si elle contient '/uploads/' mais pas '/residences/'
+            if (imageUrl.contains('/uploads/') && !imageUrl.contains('/uploads/residences/')) {
+              imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
+            }
+          } else {
+            // C'est un chemin relatif, normaliser et construire l'URL complète
+            if (imageUrl.startsWith('/')) {
+              imageUrl = imageUrl.substring(1);
+            }
+            
+            // Vérifier différents patterns de chemins et normaliser
+            if (imageUrl.startsWith('uploads/')) {
+              if (!imageUrl.contains('residences/')) {
                 imageUrl = imageUrl.replaceAll('uploads/', 'uploads/residences/');
               }
-              imageUrl = '$cleanBaseUrl/$imageUrl';
-            } else if (imageUrl.startsWith('/')) {
-              imageUrl = '$cleanBaseUrl/uploads/residences$imageUrl';
-            } else {
-              imageUrl = '$cleanBaseUrl/uploads/residences/$imageUrl';
+            } else if (!imageUrl.contains('uploads/')) {
+              imageUrl = 'uploads/residences/$imageUrl';
             }
-          } else if (imageUrl.startsWith('http') && imageUrl.contains('/uploads/') && !imageUrl.contains('/uploads/residences/')) {
-            // Si c'est une URL complète, ajouter /residences/ si nécessaire
-            imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
+            
+            // Construire l'URL complète
+            imageUrl = '$cleanBaseUrl/$imageUrl';
           }
-          print("✅ URL d'image #$index extraite et formatée: $imageUrl");
-          imageUrls.add(imageUrl);
+          
+          // Vérifier si l'URL est valide
+          final hasValidExtension = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].any(
+            (ext) => imageUrl.toLowerCase().endsWith(ext)
+          );
+          
+          if (hasValidExtension || imageUrl.contains('cloudinary.com') || imageUrl.contains('placeholder.com')) {
+            print("✅ URL d'image #$index formatée et valide: $imageUrl");
+            imageUrls.add(imageUrl);
+          } else {
+            print("⚠️ URL d'image #$index a un format inhabituel: $imageUrl");
+            // Ajouter quand même, car c'est peut-être une URL valide sans extension
+            imageUrls.add(imageUrl);
+          }
         } else {
           print("❌ URL vide pour l'image #$index");
         }
         index++;
       }
+    } else if (imagesData is Map) {
+      // Si imagesData est un Map, essayer d'extraire les valeurs
+      print("🔍 Images data est un Map, extraction des valeurs");
+      imagesData.forEach((key, value) {
+        if (value is String) {
+          final imageUrl = _formatImageUrl(value, cleanBaseUrl);
+          if (imageUrl.isNotEmpty) {
+            imageUrls.add(imageUrl);
+          }
+        }
+      });
     } else {
-      print("❌ Images data n'est pas une liste: ${imagesData.runtimeType}");
+      print("❌ Images data n'est pas une liste ni un map: ${imagesData.runtimeType}");
     }
     
     // Si aucune image trouvée, ajouter une image par défaut
     if (imageUrls.isEmpty) {
       print("❌ Aucune image trouvée, utilisation de l'image par défaut");
-      imageUrls.add('https://via.placeholder.com/300x200?text=No+Image');
+      // Utiliser une image en ligne sécurisée pour éviter les problèmes d'assets manquants
+      imageUrls.add('https://via.placeholder.com/300x200?text=ChapeChape+Residence');
+      
+      // Déboguer pourquoi aucune image n'a été trouvée
+      if (imagesData != null) {
+        print("🔍 Débogage des données d'images originales: $imagesData");
+        if (imagesData is List && imagesData.isNotEmpty) {
+          print("🔍 Premier élément des images: ${imagesData.first}");
+        }
+      }
     }
     
-    print("Images finales extraites: $imageUrls");
+    print("Images finales extraites (${imageUrls.length}): ${imageUrls.join('\n')}");
     return imageUrls;
+  }
+  
+  // Méthode auxiliaire pour formater une URL d'image
+  String _formatImageUrl(String url, String baseUrl) {
+    if (url.isEmpty) return '';
+    
+    if (url.startsWith('http')) {
+      return url;
+    }
+    
+    // Normaliser le chemin relatif
+    if (url.startsWith('/')) {
+      url = url.substring(1);
+    }
+    
+    // Ajouter le préfixe 'uploads/residences/' si nécessaire
+    if (!url.contains('uploads/')) {
+      url = 'uploads/residences/$url';
+    } else if (!url.contains('residences/')) {
+      url = url.replaceAll('uploads/', 'uploads/residences/');
+    }
+    
+    // Construire l'URL complète
+    return '$baseUrl/$url';
   }
 
   // Gérer les erreurs Dio

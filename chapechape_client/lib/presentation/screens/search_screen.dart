@@ -219,7 +219,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResidenceCard(Residence residence) {
-    final imageUrl = residence.imageUrl ?? 'assets/images/placeholder.jpg';
+    final imageUrl = residence.imageUrl ?? 'https://via.placeholder.com/300x200?text=ChapeChape+Residence';
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -243,9 +243,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return Image.asset(
-                    'assets/images/placeholder.jpg',
+                  return Image.network(
+                    'https://via.placeholder.com/300x200?text=ChapeChape+Residence',
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: Center(
+                          child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey[600]),
+                        ),
+                      );
+                    },
                   );
                 },
               ),

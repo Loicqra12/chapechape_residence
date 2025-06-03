@@ -53,19 +53,21 @@ class ResidenceTypeSelectorWidget extends StatefulWidget {
       _ResidenceTypeSelectorWidgetState();
 }
 
-class _ResidenceTypeSelectorWidgetState extends State<ResidenceTypeSelectorWidget> {
+class _ResidenceTypeSelectorWidgetState
+    extends State<ResidenceTypeSelectorWidget> {
   ResidenceType? _selectedType;
   String? _selectedCategoryId;
   List<ResidenceType> _filteredTypes = [];
-  
+
   @override
   void initState() {
     super.initState();
     _selectedType = widget.initialType;
-    _selectedCategoryId = widget.initialCategoryId ?? widget.categories.first.id;
+    _selectedCategoryId =
+        widget.initialCategoryId ?? widget.categories.first.id;
     _updateFilteredTypes();
   }
-  
+
   void _updateFilteredTypes() {
     if (_selectedCategoryId != null) {
       // Filtrer les types selon la catégorie sélectionnée
@@ -91,13 +93,13 @@ class _ResidenceTypeSelectorWidgetState extends State<ResidenceTypeSelectorWidge
       children: [
         // Section des catégories (optionnelle)
         if (widget.showCategories) _buildCategoriesSelector(),
-        
+
         // Section des types
         _buildTypesSelector(),
       ],
     );
   }
-  
+
   Widget _buildCategoriesSelector() {
     return Container(
       height: 80,
@@ -171,10 +173,10 @@ class _ResidenceTypeSelectorWidgetState extends State<ResidenceTypeSelectorWidge
       ),
     );
   }
-  
+
   Widget _buildTypesSelector() {
     return Container(
-      height: 120,
+      height: 130,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -229,6 +231,8 @@ class _ResidenceTypeSelectorWidgetState extends State<ResidenceTypeSelectorWidge
                     Text(
                       type.name,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
                         fontSize: 12,
@@ -292,7 +296,7 @@ final List<ResidenceCategory> availableResidenceCategories = [
       ),
     ],
   ),
-  
+
   // Catégorie 2: Hôtels & Hébergements classiques
   ResidenceCategory(
     id: 'hotels_hebergements',
@@ -337,7 +341,7 @@ final List<ResidenceCategory> availableResidenceCategories = [
       ),
     ],
   ),
-  
+
   // Catégorie 3: Hébergements insolites & nature
   ResidenceCategory(
     id: 'hebergements_insolites',
@@ -376,7 +380,7 @@ final List<ResidenceCategory> availableResidenceCategories = [
       ),
     ],
   ),
-  
+
   // Catégorie 4: Colocation & résidences partagées
   ResidenceCategory(
     id: 'colocation_partage',
@@ -415,7 +419,7 @@ final List<ResidenceCategory> availableResidenceCategories = [
       ),
     ],
   ),
-  
+
   // Catégorie 5: Résidences longue durée
   ResidenceCategory(
     id: 'residences_longue_duree',
@@ -448,7 +452,7 @@ final List<ResidenceCategory> availableResidenceCategories = [
       ),
     ],
   ),
-  
+
   // Catégorie 6: Hébergements économiques et populaires
   ResidenceCategory(
     id: 'hebergements_economiques',
@@ -478,5 +482,5 @@ final List<ResidenceCategory> availableResidenceCategories = [
 ];
 
 // Pour la compatibilité avec le code existant
-final List<ResidenceType> availableResidenceTypes = 
+final List<ResidenceType> availableResidenceTypes =
     availableResidenceCategories.expand((category) => category.types).toList();

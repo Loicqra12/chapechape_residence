@@ -6,22 +6,25 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:logging/logging.dart';
-import 'package:mime/mime.dart';
 import 'package:path/path.dart' as path;
 import '../../config/api_config.dart';
+import '../../config/feature_flags.dart';
 import '../../models/residence/residence.dart';
 import '../../models/residence/residence_image.dart';
 import '../../models/residence/nearby_place.dart';
 import '../../models/residence/faq.dart';
 import '../../exceptions/api_exception.dart';
 import '../media/media_service.dart';
+import '../media/cloudinary_service.dart';
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:chapechape_partner/core/services/event_bus/residence_event_bus.dart';
 
 class ResidenceService {
   final String baseUrl;
   final http.Client client;
   final FlutterSecureStorage storage;
+  final ResidenceEventBus _eventBus = ResidenceEventBus();
   late Dio _dio;
 
   ResidenceService({
@@ -286,6 +289,16 @@ class ResidenceService {
     }
   }
 
+  // Liste complète des équipements connus pour chaque résidence
+  // Cette map persiste en mémoire tant que l'application est ouverte
+  final Map<String, List<dynamic>> _residenceAmenities = {};
+  
+  // Méthode pour conserver les équipements d'une résidence
+  void saveResidenceAmenities(String residenceId, List<dynamic> amenities) {
+    _residenceAmenities[residenceId] = List.from(amenities);
+    print('✅ Équipements sauvegardés pour la résidence $residenceId: $amenities');
+  }
+  
   Future<Residence> getResidenceById(String id) async {
     try {
       final headers = await _getAuthHeaders();
@@ -308,6 +321,31 @@ class ResidenceService {
           if (data is Map<String, dynamic> && data.containsKey('data')) {
             var residenceData = data['data'];
             if (residenceData is Map<String, dynamic>) {
+              // Vérifier si nous avons des équipements sauvegardés pour cette résidence
+              if (_residenceAmenities.containsKey(id) && 
+                  (_residenceAmenities[id]?.isNotEmpty ?? false) &&
+                  residenceData.containsKey('amenities')) {
+                
+                // Récupérer les équipements actuels du backend
+                final backendAmenities = residenceData['amenities'];
+                // Récupérer nos équipements sauvegardés
+                final savedAmenities = _residenceAmenities[id];
+                
+                // Si le backend renvoie moins d'équipements que ce que nous avons sauvegardé
+                if (backendAmenities is List && 
+                    savedAmenities != null && 
+                    backendAmenities.length < savedAmenities.length) {
+                  
+                  print('❗ Incohérence détectée dans les équipements de la résidence $id');
+                  print('ℹ️ Backend: $backendAmenities');
+                  print('ℹ️ Sauvegardés: $savedAmenities');
+                  
+                  // Remplacer les équipements du backend par nos équipements sauvegardés
+                  residenceData['amenities'] = savedAmenities;
+                  print('✅ Équipements restaurés pour la résidence $id');
+                }
+              }
+              
               return _adaptBackendResidenceToFrontend(residenceData);
             }
           }
@@ -675,8 +713,14 @@ class ResidenceService {
       print('🏠 Création résidence - Données JSON: $jsonBody');
       
       // Appel API pour créer la résidence
+      // Suivre la même convention que getResidences() qui fonctionne
+      // C'est-à-dire inclure explicitement /api/ même si baseUrl contient déjà ce préfixe
+      final fullUrl = '$baseUrl/api/residences';
+      
+      print('🏠 Création résidence - URL complète: $fullUrl');
+      
       final response = await client.post(
-          Uri.parse('$baseUrl/residences'),
+        Uri.parse(fullUrl),
         headers: headers,
         body: jsonBody,
       );
@@ -710,7 +754,13 @@ class ResidenceService {
       
       // Étape 3: Récupérer les détails complets de la résidence
       print('🏠 Création résidence - Étape 3: Récupération des détails de la résidence');
-      return await getResidenceById(residenceId);
+      final residence = await getResidenceById(residenceId);
+      
+      // Étape 4: Notifier les autres parties de l'application via le bus d'événements
+      print('🏠 Création résidence - Étape 4: Notification des autres composants');
+      _eventBus.emit(ResidenceEventType.created);
+      
+      return residence;
           } catch (e) {
       print('❌ Création résidence - Erreur: $e');
             if (e is ApiException) rethrow;
@@ -846,7 +896,55 @@ class ResidenceService {
       }
       
       final responseData = jsonDecode(response.body);
-      final residence = Residence.fromJson(responseData['data']);
+      
+      // Transformer et adapter la réponse API pour éviter les erreurs de conversion de type
+      final Map<String, dynamic> residenceData = responseData['data'];
+      
+      // Préserver les équipements originaux car le backend peut ne pas tous les renvoyer
+      try {
+        // Vérifier d'abord si les amenities originales sont disponibles dans les données adaptées
+        if (adaptedData.containsKey('amenities')) {
+          // Utiliser les amenities originales des données adaptées
+          final originalAmenities = adaptedData['amenities'];
+          
+          // Remplacer les équipements renvoyés par ceux envoyés initialement
+          residenceData['amenities'] = originalAmenities;
+          
+          // Sauvegarder les équipements pour les futures requêtes getResidenceById
+          saveResidenceAmenities(id, originalAmenities);
+          
+          print('✅ Préservation des équipements originaux: $originalAmenities');
+        }
+      } catch (e) {
+        print('⚠️ Erreur lors de la préservation des équipements: $e');
+      }
+      
+      // Extraire et simplifier les tarifs horaires et journaliers si présents
+      if (residenceData.containsKey('hourlyRates') && residenceData['hourlyRates'] is Map) {
+        try {
+          final hourlyRates = residenceData['hourlyRates'] as Map<String, dynamic>;
+          residenceData['hourlyRate'] = hourlyRates['oneHour'] ?? 0;
+        } catch (e) {
+          print('Erreur lors de la conversion des tarifs horaires: $e');
+          residenceData['hourlyRate'] = 0;
+        }
+      }
+      
+      if (residenceData.containsKey('dailyRates') && residenceData['dailyRates'] is Map) {
+        try {
+          final dailyRates = residenceData['dailyRates'] as Map<String, dynamic>;
+          residenceData['halfDayRate'] = dailyRates['halfDay'] ?? 0;
+          residenceData['fullDayRate'] = dailyRates['fullDay'] ?? 0;
+          residenceData['weekendRate'] = dailyRates['weekend'] ?? 0;
+        } catch (e) {
+          print('Erreur lors de la conversion des tarifs journaliers: $e');
+          residenceData['halfDayRate'] = 0;
+          residenceData['fullDayRate'] = 0;
+          residenceData['weekendRate'] = 0;
+        }
+      }
+      
+      final residence = Residence.fromJson(residenceData);
       return residence;
     } catch (e) {
       print('Exception complète lors de la mise à jour de la résidence: $e');
@@ -861,11 +959,23 @@ class ResidenceService {
   }
 
   // Méthode améliorée avec retry pour l'upload d'images
-  Future<void> uploadResidenceImages(String residenceId, List<ResidenceImage> images, {int maxRetries = 3}) async {
+  /// Upload des images de résidence avec possibilité d'utiliser Cloudinary
+  /// 
+  /// Si [useCloudinary] est true, les images sont d'abord uploadées vers Cloudinary
+  /// puis les URLs sont envoyées au backend.
+  /// Sinon, les images sont directement envoyées au backend via multipart.
+  Future<void> uploadResidenceImages(
+    String residenceId, 
+    List<ResidenceImage> images, 
+    {int maxRetries = 3, bool? useCloudinary}
+  ) async {
+    // Utiliser la valeur du paramètre ou celle du feature flag
+    final useCloudinaryFlag = useCloudinary ?? FeatureFlags.useCloudinary;
     try {
       final logger = Logger('UploadImages');
       logger.info("\n===== DÉBUT DE L'UPLOAD DES IMAGES =====");
       logger.info("Téléchargement de ${images.length} images pour la résidence $residenceId");
+      logger.info("Mode: ${useCloudinaryFlag ? 'Cloudinary' : 'Upload direct'}");
       
       // Si aucune image à télécharger, sortir immédiatement
       if (images.isEmpty) {
@@ -884,6 +994,13 @@ class ResidenceService {
         return;
       }
       
+      // Si Cloudinary est activé, utiliser cette méthode
+      if (useCloudinaryFlag) {
+        await _uploadImagesWithCloudinary(residenceId, optimizedImages, logger);
+        return;
+      }
+      
+      // Sinon, continuer avec la méthode standard
       final token = await storage.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
@@ -1014,6 +1131,102 @@ class ResidenceService {
       Logger('UploadImages').info("===== FIN DE L'UPLOAD DES IMAGES =====\n");
     }
   }
+  
+  /// Upload des images via Cloudinary puis envoi des URLs au backend
+  /// 
+  /// Cette méthode gère le processus complet:
+  /// 1. Upload des images vers Cloudinary
+  /// 2. Collecte des URLs générées
+  /// 3. Envoi des URLs au backend pour mise à jour de la résidence
+  Future<void> _uploadImagesWithCloudinary(
+    String residenceId,
+    List<ResidenceImage> optimizedImages,
+    Logger logger
+  ) async {
+    try {
+      logger.info("🌥️ Utilisation de Cloudinary pour l'upload des images");
+      
+      // Initialiser Cloudinary
+      final cloudinaryService = CloudinaryService();
+      final List<String> cloudinaryUrls = [];
+      
+      // Upload de chaque image vers Cloudinary
+      for (var i = 0; i < optimizedImages.length; i++) {
+        final image = optimizedImages[i];
+        
+        try {
+          // Si c'est déjà une URL externe (comme une URL Cloudinary), la conserver
+          if (image.url != null && image.url!.startsWith('http')) {
+            logger.fine("Image ${i+1}: URL externe conservée: ${image.url}");
+            cloudinaryUrls.add(image.url!);
+            continue;
+          }
+          
+          // Upload vers Cloudinary avec dossier par résidence
+          final url = await cloudinaryService.uploadImage(
+            image,
+            folder: 'chapechape/residences/$residenceId',
+          );
+          
+          cloudinaryUrls.add(url);
+          logger.info("Image ${i+1}: Uploadée vers Cloudinary: $url");
+          
+        } catch (e) {
+          logger.warning("Image ${i+1}: Erreur upload Cloudinary: $e");
+          // Continuer avec les autres images
+        }
+      }
+      
+      if (cloudinaryUrls.isEmpty) {
+        logger.warning("Aucune image n'a pu être uploadée vers Cloudinary");
+        throw ApiException(
+          'Échec de l\'upload des images vers Cloudinary',
+          500,
+          {'error': 'cloudinary_upload_failed'}
+        );
+      }
+      
+      // Envoi des URLs au backend
+      logger.info("Envoi de ${cloudinaryUrls.length} URLs Cloudinary au backend");
+      
+      final token = await storage.read(key: 'token');
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'images': cloudinaryUrls,
+        }),
+      );
+      
+      logger.info("Statut de la réponse: ${response.statusCode}");
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        logger.info("✅ URLs Cloudinary enregistrées avec succès!");
+        return;
+      } else {
+        logger.warning("❌ Échec de l'enregistrement des URLs: ${response.statusCode}");
+        logger.warning("Détail de l'erreur: ${response.body}");
+        throw ApiException(
+          'Erreur lors de l\'enregistrement des URLs Cloudinary: ${response.statusCode}',
+          response.statusCode,
+          {'error': response.body}
+        );
+      }
+    } catch (e) {
+      logger.severe("Exception complète lors de l'upload via Cloudinary: $e");
+      if (e is ApiException) rethrow;
+      
+      throw ApiException(
+        'Échec de l\'upload via Cloudinary: $e',
+        500,
+        {'error': e.toString()}
+      );
+    }
+  }
 
   Future<void> deleteResidence(String id) async {
     try {
@@ -1093,8 +1306,21 @@ class ResidenceService {
       // 1. Essayer d'abord l'endpoint standard
       try {
         final headers = await _getAuthHeaders();
+        // Récupérer l'ID du partenaire actuel
+        final userId = await storage.read(key: 'userId');
+        print("👤 ID du partenaire pour requête: $userId");
+        
+        if (userId == null) {
+          throw ApiException(
+            'ID utilisateur non trouvé. Veuillez vous reconnecter.',
+            401,
+            {'error': 'user_id_not_found'}
+          );
+        }
+        
+        // Construire l'URL avec l'ID du partenaire
         final response = await client.get(
-          Uri.parse('$baseUrl/api/residences/partner'),
+          Uri.parse('$baseUrl/api/residences/partner/$userId'),
           headers: headers,
         );
 
@@ -1127,8 +1353,9 @@ class ResidenceService {
         
         // 2. Essayer l'endpoint alternatif
         final headers = await _getAuthHeaders();
+        // Correction du chemin API - ajout du préfixe /api/
         final response = await client.get(
-          Uri.parse('$baseUrl/partners/stats/residences'),
+          Uri.parse('$baseUrl/api/partners/stats/residences'),
           headers: headers,
         );
 
@@ -1399,6 +1626,10 @@ class ResidenceService {
       // 3. Log pour déboguer
       print("Images dans la résidence mise à jour: ${updatedResidence.images.length}");
       updatedResidence.images.forEach((imgUrl) => print("- Image URL: $imgUrl"));
+      
+      // 4. Notifier les autres parties de l'application via le bus d'événements
+      print("🔔 Notification de mise à jour de la résidence");
+      _eventBus.emit(ResidenceEventType.updated);
       
       print("===== FIN DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
       

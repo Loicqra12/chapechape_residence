@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const upload = require('../middlewares/upload.middleware');
+const { uploadResidenceImages } = require('../config/cloudinary');
 const residenceController = require('../controllers/residence/residence.controller');
 const {
     createResidence,
@@ -11,6 +12,7 @@ const {
     deleteResidence,
     searchResidences,
     uploadImages,
+    deleteImage,
     getAllResidences
 } = residenceController;
 const Residence = require('../models/residence.model');
@@ -94,8 +96,18 @@ router.post('/', createResidence);
 router.put('/:id', updateResidence);
 router.delete('/:id', deleteResidence);
 
-// Route pour l'upload d'images
-router.post('/:id/images', upload.residence.array('images', 5), uploadImages);
+// Routes pour la gestion des images
+// 1. Route traditionnelle avec upload de fichiers physiques
+router.post('/:id/images/local', upload.residence.array('images', 5), uploadImages);
+
+// 2. Route avec upload direct vers Cloudinary (via multer-storage-cloudinary)
+router.post('/:id/images/cloudinary', uploadResidenceImages, uploadImages);
+
+// 3. Route pour recevoir directement des URLs Cloudinary (depuis l'app mobile/web)
+router.post('/:id/images', uploadImages);
+
+// 4. Route pour supprimer une image spécifique
+router.delete('/:id/images/:imageIndex', deleteImage);
 
 // Routes pour les nouvelles fonctionnalités
 router.post('/:id/nearby-places', protect, authorize('partner'), residenceController.addNearbyPlace);

@@ -142,10 +142,42 @@ class Residence {
     
     // Ajouter les propriétés de tarification
     final pricePeriod = json['pricePeriod']?.toString() ?? '';
-    final hourlyRate = (json['hourlyRate'] as num?)?.toDouble() ?? 0.0;
-    final halfDayRate = (json['halfDayRate'] as num?)?.toDouble() ?? 0.0;
-    final fullDayRate = (json['fullDayRate'] as num?)?.toDouble() ?? 0.0;
-    final weekendRate = (json['weekendRate'] as num?)?.toDouble() ?? 0.0;
+    
+    // Gérer les différents formats de tarification
+    double hourlyRate = 0.0;
+    double halfDayRate = 0.0;
+    double fullDayRate = 0.0;
+    double weekendRate = 0.0;
+    
+    // Extraction des tarifs horaires (peut être un nombre simple ou un objet)
+    if (json['hourlyRate'] != null && json['hourlyRate'] is num) {
+      hourlyRate = (json['hourlyRate'] as num).toDouble();
+    } else if (json['hourlyRates'] != null && json['hourlyRates'] is Map) {
+      final hourlyRates = json['hourlyRates'] as Map<String, dynamic>;
+      hourlyRate = (hourlyRates['oneHour'] as num?)?.toDouble() ?? 0.0;
+    }
+    
+    // Extraction des tarifs journaliers (peut être un nombre simple ou un objet)
+    if (json['halfDayRate'] != null && json['halfDayRate'] is num) {
+      halfDayRate = (json['halfDayRate'] as num).toDouble();
+    } else if (json['dailyRates'] != null && json['dailyRates'] is Map) {
+      final dailyRates = json['dailyRates'] as Map<String, dynamic>;
+      halfDayRate = (dailyRates['halfDay'] as num?)?.toDouble() ?? 0.0;
+    }
+    
+    if (json['fullDayRate'] != null && json['fullDayRate'] is num) {
+      fullDayRate = (json['fullDayRate'] as num).toDouble();
+    } else if (json['dailyRates'] != null && json['dailyRates'] is Map) {
+      final dailyRates = json['dailyRates'] as Map<String, dynamic>;
+      fullDayRate = (dailyRates['fullDay'] as num?)?.toDouble() ?? 0.0;
+    }
+    
+    if (json['weekendRate'] != null && json['weekendRate'] is num) {
+      weekendRate = (json['weekendRate'] as num).toDouble();
+    } else if (json['dailyRates'] != null && json['dailyRates'] is Map) {
+      final dailyRates = json['dailyRates'] as Map<String, dynamic>;
+      weekendRate = (dailyRates['weekend'] as num?)?.toDouble() ?? 0.0;
+    }
     
     // Extraire les options
     Map<String, dynamic>? options = json['options'] as Map<String, dynamic>?;
@@ -205,7 +237,7 @@ class Residence {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       bedrooms: json['bedrooms'] as int? ?? 0,
       bathrooms: json['bathrooms'] as int? ?? 0,
-      surface: json['area'] as double? ?? json['surface'] as double? ?? 0.0,
+      surface: (json['area'] as num?)?.toDouble() ?? (json['surface'] as num?)?.toDouble() ?? 0.0,
       hasPool: amenities.contains('pool'),
       hasWifi: amenities.contains('wifi'),
       hasRestaurant: amenities.contains('kitchen'),

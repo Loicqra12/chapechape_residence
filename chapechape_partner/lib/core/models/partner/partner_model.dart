@@ -104,39 +104,59 @@ class PartnerDocument extends Equatable {
   final String id;
   final String type;
   final String documentUrl;
-  final DateTime uploadedAt;
+  final DateTime uploadDate; // Renommé de uploadedAt à uploadDate pour cohérence
+  final DateTime? validUntil; // Date d'expiration du document (nouvelle propriété)
   final String status; // 'pending', 'approved', 'rejected'
+  final String? comment; // Commentaire de l'administrateur (nouvelle propriété)
 
   const PartnerDocument({
     required this.id,
     required this.type,
     required this.documentUrl,
-    required this.uploadedAt,
+    required this.uploadDate,
+    this.validUntil,
     required this.status,
+    this.comment,
   });
 
   factory PartnerDocument.fromJson(Map<String, dynamic> json) {
     return PartnerDocument(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       type: json['type'] ?? '',
       documentUrl: json['documentUrl'] ?? '',
-      uploadedAt: json['uploadedAt'] != null
-          ? DateTime.parse(json['uploadedAt'])
-          : DateTime.now(),
+      uploadDate: json['uploadDate'] != null
+          ? DateTime.parse(json['uploadDate'])
+          : json['uploadedAt'] != null
+              ? DateTime.parse(json['uploadedAt'])
+              : DateTime.now(),
+      validUntil: json['validUntil'] != null
+          ? DateTime.parse(json['validUntil'])
+          : null,
       status: json['status'] ?? 'pending',
+      comment: json['comment'],
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> data = {
       'id': id,
       'type': type,
       'documentUrl': documentUrl,
-      'uploadedAt': uploadedAt.toIso8601String(),
+      'uploadDate': uploadDate.toIso8601String(),
       'status': status,
     };
+    
+    if (validUntil != null) {
+      data['validUntil'] = validUntil!.toIso8601String();
+    }
+    
+    if (comment != null) {
+      data['comment'] = comment;
+    }
+    
+    return data;
   }
 
   @override
-  List<Object?> get props => [id, type, documentUrl, uploadedAt, status];
+  List<Object?> get props => [id, type, documentUrl, uploadDate, validUntil, status, comment];
 }

@@ -3,6 +3,7 @@ const apiError = require('../../utils/apiError');
 const asyncHandler = require('../../middlewares/async');
 const fs = require('fs');
 const path = require('path');
+const { CloudinaryService } = require('../../config/cloudinary');
 
 // @desc    Créer une nouvelle résidence
 // @route   POST /api/residences
@@ -305,17 +306,24 @@ exports.searchResidences = asyncHandler(async (req, res) => {
     res.status(200).json(response);
 });
 
-// @desc    Ajouter des images à une résidence
+// @desc    Ajouter des images à une résidence (supporte les fichiers physiques et les URLs Cloudinary)
 // @route   POST /api/residences/:id/images
 // @access  Private (Partner only)
 exports.uploadImages = asyncHandler(async (req, res) => {
+    console.log('==== UPLOAD IMAGES ====');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Body:', req.body);
+    console.log('Files:', req.files ? req.files.length : 'Aucun');
+    
     const residence = await Residence.findById(req.params.id);
 
     if (!residence) {
         // Supprimer les fichiers uploadés si la résidence n'existe pas
         if (req.files) {
             req.files.forEach(file => {
-                fs.unlinkSync(file.path);
+                if (file.path && fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
             });
         }
         throw new apiError('Résidence non trouvée', 404);
@@ -325,25 +333,131 @@ exports.uploadImages = asyncHandler(async (req, res) => {
         // Supprimer les fichiers uploadés si non autorisé
         if (req.files) {
             req.files.forEach(file => {
-                fs.unlinkSync(file.path);
+                if (file.path && fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
             });
         }
         throw new apiError('Non autorisé à modifier cette résidence', 403);
     }
 
-    if (!req.files) {
-        throw new apiError('Veuillez télécharger des images', 400);
+    // Deux modes de fonctionnement :
+    // 1. Upload de fichiers traditionnels (multipart/form-data)
+    // 2. Envoi d'URLs Cloudinary (application/json)
+    
+    let newImages = [];
+    
+    // Mode 1: Upload de fichiers (multipart/form-data)
+    if (req.files && req.files.length > 0) {
+        console.log(`Traitement de ${req.files.length} fichiers uploadés`);
+        
+        // Si nous utilisons le stockage Cloudinary via multer, les fichiers ont déjà une URL Cloudinary
+        if (req.files[0].path && req.files[0].path.startsWith('http')) {
+            // Images déjà sur Cloudinary via multer-storage-cloudinary
+            newImages = req.files.map(file => file.path);
+            console.log('Images Cloudinary via multer:', newImages);
+        } else {
+            // Stockage local classique
+            newImages = req.files.map(file => `/uploads/residences/${file.filename}`);
+            console.log('Images locales:', newImages);
+        }
+    }
+    // Mode 2: Envoi d'URLs (application/json)
+    else if (req.body.images && Array.isArray(req.body.images)) {
+        console.log(`Traitement de ${req.body.images.length} URLs d'images`);
+        newImages = req.body.images;
+        console.log('URLs reçues:', newImages);
+    }
+    // Aucune image reçue
+    else {
+        throw new apiError('Veuillez fournir des images (fichiers ou URLs)', 400);
+    }
+    
+    if (newImages.length === 0) {
+        throw new apiError('Aucune image valide reçue', 400);
     }
 
-    const images = req.files.map(file => `/uploads/residences/${file.filename}`);
-
-    residence.images = [...residence.images, ...images];
+    // Ajouter les nouvelles images au tableau existant
+    residence.images = [...residence.images, ...newImages];
     await residence.save();
+    
+    console.log(`${newImages.length} images ajoutées à la résidence ${residence._id}`);
+    console.log('Total images dans la résidence:', residence.images.length);
 
     res.status(200).json({
         success: true,
         data: residence.toObject()
     });
+});
+
+// @desc    Supprimer une image d'une résidence
+// @route   DELETE /api/residences/:id/images/:imageIndex
+// @access  Private (Partner only)
+exports.deleteImage = asyncHandler(async (req, res) => {
+    const { id, imageIndex } = req.params;
+    
+    // Validation des données
+    if (isNaN(imageIndex) || parseInt(imageIndex) < 0) {
+        throw new apiError('Index d\'image invalide', 400);
+    }
+    
+    const index = parseInt(imageIndex);
+    
+    // Récupérer la résidence
+    const residence = await Residence.findById(id);
+    if (!residence) {
+        throw new apiError('Résidence non trouvée', 404);
+    }
+    
+    // Vérifier l'autorisation
+    if (residence.partner.toString() !== req.user.id && req.user.role !== 'admin') {
+        throw new apiError('Non autorisé à modifier cette résidence', 403);
+    }
+    
+    // Vérifier que l'index existe
+    if (index >= residence.images.length) {
+        throw new apiError('Image non trouvée à cet index', 404);
+    }
+    
+    // Récupérer l'URL de l'image
+    const imageUrl = residence.images[index];
+    
+    try {
+        // Si c'est une URL Cloudinary, supprimer l'image du cloud
+        if (imageUrl.includes('cloudinary.com')) {
+            console.log(`Suppression de l'image Cloudinary: ${imageUrl}`);
+            const publicId = CloudinaryService.getPublicIdFromUrl(imageUrl);
+            
+            if (publicId) {
+                console.log(`PublicId extrait: ${publicId}`);
+                await CloudinaryService.deleteImage(publicId);
+                console.log('Image supprimée de Cloudinary avec succès');
+            }
+        } 
+        // Si c'est un fichier local, supprimer le fichier du serveur
+        else if (imageUrl.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, '../../../', imageUrl);
+            console.log(`Suppression du fichier local: ${filePath}`);
+            
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                console.log('Fichier local supprimé avec succès');
+            }
+        }
+        
+        // Supprimer l'URL de l'image du tableau
+        residence.images.splice(index, 1);
+        await residence.save();
+        
+        res.status(200).json({
+            success: true,
+            message: 'Image supprimée avec succès',
+            data: residence.images
+        });
+    } catch (error) {
+        console.error('Erreur lors de la suppression de l\'image:', error);
+        throw new apiError(`Erreur lors de la suppression de l'image: ${error.message}`, 500);
+    }
 });
 
 // @desc    Ajouter des points d'intérêt à proximité d'une résidence

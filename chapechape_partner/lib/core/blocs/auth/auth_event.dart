@@ -73,15 +73,19 @@ class UploadProfilePictureRequested extends AuthEvent {
 // Événement de téléchargement de document
 class UploadDocumentRequested extends AuthEvent {
   final String documentType;
-  final dynamic documentFile;
+  final dynamic documentFile; // Pour mobile (File)
+  final dynamic documentBytes; // Pour web (Uint8List)
+  final String? fileName;
 
   const UploadDocumentRequested({
     required this.documentType,
-    required this.documentFile,
-  });
+    this.documentFile,
+    this.documentBytes,
+    this.fileName,
+  }) : assert(documentFile != null || documentBytes != null, 'Soit documentFile soit documentBytes doit être fourni');
 
   @override
-  List<Object?> get props => [documentType, documentFile];
+  List<Object?> get props => [documentType, documentFile, documentBytes, fileName];
 }
 
 // Événement de suppression de compte

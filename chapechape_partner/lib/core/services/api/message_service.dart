@@ -4,6 +4,8 @@ import '../../models/message/conversation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../../config/feature_flags.dart';
+import '../media/cloudinary_service.dart';
 
 class MessageService {
   late final Dio _dio;
@@ -274,9 +276,93 @@ class MessageService {
     }
   }
 
-  /// Upload un fichier pour une conversation
+  /// Upload un fichier pour une conversation avec support Cloudinary
   Future<MessageAttachment> uploadAttachment(String conversationId, String filePath, {String? name}) async {
     try {
+      print('⬆️ Début de l\'upload de pièce jointe pour la conversation $conversationId');
+      print('☁️ Mode Cloudinary: ${FeatureFlags.useCloudinary ? 'Activé' : 'Désactivé'}');
+      
+      // Si Cloudinary est activé, utiliser l'upload direct
+      if (FeatureFlags.useCloudinary) {
+        try {
+          print('☁️ Utilisation de Cloudinary pour l\'upload de pièce jointe');
+          
+          // Initialiser le service Cloudinary
+          final cloudinaryService = CloudinaryService();
+          
+          // Préparer le fichier pour l'upload
+          dynamic fileContent;
+          String fileName = name ?? 'attachment.jpg';
+          
+          if (kIsWeb) {
+            // Pour le web, on utilise les données brutes du fichier
+            print('🖥️ Web: Décodage des données base64');
+            fileContent = base64Decode(filePath.split(',').last);
+            // Essayer de déterminer le type de fichier depuis les données base64
+            if (filePath.startsWith('data:')) {
+              final mimeType = filePath.split(',')[0].split(':')[1].split(';')[0];
+              if (mimeType.isNotEmpty) {
+                final ext = mimeType.split('/').last;
+                fileName = name ?? 'attachment.$ext';
+              }
+            }
+          } else {
+            // Pour mobile/desktop, utiliser le chemin du fichier
+            print('📱 Mobile: Préparation du fichier $filePath');
+            fileContent = filePath; // Le service Cloudinary peut gérer les chemins de fichier
+            fileName = name ?? filePath.split('/').last;
+          }
+          
+          // Upload vers Cloudinary
+          final String cloudinaryUrl = await cloudinaryService.uploadImage(
+            fileContent,
+            folder: 'chapechape/messages/$conversationId',
+          );
+          
+          print('☁️ Fichier uploadé sur Cloudinary: $cloudinaryUrl');
+          
+          // Envoyer l'URL Cloudinary au backend
+          final attachmentResponse = await _dio.post(
+            '/messages/conversations/$conversationId/attachments',
+            data: {
+              'fileUrl': cloudinaryUrl,
+              'fileName': fileName,
+              'fileType': _getFileType(fileName),
+            },
+            options: Options(
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            ),
+          );
+          
+          if (attachmentResponse.statusCode == 201 && attachmentResponse.data['success'] == true) {
+            final attachmentData = attachmentResponse.data['data']['attachments']?[0];
+            if (attachmentData == null) {
+              throw Exception('Aucune pièce jointe dans la réponse');
+            }
+            
+            print('✅ Pièce jointe enregistrée avec succès via Cloudinary');
+            
+            return MessageAttachment(
+              id: attachmentData['_id'] ?? '',
+              url: attachmentData['url'] ?? cloudinaryUrl, // Utiliser l'URL Cloudinary si pas d'URL retournée
+              type: attachmentData['type'] ?? _getFileType(fileName),
+              name: attachmentData['name'] ?? fileName,
+              size: attachmentData['size'] ?? 0,
+            );
+          } else {
+            throw Exception('Erreur lors de l\'enregistrement de la pièce jointe');
+          }
+        } catch (cloudinaryError) {
+          print('☁️❌ Erreur Cloudinary: $cloudinaryError');
+          print('🔄 Retour à la méthode traditionnelle d\'upload');
+          // En cas d'erreur avec Cloudinary, revenir à la méthode traditionnelle
+        }
+      }
+      
+      // Méthode traditionnelle (multipart/form-data)
+      print('💾 Utilisation de la méthode traditionnelle d\'upload');
       FormData formData;
       
       if (kIsWeb) {
@@ -313,6 +399,8 @@ class MessageService {
           throw Exception('Aucune pièce jointe dans la réponse');
         }
         
+        print('✅ Pièce jointe enregistrée avec succès via méthode traditionnelle');
+        
         return MessageAttachment(
           id: attachmentData['_id'] ?? '',
           url: attachmentData['url'] ?? '',
@@ -325,6 +413,35 @@ class MessageService {
     } catch (e) {
       print('Erreur détaillée lors de l\'upload: $e');
       throw Exception('Erreur lors de l\'upload du fichier');
+    }
+  }
+
+  /// Détermine le type de fichier en fonction de l'extension
+  String _getFileType(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'webp':
+        return 'image';
+      case 'pdf':
+        return 'pdf';
+      case 'doc':
+      case 'docx':
+        return 'document';
+      case 'mp4':
+      case 'mov':
+      case 'avi':
+        return 'video';
+      case 'mp3':
+      case 'wav':
+      case 'ogg':
+        return 'audio';
+      default:
+        return 'file';
     }
   }
 

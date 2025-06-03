@@ -102,7 +102,7 @@ class Residence {
   // Propriétés pour compatibilité avec l'ancien code
   String get name => title;
   double get surface => squareMeters;
-  String get imageUrl => images.isNotEmpty ? images.first : 'assets/images/placeholders/placeholder.jpg';
+  String get imageUrl => images.isNotEmpty ? images.first : 'https://via.placeholder.com/300x200?text=ChapeChape+Residence';
   List<String> get imageUrls => images;
   String get status => isAvailable ? 'available' : 'unavailable';
   String get pricePerNight => '${price.toStringAsFixed(0)} FCFA/nuit';
@@ -239,7 +239,7 @@ class Residence {
       shortDescription: json['shortDescription'] as String? ?? '',
       images: json['images'] != null
           ? List<String>.from(json['images'] as List)
-          : ['assets/images/placeholders/placeholder.jpg'],
+          : ['https://via.placeholder.com/300x200?text=ChapeChape+Residence'],
       price: json['price'] != null
           ? double.parse(json['price'].toString())
           : 0.0,

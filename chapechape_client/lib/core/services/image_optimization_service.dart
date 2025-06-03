@@ -7,6 +7,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:chapechape_client/core/services/logger_service.dart';
+import 'package:chapechape_client/core/config/feature_flags.dart';
+import 'package:chapechape_client/core/services/media/cloudinary_service.dart';
 
 /// Classe 
 ///  l'état de la connexion
@@ -191,21 +193,38 @@ class ImageOptimizationService {
   }
   
   /// Récupère une image optimisée avec des paramètres de redimensionnement adaptés à la qualité de connexion
+  /// Supporte les URLs Cloudinary pour une optimisation avancée
   String getOptimizedImageUrl(String originalUrl, {int? width, int? quality}) {
-    // Si l'URL est déjà une URL d'image optimisée, la retourner telle quelle
-    if (originalUrl.contains('?width=') || originalUrl.contains('&quality=')) {
-      return originalUrl;
+    // Vérifier si l'URL est valide
+    if (!isImageUrlValid(originalUrl)) return originalUrl;
+    
+    // Déterminer la qualité en fonction de la connexion
+    final adaptiveQuality = _isSlowConnection 
+      ? 50  // Basse qualité pour les connexions lentes
+      : 85; // Haute qualité pour les connexions rapides
+    
+    final finalQuality = quality ?? adaptiveQuality;
+    
+    // Si Cloudinary est activé et que c'est une URL Cloudinary
+    if (FeatureFlags.useCloudinary && originalUrl.contains('cloudinary.com')) {
+      try {
+        // Utiliser CloudinaryService pour les transformations
+        final cloudinaryService = CloudinaryService();
+        return cloudinaryService.getOptimizedUrl(
+          originalUrl,
+          width: width,
+          quality: finalQuality,
+        );
+      } catch (e) {
+        _logger.error('Erreur lors de l\'optimisation Cloudinary', e);
+        // En cas d'erreur, retourner l'URL originale
+        return originalUrl;
+      }
     }
     
-    // Adapter la qualité et la largeur en fonction de l'état de la connexion
-    int finalWidth = width ?? (_isSlowConnection ? 400 : 600);
-    int finalQuality = quality ?? (_isSlowConnection ? 60 : 80);
-    
-    // Ajouter les paramètres d'optimisation à l'URL
-    final separator = originalUrl.contains('?') ? '&' : '?';
-    final optimizedUrl = '$originalUrl${separator}width=$finalWidth&quality=$finalQuality';
-    
-    return optimizedUrl;
+    // Pour les autres URLs, retourner l'URL originale pour l'instant
+    // car la manipulation d'URL dépend du CDN
+    return originalUrl;
   }
   
   /// Supprime le cache des images
@@ -254,6 +273,7 @@ class ImageOptimizationService {
   }
   
   /// Construit un widget d'image optimisé pour les résidences avec chargement progressif
+  /// Supporte les images Cloudinary pour des optimisations avancées
   Widget buildOptimizedImage({
     required String imageUrl,
     required double width,
@@ -262,50 +282,104 @@ class ImageOptimizationService {
     Widget? placeholder,
     Widget? errorWidget,
   }) {
-    // Déterminer si nous devons utiliser une version basse résolution pour le chargement progressif
-    final shouldUseProgressiveLoading = !_isOffline && imageUrl.length > 0;
-  
-    // Utiliser CachedNetworkImage pour la mise en cache automatique
-    if (shouldUseProgressiveLoading) {
-      return ProgressiveImage(
-        placeholder: NetworkImage(imageUrl + '?width=100&quality=40'), // Thumbnail de très faible qualité
-        thumbnail: NetworkImage(imageUrl + '?width=300&quality=60'), // Version intermédiaire
-        image: CachedNetworkImageProvider(
-          _isSlowConnection 
-              ? imageUrl + '?width=400&quality=60' // Version pour connexion lente
-              : imageUrl,                          // Version complète
-          cacheManager: _cacheManager,
-        ),
+    // Vérifier si l'URL est valide
+    if (!isImageUrlValid(imageUrl)) {
+      return errorWidget ?? Container(
         width: width,
         height: height,
-        fit: fit,
-        fadeOutDuration: const Duration(milliseconds: 300),
-        fadeInDuration: const Duration(milliseconds: 300),
-      );
-    } else {
-      // Fallback sur CachedNetworkImage standard pour le mode hors ligne
-      return CachedNetworkImage(
-        imageUrl: imageUrl,
-        width: width,
-        height: height,
-        fit: fit,
-        placeholder: (context, url) => placeholder ?? 
-            Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-        errorWidget: (context, url, error) => errorWidget ?? 
-            Container(
-              color: Colors.grey[300],
-              child: const Icon(Icons.error_outline, color: Colors.red),
-            ),
-        cacheManager: _cacheManager,
-        fadeInDuration: const Duration(milliseconds: 200),
-        fadeOutDuration: const Duration(milliseconds: 200),
+        color: Colors.grey[200],
+        child: const Icon(Icons.broken_image, color: Colors.grey),
       );
     }
+    
+    // Détecter si c'est une URL Cloudinary
+    final bool isCloudinaryUrl = imageUrl.contains('cloudinary.com');
+    
+    // Placeholder par défaut si non fourni
+    final defaultPlaceholder = Container(
+      width: width,
+      height: height,
+      color: Colors.grey[300],
+      child: const Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+    
+    // Widget d'erreur par défaut si non fourni
+    final defaultErrorWidget = Container(
+      width: width,
+      height: height,
+      color: Colors.grey[200],
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: Colors.grey),
+          SizedBox(height: 4),
+          Text(
+            'Image indisponible',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+    
+    // Si c'est une URL Cloudinary et que le feature flag est activé,
+    // utiliser une stratégie avancée de chargement progressif
+    if (FeatureFlags.useCloudinary && isCloudinaryUrl) {
+      final CloudinaryService cloudinaryService = CloudinaryService();
+      
+      // URL optimisée complète avec Cloudinary
+      final optimizedUrl = cloudinaryService.getOptimizedUrl(
+        imageUrl,
+        width: width.toInt(),
+        quality: _isSlowConnection ? 60 : 85,
+      );
+      
+      // URL basse qualité pour le chargement ultra-rapide
+      final lowQualityUrl = cloudinaryService.getOptimizedUrl(
+        imageUrl,
+        width: (width / 4).toInt(), // Très basse résolution
+        quality: 20, // Très basse qualité
+      );
+      
+      // Utiliser CachedNetworkImage avec une stratégie de placeholder progressif
+      return CachedNetworkImage(
+        imageUrl: optimizedUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        placeholder: (context, url) {
+          if (placeholder != null) return placeholder;
+          
+          // Utiliser une image basse qualité comme placeholder
+          return CachedNetworkImage(
+            imageUrl: lowQualityUrl,
+            width: width,
+            height: height,
+            fit: fit,
+            placeholder: (_, __) => defaultPlaceholder,
+            errorWidget: (_, __, ___) => defaultPlaceholder,
+          );
+        },
+        errorWidget: (context, url, error) => errorWidget ?? defaultErrorWidget,
+        memCacheWidth: (width * 1.2).toInt(),
+        fadeInDuration: const Duration(milliseconds: 300),
+      );
+    }
+    
+    // Pour les images non-Cloudinary, utiliser l'approche standard
+    return CachedNetworkImage(
+      imageUrl: getOptimizedImageUrl(imageUrl, width: width.toInt()),
+      width: width,
+      height: height,
+      fit: fit,
+      placeholder: (context, url) => placeholder ?? defaultPlaceholder,
+      errorWidget: (context, url, error) => errorWidget ?? defaultErrorWidget,
+      memCacheWidth: (width * 1.2).toInt(), // Cache légèrement plus grand pour les zooms
+      fadeInDuration: const Duration(milliseconds: 300),
+      cacheManager: _cacheManager,
+    );
   }
   
   /// Détermine si une URL d'image est valide (vérification simple sans appel réseau)

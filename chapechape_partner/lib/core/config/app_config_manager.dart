@@ -243,10 +243,49 @@ class AppConfigManager {
     }
   }
   
+  /// Liste des patterns d'images de résidences problématiques connus
+  static final List<String> _knownProblematicResidenceImagePatterns = [
+    // Ajouter ici les patterns d'images problématiques pour les résidences
+    'residences-', // Pattern générique pour les anciennes images
+  ];
+  
   /// Construit une URL d'image de résidence complète
   static String getResidenceImageUrl(String path) {
+    // Si l'URL est vide ou invalide, retourner une chaîne vide
+    if (path.isEmpty || 
+        path.contains('placeholder.com') || 
+        path.contains('undefined') || 
+        path.contains('null')) {
+      debugPrint('URL d\'image de résidence problématique détectée: $path - Elle sera ignorée');
+      return '';
+    }
+    
+    // Vérifier si l'image fait partie des images problématiques connues
+    for (final problematicPattern in _knownProblematicResidenceImagePatterns) {
+      if (path.contains(problematicPattern)) {
+        debugPrint('Image de résidence problématique connue détectée: $path - Elle sera ignorée');
+        return '';
+      }
+    }
+    
+    // Vérifier les URLs problematiques communes aux profils
+    for (final problematicPattern in _knownProblematicImagePatterns) {
+      if (path.contains(problematicPattern)) {
+        debugPrint('Image problématique connue détectée dans résidence: $path - Elle sera ignorée');
+        return '';
+      }
+    }
+    
+    // Vérifier si c'est une URL Cloudinary
+    if (path.contains('cloudinary.com') || path.contains('res.cloudinary.com')) {
+      debugPrint('URL Cloudinary de résidence détectée: $path');
+      return path;
+    }
+    
+    // Déjà une URL complète
     if (path.startsWith('http')) {
-      return path; // Déjà une URL complète
+      debugPrint('URL d\'image de résidence déjà complète: $path');
+      return path;
     }
     
     final baseUrl = apiBaseUrl;
@@ -266,12 +305,40 @@ class AppConfigManager {
     }
   }
   
+  /// Liste des patterns d'images problématiques connus
+  static final List<String> _knownProblematicImagePatterns = [
+    'images-1745027999174-175590833.jpg',
+    'images-1745120501449-279771060.jpg',
+    'images-1745118259981-271943468.jpg',
+    'images-1745119349926-381849983.jpg',
+    'images-1745119349926-381849983.jpg',
+    'images-1745118259981-271943468.jpg',
+    'images-1745120501449-279771060.jpg'
+  ];
+  
   /// Construit une URL d'image de profil complète
   static String getProfileImageUrl(String path) {
     // Si l'URL est vide ou invalide, retourner une chaîne vide
-    if (path.isEmpty || path.contains('placeholder.com') || path.contains('undefined')) {
+    if (path.isEmpty || 
+        path.contains('placeholder.com') || 
+        path.contains('undefined') || 
+        path.contains('null')) {
       debugPrint('URL d\'image problématique détectée: $path - Elle sera ignorée');
       return '';
+    }
+    
+    // Vérifier si l'image fait partie des images problématiques connues
+    for (final problematicPattern in _knownProblematicImagePatterns) {
+      if (path.contains(problematicPattern)) {
+        debugPrint('Image problématique connue détectée: $path - Elle sera ignorée');
+        return '';
+      }
+    }
+    
+    // Vérifier si c'est une URL Cloudinary
+    if (path.contains('cloudinary.com') || path.contains('res.cloudinary.com')) {
+      debugPrint('URL Cloudinary détectée: $path');
+      return path;
     }
     
     // Déjà une URL complète
@@ -325,6 +392,16 @@ class AppConfigManager {
   /// Vérifie si le serveur est accessible
   static Future<bool> isServerReachable() async {
     return await _ipDetectionService?.isServerReachable() ?? false;
+  }
+  
+  /// Retourne la liste des patterns d'images problématiques
+  static List<String> getProblematicImagePatterns() {
+    return List.from(_knownProblematicImagePatterns);
+  }
+  
+  /// Retourne la liste des patterns d'images de résidences problématiques
+  static List<String> getProblematicResidenceImagePatterns() {
+    return List.from(_knownProblematicResidenceImagePatterns);
   }
   
   /// Tente de détecter automatiquement l'IP du serveur

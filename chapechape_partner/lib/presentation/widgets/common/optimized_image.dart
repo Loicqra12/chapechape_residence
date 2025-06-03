@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/rendering.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../core/services/media/media_service.dart';
+import '../../../core/services/media/cloudinary_service.dart';
+import '../../../core/config/feature_flags.dart';
 
 /// Widget optimisé pour le chargement d'images avec cache
 class OptimizedImage extends StatelessWidget {
@@ -14,6 +17,12 @@ class OptimizedImage extends StatelessWidget {
   final Duration cacheDuration;
   final BorderRadius? borderRadius;
   final Color? backgroundColor;
+  
+  /// Qualité de l'image (1-100), uniquement utilisé avec Cloudinary
+  final int quality;
+  
+  /// Indique si l'image doit être optimisée pour les connexions lentes
+  final bool optimizeForLowBandwidth;
   
   /// Widget pour l'affichage optimisé d'images avec cache et gestion d'erreurs
   /// 
@@ -37,6 +46,8 @@ class OptimizedImage extends StatelessWidget {
     this.cacheDuration = const Duration(days: 30),
     this.borderRadius,
     this.backgroundColor,
+    this.quality = 80,
+    this.optimizeForLowBandwidth = false,
   }) : super(key: key);
   
   /// Précharge une image pour un affichage instantané
@@ -57,53 +68,94 @@ class OptimizedImage extends StatelessWidget {
     }
   }
 
+  /// Déterminer si nous sommes sur une connexion lente/économe en données
+  Future<bool> _isLowBandwidthConnection() async {
+    if (!FeatureFlags.adaptiveImageQuality) return false;
+    if (optimizeForLowBandwidth) return true;
+    
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      return connectivityResult == ConnectivityResult.mobile && FeatureFlags.dataSavingMode;
+    } catch (e) {
+      debugPrint('Erreur détection connectivité: $e');
+      return false;
+    }
+  }
+  
+  /// Optimise l'URL de l'image selon les paramètres et la connectivité
+  Future<String> _getOptimizedUrl(String url) async {
+    // Si Cloudinary n'est pas activé, retourner l'URL avec un cache buster
+    if (!FeatureFlags.useCloudinary || !url.contains('cloudinary.com')) {
+      return url.contains('?') 
+        ? '$url&cache=${DateTime.now().millisecondsSinceEpoch}' 
+        : '$url?cache=${DateTime.now().millisecondsSinceEpoch}';
+    }
+    
+    // Déterminer si nous sommes sur une connexion lente
+    final isLowBandwidth = await _isLowBandwidthConnection();
+    
+    // Utiliser CloudinaryService pour optimiser l'URL
+    final cloudinaryService = CloudinaryService();
+    return cloudinaryService.getOptimizedUrl(
+      url,
+      width: width?.toInt(),
+      height: height?.toInt(),
+      quality: isLowBandwidth ? 40 : quality, // Réduire la qualité si connexion lente
+      isLowBandwidth: isLowBandwidth,
+      progressive: true, // Toujours utiliser le chargement progressif
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Debug: afficher l'URL
-    print('OptimizedImage: URL reçue = $imageUrl');
+    debugPrint('OptimizedImage: URL reçue = $imageUrl');
     
     if (imageUrl.isEmpty) {
-      print('OptimizedImage: URL vide, affichage de l\'image par défaut');
+      debugPrint('OptimizedImage: URL vide, affichage de l\'image par défaut');
       return _buildEmptyImage();
     }
     
-    // Ajouter un paramètre aléatoire à l'URL pour éviter le cache
-    final String urlWithCacheBuster = imageUrl.contains('?') 
-        ? '$imageUrl&cache=${DateTime.now().millisecondsSinceEpoch}' 
-        : '$imageUrl?cache=${DateTime.now().millisecondsSinceEpoch}';
-    
-    print('OptimizedImage: URL modifiée avec cache buster = $urlWithCacheBuster');
-    
-    return ClipRRect(
-      borderRadius: borderRadius ?? BorderRadius.zero,
-      child: CachedNetworkImage(
-        imageUrl: urlWithCacheBuster,
-        width: width,
-        height: height,
-        fit: fit,
-        fadeInDuration: const Duration(milliseconds: 300),
-        fadeOutDuration: const Duration(milliseconds: 300),
-        placeholderFadeInDuration: const Duration(milliseconds: 300),
-        memCacheWidth: width?.toInt(),
-        memCacheHeight: height?.toInt(),
-        // Désactiver complètement le cache
-        maxHeightDiskCache: 0,
-        maxWidthDiskCache: 0,
-        // Forcer un rechargement en désactivant le cache HTTP
-        cacheManager: null,
-        useOldImageOnUrlChange: false,
-        placeholder: (context, url) => _buildLoadingWidget(),
-        errorWidget: (context, url, error) {
-          print('OptimizedImage: ERREUR chargement de $url - Erreur: $error');
-          return _buildErrorWidget();
-        },
-        httpHeaders: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'If-Modified-Since': DateTime.now().toUtc().toString(),
-        },
-      ),
+    return FutureBuilder<String>(
+      future: _getOptimizedUrl(imageUrl),
+      builder: (context, snapshot) {
+        final String urlToUse = snapshot.data ?? imageUrl;
+        
+        debugPrint('OptimizedImage: URL optimisée = $urlToUse');
+        
+        return ClipRRect(
+          borderRadius: borderRadius ?? BorderRadius.zero,
+          child: CachedNetworkImage(
+            imageUrl: urlToUse,
+            width: width,
+            height: height,
+            fit: fit,
+            fadeInDuration: const Duration(milliseconds: 300),
+            fadeOutDuration: const Duration(milliseconds: 300),
+            placeholderFadeInDuration: const Duration(milliseconds: 300),
+            memCacheWidth: width?.toInt(),
+            memCacheHeight: height?.toInt(),
+            // Utiliser le cache disque selon les feature flags
+            maxHeightDiskCache: FeatureFlags.aggressiveImageCaching ? 2048 : 0,
+            maxWidthDiskCache: FeatureFlags.aggressiveImageCaching ? 2048 : 0,
+            // Cache manager
+            cacheManager: FeatureFlags.aggressiveImageCaching ? null : null,
+            useOldImageOnUrlChange: false,
+            placeholder: (context, url) => _buildLoadingWidget(),
+            errorWidget: (context, url, error) {
+              debugPrint('OptimizedImage: ERREUR chargement de $url - Erreur: $error');
+              return _buildErrorWidget();
+            },
+            // Garder les en-têtes de cache seulement si nous n'utilisons pas Cloudinary
+            httpHeaders: FeatureFlags.useCloudinary ? {} : {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+              'If-Modified-Since': DateTime.now().toUtc().toString(),
+            },
+          ),
+        );
+      },
     );
   }
   

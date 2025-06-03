@@ -23,6 +23,43 @@ const ensureUploadDirExists = async () => {
 // Appel de la fonction pour s'assurer que le dossier existe
 ensureUploadDirExists();
 
+// Fonction utilitaire pour déterminer le type de fichier à partir d'une URL
+function _getFileTypeFromUrl(url) {
+    // Extraire l'extension du fichier de l'URL
+    const extension = url.split('?')[0].split('.').pop().toLowerCase();
+    
+    // Mapping des extensions vers les types de fichiers
+    const typeMap = {
+        'jpg': 'image',
+        'jpeg': 'image',
+        'png': 'image',
+        'gif': 'image',
+        'webp': 'image',
+        'pdf': 'pdf',
+        'doc': 'document',
+        'docx': 'document',
+        'mp4': 'video',
+        'mov': 'video',
+        'avi': 'video',
+        'mp3': 'audio',
+        'wav': 'audio',
+        'ogg': 'audio'
+    };
+    
+    // Si l'URL contient des paramètres spécifiques de Cloudinary, les analyser
+    if (url.includes('cloudinary.com')) {
+        if (url.includes('/image/')) return 'image';
+        if (url.includes('/video/')) return 'video';
+        if (url.includes('/raw/')) {
+            // Pour les fichiers bruts, vérifier l'extension
+            return typeMap[extension] || 'file';
+        }
+    }
+    
+    // Retourner le type basé sur l'extension ou 'file' par défaut
+    return typeMap[extension] || 'file';
+}
+
 // Configuration de multer pour le stockage des fichiers
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -224,11 +261,17 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-        return res.status(404).json({ success: false, error: 'Conversation non trouvée' });
+        return res.status(404).json({
+            success: false,
+            error: 'Conversation non trouvée'
+        });
     }
 
-    if (!conversation.participants.some(p => p.toString() === req.user.id)) {
-        return res.status(403).json({ success: false, error: 'Non autorisé à envoyer des fichiers dans cette conversation' });
+    if (!conversation.participants.includes(req.user.id)) {
+        return res.status(403).json({
+            success: false,
+            error: 'Vous n\'êtes pas autorisé à envoyer des fichiers dans cette conversation'
+        });
     }
     
     // Vérifier si la messagerie est activée pour cette réservation
@@ -242,7 +285,52 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
         }
     }
 
-    // Debugging information
+    // Vérifier d'abord si un lien Cloudinary a été fourni directement via JSON
+    if (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
+        try {
+            const { fileUrl, fileName, fileType, fileSize } = req.body;
+            
+            if (fileUrl && typeof fileUrl === 'string' && 
+                (fileUrl.startsWith('http://') || fileUrl.startsWith('https://'))) {
+                
+                console.log('URL Cloudinary détectée:', fileUrl);
+                
+                // Créer un attachement à partir de l'URL
+                const attachment = {
+                    url: fileUrl,
+                    type: fileType || _getFileTypeFromUrl(fileUrl) || 'file',
+                    name: fileName || 'Pièce jointe',
+                    size: fileSize || 0,
+                    source: 'cloudinary'
+                };
+                
+                // Créer le message avec l'attachement
+                const message = await Message.create({
+                    conversation: conversationId,
+                    sender: req.user.id,
+                    content: `A envoyé un ${attachment.type}`,
+                    attachments: [attachment]
+                });
+
+                conversation.lastMessage = message._id;
+                conversation.updatedAt = Date.now();
+                await conversation.save();
+
+                await message.populate('sender', 'name avatar');
+
+                return res.status(201).json({ success: true, data: { message, attachments: [attachment] } });
+            }
+        } catch (error) {
+            console.error('Erreur lors du traitement de l\'URL Cloudinary:', error);
+            return res.status(400).json({
+                success: false,
+                error: 'Format JSON invalide ou URL manquante',
+                details: error.message
+            });
+        }
+    }
+    
+    // Si pas d'URL Cloudinary, continuer avec l'upload traditionnel
     console.log('Headers:', req.headers);
     console.log('Content-Type:', req.headers['content-type']);
 

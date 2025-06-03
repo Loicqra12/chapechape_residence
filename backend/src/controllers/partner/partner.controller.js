@@ -37,8 +37,16 @@ exports.updatePartnerProfile = asyncHandler(async (req, res) => {
             address 
         };
         
-        // Gérer l'upload de photo de profil avec une meilleure gestion d'erreur
-        if (req.files) {
+        // Vérifier si une URL d'image Cloudinary a été fournie directement
+        if (req.body.profileImage && typeof req.body.profileImage === 'string' && 
+            (req.body.profileImage.startsWith('http://') || req.body.profileImage.startsWith('https://'))) {
+            // C'est une URL Cloudinary
+            console.log('URL Cloudinary détectée pour l\'image de profil:', req.body.profileImage);
+            updateData.profileImage = req.body.profileImage;
+            updateData.profileImageSource = 'cloudinary';
+        }
+        // Sinon, gérer l'upload de photo de profil traditionnelle
+        else if (req.files) {
             // Chercher le fichier quel que soit le nom du champ
             let profileImage = null;
             
@@ -62,6 +70,7 @@ exports.updatePartnerProfile = asyncHandler(async (req, res) => {
             if (profileImage) {
                 // Créer une URL relative pour l'image
                 updateData.profileImage = profileImage.filename;
+                updateData.profileImageSource = 'local';
                 console.log('Photo de profil mise à jour:', profileImage.filename);
             }
         }
@@ -94,9 +103,19 @@ exports.updatePartnerProfile = asyncHandler(async (req, res) => {
         // Sauvegarder les modifications
         await user.save();
 
-        // Construire les URLs complètes pour les fichiers
-        if (user.profileImage && user.profileImage !== 'default.jpg') {
-            user.profileImage = `/uploads/profiles/${user.profileImage}`;
+        // Construire les URLs complètes pour les fichiers selon la source
+        if (user.profileImage) {
+            // Si c'est une URL Cloudinary, la laisser telle quelle
+            if (user.profileImageSource === 'cloudinary' || 
+                user.profileImage.startsWith('http://') || 
+                user.profileImage.startsWith('https://')) {
+                // Ne rien faire, c'est déjà une URL complète
+                console.log('Utilisation de l\'URL Cloudinary existante:', user.profileImage);
+            } else {
+                // C'est un fichier local, construire l'URL complète
+                user.profileImage = `/uploads/profiles/${user.profileImage}`;
+                console.log('URL locale construite:', user.profileImage);
+            }
         }
         
         res.status(200).json({

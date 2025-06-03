@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import '../../../core/blocs/residence/residence_bloc.dart';
+import '../../../core/services/event_bus/residence_event_bus.dart';
 import '../../../core/blocs/review/review_bloc.dart';
 import '../../../core/blocs/review/review_event.dart';
 import '../../../core/blocs/review/review_state.dart';
@@ -30,7 +31,7 @@ import '../../widgets/promotion/promotion_form_dialog.dart';
 import '../../../core/services/currency_service.dart';
 import '../../widgets/currency_selector_widget.dart';
 
-class ResidenceDetailsScreen extends StatelessWidget {
+class ResidenceDetailsScreen extends StatefulWidget {
   final Residence residence;
 
   const ResidenceDetailsScreen({
@@ -39,16 +40,48 @@ class ResidenceDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<ResidenceDetailsScreen> createState() => _ResidenceDetailsScreenState();
+}
+
+class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
+  // Abonnement au bus d'événements
+  StreamSubscription? _residenceEventSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // S'abonner au bus d'événements pour les mises à jour de résidences
+    _residenceEventSubscription = ResidenceEventBus().stream.listen((event) {
+      // Quand une résidence est mise à jour, recharger les détails
+      if (event == ResidenceEventType.updated || event == ResidenceEventType.refreshNeeded) {
+        // Vérifier si le widget est toujours monté
+        if (mounted) {
+          // Recharger les détails de cette résidence
+          context.read<ResidenceBloc>().add(LoadResidenceDetails(widget.residence.id));
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Se désabonner du bus d'événements
+    _residenceEventSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ResidenceBloc>(
           create: (context) => ResidenceBloc(
             ResidenceService(baseUrl: AppConfigManager.apiUrl),
-          )..add(CheckResidenceExists(residence.id, 
+          )..add(CheckResidenceExists(widget.residence.id, 
               onSuccess: (exists) {
                 if (exists) {
-                  context.read<ResidenceBloc>().add(LoadResidenceDetails(residence.id));
+                  context.read<ResidenceBloc>().add(LoadResidenceDetails(widget.residence.id));
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -75,14 +108,14 @@ class ResidenceDetailsScreen extends StatelessWidget {
             reviewService: ReviewService.withApiService(
               apiService: ApiService(authBloc: null),
             ),
-          )..add(LoadReviews(residence.id)),
+          )..add(LoadReviews(widget.residence.id)),
         ),
         BlocProvider<FavoriteBloc>(
           create: (context) => FavoriteBloc(
             favoriteService: FavoriteService.withApiService(
               apiService: ApiService(authBloc: null),
             ),
-          )..add(CheckFavoriteStatus(residenceId: residence.id)),
+          )..add(CheckFavoriteStatus(residenceId: widget.residence.id)),
         ),
         BlocProvider<PromotionBloc>(
           create: (context) => PromotionBloc(
@@ -106,7 +139,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
         builder: (context, state) {
           if (state is ResidenceLoading) {
             return Scaffold(
-              appBar: AppBar(title: Text(residence.name)),
+              appBar: AppBar(title: Text(widget.residence.name)),
               body: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -126,7 +159,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                       elevation: 0,
                       backgroundColor: Theme.of(context).colorScheme.surface,
                       title: Text(
-                        residence.name,
+                        widget.residence.name,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
@@ -135,7 +168,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                       actions: [
                         // Bouton de favori
                         FavoriteButtonWidget(
-                          residenceId: residence.id,
+                          residenceId: widget.residence.id,
                           activeColor: Colors.red,
                           inactiveColor: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
                           size: 26.0,
@@ -151,16 +184,16 @@ class ResidenceDetailsScreen extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => EditResidenceScreen(
-                                  residence: residence,
+                                  residence: widget.residence,
                                 ),
                               ),
                             ).then((_) {
                               // Rafraîchir les données après l'édition
                                 context.read<ResidenceBloc>().add(CheckResidenceExists(
-                                  residence.id, 
+                                  widget.residence.id, 
                                   onSuccess: (exists) {
                                     if (exists) {
-                                      context.read<ResidenceBloc>().add(LoadResidenceDetails(residence.id));
+                                      context.read<ResidenceBloc>().add(LoadResidenceDetails(widget.residence.id));
                                     }
                                   }
                                 ));
@@ -200,7 +233,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                         ),
                       ],
                       flexibleSpace: FlexibleSpaceBar(
-                        background: _ImageGalleryHeader(residence: residence),
+                        background: _ImageGalleryHeader(residence: widget.residence),
                       ),
                     ),
                     SliverPersistentHeader(
@@ -223,7 +256,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                     ),
                     // Ajouter une section de résumé clé en dessous des onglets
                     SliverToBoxAdapter(
-                      child: _ResidenceStatsBar(residence: residence),
+                      child: _ResidenceStatsBar(residence: widget.residence),
                     ),
                   ];
                 },
@@ -232,15 +265,15 @@ class ResidenceDetailsScreen extends StatelessWidget {
                 child: TabBarView(
                   children: [
                     // Onglet Aperçu
-                      _EnhancedOverviewTab(residence: residence),
+                      _EnhancedOverviewTab(residence: widget.residence),
                     // Onglet Disponibilités
-                      _EnhancedAvailabilityTab(residence: residence),
+                      _EnhancedAvailabilityTab(residence: widget.residence),
                     // Onglet Galerie
-                      _EnhancedGalleryTab(residence: residence),
+                      _EnhancedGalleryTab(residence: widget.residence),
                     // Onglet Avis
-                      _EnhancedReviewsTab(residence: residence),
+                      _EnhancedReviewsTab(residence: widget.residence),
                     // Onglet Promotions
-                      _EnhancedPromotionsTab(residence: residence),
+                      _EnhancedPromotionsTab(residence: widget.residence),
                   ],
                 ),
               ),
@@ -251,7 +284,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditResidenceScreen(
-                        residence: residence,
+                        residence: widget.residence,
                       ),
                     ),
                   );
@@ -273,7 +306,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Supprimer la résidence'),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer la résidence "${residence.name}" ? Cette action est irréversible.',
+          'Êtes-vous sûr de vouloir supprimer la résidence "${widget.residence.name}" ? Cette action est irréversible.',
         ),
         actions: [
           TextButton(
@@ -283,7 +316,7 @@ class ResidenceDetailsScreen extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<ResidenceBloc>().add(DeleteResidence(residence.id));
+              context.read<ResidenceBloc>().add(DeleteResidence(widget.residence.id));
               // Retourner à la liste des résidences
               Navigator.pop(context);
             },
@@ -366,13 +399,33 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
   }
 
   String _buildImageUrl(String url) {
-    if (url.isEmpty) return '';
+    if (url.isEmpty) {
+      debugPrint('URL de résidence vide détectée');
+      return '';
+    }
+    
+    // Vérifier les URLs problématiques
+    if (url.contains('placeholder') || url.contains('undefined') || url.contains('null')) {
+      debugPrint('URL de résidence problématique détectée: $url');
+      return '';
+    }
+    
+    // Si c'est une URL Cloudinary, la retourner telle quelle
+    if (url.contains('cloudinary.com') || url.contains('res.cloudinary.com')) {
+      debugPrint('URL Cloudinary de résidence détectée: $url');
+      return url;
+    }
     
     // Si l'URL est déjà complète, la retourner telle quelle
-    if (url.startsWith('http')) return url;
+    if (url.startsWith('http')) {
+      debugPrint('URL d\'image de résidence déjà complète: $url');
+      return url;
+    }
     
-    // Utiliser AppConfigManager pour construire l'URL
-    return AppConfigManager.getResidenceImageUrl(url);
+    // Utiliser AppConfigManager pour construire l'URL complète
+    String completeUrl = AppConfigManager.getResidenceImageUrl(url);
+    debugPrint('URL de résidence construite: $completeUrl');
+    return completeUrl;
   }
   
   void _resetZoom() {
@@ -389,17 +442,58 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
     super.dispose();
   }
 
+  /// Méthode pour filtrer les images problématiques
+  List<dynamic> _filterProblematicImages(List<dynamic> images) {
+    List<dynamic> filteredImages = [];
+    
+    // Liste des patterns d'images problématiques
+    final problematicPatterns = [
+      ...AppConfigManager.getProblematicImagePatterns(),
+      ...AppConfigManager.getProblematicResidenceImagePatterns(),
+      'placeholder', 'undefined', 'null'
+    ];
+    
+    for (var image in images) {
+      String imageStr = image.toString();
+      bool isProblematic = false;
+      
+      // Vérifier si l'image est vide
+      if (imageStr.isEmpty) {
+        isProblematic = true;
+      }
+      
+      // Vérifier si l'image correspond à un pattern problématique
+      for (var pattern in problematicPatterns) {
+        if (imageStr.contains(pattern)) {
+          isProblematic = true;
+          debugPrint('Image problématique filtrée: $imageStr');
+          break;
+        }
+      }
+      
+      // Ajouter l'image si elle n'est pas problématique
+      if (!isProblematic) {
+        filteredImages.add(image);
+      }
+    }
+    
+    debugPrint('Images filtrées: ${filteredImages.length} sur ${images.length}');
+    return filteredImages;
+  }
+  
   @override
   Widget build(BuildContext context) {
-    final images = widget.residence.images;
+    // Filtrer les images problématiques avant affichage
+    final allImages = widget.residence.images;
+    final images = _filterProblematicImages(allImages);
     
-    print("Images dans la résidence: ${images.length}");
+    debugPrint("Images dans la résidence après filtrage: ${images.length}");
     for (var img in images) {
-      print(" - $img");
+      debugPrint(" - $img");
     }
     
     if (images.isEmpty) {
-      print("Aucune image trouvée pour la résidence ${widget.residence.id}");
+      debugPrint("Aucune image valide trouvée pour la résidence ${widget.residence.id}");
       return Container(
         height: 300,
         color: Colors.grey[300],
@@ -1028,11 +1122,11 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                _buildRuleRow(context, 'Fumeurs', residence.allowsSmoking),
-                _buildRuleRow(context, 'Animaux', residence.allowsPets),
-                _buildRuleRow(context, 'Événements', residence.allowsParties),
+                _buildRuleRow(context, 'Usage illicite', false),
+                _buildRuleRow(context, 'Surveillance cachée', false),
+                _buildRuleRow(context, 'Publication non autorisée', false),
                 if (residence.maxGuests > 0)
-                  _buildInfoRow(context, 'Capacité maximale', '${residence.maxGuests} personnes'),
+                  _buildInfoRow(context, 'Capacité maximale', 'À respecter'),
               ],
             ),
           ),
@@ -1209,6 +1303,175 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
     if (widget.residence.hasWifi) features.add(_Feature(Icons.wifi, 'Wi-Fi'));
     if (widget.residence.hasRestaurant) features.add(_Feature(Icons.restaurant, 'Restaurant'));
     
+    // Ajouter les équipements depuis la liste amenities
+    if (widget.residence.amenities.isNotEmpty) {
+      for (final amenity in widget.residence.amenities) {
+        // Mapper les amenities avec des icônes appropriées
+        IconData icon;
+        String label;
+        
+        switch (amenity) {
+          // Format snake_case comme utilisé dans edit_residence_screen.dart
+          case 'running_water':
+            icon = Icons.water_drop;
+            label = 'Eau courante';
+            break;
+          case 'hot_water':
+            icon = Icons.hot_tub;
+            label = 'Eau chaude';
+            break;
+          case 'water_tank':
+            icon = Icons.water;
+            label = 'Réservoir d\'eau';
+            break;
+          case 'electricity':
+            icon = Icons.bolt;
+            label = 'Électricité';
+            break;
+          case 'generator':
+            icon = Icons.power_settings_new;
+            label = 'Générateur';
+            break;
+          case 'solar_power':
+            icon = Icons.wb_sunny;
+            label = 'Énergie solaire';
+            break;
+          case 'inverter':
+            icon = Icons.battery_charging_full;
+            label = 'Onduleur';
+            break;
+          case 'air_conditioning':
+            icon = Icons.ac_unit;
+            label = 'Climatisation';
+            break;
+          case 'kitchen':
+            icon = Icons.kitchen;
+            label = 'Cuisine';
+            break;
+          case 'parking':
+            icon = Icons.local_parking;
+            label = 'Parking';
+            break;
+          case 'wifi':
+            icon = Icons.wifi;
+            label = 'Wi-Fi';
+            break;
+          case 'pool':
+            icon = Icons.pool;
+            label = 'Piscine';
+            break;
+          case 'gym':
+            icon = Icons.fitness_center;
+            label = 'Salle de sport';
+            break;
+          case 'spa':
+            icon = Icons.spa;
+            label = 'Spa';
+            break;
+          case 'meeting_room':
+            icon = Icons.meeting_room;
+            label = 'Salle de réunion';
+            break;
+          case 'terrace':
+            icon = Icons.deck;
+            label = 'Terrasse';
+            break;
+          case 'balcony':
+            icon = Icons.balcony;
+            label = 'Balcon';
+            break;
+          case 'fiber_optic':
+            icon = Icons.wifi;
+            label = 'Fibre optique';
+            break;
+          case 'ethernet':
+            icon = Icons.settings_ethernet;
+            label = 'Ethernet';
+            break;
+          case 'full_kitchen':
+            icon = Icons.kitchen;
+            label = 'Cuisine complète';
+            break;
+          case 'kitchenette':
+            icon = Icons.soup_kitchen;
+            label = 'Kitchenette';
+            break;
+          case 'refrigerator':
+            icon = Icons.kitchen;
+            label = 'Réfrigérateur';
+            break;
+          case 'microwave':
+            icon = Icons.microwave;
+            label = 'Micro-ondes';
+            break;
+          case 'oven':
+            icon = Icons.local_fire_department;
+            label = 'Four';
+            break;
+          case 'fan':
+            icon = Icons.air;
+            label = 'Ventilateur';
+            break;
+          case 'ceiling_fan':
+            icon = Icons.air;
+            label = 'Ventilateur de plafond';
+            break;
+          case 'alarm_system':
+            icon = Icons.security;
+            label = 'Système d\'alarme';
+            break;
+          case 'cctv':
+            icon = Icons.videocam;
+            label = 'Vidéosurveillance';
+            break;
+          case 'security_guard':
+            icon = Icons.security;
+            label = 'Gardien de sécurité';
+            break;
+          // Ajouter d'autres cas selon vos besoins
+          default:
+            // Pour les amenities qui n'ont pas de mapping spécifique
+            icon = Icons.check_circle;
+            // Transformer snake_case en format lisible
+            label = amenity.replaceAll('_', ' ').split(' ')
+                .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
+                .join(' ');
+        }
+        
+        features.add(_Feature(icon, label));
+      }
+    }
+    
+    // Ajouter les équipements améliorés (enhancedAmenities)
+    if (widget.residence.enhancedAmenities.isNotEmpty) {
+      widget.residence.enhancedAmenities.forEach((category, amenities) {
+        if (amenities is List && amenities.isNotEmpty) {
+          for (final amenity in amenities) {
+            if (amenity is String) {
+              // Vous pouvez personnaliser les icônes selon les catégories
+              IconData icon = Icons.star;
+              
+              if (category == 'water') {
+                icon = Icons.water_drop;
+              } else if (category == 'electricity') {
+                icon = Icons.electrical_services;
+              } else if (category == 'internet') {
+                icon = Icons.wifi;
+              } else if (category == 'kitchen') {
+                icon = Icons.kitchen;
+              } else if (category == 'bedroom') {
+                icon = Icons.bed;
+              } else if (category == 'bathroom') {
+                icon = Icons.bathtub;
+              }
+              
+              features.add(_Feature(icon, amenity));
+            }
+          }
+        }
+      });
+    }
+    
     // Ajouter d'autres équipements depuis les options (si disponibles)
     final options = widget.residence.options;
     if (options != null) {
@@ -1236,18 +1499,25 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
       );
     }
     
-    // Afficher les équipements en grille
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 2.5,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: features.length,
-      itemBuilder: (context, index) {
+    // Afficher les équipements en grille avec défilement
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Grille limitée en hauteur avec défilement
+        Container(
+          constraints: const BoxConstraints(maxHeight: 240), // Hauteur fixe pour montrer qu'il y a du contenu supplémentaire
+          child: GridView.builder(
+            shrinkWrap: true,
+            // Permettre le défilement vertical
+            physics: const AlwaysScrollableScrollPhysics(), 
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 2.5,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: features.length,
+            itemBuilder: (context, index) {
         final feature = features[index];
         return Container(
           decoration: BoxDecoration(
@@ -1292,6 +1562,31 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
           ),
         );
       },
+            ),
+          ),
+          // Indicateur visuel pour montrer qu'on peut défiler
+          if (features.length > 9) // Si plus de 9 équipements (3x3 grille initiale)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.keyboard_arrow_down, 
+                      size: 16, 
+                      color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text('Faites défiler pour voir plus',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      ],
     );
   }
   
@@ -1737,7 +2032,7 @@ class _EnhancedGalleryTab extends StatelessWidget {
                           ),
                   ),
                         const SizedBox(height: 24),
-                        OutlinedButton.icon(
+                        OutlinedButton(
                           onPressed: () {
                             // Action pour ajouter des photos
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1747,8 +2042,7 @@ class _EnhancedGalleryTab extends StatelessWidget {
                               ),
                             );
                           },
-                          icon: const Icon(Icons.add_photo_alternate),
-                          label: const Text('Ajouter des photos'),
+                          child: const Text('Ajouter des photos'),
                         ),
                       ],
                     ),
