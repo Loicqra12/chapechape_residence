@@ -35,6 +35,7 @@ const adminRoutes = require("./routes/admin.routes");
 const superAdminRoutes = require("./routes/superadmin.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const promotionRoutes = require("./routes/promotion.routes");
+const mapsRoutes = require("./routes/maps.routes"); // Import des routes Maps
 // Import des routes de test
 const testRoutes = require("./routes/test.routes");
 // Import des routes de gestion des appareils
@@ -50,16 +51,27 @@ app.use(express.urlencoded({ extended: true })); // Pour parser les requêtes av
 app.use(cookieParser(process.env.COOKIE_SECRET || "chapechape-secret-key"));
 
 // Routes publiques de test et promotions (APRÈS les middlewares de parsing mais AVANT la sécurité)
-// Route de test simple
-app.get("/api/test", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Cette route de test fonctionne correctement"
+// Protection des routes de test en production
+if (process.env.NODE_ENV === 'production') {
+  app.use(['/api/test', '/api/public-test/*'], (req, res) => {
+    return res.status(404).json({
+      success: false,
+      message: "Route non disponible en environnement de production"
+    });
   });
-});
+} else {
+  // Route de test simple - uniquement en développement
+  app.get("/api/test", (req, res) => {
+    res.status(200).json({
+      success: true,
+      message: "Cette route de test fonctionne correctement"
+    });
+  });
+}
 
-// Route de test pour l'email - directement accessible sans middleware
-app.post("/api/public-test/email", async (req, res) => {
+// Route de test pour l'email - uniquement en environnement non-production
+if (process.env.NODE_ENV !== 'production') {
+  app.post("/api/public-test/email", async (req, res) => {
   try {
     const emailService = require('./services/email.service');
     const { email, subject, content } = req.body;
@@ -108,10 +120,12 @@ app.post("/api/public-test/email", async (req, res) => {
       error: error.message
     });
   }
-});
+  });
+}
 
-// Route de test pour OneSignal - directement accessible sans middleware
-app.post("/api/public-test/notification", async (req, res) => {
+// Route de test pour OneSignal - uniquement en environnement non-production
+if (process.env.NODE_ENV !== 'production') {
+  app.post("/api/public-test/notification", async (req, res) => {
   try {
     const oneSignalService = require('./services/onesignal.service');
     const { title, message, segment } = req.body;
@@ -147,7 +161,8 @@ app.post("/api/public-test/notification", async (req, res) => {
       error: error.message
     });
   }
-});
+  });
+}
 
 // Route de vérification de santé (health check)
 app.get("/health", (req, res) => {
@@ -194,11 +209,12 @@ app.use(
     origin: [
       "http://localhost:3000", // Frontend client
       "http://localhost:3001", // Frontend partenaire
+      "https://admin.chapechaperesidence.com", // Dashboard admin
       process.env.CLIENT_URL,
       process.env.PARTNER_URL,
     ],
     credentials: true, // Pour permettre les cookies avec CORS
-    exposedHeaders: ["X-CSRF-Token"], // Exposer l'en-tête CSRF
+    exposedHeaders: ["X-CSRF-Token", "Authorization"], // Exposer les en-têtes nécessaires
   })
 );
 
@@ -259,7 +275,8 @@ app.use(
 );
 
 // Génération de tokens CSRF pour les routes qui en ont besoin
-app.use("/api/auth/login", generateCsrfToken);
+// Désactivé temporairement pour résoudre les problèmes d'authentification du dashboard
+// app.use("/api/auth/login", generateCsrfToken);
 app.use("/api/auth/register", generateCsrfToken);
 
 // Protection CSRF pour les routes mutatives sensibles
@@ -289,10 +306,11 @@ app.use("/api/partners", partnerRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/messages", messageRoutes); // Routes de messagerie
-app.use("/api", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
+app.use("/api/availability", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
 app.use("/api/devices", deviceRoutes); // Ajout des routes pour la gestion des appareils
 app.use("/api/sms", smsRoutes); // Ajout des routes pour l'envoi de SMS via Twilio
 app.use("/api/promotions", promotionRoutes); // Ajout des routes pour la gestion des promotions
+app.use("/api/maps", mapsRoutes); // Ajout des routes pour la géolocalisation et les cartes
 
 // Routes de test (uniquement en environnement de développement)
 if (process.env.NODE_ENV === 'development') {
@@ -309,29 +327,19 @@ app.get("/", (req, res) => {
 
 // Ajouter un endpoint pour vérifier le CSRF
 app.get("/api/csrf-token", (req, res) => {
-  // Utiliser csrfProtection directement pour générer un token sans vérification d'authentification
-  const csrf = require("csurf");
-  const csrfProtection = csrf({
-    cookie: {
-      key: "_csrf",
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 3600 * 1000, // 1 heure
-    },
-  });
-
-  // Appliquer csrfProtection directement
+  // Importer le middleware CSRF qui utilise csurf
+  const { csrfProtection } = require("./middlewares/csrf.middleware");
+  
+  // Appliquer csrfProtection pour générer un token
   csrfProtection(req, res, (err) => {
     if (err) {
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erreur lors de la génération du token CSRF",
-        });
+      console.error(`Erreur lors de la génération du token CSRF: ${err.message}`);
+      return res.status(500).json({
+        success: false,
+        message: "Erreur lors de la génération du token CSRF",
+      });
     }
+    
     // Générer et renvoyer le token
     const token = req.csrfToken();
     res.setHeader("X-CSRF-Token", token);

@@ -28,13 +28,13 @@ exports.securityMiddleware = [
     // Prévention de la pollution des paramètres HTTP
     hpp(),
     
-    // Enable CORS
-    cors({
-        origin: process.env.FRONTEND_URL || '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        credentials: true
-    }),
+    // CORS désactivé ici car déjà configuré dans app.js
+    // cors({
+    //     origin: process.env.FRONTEND_URL || '*',
+    //     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    //     allowedHeaders: ['Content-Type', 'Authorization'],
+    //     credentials: true
+    // }),
     
     // Headers de sécurité supplémentaires
     helmet.contentSecurityPolicy({
