@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import '../../../presentation/widgets/common/watermark_widget.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -324,6 +325,12 @@ class _AboutScreenState extends State<AboutScreen> {
               Icons.email,
               onTap: () => _launchURL('mailto:support@chapechape.com'),
             ),
+            
+            // Séparateur avant le watermark
+            const SizedBox(height: 30),
+            
+            // Watermark ChapeChape
+            const ChapeWatermarkWidget(),
           ],
         ),
       ),

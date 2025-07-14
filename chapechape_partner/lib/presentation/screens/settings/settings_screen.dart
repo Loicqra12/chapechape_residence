@@ -6,6 +6,7 @@ import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/auth/auth_event.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../widgets/common/dialogs/confirmation_dialog.dart';
+import '../../widgets/common/watermark_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1054,6 +1055,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                   },
+                ),
+                const Divider(height: 1),
+                
+                // Widget watermark de copyright
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: PartnerWatermarkWidget(),
                 ),
               ],
             ),
