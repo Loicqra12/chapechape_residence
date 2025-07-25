@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth.middleware');
+const validate = require('../middlewares/validate.middleware');
+const residenceValidation = require('../validations/residence.validation');
 const upload = require('../middlewares/upload.middleware');
 const { uploadResidenceImages } = require('../config/cloudinary');
 const residenceController = require('../controllers/residence/residence.controller');
@@ -98,24 +100,32 @@ router.delete('/:id', deleteResidence);
 
 // Routes pour la gestion des images
 // 1. Route traditionnelle avec upload de fichiers physiques
-router.post('/:id/images/local', upload.residence.array('images', 5), uploadImages);
+router.post('/:id/images/local', validate(residenceValidation.uploadImages), upload.residence.array('images', 5), uploadImages);
 
 // 2. Route avec upload direct vers Cloudinary (via multer-storage-cloudinary)
-router.post('/:id/images/cloudinary', uploadResidenceImages, uploadImages);
+router.post('/:id/images/cloudinary', validate(residenceValidation.uploadImages), uploadResidenceImages, uploadImages);
 
 // 3. Route pour recevoir directement des URLs Cloudinary (depuis l'app mobile/web)
-router.post('/:id/images', uploadImages);
+router.post('/:id/images', validate(residenceValidation.uploadImages), uploadImages);
 
 // 4. Route pour supprimer une image spécifique
-router.delete('/:id/images/:imageIndex', deleteImage);
+router.delete('/:id/images/:imageIndex', validate(residenceValidation.deleteImage), deleteImage);
 
 // Routes pour les nouvelles fonctionnalités
 router.post('/:id/nearby-places', protect, authorize('partner'), residenceController.addNearbyPlace);
 router.put('/:id/nearby-places', protect, authorize('partner'), residenceController.updateNearbyPlaces);
+
+// Routes avec validation Joi pour les FAQs
 router.post('/:id/faqs', protect, authorize('partner'), residenceController.addFaq);
-router.put('/:id/faqs', protect, authorize('partner'), residenceController.updateFaqs);
-router.put('/:id/payment-methods', protect, authorize('partner'), residenceController.updatePaymentMethods);
-router.put('/:id/enhanced-amenities', protect, authorize('partner'), residenceController.updateEnhancedAmenities);
+router.put('/:id/faqs', protect, authorize('partner'), validate(residenceValidation.updateFaqs), residenceController.updateFaqs);
+
+// Routes avec validation Joi pour les méthodes de paiement
+router.put('/:id/payment-methods', protect, authorize('partner'), validate(residenceValidation.updatePaymentMethods), residenceController.updatePaymentMethods);
+
+// Routes avec validation Joi pour les équipements améliorés
+router.put('/:id/enhanced-amenities', protect, authorize('partner'), validate(residenceValidation.updateEnhancedAmenities), residenceController.updateEnhancedAmenities);
+
+// Autres routes
 router.put('/:id/stars', protect, authorize('admin'), residenceController.updateStars);
 router.put('/:id/ratings', protect, residenceController.updateRatings);
 

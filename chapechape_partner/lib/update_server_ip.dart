@@ -8,7 +8,7 @@ void main() async {
   await AppConfigManager.initialize(autoDetectIp: false);
   
   // Définir l'adresse IP du serveur
-  await AppConfigManager.setServerIp('192.168.1.66');
+  await AppConfigManager.setServerIp('192.168.1.70');
   
   // Activer l'utilisation d'une URL personnalisée
   await AppConfigManager.setUseCustomServerUrl(true);

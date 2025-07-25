@@ -1,9 +1,10 @@
+
 const Booking = require('../models/booking.model');
 const Residence = require('../models/residence.model');
 const Payment = require('../models/payment.model');
 const Availability = require('../models/availability.model');
 const CancellationPolicy = require('../models/cancellationPolicy.model');
-const { ApiError } = require('../utils/ApiError');
+const ApiError = require('../utils/apiError');
 const availabilityService = require('./availability.service');
 const paymentService = require('./payment.service');
 const notificationService = require('./notification.service');

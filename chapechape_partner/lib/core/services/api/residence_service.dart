@@ -526,6 +526,29 @@ class ResidenceService {
   Map<String, dynamic> _adaptFrontendResidenceToBackend(Map<String, dynamic> data) {
     // Créer une copie pour éviter de modifier l'original
     final Map<String, dynamic> adapted = Map.from(data);
+    
+    // ÉTAPE 1: Extraire les coordonnées GPS sous forme numérique
+    final numLat = _extractNumericValue(data['latitude']);
+    final numLng = _extractNumericValue(data['longitude']);
+    
+    // ÉTAPE 2: Supprimer tous les champs liés à la localisation pour éviter les conflits
+    adapted.remove('locationData');
+    adapted.remove('location');
+    
+    // ÉTAPE 3: Toujours conserver les coordonnées au niveau racine pour compatibilité
+    adapted['latitude'] = numLat;
+    adapted['longitude'] = numLng;
+    
+    // ÉTAPE 4: Formater les coordonnées dans la structure attendue par le backend
+    // Le backend attend locationData.coordinates.latitude/longitude
+    if (numLat != null && numLng != null) {
+      adapted['locationData'] = {
+        'coordinates': {
+          'latitude': numLat,
+          'longitude': numLng
+        }
+      };
+    }
 
     // Adapter les noms de champs pour correspondre à ceux attendus par le backend
     if (data.containsKey('name')) {
@@ -541,26 +564,14 @@ class ResidenceService {
       adapted['type'] = _mapFrontendTypeToBackendType(data['type']);
     }
 
-    // 1. Gérer le statut
+    // Gérer le statut
     if (data['status'] != null) {
       adapted['isAvailable'] = data['status'] == 'available';
     }
-
-    // 2. Structurer correctement les données de localisation
-    if (data['location'] != null) {
-      // Si des données structurées de localisation sont fournies, les utiliser
-      adapted['location'] = data['location'];
-    } else {
-      // Sinon, construire une structure à partir des champs individuels
-      adapted['location'] = {
-        'country': data['country'] ?? 'CI',
-        'countryName': data['countryName'],
-        'region': data['region'],
-        'regionName': data['regionName'],
-      'city': data['city'],
-        'cityName': data['cityName'],
-        'address': data['address'],
-      };
+    
+    // Assurer que l'adresse formatée est utilisée si disponible
+    if (data.containsKey('formattedAddress') && data['formattedAddress'] != null) {
+      adapted['address'] = data['formattedAddress'];
     }
 
     // 3. Traiter les amenities dans une liste
@@ -617,6 +628,84 @@ class ResidenceService {
     print('🏠 Création résidence - JSON des données: ${json.encode(adapted)}');
 
     return adapted;
+  }
+
+  /// Extrait une valeur numérique à partir d'un objet qui peut être numérique ou un Map
+  /// Utilisé pour gérer les coordonnées GPS qui peuvent être passées sous différentes formes
+  /// @return num? - Retourne toujours une valeur numérique ou null, jamais un Map ou autre objet
+  num? _extractNumericValue(dynamic value) {
+    try {
+      if (value == null) {
+        return null;
+      }
+      
+      // Si c'est déjà un nombre, retourner tel quel
+      if (value is num) {
+        return value;
+      }
+      
+      // Si c'est une chaîne, essayer de la convertir en nombre
+      if (value is String) {
+        return double.tryParse(value) ?? 0.0;
+      }
+      
+      // Si c'est un Map (probablement un objet AddressSearchResult), extraire la valeur numérique
+      if (value is Map) {
+        // Essayer d'obtenir la valeur par la clé 'latitude' ou 'longitude'
+        if (value.containsKey('latitude') && value['latitude'] != null) {
+          final extractedValue = value['latitude'];
+          // Récursion mais avec vérification explicite des types pour éviter les boucles infinies
+          if (extractedValue is num) {
+            return extractedValue;
+          } else if (extractedValue is String) {
+            return double.tryParse(extractedValue) ?? 0.0;
+          } else {
+            // Si on ne peut pas extraire une valeur numérique, retourner 0.0 par défaut
+            print('Impossible d\'extraire une valeur numérique de latitude: $extractedValue');
+            return 0.0;
+          }
+        }
+        
+        if (value.containsKey('longitude') && value['longitude'] != null) {
+          final extractedValue = value['longitude'];
+          // Récursion mais avec vérification explicite des types pour éviter les boucles infinies
+          if (extractedValue is num) {
+            return extractedValue;
+          } else if (extractedValue is String) {
+            return double.tryParse(extractedValue) ?? 0.0;
+          } else {
+            // Si on ne peut pas extraire une valeur numérique, retourner 0.0 par défaut
+            print('Impossible d\'extraire une valeur numérique de longitude: $extractedValue');
+            return 0.0;
+          }
+        }
+        
+        // Si on ne trouve pas ces clés, essayer de prendre la première valeur numérique
+        for (var entry in value.entries) {
+          if (entry.value is num) {
+            print('Extraction de valeur numérique depuis Map: ${entry.value}');
+            return entry.value;
+          } else if (entry.value is String) {
+            final numValue = double.tryParse(entry.value as String);
+            if (numValue != null) {
+              print('Extraction de valeur numérique depuis String: $numValue');
+              return numValue;
+            }
+          }
+        }
+        
+        // Aucune valeur numérique trouvée dans le Map
+        print('Aucune valeur numérique trouvée dans: $value');
+        return 0.0;
+      }
+      
+      // Cas par défaut: impossible d'extraire une valeur numérique
+      print('Type non supporté pour extraction numérique: ${value.runtimeType}');
+      return 0.0;
+    } catch (e) {
+      print('Erreur lors de l\'extraction d\'une valeur numérique: $e');
+      return 0.0;
+    }
   }
 
   String _mapFrontendTypeToBackendType(String frontendType) {

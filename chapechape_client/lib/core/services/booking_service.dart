@@ -140,30 +140,86 @@ class BookingService {
       }
       
       debugPrint('🔍 Récupération de la réservation $id depuis l\'API');
-      // Utiliser exclusivement l'endpoint reservations
-      final response = await _apiService.get('reservations/$id');
       
-      // Gestion défensive de la réponse
-      if (response.data == null) {
-        throw Exception('Réponse vide du serveur');
-      }
-      
-      if (response.data is! Map) {
-        throw Exception('Format de réponse inattendu: ${response.data}');
-      }
-      
-      final responseData = response.data as Map<String, dynamic>;
-      if (!responseData.containsKey('data')) {
-        throw Exception('Données manquantes dans la réponse');
-      }
+      // AMÉLIORATION: Implémenter une stratégie de récupération avec tentatives multiples
+      // 1. D'abord essayer l'endpoint standard pour les réservations
+      try {
+        final response = await _apiService.get('reservations/$id',
+          options: Options(validateStatus: (status) => true),  // Accepter tous les statuts
+        );
+        
+        // Vérifier spécifiquement si nous avons une erreur 403 (Forbidden)
+        if (response.statusCode == 403) {
+          debugPrint('⚠️ Accès refusé (403) à l\'endpoint reservations/$id, tentative alternative...');
+          // Laisser l'exécution continuer pour essayer l'endpoint alternatif
+          throw DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+          );
+        }
+        
+        // Si pas d'erreur 403, continuer normalement
+        if (response.statusCode == 200 && response.data != null) {
+          // Gestion défensive de la réponse
+          if (response.data is! Map) {
+            throw Exception('Format de réponse inattendu: ${response.data}');
+          }
+          
+          final responseData = response.data as Map<String, dynamic>;
+          if (!responseData.containsKey('data')) {
+            throw Exception('Données manquantes dans la réponse');
+          }
 
-      final data = responseData['data'];
-      final booking = Booking.fromJson(data as Map<String, dynamic>);
-      
-      // Mettre en cache pour les futures requêtes
-      await _cacheService.cacheBooking(booking);
-      
-      return booking;
+          final data = responseData['data'];
+          final booking = Booking.fromJson(data as Map<String, dynamic>);
+          
+          // Mettre en cache pour les futures requêtes
+          await _cacheService.cacheBooking(booking);
+          
+          return booking;
+        }
+        
+        // Si on arrive ici, c'est qu'on a un code HTTP différent de 200 ou 403
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+        );
+      } catch (firstError) {
+        // 2. Si la première tentative échoue (surtout en cas de 403),
+        // essayer l'endpoint alternatif user-bookings
+        debugPrint('🔄 Première tentative échouée, essai avec l\'endpoint alternatif...');
+        
+        final alternativeResponse = await _apiService.get('reservations/user-bookings');
+        
+        if (alternativeResponse.statusCode == 200 && alternativeResponse.data != null) {
+          final List<dynamic> bookingsJson = alternativeResponse.data['data'] ?? [];
+          
+          // Chercher la réservation correspondant à l'ID dans la liste récupérée
+          final targetBookingJson = bookingsJson.firstWhere(
+            (json) => (json['_id']?.toString() ?? '') == id || (json['id']?.toString() ?? '') == id,
+            orElse: () => null
+          );
+          
+          if (targetBookingJson != null) {
+            final booking = Booking.fromJson(targetBookingJson as Map<String, dynamic>);
+            
+            // Mettre en cache pour les futures requêtes
+            await _cacheService.cacheBooking(booking);
+            
+            return booking;
+          }
+        }
+        
+        // Si on arrive ici, c'est qu'on n'a pas trouvé la réservation
+        // Relancer l'erreur initiale pour une gestion cohérente
+        if (firstError is DioException) {
+          throw _handleDioError(firstError);
+        } else {
+          throw firstError;
+        }
+      }
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -421,38 +477,74 @@ class BookingService {
       final formattedCheckIn = "${checkIn.year}-${checkIn.month.toString().padLeft(2, '0')}-${checkIn.day.toString().padLeft(2, '0')}";
       final formattedCheckOut = "${checkOut.year}-${checkOut.month.toString().padLeft(2, '0')}-${checkOut.day.toString().padLeft(2, '0')}";
       
-      debugPrint('Vérification disponibilité pour residence: $residenceId');
-      debugPrint('CheckIn: $formattedCheckIn, CheckOut: $formattedCheckOut');
+      debugPrint('🔍 Vérification disponibilité pour residence: $residenceId');
+      debugPrint('Dates: $formattedCheckIn → $formattedCheckOut');
       
-      // Solution temporaire: supposer que c'est disponible
-      // Cela devrait être remplacé par un appel API réel quand l'endpoint sera disponible
+      // Invalider le cache potentiellement obsolète avant la vérification
+      _cacheService.invalidateAvailability(residenceId);
       
-      return {
-        'isAvailable': true,
-        'price': await calculatePrice(
-          residenceId: residenceId,
-          checkIn: checkIn,
-          checkOut: checkOut,
-          numberOfGuests: 2, // Valeur par défaut
-        ),
-        'availableDates': [],
-        'conflictDates': []
-      };
-      
-      /* Lorsque l'API sera disponible, utiliser:
-      final response = await _apiService.post(
-        'reservations/check-availability',
-        data: {
+      // Appel à l'API réelle pour vérifier la disponibilité
+      // Note: L'URL complète est /api/availability/flutter-check, mais le préfixe /api est géré par l'ApiService
+      final response = await _apiService.get(
+        'availability/flutter-check',
+        queryParameters: {
           'residenceId': residenceId,
           'checkIn': formattedCheckIn,
           'checkOut': formattedCheckOut,
         },
       );
+      
+      if (response.data == null) {
+        throw Exception('Réponse vide du serveur lors de la vérification de disponibilité');
+      }
 
-      return response.data;
-      */
+      if (response.data is! Map<String, dynamic>) {
+        throw Exception('Format de réponse inattendu: ${response.data}');
+      }
+      
+      final responseData = response.data as Map<String, dynamic>;
+      
+      // Extraire les données de la réponse
+      if (!responseData.containsKey('data')) {
+        debugPrint('⚠️ Réponse API sans clé data: $responseData');
+        
+        // Fallback: retourner une structure avec disponibilité par défaut
+        return {
+          'isAvailable': false,
+          'price': await calculatePrice(
+            residenceId: residenceId,
+            checkIn: checkIn,
+            checkOut: checkOut,
+            numberOfGuests: 2, // Valeur par défaut
+          ),
+          'availableDates': [],
+          'conflictDates': [],
+          'message': 'Impossible de vérifier la disponibilité'
+        };
+      }
+      
+      final data = responseData['data'] as Map<String, dynamic>;
+      
+      // Log des détails de disponibilité pour débogage
+      debugPrint('📅 Résultat disponibilité: ${data['isAvailable'] ? "✅ Disponible" : "❌ Non disponible"}');
+      if (data.containsKey('conflictDates') && (data['conflictDates'] as List).isNotEmpty) {
+        debugPrint('⚠️ Dates en conflit: ${data['conflictDates']}');
+      }
+      
+      // S'assurer que le champ price est toujours un double
+      if (data.containsKey('price')) {
+        // Convertir explicitement la valeur du prix en double
+        data['price'] = (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0;
+        debugPrint('💰 Prix converti en double: ${data['price']}');
+      }
+      
+      return data;
     } on DioException catch (e) {
+      debugPrint('🔴 Erreur API lors de la vérification de disponibilité: ${e.message}');
       throw _handleDioError(e);
+    } catch (e) {
+      debugPrint('❌ Exception lors de la vérification de disponibilité: $e');
+      throw Exception('Impossible de vérifier la disponibilité: $e');
     }
   }
 

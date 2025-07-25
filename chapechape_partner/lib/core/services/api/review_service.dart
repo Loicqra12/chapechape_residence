@@ -35,8 +35,17 @@ class ReviewService {
         },
       );
       
-      final List<dynamic> data = response.data['data'] ?? [];
-      return data.map((json) => ReviewModel.fromJson(json)).toList();
+      // Vérifier si data est un objet contenant reviews (nouvelle structure API)
+      if (response.data['data'] is Map<String, dynamic> && 
+          response.data['data'].containsKey('reviews')) {
+        // Structure: { success: true, data: { reviews: [...], stats: {}, pagination: {} } }
+        final List<dynamic> reviews = response.data['data']['reviews'] ?? [];
+        return reviews.map((json) => ReviewModel.fromJson(json)).toList();
+      } else {
+        // Structure ancienne ou fallback: { success: true, data: [...] }
+        final List<dynamic> data = response.data['data'] is List ? response.data['data'] : [];
+        return data.map((json) => ReviewModel.fromJson(json)).toList();
+      }
     } catch (e) {
       throw Exception('Impossible de récupérer les avis: $e');
     }
@@ -112,8 +121,17 @@ class ReviewService {
         },
       );
       
-      final List<dynamic> data = response.data['data'] ?? [];
-      return data.map((json) => ReviewModel.fromJson(json)).toList();
+      // Vérifier si data est un objet contenant reviews (nouvelle structure API)
+      if (response.data['data'] is Map<String, dynamic> && 
+          response.data['data'].containsKey('reviews')) {
+        // Structure: { success: true, data: { reviews: [...], stats: {}, pagination: {} } }
+        final List<dynamic> reviews = response.data['data']['reviews'] ?? [];
+        return reviews.map((json) => ReviewModel.fromJson(json)).toList();
+      } else {
+        // Structure ancienne ou fallback: { success: true, data: [...] }
+        final List<dynamic> data = response.data['data'] is List ? response.data['data'] : [];
+        return data.map((json) => ReviewModel.fromJson(json)).toList();
+      }
     } catch (e) {
       throw Exception('Impossible de récupérer les avis récents: $e');
     }

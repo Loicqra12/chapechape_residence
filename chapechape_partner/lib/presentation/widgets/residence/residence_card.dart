@@ -172,7 +172,8 @@ class ResidenceCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              residence.address,
+                              // Utiliser l'adresse formatée en priorité, sinon utiliser l'adresse courte
+                              residence.formattedAddress ?? residence.address,
                               style: Theme.of(context).textTheme.bodySmall,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

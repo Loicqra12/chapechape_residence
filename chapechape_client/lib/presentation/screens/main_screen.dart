@@ -12,6 +12,7 @@ import '../widgets/auth_button_widget.dart';
 import '../widgets/connectivity_banner.dart';
 import '../../core/models/city.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/logger_service.dart';
 
 class MainScreen extends StatefulWidget {
   final Widget child;
@@ -27,6 +28,9 @@ class _MainScreenState extends State<MainScreen> {
   
   // Variables pour gérer la sélection de ville
   City? _selectedCity;
+  
+  // Logger pour le monitoring
+  final LoggerService _logger = LoggerService();
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -39,41 +43,53 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onItemTapped(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        context.go('/home');
-        break;
-      case 1:
-        context.go('/favorites');
-        break;
-      case 2:
-        context.go('/notifications');
-        break;
-      case 3:
-        context.go('/chat');
-        break;
-      case 4:
-        context.go('/profile');
-        break;
+    final routes = [
+      '/home',
+      '/favorites',
+      '/notifications',
+      '/chat',
+      '/profile'
+    ];
+    final routeLabels = [
+      'Accueil',
+      'Favoris',
+      'Notifications',
+      'Messages',
+      'Profil'
+    ];
+    
+    if (index >= 0 && index < routes.length) {
+      _logger.debug('Navigation vers ${routeLabels[index]} (${routes[index]})');
+      context.go(routes[index]);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Définir des constantes pour la cohérence visuelle
-    const double iconSize = 22.0;
-    const double iconSpacing = 8.0;
-    const EdgeInsets iconPadding = EdgeInsets.all(8.0);
+    // Calculer les tailles d'interface en fonction de l'appareil
+    final screenSize = MediaQuery.of(context).size;
+    final bool isSmallScreen = screenSize.width < 360;
+    
+    // Définir des constantes pour la cohérence visuelle avec adaptation à la taille d'écran
+    final double iconSize = isSmallScreen ? 18.0 : 22.0;
+    final double iconSpacing = isSmallScreen ? 4.0 : 8.0;
+    final EdgeInsets iconPadding = isSmallScreen 
+        ? const EdgeInsets.all(4.0)
+        : const EdgeInsets.all(8.0);
+        
+    _logger.debug('Écran détecté: ${screenSize.width}x${screenSize.height}, isSmallScreen: $isSmallScreen');
     
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white,
         elevation: 0,
         leadingWidth: 120,
         leading: Padding(
           padding: const EdgeInsets.only(left: 8.0),
           child: Image.asset(
-            'assets/logos/app_logo.png',
+            Theme.of(context).brightness == Brightness.dark 
+              ? 'assets/logos/app_logo_dark.png'
+              : 'assets/logos/app_logo.png',
             fit: BoxFit.contain,
           ),
         ),
@@ -91,9 +107,10 @@ class _MainScreenState extends State<MainScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[800],
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                       overflow: TextOverflow.ellipsis,
+                      semanticsLabel: 'Localisation actuelle: ${_selectedCity!.name}',
                     ),
                   ),
                   Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
@@ -108,19 +125,19 @@ class _MainScreenState extends State<MainScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.menu, size: iconSize),
+                  icon: Icon(Icons.menu, size: iconSize),
                   onPressed: () => _showLocationMenu(context),
-                  constraints: const BoxConstraints(),
+                  constraints: BoxConstraints(),
                   padding: iconPadding,
                 ),
-                const SizedBox(width: iconSpacing),
+                SizedBox(width: iconSpacing),
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined, size: iconSize),
+                  icon: Icon(Icons.notifications_outlined, size: iconSize),
                   onPressed: () => context.go('/notifications'),
-                  constraints: const BoxConstraints(),
+                  constraints: BoxConstraints(),
                   padding: iconPadding,
                 ),
-                const SizedBox(width: iconSpacing),
+                SizedBox(width: iconSpacing),
                 const AuthButtonWidget(),
               ],
             ),
@@ -131,35 +148,37 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _calculateSelectedIndex(context),
         onDestinationSelected: (index) => _onItemTapped(index, context),
-        backgroundColor: whiteColor,
-        indicatorColor: Colors.transparent,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? blackColor : whiteColor,
+        indicatorColor: Theme.of(context).brightness == Brightness.dark 
+            ? AppTheme.primaryColor.withOpacity(0.2) 
+            : Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 60,
         elevation: 0,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppTheme.primaryColor),
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home, color: Theme.of(context).primaryColor),
             label: 'Accueil',
           ),
           NavigationDestination(
-            icon: Icon(Icons.favorite_outline),
-            selectedIcon: Icon(Icons.favorite, color: AppTheme.primaryColor),
+            icon: const Icon(Icons.favorite_outline),
+            selectedIcon: Icon(Icons.favorite, color: Theme.of(context).primaryColor),
             label: 'Favoris',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications, color: AppTheme.primaryColor),
+            icon: const Icon(Icons.notifications_outlined),
+            selectedIcon: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
             label: 'Notifs',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat, color: AppTheme.primaryColor),
+            icon: const Icon(Icons.chat_outlined),
+            selectedIcon: Icon(Icons.chat, color: Theme.of(context).primaryColor),
             label: 'Messages',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppTheme.primaryColor),
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
             label: 'Profil',
           ),
         ],
@@ -243,10 +262,16 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                         const SizedBox(height: 8),
                         LocationSelectorWidget(
+                          // À implémenter: support pour le sélecteur hiérarchique multiniveau
+                          // (pays, région, ville, quartier) selon les spécifications du projet
                           onCitySelected: (city) {
                             setState(() {
                               _selectedCity = city;
                             });
+                            
+                            // Logger la sélection pour analytics
+                            _logger.info('Localisation sélectionnée: ${city.name}');
+                            
                             // Feedback visuel de sélection
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(

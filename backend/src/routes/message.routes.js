@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');
+const validate = require('../middlewares/validate.middleware');
+const messageValidation = require('../validations/message.validation');
 const {
     getConversations,
     getConversation,
@@ -16,20 +18,20 @@ router.use(protect);
 
 // Routes des conversations
 router.route('/conversations')
-    .get(getConversations)
-    .post(createConversation);
+    .get(validate(messageValidation.getConversations), getConversations)
+    .post(validate(messageValidation.createConversation), createConversation);
 
 router.route('/conversations/:id')
-    .get(getConversation);
+    .get(validate(messageValidation.getConversation), getConversation);
 
 router.route('/conversations/:id/messages')
-    .get(getMessages)
-    .post(sendMessage);
+    .get(validate(messageValidation.getMessages), getMessages)
+    .post(validate(messageValidation.sendMessage), sendMessage);
 
 router.route('/conversations/:id/attachments')
-    .post(uploadAttachment);
+    .post(validate(messageValidation.uploadAttachment), uploadAttachment);
 
 router.route('/conversations/:id/read')
-    .patch(markAsRead);
+    .patch(validate(messageValidation.markAsRead), markAsRead);
 
 module.exports = router;

@@ -1,0 +1,450 @@
+# Guide de Sécurité pour ChapeChape Residences Backend
+
+Ce document décrit les meilleures pratiques de sécurité pour le backend de l'application ChapeChape Residences, ainsi que les procédures d'installation des outils de sécurité.
+
+## Sommaire
+
+1. [Configuration générale](#configuration-générale)
+2. [Protection CSRF](#protection-csrf)
+3. [Installation de ClamAV](#installation-de-clamav)
+4. [Sécurité des uploads](#sécurité-des-uploads)
+5. [Validation des données](#validation-des-données)
+6. [Rate Limiting et Protection DoS](#rate-limiting-et-protection-dos)
+7. [Tests de sécurité automatisés](#tests-de-sécurité-automatisés)
+8. [Cache Redis et Performance](#cache-redis-et-performance)
+9. [Gestion des dépendances](#gestion-des-dépendances)
+10. [Bonnes pratiques pour les développeurs](#bonnes-pratiques-pour-les-développeurs)
+
+## Configuration générale
+
+### Variables d'environnement
+
+Assurez-vous de configurer correctement toutes les variables d'environnement dans un fichier `.env` basé sur le modèle `.env.example`. Les variables liées à la sécurité sont particulièrement importantes.
+
+### Mode de production
+
+En mode production, assurez-vous que :
+
+- `NODE_ENV=production` est défini
+- Les routes de test sont désactivées
+- Les messages d'erreur détaillés ne sont pas exposés aux utilisateurs
+- Le HTTPS est activé
+- La protection CSRF est activée avec des cookies sécurisés
+- La validation des données est active sur toutes les routes
+- Le scan antivirus est activé (`ACTIVATE_VIRUS_SCAN=true`)
+
+## Protection CSRF
+
+Le backend utilise le middleware `csurf` pour se protéger contre les attaques CSRF (Cross-Site Request Forgery).
+
+### Configuration des cookies CSRF
+
+Les cookies CSRF sont configurés avec les paramètres de sécurité suivants :
+
+```javascript
+{
+  httpOnly: true,                // Le cookie n'est pas accessible par JavaScript
+  secure: process.env.NODE_ENV === 'production',  // HTTPS uniquement en production
+  sameSite: 'strict',           // Limite l'envoi du cookie aux requêtes provenant du même site
+  maxAge: 24 * 60 * 60 * 1000   // Durée de vie: 24 heures
+}
+```
+
+### Génération et vérification des tokens CSRF
+
+Les clients doivent suivre ce flux pour se protéger contre le CSRF :
+
+1. **Obtenir un token CSRF** avec une requête GET vers `/api/csrf-token`
+2. **Inclure le token** dans les requêtes POST, PUT, DELETE en l'ajoutant soit :
+   - Dans un en-tête HTTP `X-CSRF-Token`
+   - Dans un champ de formulaire `_csrf`
+
+### Exceptions CSRF
+
+Certaines routes sont exemptées de la vérification CSRF :
+
+- Les routes d'API publiques
+- Les routes d'authentification initiales
+- Les requêtes depuis les apps mobiles (identifiées par un en-tête spécial)
+
+### Gestion des erreurs CSRF
+
+En cas d'erreur CSRF, le système :
+
+1. Enregistre la tentative d'attaque potentielle
+2. Renvoie un code d'erreur 403 avec un message approprié
+3. Ne divulgue pas de détails techniques à l'utilisateur
+
+## Installation de ClamAV
+
+### Sur Windows (pour le développement)
+
+1. **Installer ClamAV**
+
+   ```powershell
+   # Via Chocolatey
+   choco install clamav
+
+   # OU télécharger depuis https://www.clamav.net/downloads
+   ```
+
+2. **Configuration de ClamAV**
+
+   - Modifiez le fichier `clamd.conf` pour activer le service TCP
+   - Définissez `TCPSocket 3310`
+   - Activez le service ClamAV
+
+3. **Installer le module Node.js**
+
+   ```bash
+   npm install clamscan
+   ```
+
+4. **Configurer les variables d'environnement**
+
+   ```bash
+   CLAMAV_HOST=127.0.0.1
+   CLAMAV_PORT=3310
+   ACTIVATE_VIRUS_SCAN=true
+   ```
+
+### Sur Linux (pour la production)
+
+1. **Installer ClamAV**
+
+   ```bash
+   sudo apt-get update
+   sudo apt-get install clamav clamav-daemon
+   ```
+
+2. **Mettre à jour la base de virus**
+
+   ```bash
+   sudo freshclam
+   ```
+
+3. **Démarrer le service**
+
+   ```bash
+   sudo systemctl start clamav-daemon
+   sudo systemctl enable clamav-daemon
+   ```
+
+4. **Installer le module Node.js**
+
+   ```bash
+   npm install clamscan
+   ```
+
+5. **Configurer les variables d'environnement**
+
+   ```bash
+   CLAMAV_SOCKET=/var/run/clamav/clamd.ctl
+   ACTIVATE_VIRUS_SCAN=true
+   ```
+
+## Sécurité des uploads
+
+Notre middleware d'upload fournit plusieurs couches de sécurité :
+
+1. **Validation des types MIME et extensions**
+2. **Limitation de la taille des fichiers**
+3. **Scan antivirus** (si activé)
+4. **Sanitization des noms de fichiers**
+5. **Protection contre le directory traversal**
+
+Pour utiliser la version sécurisée du middleware d'upload avec scan antivirus :
+
+```javascript
+// Dans vos routes
+const upload = require('../middlewares/upload.middleware');
+
+// Version avec scan antivirus (recommandée pour la production)
+router.post('/upload-image', 
+  ...upload.secure.profile('avatar'), 
+  controller.uploadProfileImage
+);
+
+// Version avec scan antivirus pour plusieurs fichiers
+router.post('/upload-documents', 
+  ...upload.secure.documentMultiple('documents', 5),
+  controller.uploadDocuments
+);
+```
+
+## Validation des données
+
+La validation des données est implémentée avec [Joi](https://joi.dev/) pour toutes les routes sensibles.
+
+### Middleware de validation
+
+Utilisez systématiquement le middleware de validation pour toutes les routes :
+
+```javascript
+const { createResidenceSchema } = require('../validations/residence.validation');
+router.post('/', validate(createResidenceSchema), residenceController.createResidence);
+```
+
+### Tests de validation
+
+Tous les schémas de validation sont testés automatiquement pour vérifier qu'ils rejettent bien les données non conformes. Les tests de validation utilisent Jest :
+
+```javascript
+describe('Validation des schémas Joi', () => {
+  describe('loginSchema', () => {
+    test('devrait rejeter un email invalide', () => {
+      const { error } = loginSchema.validate({ email: 'not-an-email', password: 'Password123!' });
+      expect(error).toBeDefined();
+    });
+  });
+});
+```
+
+## Rate Limiting et Protection DoS
+
+Le backend implémente plusieurs niveaux de protection contre les attaques par déni de service (DoS) et les tentatives de force brute.
+
+### Configuration du Rate Limiting
+
+Le middleware Express Rate Limit est configuré comme suit :
+
+```javascript
+const rateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limite par IP
+  message: 'Trop de requêtes depuis cette IP, veuillez réessayer après 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false
+});
+```
+
+### Protection spécifique pour l'authentification
+
+Les routes d'authentification (login, register) implémentent un rate limiting plus strict :
+
+```javascript
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 20, // 20 tentatives max par heure
+  message: 'Trop de tentatives de connexion. Compte temporairement bloqué.',
+  skipSuccessfulRequests: true // Ne compte pas les connexions réussies
+});
+```
+
+### Résultats des tests de charge
+
+Les tests de charge avec Artillery ont confirmé l'efficacité du rate limiting :
+
+- Délai de réponse moyen : **~1ms** même sous charge élevée
+- Réponses 429 (Too Many Requests) correctement retournées lorsque les limites sont atteintes
+- Aucune dégradation des performances observée sous charge soutenue (200 utilisateurs virtuels)
+
+## Tests de sécurité automatisés
+
+Le backend dispose d'une suite complète de tests de sécurité qui vérifient automatiquement :
+
+### Tests d'authentification
+
+```javascript
+describe('Authentification', () => {
+  test('devrait refuser l'accès sans token JWT valide', async () => {
+    // Test implementation
+  });
+});
+```
+
+### Tests CSRF
+
+```javascript
+describe('Protection CSRF', () => {
+  test('devrait rejeter les requêtes sans token CSRF', async () => {
+    // Test implementation
+  });
+});
+```
+
+### Tests de validation des données
+
+Tous les schémas de validation Joi sont testés individuellement pour garantir qu'ils :
+
+1. Acceptent les données valides
+2. Rejettent les données invalides
+3. Génèrent des messages d'erreur clairs
+
+### Tests de Rate Limiting
+
+Les tests de sécurité incluent la vérification que les mécanismes de rate limiting fonctionnent :
+
+```javascript
+describe('Rate Limiting', () => {
+  test('devrait limiter les tentatives de connexion excessives', async () => {
+    // Test implementation
+  });
+});
+```
+
+### Exécution des tests de sécurité
+
+Les tests de sécurité peuvent être exécutés avec la commande :
+
+```bash
+npm test -- tests/security.test.js
+```
+
+## Cache Redis et Performance
+
+Le backend utilise Redis comme système de cache pour améliorer les performances et réduire la charge sur la base de données MongoDB.
+
+### Configuration du middleware de cache
+
+Le middleware de cache Redis est implémenté comme suit :
+
+```javascript
+const cacheMiddleware = async (req, res, next) => {
+  // Si cache désactivé ou méthode non GET, ignorer
+  if (!CACHE_ENABLED || req.method !== 'GET') {
+    return next();
+  }
+
+  const key = `${req.originalUrl || req.url}`;
+  
+  try {
+    const cachedResponse = await redisClient.get(key);
+    
+    if (cachedResponse) {
+      return res.status(200).json(JSON.parse(cachedResponse));
+    }
+    
+    // Intercepte la réponse pour la mettre en cache
+    const originalSend = res.send;
+    res.send = function(body) {
+      if (res.statusCode === 200) {
+        redisClient.set(key, body, 'EX', CACHE_DURATION);
+      }
+      return originalSend.call(this, body);
+    };
+    
+    next();
+  } catch (error) {
+    console.error('Erreur de cache Redis:', error);
+    next(); // Continue sans cache en cas d'erreur
+  }
+};
+```
+
+### Bénéfices de sécurité du cache Redis
+
+Outre l'amélioration des performances, le cache Redis offre des avantages en termes de sécurité :
+
+1. **Atténuation des DoS** : Réduit l'impact des pics de trafic sur le backend
+2. **Réduction de la surface d'attaque** : Moins de requêtes atteignent la base de données
+3. **Isolation** : Protège MongoDB contre les surcharges
+
+### Tests du cache Redis
+
+Le middleware de cache est testé unitairement pour vérifier :
+
+1. La mise en cache correcte des réponses GET
+2. L'invalidation du cache lors des mises à jour
+3. Le comportement en cas d'erreur Redis
+
+```javascript
+const validate = require('../middlewares/validate.middleware');
+const { createUserSchema } = require('../validations/user.validation');
+
+router.post('/users', validate(createUserSchema), userController.createUser);
+```
+
+### Routes avec validation complète
+
+Les routes suivantes sont protégées par des schémas de validation Joi complets :
+
+1. **Routes d'authentification**
+
+   - Inscription, connexion, rafraîchissement du token
+   - Réinitialisation de mot de passe
+   - Authentification sociale (Google, Facebook)
+   - Vérification par SMS
+
+2. **Routes de paiement**
+
+   - Création d'intention de paiement
+   - Confirmation de paiement
+   - Remboursements
+
+3. **Routes de résidences**
+
+   - CRUD des résidences
+   - Gestion des images et uploads
+   - FAQs, méthodes de paiement, équipements
+
+4. **Routes de messagerie**
+
+   - Conversations et messages
+   - Attachements et pièces jointes
+
+### Bonnes pratiques de validation
+
+- Validez toujours les identifiants MongoDB avec la fonction `objectId` personnalisée
+- Utilisez des messages d'erreur explicites en français
+- Appliquez des règles strictes sur le format des numéros de téléphone, emails, etc.
+- Limitez la taille des champs texte
+- Vérifiez les formats de date
+
+## Gestion des dépendances
+
+### Surveillance des vulnérabilités
+
+Exécutez régulièrement la commande suivante pour identifier les vulnérabilités dans les dépendances :
+
+```bash
+npm audit
+```
+
+Pour les vulnérabilités non critiques, utilisez :
+
+```bash
+npm audit fix
+```
+
+### Gestion des conflits de dépendances
+
+Des conflits connus existent entre :
+
+- `cloudinary` v2.x et `multer-storage-cloudinary` (qui nécessite `cloudinary` v1.x)
+- Pour la mise à jour des dépendances vulnérables, utilisez l'option `--legacy-peer-deps`
+
+```bash
+npm install <package>@latest --save --legacy-peer-deps
+```
+
+### Dépendances vulnérables connues
+
+- `onesignal-node` : Dépendance dépréciée utilisant `request` et `request-promise`  
+  **Mitigation** : À remplacer par l'API REST OneSignal avec un client HTTP moderne
+
+- `csurf` : Vulnérabilité de niveau faible liée à `cookie`  
+  **Mitigation** : Configuration sécurisée des cookies implémentée
+
+## Bonnes pratiques pour les développeurs
+
+1. **Ne jamais exposer de routes de test en production**
+
+2. **Utiliser des règles de validation strictes pour chaque entrée utilisateur**
+
+3. **Ne pas stocker de secrets dans le code source**
+
+4. **Exécuter `npm audit` lors de chaque update majeur**
+
+5. **Mettre à jour les dépendances régulièrement**
+
+6. **Utiliser le système de log pour tracer les activités sensibles**
+
+7. **Appliquer le principe du moindre privilège pour les rôles utilisateur**
+
+8. **Tester les scénarios de sécurité (injection, XSS, CSRF, etc.)**
+
+---
+
+Pour toute question sur la sécurité du backend, contactez l'équipe de développement.

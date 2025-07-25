@@ -201,9 +201,17 @@ const ResidenceTypes = () => {
         </motion.div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Section de gauche - Visualisation */}
+          {/* Section de gauche - Visualisation avec parallax 3D */}
           <motion.div
-            className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-xl group"
+            className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-xl group perspective-1000"
+            whileHover={{
+              rotateY: 5,
+              rotateX: 2,
+              transition: { duration: 0.4, ease: "easeOut" }
+            }}
+            style={{
+              transformStyle: 'preserve-3d'
+            }}
           >
             <AnimatePresence mode="wait">
               <motion.div 
@@ -214,12 +222,20 @@ const ResidenceTypes = () => {
                 exit="exit"
                 className="absolute inset-0"
               >
-                {/* Utiliser une condition plus fiable pour vérifier si l'image est chargée */}
+                {/* Image avec parallax 3D effect */}
                 {selectedType.imageUrl && (imagesLoaded[selectedType.id] !== false) ? (
-                  <div 
-                    className="w-full h-full bg-cover bg-center transform transition-transform duration-1000 group-hover:scale-110"
-                    style={{ backgroundImage: `url(${selectedType.imageUrl})` }}
-                  ></div>
+                  <motion.div 
+                    className="w-full h-full bg-cover bg-center"
+                    style={{ 
+                      backgroundImage: `url(${selectedType.imageUrl})`,
+                      transform: 'translateZ(20px)'
+                    }}
+                    whileHover={{
+                      scale: 1.1,
+                      rotateZ: 1,
+                      transition: { duration: 0.6, ease: "easeOut" }
+                    }}
+                  ></motion.div>
                 ) : (
                   <ResidencePlaceholder type={selectedType.id as any} className="w-full h-full" />
                 )}
@@ -257,7 +273,23 @@ const ResidenceTypes = () => {
               className="space-y-4 mb-6"
             >
               <h3 className="text-xl font-semibold text-secondary-900">Choisissez votre type de résidence</h3>
-              <div className="flex flex-wrap gap-3">
+              {/* Tabs animés avec slider doré - Style Stripe */}
+              <div className="relative flex flex-wrap gap-3 p-2 bg-white/80 backdrop-blur-sm rounded-2xl border border-primary-100/30 shadow-lg">
+                {/* Slider doré qui glisse */}
+                <motion.div
+                  className="absolute top-2 left-2 h-10 bg-gradient-to-r from-primary-300 via-primary-400 to-primary-300 rounded-xl shadow-lg"
+                  animate={{
+                    x: residenceTypes.findIndex(type => type.id === selectedType.id) * (120 + 12), // 120px width + 12px gap
+                    width: 120
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    duration: 0.6
+                  }}
+                />
+                
                 {residenceTypes.map((type, index) => {
                   const isSelected = selectedType.id === type.id;
                   
@@ -269,22 +301,28 @@ const ResidenceTypes = () => {
                         console.log('Clic sur le bouton:', type.name);
                         handleTypeChange(type);
                       }}
-                      className={`relative inline-flex items-center justify-center px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-sm border cursor-pointer ${
+                      className={`relative z-10 inline-flex items-center justify-center px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer min-w-[120px] ${
                         isSelected 
-                          ? 'bg-primary-300 text-secondary-900 shadow-lg border-primary-400 font-semibold' 
-                          : 'bg-white text-secondary-700 hover:bg-primary-50 hover:text-secondary-900 border-secondary-200 hover:border-primary-200'
+                          ? 'text-secondary-900 font-semibold' 
+                          : 'text-secondary-600 hover:text-secondary-900'
                       }`}
-                      whileHover={{ y: -2, boxShadow: "0 4px 8px rgba(0,0,0,0.1)" }}
+                      whileHover={{ 
+                        y: -2, 
+                        scale: 1.05,
+                        transition: { duration: 0.2 }
+                      }}
                       whileTap={{ scale: 0.95 }}
+                      animate={{
+                        color: isSelected ? '#1a1a1a' : '#666666'
+                      }}
                     >
-                      {isSelected && (
-                        <motion.span
-                          className="absolute inset-0 bg-primary-200 opacity-20 rounded-full"
-                          layoutId="activeButton"
-                          initial={false}
-                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                        />
-                      )}
+                      {/* Glow effect au hover */}
+                      <motion.div 
+                        className="absolute inset-0 rounded-xl bg-primary-300/10 opacity-0"
+                        whileHover={{ opacity: isSelected ? 0 : 1 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                      
                       {type.name}
                     </motion.button>
                   );
@@ -303,40 +341,127 @@ const ResidenceTypes = () => {
               <p className="text-secondary-600 mb-6">{selectedType.description}</p>
               
               <h5 className="text-md font-semibold text-secondary-800 mb-3">Caractéristiques</h5>
-              <ul className="space-y-2 mb-6">
+              {/* Checklist animée avec icônes en cascade - Style Stripe */}
+              <div className="space-y-2 mb-6">
                 {selectedType.features.map((feature, index) => (
-                  <motion.li 
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center text-secondary-600"
+                  <motion.div 
+                    key={`${selectedType.id}-${index}`}
+                    initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    transition={{ 
+                      delay: index * 0.15,
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 20
+                    }}
+                    className="flex items-center text-secondary-600 group/item"
                   >
-                    <span className="text-primary-300 mr-2">✓</span>
-                    {feature}
-                  </motion.li>
+                    {/* Icône check animée */}
+                    <motion.div
+                      className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-300/20 flex items-center justify-center mr-3 group-hover/item:bg-primary-300/30 transition-colors"
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ 
+                        delay: index * 0.15 + 0.2,
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 15
+                      }}
+                      whileHover={{
+                        scale: 1.2,
+                        rotate: 360,
+                        transition: { duration: 0.4 }
+                      }}
+                    >
+                      <motion.svg 
+                        className="w-3 h-3 text-primary-300"
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ 
+                          delay: index * 0.15 + 0.4,
+                          duration: 0.3
+                        }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </motion.svg>
+                    </motion.div>
+                    
+                    {/* Texte avec effet de typing */}
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ 
+                        delay: index * 0.15 + 0.3,
+                        duration: 0.4
+                      }}
+                      className="group-hover/item:text-secondary-800 transition-colors"
+                    >
+                      {feature}
+                    </motion.span>
+                  </motion.div>
                 ))}
-              </ul>
+              </div>
               
+              {/* Gradient hover button premium - Style Stripe */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
                 className="flex justify-center md:justify-start"
               >
-                <a 
+                <motion.a 
                   href="/residences" 
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary-300 text-secondary-900 rounded-full hover:bg-primary-400 transition-colors duration-300 font-medium"
+                  className="relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-300 via-primary-400 to-primary-300 text-secondary-900 rounded-full font-medium overflow-hidden group cursor-pointer"
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 20px 40px rgba(212, 175, 55, 0.3)",
+                    transition: { duration: 0.3 }
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  animate={{
+                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                  }}
+                  transition={{
+                    backgroundPosition: {
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }
+                  }}
+                  style={{
+                    backgroundSize: '200% 100%'
+                  }}
                 >
-                  <span>Explorer cette option</span>
+                  {/* Effet ripple au hover */}
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    initial={{ x: '-100%' }}
+                    whileHover={{ 
+                      x: '100%',
+                      transition: { duration: 0.6, ease: "easeInOut" }
+                    }}
+                  />
+                  
+                  {/* Glow effect premium */}
+                  <motion.div 
+                    className="absolute -inset-1 bg-gradient-to-r from-primary-300/50 via-primary-400/50 to-primary-300/50 rounded-full blur-md opacity-0 group-hover:opacity-100"
+                    transition={{ duration: 0.3 }}
+                  />
+                  
+                  <span className="relative z-10">Explorer cette option</span>
                   <motion.span 
-                    initial={{ x: 0 }}
-                    whileHover={{ x: 5 }}
+                    className="relative z-10 bg-secondary-900/20 w-6 h-6 rounded-full flex items-center justify-center"
+                    whileHover={{ x: 5, rotate: 90 }}
                     transition={{ duration: 0.2 }}
                   >
-                    →
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </motion.span>
-                </a>
+                </motion.a>
               </motion.div>
             </motion.div>
           </div>

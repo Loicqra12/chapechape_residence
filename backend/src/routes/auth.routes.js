@@ -233,7 +233,7 @@ router.get('/me', protect, getMe);
  *       401:
  *         description: Authentification échouée
  */
-router.post('/google', googleAuthController.googleAuth);
+router.post('/google', validate(authValidation.googleAuth), googleAuthController.googleAuth);
 
 /**
  * @swagger
@@ -273,11 +273,11 @@ router.post('/google', googleAuthController.googleAuth);
  *       401:
  *         description: Authentification échouée
  */
-router.post('/facebook', facebookAuthController.handleFacebookAuth);
+router.post('/facebook', validate(authValidation.facebookAuth), facebookAuthController.handleFacebookAuth);
 
 // Vérification de numéro de téléphone par SMS
-router.post('/request-verification-code', requestVerificationCode);
-router.post('/verify-code', verifyCode);
-router.post('/resend-verification-code', resendVerificationCode);
+router.post('/request-verification-code', validate(authValidation.requestVerificationCode), requestVerificationCode);
+router.post('/verify-code', validate(authValidation.verifyCode), verifyCode);
+router.post('/resend-verification-code', validate(authValidation.resendVerificationCode), resendVerificationCode);
 
 module.exports = router;

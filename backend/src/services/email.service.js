@@ -37,8 +37,14 @@ class EmailService {
                 email: process.env.EMAIL_USERNAME || process.env.SMTP_USER || "noreply@chapechaperesidence.com"
             };
             
+            // Support pour les champs 'to' et 'email'
+            const recipientEmail = options.to || options.email;
+            if (!recipientEmail) {
+                throw new Error('Aucun destinataire spécifié (champ to ou email requis)');
+            }
+            
             const receivers = [{
-                email: options.email
+                email: recipientEmail
             }];
             
             // Création de l'objet de requête d'email
@@ -56,7 +62,7 @@ class EmailService {
                 };
             }
             
-            console.log('Envoi d\'email via API Brevo à:', options.email);
+            console.log('Envoi d\'email via API Brevo à:', recipientEmail);
             const data = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
             console.log('Email envoyé avec succès. ID:', data.messageId);
             return data;

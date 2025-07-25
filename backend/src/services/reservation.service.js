@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const apiError = require('../utils/apiError');
+const ApiError = require('../utils/apiError');
 const Reservation = require('../models/reservation.model');
 const Residence = require('../models/residence.model');
 const Availability = require('../models/availability.model');
@@ -63,15 +63,63 @@ const createReservation = async (reservationBody) => {
       reservationBody.checkOut
     );
 
-    // Créer la réservation avec tous les champs requis
+    // Vérifier si la résidence a un partenaire associé et gérer ce cas de façon robuste
+    let partnerId = null;
+    
+    if (!residence.partner) {
+      console.error(`ERREUR: La résidence ${residence._id} n'a pas de partenaire défini`);
+      
+      // Rechercher le propriétaire de la résidence ou un admin comme partenaire de secours
+      try {
+        // Si nous sommes en environnement de dev/test, permettre un fallback
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('ATTENTION: Tentative de récupération d\'un partenaire de secours (NON RECOMMANDÉ en production)');
+          
+          // Chercher un utilisateur avec le rôle 'partner' pour l'associer
+          const fallbackPartner = await User.findOne({ role: 'partner' }).select('_id');
+          
+          if (fallbackPartner) {
+            partnerId = fallbackPartner._id;
+            console.log(`Partenaire de secours trouvé: ${partnerId}`);
+          } else {
+            // En dernier recours, utiliser l'ID de l'utilisateur (créateur de la réservation)
+            partnerId = reservationBody.user;
+            console.log(`Aucun partenaire trouvé, utilisation de l'utilisateur comme fallback: ${partnerId}`);
+          }
+        } else {
+          // En production, rejeter la création si aucun partenaire n'est défini
+          throw new ApiError('Cette résidence n\'a pas de partenaire associé. Réservation impossible.', 400);
+        }
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        console.error('Erreur lors de la recherche d\'un partenaire de secours:', error);
+        // En cas d'erreur dans la recherche, utiliser l'ID utilisateur en dernier recours
+        partnerId = reservationBody.user;
+      }
+    } else {
+      partnerId = residence.partner;
+    }
+    
+    console.log(`Création de réservation avec partenaire: ${partnerId}`);
+    
+    // Créer la réservation avec tous les champs requis et un partenaire valide
     const reservation = await Reservation.create([{
       ...reservationBody,
-      partner: residence.partner, // Ajouter le partenaire (propriétaire) de la résidence
+      // Utiliser le partenaire déterminé par la logique ci-dessus
+      partner: partnerId,
       user: reservationBody.user || reservationBody.client, // Assurer la compatibilité entre user/client
       totalPrice,
       cancellationPolicy: cancellationPolicyId,
       status: 'pending'
     }], { session });
+    
+    // Journaliser les IDs pour faciliter le débogage
+    console.log('Réservation créée:', {
+      reservationId: reservation[0]._id,
+      userId: reservation[0].user,
+      partnerId: reservation[0].partner,
+      residenceId: residence._id
+    });
 
     // Mettre à jour la disponibilité
     await availabilityService.updateAvailabilityForReservation(
@@ -89,20 +137,41 @@ const createReservation = async (reservationBody) => {
     session.endSession();
 
     // Envoyer les emails de confirmation (hors transaction)
-    const [user, partner] = await Promise.all([
-      User.findById(reservation[0].client),
-      User.findById(residence.owner)
-    ]);
-
+    // Récupérer le client à partir de user ou client selon la propriété disponible
+    const clientId = reservation[0].client || reservation[0].user;
+    console.log(`DEBUG: ID du client pour la réservation: ${clientId}`);
+    
     try {
-      await Promise.all([
-        emailService.sendBookingConfirmation(user.email, reservation[0]),
-        emailService.sendPartnerNotification(partner, 'new_booking', {
+      // Rechercher l'utilisateur et le partenaire séparément pour gérer les cas null
+      const user = clientId ? await User.findById(clientId) : null;
+      const partner = residence.owner ? await User.findById(residence.owner) : null;
+      
+      console.log(`DEBUG: Utilisateur trouvé: ${user ? 'Oui' : 'Non'}, Partenaire trouvé: ${partner ? 'Oui' : 'Non'}`);
+      
+      // Envoyer les emails seulement si les destinataires existent
+      const emailPromises = [];
+      
+      if (user && user.email) {
+        console.log(`DEBUG: Envoi d'email de confirmation à l'utilisateur: ${user.email}`);
+        emailPromises.push(emailService.sendBookingConfirmation(user.email, reservation[0]));
+      } else {
+        console.log('ATTENTION: Impossible d\'envoyer l\'email de confirmation - utilisateur ou email manquant');
+      }
+      
+      if (partner) {
+        console.log(`DEBUG: Envoi de notification au partenaire: ${partner.email || 'email inconnu'}`);
+        emailPromises.push(emailService.sendPartnerNotification(partner, 'new_booking', {
           checkIn: reservation[0].checkIn,
           checkOut: reservation[0].checkOut,
           guests: reservation[0].numberOfGuests
-        })
-      ]);
+        }));
+      } else {
+        console.log('ATTENTION: Impossible d\'envoyer l\'email au partenaire - partenaire manquant');
+      }
+      
+      if (emailPromises.length > 0) {
+        await Promise.all(emailPromises);
+      }
     } catch (emailError) {
       console.error('Erreur lors de l\'envoi des emails de confirmation:', emailError);
       // Ne pas faire échouer la réservation si l'envoi d'email échoue

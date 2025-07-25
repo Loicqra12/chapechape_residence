@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../config/app_config.dart';
 import './interceptors/auth_interceptor.dart';
 import './interceptors/image_url_interceptor.dart';
+import './interceptors/retry_interceptor.dart';
 import '../../utils/error_handler.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
@@ -48,6 +49,15 @@ class ApiService {
 
     // Ajouter l'intercepteur d'URL d'images pour corriger les chemins d'images problématiques
     _dio.interceptors.add(ImageUrlInterceptor());
+
+    // Ajouter l'intercepteur de retry avec délai exponentiel pour gérer les erreurs 429 et réseau
+    _dio.interceptors.add(RetryInterceptor(
+      dio: _dio,
+      maxRetries: 3,
+      initialDelay: const Duration(milliseconds: 500),
+      backoffFactor: 2.0,
+      maxDelay: const Duration(seconds: 15),
+    ));
 
     // Ajouter l'intercepteur d'authentification
     _dio.interceptors.add(

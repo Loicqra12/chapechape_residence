@@ -5,6 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+// Import du nouveau widget d'autocomplétion d'adresses
+import '../../widgets/maps/address_autocomplete_field.dart';
 import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_image.dart';
@@ -86,6 +89,8 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   // Service de résidence pour les appels API directs
   final ResidenceService _residenceService =
       ResidenceService(baseUrl: AppConfig.apiUrl);
+      
+  // Nous n'avons pas besoin d'instancier MapsService ici car le widget AddressAutocompleteField crée sa propre instance
 
   // Options spécifiques pour différents types de résidences
   bool _hasAirConditioning = false;
@@ -139,6 +144,57 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   String _selectedCountry = 'CI'; // Côte d'Ivoire par défaut
   String _selectedRegion = 'AB'; // Abidjan par défaut
   String _selectedCity = 'CO'; // Cocody par défaut
+  
+  // Variables pour la géolocalisation
+  double? _latitude;
+  double? _longitude;
+  String? _formattedAddress;
+  
+  /// Construction d'une carte Google Maps avec le marqueur de la résidence
+  Widget _buildGoogleMap() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: LatLng(_latitude!, _longitude!),
+            zoom: 15,
+          ),
+          markers: {
+            Marker(
+              markerId: const MarkerId('selected_location'),
+              position: LatLng(_latitude!, _longitude!),
+              infoWindow: InfoWindow(title: _formattedAddress ?? "Position sélectionnée"),
+            ),
+          },
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: true,
+          mapToolbarEnabled: false,
+        ),
+      ),
+    );
+  }
+  
+  /// Callback appelé quand une position est sélectionnée sur la carte
+  void _onMapPositionSelected(LatLng position, String? address) {
+    setState(() {
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+      _formattedAddress = address;
+      
+      // Si l'adresse est disponible et que le champ d'adresse est vide ou a une valeur par défaut
+      // on pré-remplit le champ d'adresse
+      if (address != null && (_addressController.text.isEmpty || 
+          _addressController.text == 'Adresse non spécifiée')) {
+        _addressController.text = address;
+      }
+    });
+  }
 
   // Variables pour les images
   List<String>? _existingImages;
@@ -968,6 +1024,10 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           'region': _selectedRegion,
           'city': _selectedCity,
           'address': _addressController.text,
+          // Coordonnées GPS (si disponibles)
+          'latitude': _latitude,
+          'longitude': _longitude,
+          'formattedAddress': _formattedAddress,
 
           // Règles de la résidence
           'rules': {
@@ -2154,20 +2214,165 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ),
               const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _addressController,
-                decoration: InputDecoration(
-                  labelText: 'Adresse exacte',
-                  hintText: 'ex: 123 Rue des Fleurs, Résidence Le Palmier',
-                  prefixIcon: Icon(Icons.location_on),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'L\'adresse exacte est requise';
-                  }
-                  return null;
+              AddressAutocompleteField(
+                initialAddress: _formattedAddress ?? _addressController.text,
+                onAddressSelected: (result) {
+                  setState(() {
+                    _addressController.text = result.formattedAddress;
+                    _formattedAddress = result.formattedAddress;
+                    if (result.coordinates != null) {
+                      _latitude = result.coordinates!.latitude;
+                      _longitude = result.coordinates!.longitude;
+                    }
+                    
+                    // Extraire les composantes d'adresse si disponibles
+                    if (result.components != null) {
+                      final components = result.components!;
+                      if (components['country'] != null) {
+                        // Si nous avons un code pays dans les composantes,
+                        // nous pourrions le mapper à nos codes pays internes
+                        // Pour l'instant, nous gardons simplement la vérification de base
+                      }
+                      
+                      if (components['city'] != null) {
+                        _cityController.text = components['city'];
+                      }
+                    }
+                  });
                 },
+                label: 'Adresse exacte',
+                hintText: 'Rechercher une adresse...',
+                showMap: false, // Désactivons la carte dans le widget car nous affichons notre propre carte
+              ),
+
+              const SizedBox(height: 16),
+              
+              // Affichage de la carte Google Maps si des coordonnées sont disponibles
+              if (_latitude != null && _longitude != null)
+                _buildGoogleMap(),
+                
+              const SizedBox(height: 16),
+              
+              // Section de sélection sur la carte
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.map,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Position exacte sur la carte',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sélectionnez l\'emplacement précis de votre résidence en touchant la carte ou en recherchant une adresse.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                      // Utilisation d'un conteneur simple avec gestion d'état pour la sélection de localisation
+                      Container(
+                        margin: EdgeInsets.only(bottom: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Bouton de recherche d'adresse
+                            ElevatedButton.icon(
+                              icon: Icon(Icons.search),
+                              label: Text('Rechercher une adresse'),
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () async {
+                                // Implémentation temporaire: coordonnées fictives pour démonstration
+                                // À remplacer par une véritable implémentation de sélection
+                                setState(() {
+                                  _latitude = 5.3364504;
+                                  _longitude = -4.0266486;
+                                  _formattedAddress = 'Abidjan, Côte d\'Ivoire';
+                                });
+                              },
+                            ),
+                            SizedBox(height: 12),
+                            // Affichage de l'adresse sélectionnée
+                            if (_latitude != null && _longitude != null)
+                              Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Theme.of(context).dividerColor),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Position sélectionnée:',
+                                      style: Theme.of(context).textTheme.titleSmall,
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      _formattedAddress ?? 'Adresse non disponible',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Coordonnées: ${_latitude?.toStringAsFixed(6)}, ${_longitude?.toStringAsFixed(6)}',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                    SizedBox(height: 8),
+                                    // Bouton pour réinitialiser la sélection
+                                    TextButton.icon(
+                                      icon: Icon(Icons.refresh),
+                                      label: Text('Modifier la position'),
+                                      onPressed: () {
+                                        setState(() {
+                                          _latitude = null;
+                                          _longitude = null;
+                                          _formattedAddress = null;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (_formattedAddress != null) ...[  
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 16,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Position sélectionnée: $_formattedAddress',
+                                style: TextStyle(fontStyle: FontStyle.italic),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
 
               const SizedBox(height: 32),

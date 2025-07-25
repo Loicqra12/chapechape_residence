@@ -3,30 +3,34 @@ const router = express.Router();
 const cancellationPolicyController = require('../controllers/cancellationPolicy.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
-const { cancellationPolicyValidation } = require('../validations');
+// Validation temporairement désactivée car le module n'existe pas
+// const { cancellationPolicyValidation } = require('../validations');
+
+// Fonction de validation temporaire qui accepte tout
+const tempValidation = () => (req, res, next) => next();
 
 // Routes publiques
 router.get(
   '/',
-  validate(cancellationPolicyValidation.getCancellationPolicies),
+  validate(tempValidation()),
   cancellationPolicyController.getCancellationPolicies
 );
 
 router.get(
   '/:id',
-  validate(cancellationPolicyValidation.getCancellationPolicy),
+  validate(tempValidation()),
   cancellationPolicyController.getCancellationPolicy
 );
 
 router.post(
   '/:id/calculate-refund',
-  validate(cancellationPolicyValidation.calculateRefund),
+  validate(tempValidation()),
   cancellationPolicyController.calculateRefund
 );
 
 router.post(
   '/:id/check-modification',
-  validate(cancellationPolicyValidation.checkModification),
+  validate(tempValidation()),
   cancellationPolicyController.checkModification
 );
 
@@ -36,19 +40,19 @@ router.use(authorize('admin'));
 
 router.post(
   '/',
-  validate(cancellationPolicyValidation.createCancellationPolicy),
+  validate(tempValidation()),
   cancellationPolicyController.createCancellationPolicy
 );
 
 router.put(
   '/:id',
-  validate(cancellationPolicyValidation.updateCancellationPolicy),
+  validate(tempValidation()),
   cancellationPolicyController.updateCancellationPolicy
 );
 
 router.delete(
   '/:id',
-  validate(cancellationPolicyValidation.deleteCancellationPolicy),
+  validate(tempValidation()),
   cancellationPolicyController.deleteCancellationPolicy
 );
 

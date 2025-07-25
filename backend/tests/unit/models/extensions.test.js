@@ -22,25 +22,27 @@ describe('Extensions de modèles ChapeChape', () => {
             name: 'Partner Test',
             email: 'extension-partner@test.com',
             password: 'Password123!',
-            role: 'partner'
+            role: 'partner',
+            firstName: 'Partner',
+            lastName: 'Test'
         });
         partnerId = partner._id;
         
         // Créer une résidence complète
         const residence = await Residence.create({
-            name: 'Résidence Extension Test',
+            title: 'Résidence Extension Test', // title au lieu de name
             description: 'Une résidence pour tester les extensions',
             price: 150,
             images: ['https://example.com/test1.jpg', 'https://example.com/test2.jpg'],
-            location: {
-                address: '123 Test Boulevard',
-                city: 'Extension City',
-                country: 'Test Country',
-                formattedAddress: '123 Test Boulevard, Extension City, Test Country',
-                coordinates: [4.5678, 3.4567],
-                postalCode: '12345'
-            },
-            amenities: ['wifi', 'pool', 'parking', 'garden', 'bbq'],
+            // Attributs requis directement au niveau racine
+            address: '123 Test Boulevard',
+            city: 'Extension City',
+            // Autres champs requis par le schéma
+            type: 'villa', // Type requis
+            area: 120, // Surface requise
+            partner: partnerId, // Partenaire requis
+            // Amenities corrects (sans bbq qui est une valeur non autorisée)
+            amenities: ['wifi', 'pool', 'parking', 'garden'],
             owner: partnerId,
             isAvailable: true,
             category: 'villa',

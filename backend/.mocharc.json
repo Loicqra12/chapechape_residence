@@ -1,0 +1,7 @@
+{
+  "require": ["tests/setup/setup.js"],
+  "timeout": 10000,
+  "recursive": true,
+  "reporter": "spec",
+  "exit": true
+}

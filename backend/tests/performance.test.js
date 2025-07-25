@@ -2,7 +2,7 @@ const request = require('supertest');
 const app = require('../src/app');
 const Residence = require('../src/models/residence.model');
 const User = require('../src/models/user.model');
-const { generateToken } = require('../src/utils/jwt');
+const { generateToken } = require('./helpers/auth.helper');
 
 describe('Performance Tests', () => {
     let userToken;

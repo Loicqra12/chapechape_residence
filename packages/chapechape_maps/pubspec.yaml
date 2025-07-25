@@ -1,0 +1,31 @@
+name: chapechape_maps
+description: Package partagé pour les fonctionnalités de cartographie de ChapeChape Residence
+version: 0.0.1
+
+environment:
+  sdk: ">=2.19.0 <4.0.0"
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Cartographie
+  google_maps_flutter: ^2.5.0
+  geolocator: ^10.1.0
+  geocoding: ^2.1.1
+  
+  # Réseau et API
+  dio: ^5.4.0
+  
+  # Stockage local
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  # Le commentaire suivant doit être sous une propriété valide
+  uses-material-design: true

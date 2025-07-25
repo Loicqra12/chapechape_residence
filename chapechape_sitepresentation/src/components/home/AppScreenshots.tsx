@@ -99,30 +99,57 @@ const AppScreenshots: React.FC = () => {
     }
   }, [screenshots]);
   
-  // Variants d'animation pour les transitions
+  // Auto-rotation du carrousel - Style Stripe
+  useEffect(() => {
+    const currentScreenshots = screenshots[activeApp.id] || [];
+    if (currentScreenshots.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % currentScreenshots.length);
+    }, 4000); // Change toutes les 4 secondes
+    
+    return () => clearInterval(interval);
+  }, [activeApp.id, screenshots]);
+  
+  // Variants d'animation pour les transitions - Style Stripe
   const phoneVariants = {
     initial: { 
       opacity: 0,
-      y: 50,
-      rotateY: -10
+      y: 80,
+      rotateY: -15,
+      rotateX: 10,
+      scale: 0.8
     },
     animate: { 
       opacity: 1,
       y: 0,
       rotateY: 0,
+      rotateX: 0,
+      scale: 1,
       transition: { 
-        duration: 0.5,
+        duration: 0.8,
         type: 'spring',
-        stiffness: 100,
-        damping: 15
+        stiffness: 120,
+        damping: 20
       }
     },
     exit: { 
       opacity: 0,
-      y: -50,
-      rotateY: 10,
+      y: -80,
+      rotateY: 15,
+      rotateX: -10,
+      scale: 0.8,
       transition: { 
-        duration: 0.3
+        duration: 0.4
+      }
+    },
+    hover: {
+      rotateY: 5,
+      rotateX: -2,
+      scale: 1.02,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut"
       }
     }
   };
@@ -319,54 +346,186 @@ const AppScreenshots: React.FC = () => {
             </p>
             
             <h4 className="text-lg font-semibold text-secondary-800 mb-4">Fonctionnalités principales</h4>
-            <ul className="space-y-3 mb-8">
+            {/* Icônes check animées en cascade - Style Stripe */}
+            <div className="space-y-3 mb-8">
               {activeApp.features.map((feature, index) => (
-                <motion.li
-                  key={feature}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start"
+                <motion.div
+                  key={`${activeApp.id}-${feature}`}
+                  initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  transition={{ 
+                    delay: index * 0.15,
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20
+                  }}
+                  className="flex items-start group/feature"
                 >
-                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full mr-3 flex-shrink-0 ${
-                    activeApp.id === 'client' ? 'bg-primary-100 text-primary-700' : 'bg-secondary-100 text-secondary-700'
-                  }`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {/* Icône check animée premium */}
+                  <motion.div
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded-full mr-3 flex-shrink-0 ${
+                      activeApp.id === 'client' ? 'bg-primary-100 text-primary-700' : 'bg-secondary-100 text-secondary-700'
+                    } group-hover/feature:scale-110 transition-transform`}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ 
+                      delay: index * 0.15 + 0.2,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 15
+                    }}
+                    whileHover={{
+                      scale: 1.3,
+                      rotate: 360,
+                      transition: { duration: 0.4 }
+                    }}
+                  >
+                    <motion.svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-4 w-4" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ 
+                        delay: index * 0.15 + 0.4,
+                        duration: 0.3
+                      }}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                  <span className="text-secondary-700">{feature}</span>
-                </motion.li>
+                    </motion.svg>
+                  </motion.div>
+                  
+                  {/* Texte avec effet de typing */}
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ 
+                      delay: index * 0.15 + 0.3,
+                      duration: 0.4
+                    }}
+                    className="text-secondary-700 group-hover/feature:text-secondary-900 transition-colors"
+                  >
+                    {feature}
+                  </motion.span>
+                </motion.div>
               ))}
-            </ul>
+            </div>
             
+            {/* Store buttons premium avec glow et icon movement - Style Stripe */}
             <div className="flex flex-wrap gap-4">
-              <a 
+              {/* Google Play Button */}
+              <motion.a 
                 href="#" 
-                className={`inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md ${
+                className={`relative inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md overflow-hidden group cursor-pointer ${
                   activeApp.id === 'client' 
-                    ? 'bg-primary-400 text-secondary-900 hover:bg-primary-500' 
-                    : 'bg-secondary-800 text-white hover:bg-secondary-900'
+                    ? 'bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 text-secondary-900' 
+                    : 'bg-gradient-to-r from-secondary-800 via-secondary-900 to-secondary-800 text-white'
                 }`}
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: activeApp.id === 'client' 
+                    ? "0 20px 40px rgba(212, 175, 55, 0.3)" 
+                    : "0 20px 40px rgba(0, 0, 0, 0.3)"
+                }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                }}
+                transition={{
+                  backgroundPosition: {
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }
+                }}
+                style={{
+                  backgroundSize: '200% 100%'
+                }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                {/* Glow effect premium */}
+                <motion.div 
+                  className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-100 ${
+                    activeApp.id === 'client' 
+                      ? 'bg-gradient-to-r from-primary-400/50 via-primary-500/50 to-primary-400/50' 
+                      : 'bg-gradient-to-r from-secondary-800/50 via-secondary-900/50 to-secondary-800/50'
+                  }`}
+                  transition={{ duration: 0.3 }}
+                />
+                
+                {/* Icône animée */}
+                <motion.svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2 relative z-10" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                  whileHover={{ 
+                    x: 3,
+                    rotate: 10,
+                    transition: { duration: 0.2 }
+                  }}
+                >
                   <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z"/>
-                </svg>
-                Télécharger sur Google Play
-              </a>
-              <a 
+                </motion.svg>
+                <span className="relative z-10">Télécharger sur Google Play</span>
+              </motion.a>
+              
+              {/* App Store Button */}
+              <motion.a 
                 href="#" 
-                className={`inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md ${
+                className={`relative inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md overflow-hidden group cursor-pointer ${
                   activeApp.id === 'client' 
-                    ? 'bg-primary-400 text-secondary-900 hover:bg-primary-500' 
-                    : 'bg-secondary-800 text-white hover:bg-secondary-900'
+                    ? 'bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 text-secondary-900' 
+                    : 'bg-gradient-to-r from-secondary-800 via-secondary-900 to-secondary-800 text-white'
                 }`}
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: activeApp.id === 'client' 
+                    ? "0 20px 40px rgba(212, 175, 55, 0.3)" 
+                    : "0 20px 40px rgba(0, 0, 0, 0.3)"
+                }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                }}
+                transition={{
+                  backgroundPosition: {
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }
+                }}
+                style={{
+                  backgroundSize: '200% 100%'
+                }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                {/* Glow effect premium */}
+                <motion.div 
+                  className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-100 ${
+                    activeApp.id === 'client' 
+                      ? 'bg-gradient-to-r from-primary-400/50 via-primary-500/50 to-primary-400/50' 
+                      : 'bg-gradient-to-r from-secondary-800/50 via-secondary-900/50 to-secondary-800/50'
+                  }`}
+                  transition={{ duration: 0.3 }}
+                />
+                
+                {/* Icône animée */}
+                <motion.svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 mr-2 relative z-10" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                  whileHover={{ 
+                    x: 3,
+                    rotate: -10,
+                    transition: { duration: 0.2 }
+                  }}
+                >
                   <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z"/>
-                </svg>
-                Télécharger sur App Store
-              </a>
+                </motion.svg>
+                <span className="relative z-10">Télécharger sur App Store</span>
+              </motion.a>
             </div>
           </motion.div>
         </div>

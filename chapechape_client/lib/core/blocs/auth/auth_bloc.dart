@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/auth_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';

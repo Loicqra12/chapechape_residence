@@ -8,7 +8,7 @@ const cacheMiddleware = (duration) => {
             return next();
         }
 
-        const key = `__chapechape__${req.originalUrl || req.url}`;
+        const key = `cache:${req.originalUrl || req.url}`;
 
         try {
             const cachedResponse = await redis.get(key);
@@ -40,7 +40,7 @@ const invalidateCache = async (pattern) => {
         }
         
         // Utiliser redis.keys pour trouver toutes les clés correspondant au pattern
-        const keys = await redis.keys(`__chapechape__${pattern}`);
+        const keys = await redis.keys(`cache:${pattern}`);
         
         if (keys.length > 0) {
             // Utiliser redis.del pour supprimer les clés

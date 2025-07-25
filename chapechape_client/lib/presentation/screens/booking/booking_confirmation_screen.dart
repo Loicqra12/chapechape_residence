@@ -167,12 +167,28 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Confirmation de réservation'),
-        elevation: 0,
-      ),
-      body: LoadingOverlay(
+    return WillPopScope(
+      onWillPop: () async {
+        // Naviguer vers l'écran d'accueil au lieu de simplement faire pop()
+        // Cela évite que l'app redémarre lorsqu'on appuie sur retour
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        context.go('/home');
+        return false; // On empêche le comportement par défaut
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Confirmation de réservation'),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              // Même logique que dans onWillPop
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              context.go('/home');
+            },
+          ),
+        ),
+        body: LoadingOverlay(
         isLoading: _isLoading || _isSendingSms,
         child: MultiBlocListener(
           listeners: [
@@ -215,7 +231,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               : _buildBookingConfirmation(),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildBookingConfirmation() {

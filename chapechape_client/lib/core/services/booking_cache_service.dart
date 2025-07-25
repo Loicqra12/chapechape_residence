@@ -159,4 +159,28 @@ class BookingCacheService {
       debugPrint('🔴 Erreur lors de la mise en cache des réservations de résidence: $e');
     }
   }
+  
+  /// Cache pour les données de disponibilité
+  static const String _availabilityPrefix = 'availability_';
+  
+  /// Invalide le cache de disponibilité pour une résidence spécifique
+  Future<void> invalidateAvailability(String residenceId) async {
+    try {
+      final cacheKey = '${_availabilityPrefix}$residenceId';
+      if (await _bookingBox.containsKey(cacheKey)) {
+        await _bookingBox.delete(cacheKey);
+        debugPrint('🔄 Cache de disponibilité invalidé pour la résidence: $residenceId');
+      }
+      
+      // Invalider également les réservations liées à cette résidence
+      // car elles peuvent affecter la disponibilité
+      final residenceBookingKey = 'residence_bookings_$residenceId';
+      if (await _bookingBox.containsKey(residenceBookingKey)) {
+        await _bookingBox.delete(residenceBookingKey);
+        debugPrint('🔄 Cache des réservations invalidé pour la résidence: $residenceId');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Erreur lors de l\'invalidation du cache de disponibilité: $e');
+    }
+  }
 }

@@ -255,7 +255,7 @@ class PromotionService {
         discountPercentage: 0,
         startDate: DateTime.now(),
         endDate: DateTime.now().add(const Duration(days: 1)),
-        imageUrl: 'https://via.placeholder.com/400x300?text=Promotion+non+disponible',
+        imageUrl: 'assets/images/placeholders/promotion.jpg',
         residenceId: '',
       );
     }

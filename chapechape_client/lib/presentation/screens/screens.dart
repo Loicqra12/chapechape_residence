@@ -8,7 +8,7 @@ export 'booking_screen.dart';
 export 'payment_screen.dart';
 export 'favorites_screen.dart';
 export 'profile_screen.dart';
-export 'settings_screen.dart';
+export 'nearby_residences/nearby_residences_screen.dart';
 export 'chat_screen.dart';
 export 'notifications_screen.dart';
 export 'booking_history_screen.dart';

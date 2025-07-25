@@ -11,6 +11,7 @@ import 'price_range_slider_widget.dart';
 import 'multilevel_location_selector.dart';
 import 'animated_search_field.dart';
 import 'animated_filter_option.dart';
+import 'date_range_picker_widget.dart';
 
 class AdvancedSearchWidget extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSearch;
@@ -80,39 +81,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     ).format(price) + ' FCFA';
   }
   
-  // Sélection d'une plage de dates
-  Future<void> _selectDateRange(BuildContext context) async {
-    final initialDateRange = _selectedDateRange ?? DateTimeRange(
-      start: DateTime.now(),
-      end: DateTime.now().add(const Duration(days: 7)),
-    );
-    
-    final newDateRange = await showDateRangePicker(
-      context: context,
-      initialDateRange: initialDateRange,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppTheme.primaryColor,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    
-    if (newDateRange != null) {
-      setState(() {
-        _selectedDateRange = newDateRange;
-      });
-    }
-  }
+  // La sélection de dates est maintenant gérée par le widget DateRangePickerWidget
   
   @override
   Widget build(BuildContext context) {
@@ -336,47 +305,16 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
           ),
         ),
         
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         
-        // Widget de sélection de dates
-        GestureDetector(
-          onTap: () => _selectDateRange(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  color: AppTheme.primaryColor,
-                  size: 20,
-                ),
-                
-                const SizedBox(width: 12),
-                
-                Expanded(
-                  child: Text(
-                    _selectedDateRange != null
-                        ? '${DateFormat('dd/MM/yyyy').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM/yyyy').format(_selectedDateRange!.end)}'
-                        : 'Sélectionner les dates',
-                    style: TextStyle(
-                      color: _selectedDateRange != null
-                          ? Colors.grey[800]
-                          : Colors.grey[500],
-                    ),
-                  ),
-                ),
-                
-                Icon(
-                  Icons.arrow_drop_down,
-                  color: Colors.grey[600],
-                ),
-              ],
-            ),
-          ),
+        // Widget de sélection de dates personnalisé
+        DateRangePickerWidget(
+          initialDateRange: _selectedDateRange,
+          onDateRangeSelected: (dateRange) {
+            setState(() {
+              _selectedDateRange = dateRange;
+            });
+          },
         ),
       ],
     )

@@ -6,6 +6,11 @@ import 'package:expandable_text/expandable_text.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:chapechape_maps/chapechape_maps.dart';
+import 'package:chapechape_client/core/services/residence_service.dart';
+// import '../screens/full_map_screen.dart'; // Commenté car non utilisé
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
@@ -25,16 +30,16 @@ class ResidenceDetailsScreen extends StatefulWidget {
 
 class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
-  // Contrôleur pour le carrousel d'images
+  final TextEditingController commentController = TextEditingController();
+  double selectedRating = 0;
   final PageController _pageController = PageController();
   int _currentImageIndex = 0;
   
-  // Pour gestion des onglets
-  int _currentTabIndex = 0;
-  
-  // Image par défaut quand aucune image n'est disponible
   final String defaultImage = 'assets/images/residences/apartments/304661255.jpg';
+
+  late final LocationService _locationService;
+  
+  LatLng? _currentUserLocation;
 
   @override
   void initState() {
@@ -42,14 +47,29 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabSelection);
     
-    // Charger les détails de la résidence
+    _locationService = LocationService();
+    _getCurrentLocation();
+    
     context.read<ResidenceBloc>().add(LoadResidenceDetails(residenceId: widget.residenceId));
+  }
+  
+  Future<void> _getCurrentLocation() async {
+    try {
+      final position = await _locationService.getCurrentPosition();
+      if (mounted) {
+        setState(() {
+          _currentUserLocation = LatLng(position.latitude, position.longitude);
+        });
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération de la position: $e');
+    }
   }
   
   void _handleTabSelection() {
     if (_tabController.indexIsChanging) {
       setState(() {
-        _currentTabIndex = _tabController.index;
+        // _currentTabIndex = _tabController.index; // Commenté car non utilisé
       });
     }
   }
@@ -65,7 +85,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Restaurer l'état précédent avant de revenir en arrière
         context.read<ResidenceBloc>().add(const RefreshResidencesEvent());
         return true;
       },
@@ -79,22 +98,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               
               return CustomScrollView(
                 slivers: [
-                  // AppBar avec carrousel d'images en arrière-plan
                   SliverAppBar(
                     expandedHeight: 300,
                     pinned: true,
                     flexibleSpace: Stack(
                       children: [
-                        // Carrousel d'images avec style Booking.com
                         Positioned.fill(
                           child: GestureDetector(
                             onTap: () {
-                              // Ouvrir la galerie en plein écran
                               _openGallery(context, residence.images, _currentImageIndex);
                             },
                             child: Stack(
                               children: [
-                                // Image principale (occupe tout l'espace disponible)
                                 residence.images.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: residence.images[_currentImageIndex],
@@ -117,7 +132,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                         width: double.infinity,
                                       ),
                                 
-                                // Grille des miniatures (en bas à droite)
                                 if (residence.images.length > 1)
                                   Positioned(
                                     bottom: 20,
@@ -138,12 +152,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     ),
                                   ),
                                   
-                                // Navigation gauche/droite pour les images
                                 if (residence.images.length > 1)
                                   Positioned.fill(
                                     child: Row(
                                       children: [
-                                        // Bouton précédent
                                         GestureDetector(
                                           onTap: () {
                                             if (_currentImageIndex > 0) {
@@ -174,10 +186,8 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                           ),
                                         ),
                                         
-                                        // Espace au milieu
                                         Expanded(child: Container()),
                                         
-                                        // Bouton suivant
                                         GestureDetector(
                                           onTap: () {
                                             if (_currentImageIndex < residence.images.length - 1) {
@@ -215,7 +225,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                           ),
                         ),
                         
-                        // Indicateur de nombre d'images
                         if (residence.images.length > 1)
                           Positioned(
                             bottom: 20,
@@ -247,7 +256,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ),
                           ),
                           
-                        // Superposition semi-transparente pour améliorer la visibilité des boutons
                         Positioned(
                           top: 0,
                           left: 0,
@@ -284,10 +292,8 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                       ),
                     ),
                     actions: [
-                      // Bouton de favoris (nécessite authentification)
                       BlocBuilder<AuthBloc, dynamic>(
                         builder: (context, authState) {
-                          // Vérification simple d'authentification basée sur la méthode existante
                           final bool isUserAuthenticated = _isUserAuthenticated(context);
                           return Container(
                             margin: const EdgeInsets.all(8),
@@ -315,7 +321,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                           );
                         },
                       ),
-                      // Bouton de partage
                       Container(
                         margin: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -333,18 +338,15 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                     ],
                   ),
                   
-                  // Contenu principal
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // En-tête amélioré avec nom, note et prix
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Titre et notation
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,7 +359,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                       ),
                                     ),
                                     const SizedBox(height: 5),
-                                    // Notation avec étoiles
                                     FittedBox(
                                       fit: BoxFit.scaleDown,
                                       alignment: Alignment.centerLeft,
@@ -387,7 +388,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                   ],
                                 ),
                               ),
-                              // Prix avec format et période
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
@@ -402,7 +402,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                         ),
                                       ),
                                       const SizedBox(width: 5),
-                                      // Période de prix
                                       Text(
                                         _formatPeriod(residence.pricePeriod),
                                         style: TextStyle(
@@ -413,7 +412,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     ],
                                   ),
                                   
-                                  // Si un prix avec remise existe
                                   if (residence.hasDiscount)
                                     Row(
                                       children: [
@@ -437,7 +435,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                       ],
                                     ),
                                     
-                                  // Badge de remise
                                   if (residence.hasDiscount)
                                     Container(
                                       margin: const EdgeInsets.only(top: 4),
@@ -463,7 +460,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ],
                           ),
                           
-                          // Adresse avec icône
                           const SizedBox(height: 16),
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -488,7 +484,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ),
                           ),
                           
-                          // Caractéristiques principales dans une carte
                           const SizedBox(height: 16),
                           Card(
                             elevation: 2,
@@ -532,7 +527,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ),
                           ),
                           
-                          // Statut de disponibilité
                           const SizedBox(height: 16),
                           Row(
                             children: [
@@ -564,7 +558,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ],
                           ),
                           
-                          // Description avec option "Voir plus"
                           const SizedBox(height: 24),
                           const Text(
                             'Description',
@@ -586,7 +579,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ),
                           ),
                           
-                          // Grille d'équipements avec icônes
                           const SizedBox(height: 32),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -599,7 +591,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                 ),
                               ),
                               SizedBox(
-                                width: 100, // Largeur fixe pour éviter les contraintes infinies
+                                width: 100, 
                                 child: TextButton(
                                   onPressed: () {
                                     // Ouvrir une page ou modal avec tous les équipements
@@ -612,15 +604,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                           const SizedBox(height: 8),
                           _buildSimpleAmenitiesGrid(residence.amenities),
                            
-                           // Utilisation de if-else dans une liste de widgets pour un affichage conditionnel
-                           
-                           // Équipements améliorés
                            if (residence.priceDetails != null && 
                                residence.priceDetails!.containsKey('enhancedAmenities') &&
                                residence.priceDetails!['enhancedAmenities'] is Map<String, dynamic>)
                              _buildEnhancedAmenitiesSection(residence.priceDetails!['enhancedAmenities']),
                            
-                           // Classification par étoiles
                            if (residence.priceDetails != null && 
                                residence.priceDetails!.containsKey('stars') &&
                                residence.priceDetails!['stars'] is int)
@@ -629,7 +617,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                child: _buildStarsRating(residence.priceDetails!['stars']),
                              ),
                            
-                           // FAQ
                            if (residence.priceDetails != null && 
                                residence.priceDetails!.containsKey('faqs') &&
                                residence.priceDetails!['faqs'] is List)
@@ -639,7 +626,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                    .toList(),
                              ),
                            
-                           // Méthodes de paiement
                            if (residence.priceDetails != null && 
                                residence.priceDetails!.containsKey('paymentMethods') &&
                                residence.priceDetails!['paymentMethods'] is List)
@@ -649,7 +635,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                    .toList(),
                              ),
                           
-                          // Points d'intérêt à proximité
                           if (residence.nearbyAttractions != null && residence.nearbyAttractions!.isNotEmpty)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,7 +657,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     itemBuilder: (context, index) {
                                       final attraction = residence.nearbyAttractions![index];
                                       
-                                      // Mappings d'icônes pour les types d'attractions courants
                                       final Map<String, IconData> attractionIcons = {
                                         'restaurant': Icons.restaurant,
                                         'café': Icons.coffee,
@@ -694,7 +678,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                         'station-service': Icons.local_gas_station,
                                       };
                                       
-                                      // Détecter le type d'attraction
                                       IconData attractionIcon = Icons.place;
                                       for (final entry in attractionIcons.entries) {
                                         if (attraction.toLowerCase().contains(entry.key.toLowerCase())) {
@@ -741,7 +724,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               ],
                             ),
                           
-                          // Règles
                           if (residence.rules != null && residence.rules!.isNotEmpty)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,7 +767,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               ],
                             ),
                           
-                          // Section des commentaires
                           const SizedBox(height: 24),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -798,7 +779,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              // Zone d'ajout de commentaire
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -806,36 +786,37 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: Colors.grey[300]!),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundColor: Colors.blue[100],
-                                          child: Icon(
-                                            Icons.person,
-                                            color: Colors.blue[700],
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: TextButton(
-                                            onPressed: () => _showAuthDialog(context),
-                                            child: const Text(
-                                              'Connectez-vous pour laisser un commentaire',
-                                              style: TextStyle(fontSize: 14),
+                                child: _isUserAuthenticated(context) 
+                                  ? _buildCommentForm(context, residence) 
+                                  : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: Colors.blue[100],
+                                            child: Icon(
+                                              Icons.person,
+                                              color: Colors.blue[700],
+                                              size: 20,
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: TextButton(
+                                              onPressed: () => _navigateToLogin(context),
+                                              child: const Text(
+                                                'Connectez-vous pour laisser un commentaire',
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                               ),
                               
-                              // Commentaires existants (exemples)
                               const SizedBox(height: 16),
                               _buildExampleComment(
                                 name: 'Marie S.',
@@ -852,7 +833,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ],
                           ),
                           
-                          // Séparateur avant bouton de réservation
+                          const SizedBox(height: 32),
+                          _buildLocationSection(context, residence),
+                          
                           const SizedBox(height: 80),
                         ],
                       ),
@@ -867,7 +850,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
             }
           },
         ),
-        // Bouton de réservation flottant
         floatingActionButton: BlocBuilder<ResidenceBloc, ResidenceState>(
           builder: (context, state) {
             if (state is ResidenceDetailsLoaded) {
@@ -876,10 +858,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                   final bool isAuthenticated = _isUserAuthenticated(context);
                   return FloatingActionButton.extended(
                     onPressed: state.residence.id.isEmpty 
-                      ? null // Désactiver le bouton si l'ID est vide
+                      ? null 
                       : () async {
                           if (isAuthenticated) {
-                            // Déboguer l'ID de résidence
                             debugPrint('ID de résidence pour réservation: ${state.residence.id}');
                             if (state.residence.id.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -892,11 +873,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               return;
                             }
                             
-                            // Initialiser le BookingService avant de créer le BookingBloc
                             final bookingService = await BookingService.initialize();
                             
-                            // Utiliser BlocProvider pour fournir le BookingBloc à l'écran de réservation
-                            if (!mounted) return; // Vérifier si le widget est toujours monté
+                            if (!mounted) return; 
                             
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -907,7 +886,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                         bookingService: bookingService,
                                       ),
                                     ),
-                                    // Réutiliser le ResidenceBloc existant
                                     BlocProvider.value(
                                       value: context.read<ResidenceBloc>(),
                                     ),
@@ -919,7 +897,6 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               ),
                             );
                           } else {
-                            // Afficher la boîte de dialogue d'authentification
                             _showAuthDialog(context);
                           }
                         },
@@ -949,6 +926,461 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       return authBloc.state is Authenticated;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Navigue vers l'écran de connexion
+  void _navigateToLogin(BuildContext context) {
+    // Utilise le routeur pour naviguer vers la page de connexion
+    context.push('/auth/login');
+  }
+
+  /// Construit le formulaire pour ajouter un commentaire
+  Widget _buildCommentForm(BuildContext context, dynamic residence) {
+    // Contrôleurs pour le formulaire de commentaire
+    final TextEditingController commentController = TextEditingController();
+    final double rating = 5.0;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // En-tête du formulaire
+        const Text(
+          'Laissez votre avis',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 12),
+        
+        // Étoiles pour la note
+        Row(
+          children: [
+            const Text('Note: '),
+            RatingBar.builder(
+              initialRating: rating,
+              minRating: 1,
+              direction: Axis.horizontal,
+              allowHalfRating: true,
+              itemCount: 5,
+              itemSize: 24,
+              itemBuilder: (context, _) => const Icon(
+                Icons.star,
+                color: Colors.amber,
+              ),
+              onRatingUpdate: (newRating) {
+                // Mettre à jour la note
+                setState(() {
+                  selectedRating = newRating;
+                });
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Champ de commentaire
+        TextField(
+          controller: commentController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Partagez votre expérience...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Bouton pour soumettre
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: () async {
+              final comment = commentController.text;
+              if (comment.isNotEmpty) {
+                // Afficher un indicateur de chargement
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Envoi de votre commentaire...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                
+                try {
+                  // Obtenir le ResidenceService
+                  final residenceService = await ResidenceService.initialize();
+                  
+                  // Soumettre le commentaire
+                  final success = await residenceService.submitReview(
+                    residenceId: widget.residenceId,
+                    rating: selectedRating,
+                    comment: comment,
+                  );
+                  
+                  if (success) {
+                    // Montrer un message de succès
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Merci pour votre avis!'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    
+                    // Effacer le champ de commentaire
+                    commentController.clear();
+                    // Réinitialiser la note
+                    setState(() {
+                      selectedRating = 0;
+                    });
+                  } else {
+                    // Montrer un message d'erreur
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Erreur lors de l\'envoi de votre commentaire. Veuillez réessayer.'),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Montrer un message d'erreur
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur: $e'),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+            ),
+            child: const Text('Publier'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Obtient le libellé d'emplacement personnalisé selon le type de résidence
+  String _getLocationLabel(dynamic residence) {
+    try {
+      if (residence.type != null) {
+        // Utiliser le nom d'affichage du type comme base
+        String typeDisplay = residence.type.displayName;
+        
+        // Déterminer le bon libellé selon le type
+        if (typeDisplay.toLowerCase().contains('hôtel')) {
+          return 'Emplacement de l\'hôtel';
+        } else if (typeDisplay.toLowerCase().contains('villa')) {
+          return 'Emplacement de la villa';
+        } else if (typeDisplay.toLowerCase().contains('appartement')) {
+          return 'Emplacement de l\'appartement';
+        } else if (typeDisplay.toLowerCase().contains('studio')) {
+          return 'Emplacement du studio';
+        } else if (typeDisplay.toLowerCase().contains('chambre') || 
+                  typeDisplay.toLowerCase().contains('colocation')) {
+          return 'Emplacement de la colocation';
+        } else if (typeDisplay.toLowerCase().contains('bungalow')) {
+          return 'Emplacement du bungalow';
+        } else if (typeDisplay.toLowerCase().contains('loft')) {
+          return 'Emplacement du loft';
+        } else if (typeDisplay.toLowerCase().contains('maison')) {
+          return 'Emplacement de la maison';
+        }
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération du type de résidence: $e');
+    }
+    
+    // Valeur par défaut
+    return 'Emplacement de l\'hébergement';
+  }
+
+  /// Construit la section d'emplacement avec carte Google Maps (style Booking.com)
+  Widget _buildLocationSection(BuildContext context, dynamic residence) {
+    // Récupérer les coordonnées de la résidence depuis le modèle
+    double? lat, lng;
+    String displayAddress = 'Adresse non disponible';
+    String locationLabel = _getLocationLabel(residence);
+    
+    // Essayer de récupérer les coordonnées et l'adresse depuis différentes structures possibles
+    try {
+      if (residence.location != null) {
+        if (residence.location['coordinates'] != null && residence.location['coordinates'] is List) {
+          // Format GeoJSON [longitude, latitude]
+          final coords = residence.location['coordinates'] as List;
+          if (coords.length >= 2) {
+            lng = coords[0];
+            lat = coords[1];
+          }
+        }
+        
+        // Récupérer l'adresse affichable
+        if (residence.location['displayAddress'] != null) {
+          displayAddress = residence.location['displayAddress'];
+        } else if (residence.address != null) {
+          // Construire une adresse à partir des composants disponibles
+          List<String> addressParts = [];
+          if (residence.address.isNotEmpty) addressParts.add(residence.address);
+          if (residence.city.isNotEmpty) addressParts.add(residence.city);
+          if (residence.country.isNotEmpty) addressParts.add(residence.country);
+          
+          if (addressParts.isNotEmpty) {
+            displayAddress = addressParts.join(', ');
+          }
+        }
+      } else if (residence.latitude != null && residence.longitude != null) {
+        // Structure directe avec latitude/longitude
+        lat = residence.latitude;
+        lng = residence.longitude;
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des coordonnées: $e');
+    }
+    
+    // Si pas de coordonnées valides, afficher un message
+    if (lat == null || lng == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            locationLabel,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: const Center(
+              child: Text(
+                'Les coordonnées de localisation ne sont pas disponibles pour cette résidence',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    
+    // Calculer la distance entre l'utilisateur et la résidence si disponible
+    String distanceText = '';
+    if (_currentUserLocation != null) {
+      try {
+        final distance = _locationService.calculateDistance(
+          _currentUserLocation!,
+          LatLng(lat, lng)
+        ) / 1000; // Convertir en km
+        
+        // Formater la distance
+        if (distance < 1) {
+          distanceText = '${(distance * 1000).toStringAsFixed(0)} m de votre emplacement actuel';
+        } else {
+          distanceText = '${distance.toStringAsFixed(1)} km de votre emplacement actuel';
+        }
+      } catch (e) {
+        debugPrint('Erreur lors du calcul de la distance: $e');
+      }
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          locationLabel,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Carte Google Maps avec marqueur et bouton pour carte plein écran
+        Stack(
+          children: [
+            Container(
+              height: 220,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(lat, lng),
+                    zoom: 14.0,
+                  ),
+                  markers: {
+                    Marker(
+                      markerId: const MarkerId('residence'),
+                      position: LatLng(lat, lng),
+                      infoWindow: InfoWindow(title: residence.title ?? 'Résidence'),
+                    ),
+                  },
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: true,
+                  mapToolbarEnabled: false,
+                  onTap: (_) {
+                    // Ouvrir la carte en plein écran
+                    _openFullMap(context, lat, lng, residence);
+                  },
+                ),
+              ),
+            ),
+            // Bouton pour ouvrir la carte en plein écran
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.fullscreen, color: Colors.blue),
+                  tooltip: 'Voir la carte en plein écran',
+                  onPressed: () {
+                    _openFullMap(context, lat, lng, residence);
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Adresse et distance
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      displayAddress,
+                      style: const TextStyle(
+                        fontSize: 14, // Taille de police réduite pour éviter les overflow
+                        height: 1.2, // Interligne réduit
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis, // Ajoute des points de suspension si l'adresse est trop longue
+                      maxLines: 2, // Limite à deux lignes maximum
+                    ),
+                  ),
+                ],
+              ),
+              if (distanceText.isNotEmpty) ...[  
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.near_me, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        distanceText,
+                        style: const TextStyle(
+                          fontSize: 13, // Police légèrement plus petite
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis, // Ajoute des points de suspension si le texte est trop long
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              // Bouton pour voir l'itinéraire dans Google Maps
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _launchMapsUrl(lat, lng, residence.title ?? 'Résidence'),
+                  icon: const Icon(Icons.directions),
+                  label: const Text('Obtenir l\'itinéraire'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// Ouvre la carte en plein écran avec les résidences à proximité
+  void _openFullMap(BuildContext context, double? lat, double? lng, dynamic residence) {
+    if (lat == null || lng == null) return;
+    
+    // Récupérer l'ID de la résidence si disponible
+    String? residenceId;
+    try {
+      residenceId = residence.id?.toString();
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération de l\'ID de résidence: $e');
+    }
+    
+    // Naviguer vers la carte en plein écran
+    context.push(
+      '/map-fullscreen',
+      extra: {
+        'lat': lat,
+        'lng': lng,
+        'title': residence.title ?? 'Résidence',
+        'residenceId': residenceId,
+      },
+    );
+  }
+  
+  /// Lance Google Maps avec un itinéraire vers la destination
+  Future<void> _launchMapsUrl(double? lat, double? lng, String title) async {
+    final url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=${Uri.encodeComponent(title)}'
+    );
+    
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Impossible d\'ouvrir Google Maps');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

@@ -119,16 +119,32 @@ availabilitySchema.statics.findForPeriod = async function(residenceId, startDate
 
 // Méthode statique pour vérifier si une plage de dates est disponible
 availabilitySchema.statics.isPeriodAvailable = async function(residenceId, startDate, endDate) {
-  const availabilities = await this.find({
+  // Calculer le nombre de jours entre les dates
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  console.log(`DEBUG: Vérification de disponibilité pour résidence ${residenceId}, du ${start.toISOString()} au ${end.toISOString()} (${totalDays} jours)`);
+  
+  // Chercher uniquement les entrées NON disponibles
+  const blockedAvailabilities = await this.find({
     residenceId,
     date: {
-      $gte: startDate,
-      $lte: endDate
+      $gte: start,
+      $lte: end
     },
-    status: { $ne: 'available' }
+    status: { $ne: 'available' } // Uniquement les statuts non disponibles
   });
   
-  return availabilities.length === 0;
+  console.log(`DEBUG: ${blockedAvailabilities.length} dates bloquées trouvées sur ${totalDays} jours`);
+  
+  // Si aucune date bloquée n'a été trouvée, la période est disponible
+  // Cela signifie qu'une date soit n'a pas d'entrée, soit a une entrée avec status='available'
+  const isAvailable = blockedAvailabilities.length === 0;
+
+  console.log(`DEBUG: La résidence est ${isAvailable ? 'disponible' : 'NON disponible'} pour cette période`);
+  
+  return isAvailable;
 };
 
 // Méthode statique pour créer ou mettre à jour plusieurs disponibilités en une seule opération

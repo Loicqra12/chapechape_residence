@@ -82,7 +82,7 @@ const Stats = () => {
     })
   }
   
-  // Variantes pour les animations des icônes
+  // Variantes pour les animations des icônes - Style Stripe
   const iconVariants = {
     hidden: { scale: 0.5, opacity: 0 },
     visible: { 
@@ -95,9 +95,12 @@ const Stats = () => {
       }
     },
     hover: { 
-      scale: 1.2, 
-      rotate: [0, 5, 0, -5, 0],
-      transition: { duration: 0.5 }
+      scale: 1.3, 
+      rotate: 360, // Rotation complète 360°
+      transition: { 
+        duration: 0.6,
+        ease: "easeInOut"
+      }
     }
   }
   
@@ -125,10 +128,31 @@ const Stats = () => {
         style={{ y }}
       />
       
-      {/* Grille subtile */}
+      {/* Background pattern géométrique animé - Style Stripe */}
       <motion.div 
-        className="absolute inset-0 bg-[linear-gradient(to_right,rgba(212,175,55,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(212,175,55,0.05)_1px,transparent_1px)] bg-[size:3rem_3rem] -z-10"
+        className="absolute inset-0 bg-[linear-gradient(to_right,rgba(212,175,55,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(212,175,55,0.08)_1px,transparent_1px)] bg-[size:4rem_4rem] -z-10"
         style={{ opacity }}
+        animate={{
+          backgroundPosition: ['0px 0px', '64px 64px'],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      />
+      
+      {/* Pattern géométrique secondaire */}
+      <motion.div 
+        className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(212,175,55,0.03)_2px,transparent_2px),radial-gradient(circle_at_75%_75%,rgba(168,85,247,0.02)_2px,transparent_2px)] bg-[size:8rem_8rem] -z-10"
+        animate={{
+          backgroundPosition: ['0px 0px', '-128px -128px'],
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "linear"
+        }}
       />
       
       {/* Particules dorées flottantes */}
@@ -187,18 +211,29 @@ const Stats = () => {
               variants={cardVariants}
               initial="hidden"
               whileInView="visible"
-              whileHover={{ y: -10, boxShadow: "0 15px 30px rgba(212, 175, 55, 0.1)" }}
+              whileHover={{ 
+                y: -15, 
+                scale: 1.05,
+                boxShadow: "0 25px 50px rgba(212, 175, 55, 0.25), 0 0 0 1px rgba(212, 175, 55, 0.1)",
+                transition: { duration: 0.3, ease: "easeOut" }
+              }}
               viewport={{ once: true, margin: "-50px" }}
-              className="relative bg-secondary-800/50 backdrop-blur-sm p-6 rounded-xl text-center transform transition-all duration-300 border border-primary-300/10 hover:border-primary-300/30"
+              className="relative bg-secondary-800/50 backdrop-blur-sm p-6 rounded-xl text-center transform transition-all duration-300 border border-primary-300/10 hover:border-primary-300/50 cursor-pointer group"
             >
-              {/* Halo doré subtil */}
+              {/* Halo doré subtil avec glow au hover */}
               <motion.div 
-                className="absolute -inset-1 bg-primary-300/5 rounded-xl blur-md -z-10"
+                className="absolute -inset-1 bg-primary-300/5 rounded-xl blur-md -z-10 group-hover:bg-primary-300/15"
                 animate={{
                   opacity: [0.3, 0.5, 0.3],
                   scale: [1, 1.05, 1],
                 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              />
+              
+              {/* Glow effect premium au hover */}
+              <motion.div 
+                className="absolute -inset-2 bg-gradient-to-r from-primary-300/0 via-primary-300/20 to-primary-300/0 rounded-xl blur-xl -z-20 opacity-0 group-hover:opacity-100"
+                transition={{ duration: 0.3 }}
               />
               
               <motion.div 

@@ -1,6 +1,7 @@
 /**
  * Middleware de protection CSRF pour l'API ChapeChape
  * Fournit une protection contre les attaques CSRF pour les routes sensibles
+ * Utilise csurf avec des mesures de sécurité renforcées
  */
 
 const csrf = require("csurf");
@@ -9,7 +10,7 @@ const errorCodes = require("../utils/errorCodes");
 // Commenté temporairement car il pourrait ne pas être correctement initialisé
 // const { logger } = require("../utils/logger");
 
-// Configuration de base de csurf
+// Configuration de base de csurf avec sécurité renforcée
 const csrfProtection = csrf({
   cookie: {
     key: "_csrf",
@@ -41,6 +42,7 @@ const csrfMiddleware = (req, res, next) => {
     return next();
   }
 
+  // Appliquer csrfProtection qui vérifiera le token
   csrfProtection(req, res, (err) => {
     if (err) {
       // Utiliser console.warn au lieu de logger.warn pour éviter l'erreur
@@ -48,15 +50,15 @@ const csrfMiddleware = (req, res, next) => {
         `CSRF Attack Detected: ${req.ip} - ${req.method} ${req.path}`,
         {
           headers: req.headers,
-          body: req.body,
+          body: req.body
         }
       );
 
       return next(
-        apiError.forbidden(
+        new apiError(
           "Accès invalide: jeton CSRF manquant ou incorrect",
-          errorCodes.GENERAL.CSRF_ERROR,
-          { originalError: err.message }
+          403,
+          errorCodes.GENERAL.CSRF_ERROR
         )
       );
     }
@@ -69,52 +71,42 @@ const csrfMiddleware = (req, res, next) => {
  * À utiliser sur les routes qui renvoient des formulaires ou des pages
  */
 const generateCsrfToken = (req, res, next) => {
-  // Bypass pour les applications mobiles (détection par header ou route)
+  // Pas besoin de générer un token pour les méthodes non-GET
+  if (req.method !== "GET") {
+    return next();
+  }
+
+  // Bypass pour les applications mobiles
   if (
     req.path.startsWith("/api/mobile/") ||
     req.headers["x-mobile-app"] === "true" ||
-    req.headers["user-agent"]?.includes("ChapeChapeApp") ||
-    (req.path.startsWith("/api/auth/") && req.headers["content-type"]?.includes("application/json"))
+    req.headers["user-agent"]?.includes("ChapeChapeApp")
   ) {
     return next();
   }
 
-  // Appliquer directement csrfProtection sans vérification d'authentification
+  // Appliquer csrfProtection en mode génération seulement
   csrfProtection(req, res, (err) => {
     if (err) {
-      // Utiliser console.warn au lieu de logger.warn qui n'est pas défini
-      console.warn(
-        `Erreur lors de la génération du token CSRF: ${err.message}`
-      );
-
-      // Si c'est une route API, retourner une réponse JSON
+      console.error(`Impossible de générer un token CSRF: ${err.message}`);
       if (req.path.startsWith("/api/")) {
-        // Bypass l'erreur et générer un nouveau cookie CSRF
-        try {
-          const token = req.csrfToken();
-          res.setHeader("X-CSRF-Token", token);
-          res.locals.csrfToken = token;
-          return next();
-        } catch (e) {
-          console.error(`Impossible de générer un token CSRF: ${e.message}`);
-          return res.status(500).json({
-            success: false,
-            message: "Erreur serveur lors de la génération du token CSRF",
-          });
-        }
+        return res.status(500).json({
+          success: false,
+          message: "Erreur serveur lors de la génération du token CSRF",
+        });
       }
-
       return next();
     }
-
-    // Ajouter le token CSRF à l'objet response pour y accéder dans les routes
-    res.locals.csrfToken = req.csrfToken();
-
+    
+    // Ajouter le token CSRF aux locals pour les templates
+    const token = req.csrfToken();
+    res.locals.csrfToken = token;
+    
     // Si c'est une API, ajouter le token aux headers
     if (req.path.startsWith("/api/")) {
-      res.setHeader("X-CSRF-Token", req.csrfToken());
+      res.setHeader("X-CSRF-Token", token);
     }
-
+    
     next();
   });
 };
@@ -122,4 +114,5 @@ const generateCsrfToken = (req, res, next) => {
 module.exports = {
   csrfMiddleware,
   generateCsrfToken,
+  csrfProtection,
 };

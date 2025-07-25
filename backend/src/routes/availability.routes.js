@@ -5,13 +5,24 @@ const { protect, authorize } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const availabilityValidation = require('../validations/availability.validation');
 
-// Routes publiques
+// Routes publiques - ACCESSIBLE À TOUS LES UTILISATEURS
+// IMPORTANT : Ces routes doivent être déclarées AVANT les middlewares protect & authorize
+
+// Route existante pour la vérification de disponibilité
 router.get(
   '/check',
   validate(availabilityValidation.checkAvailability),
   availabilityController.checkAvailability
 );
 
+// Nouvel endpoint public dédié pour l'application mobile Flutter - SANS AUTHENTIFICATION REQUISE
+router.get(
+  '/flutter-check',
+  validate(availabilityValidation.checkFlutterAvailability),
+  availabilityController.checkAvailabilityForFlutterApp
+);
+
+// Calendrier de disponibilité (public)
 router.get(
   '/calendar',
   validate(availabilityValidation.getAvailabilityCalendar),

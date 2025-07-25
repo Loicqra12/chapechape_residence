@@ -27,7 +27,7 @@ class AppAssets {
   static const String mapMarkerSelected = 'assets/images/map/map_marker_selected.png';
   static const String comingSoon = 'assets/images/placeholders/coming_soon.png';
   static const String heroBg = 'assets/images/hero/hero_background.jpg';
-  static const String placeholderImage = 'https://via.placeholder.com/300x200?text=ChapeChape+Residence';
+  static const String placeholderImage = 'assets/images/placeholders/residence_standard.jpg';
   static const String emptyWishlist = 'assets/images/placeholders/empty_wishlist.png';
   static const String welcomeImage = 'assets/images/backgrounds/welcome_bg.jpg';
   static const String loginBackground = 'assets/images/backgrounds/login_bg.jpg';

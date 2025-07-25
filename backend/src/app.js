@@ -1,3 +1,5 @@
+// Sentry est maintenant initialisé via instrument.js (importé dans server.js)
+
 const express = require("express");
 const mongoose = require("mongoose");
 const logger = require("./utils/logger");
@@ -31,19 +33,26 @@ const reviewRoutes = require("./routes/review.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const messageRoutes = require("./routes/message.routes");
 const authRoutes = require("./routes/auth.routes");
+// const blogRoutes = require("./routes/blog.routes"); // Temporairement désactivé pour diagnostic
 const adminRoutes = require("./routes/admin.routes");
 const superAdminRoutes = require("./routes/superadmin.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const promotionRoutes = require("./routes/promotion.routes");
 const mapsRoutes = require("./routes/maps.routes"); // Import des routes Maps
+// Import des routes de politique d'annulation
+const cancellationPolicyRoutes = require("./routes/cancellationPolicy.routes");
 // Import des routes de test
 const testRoutes = require("./routes/test.routes");
 // Import des routes de gestion des appareils
 const deviceRoutes = require("./routes/device.routes");
 // Import des routes SMS
 const smsRoutes = require("./routes/sms.routes");
+// Import des routes website
+const websiteRoutes = require("./routes/website.routes");
 
 const app = express();
+
+// Sentry middlewares sont maintenant gérés automatiquement par instrument.js
 
 // IMPORTANT: Configurer les middlewares de base AVANT toute définition de route
 app.use(express.json()); // Pour parser les requêtes avec JSON payloads
@@ -311,6 +320,9 @@ app.use("/api/devices", deviceRoutes); // Ajout des routes pour la gestion des a
 app.use("/api/sms", smsRoutes); // Ajout des routes pour l'envoi de SMS via Twilio
 app.use("/api/promotions", promotionRoutes); // Ajout des routes pour la gestion des promotions
 app.use("/api/maps", mapsRoutes); // Ajout des routes pour la géolocalisation et les cartes
+app.use("/api/cancellation-policies", cancellationPolicyRoutes); // Routes pour les politiques d'annulation
+app.use("/api/website", websiteRoutes); // Routes pour le site vitrine (contact, newsletter)
+// app.use("/api/blog", cache(1800), blogRoutes); // Routes pour le blog dynamique (temporairement désactivé pour diagnostic)
 
 // Routes de test (uniquement en environnement de développement)
 if (process.env.NODE_ENV === 'development') {
@@ -347,8 +359,19 @@ app.get("/api/csrf-token", (req, res) => {
   });
 });
 
+// Route de test Sentry (selon documentation officielle)
+if (process.env.NODE_ENV === 'development') {
+  app.get("/debug-sentry", function mainHandler(req, res) {
+    throw new Error("Test Sentry - Erreur intentionnelle pour vérifier la capture!");
+  });
+}
+
 // Middleware de sécurité pour les fichiers
 app.use("/api/uploads", fileSecurityMiddleware);
+
+// Gestionnaire d'erreurs Sentry officiel - doit être ajouté AVANT les autres gestionnaires d'erreur
+const Sentry = require('@sentry/node');
+Sentry.setupExpressErrorHandler(app);
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {

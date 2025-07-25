@@ -121,20 +121,20 @@ const AboutSection = () => {
   return (
     <section
       ref={containerRef}
-      className="relative py-24 overflow-hidden bg-gradient-to-b from-secondary-50 to-white"
+      className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-primary-25"
     >
-      {/* Arrière-plan avec dégradé */}
+      {/* Arrière-plan avec dégradé premium */}
       <motion.div 
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(212,175,55,0.03),transparent_70%)] -z-10"
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.08),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(168,85,247,0.04),transparent_50%)] -z-10"
         style={{ y, opacity }}
       />
       
-      {/* Motif élégant en arrière-plan */}
+      {/* Motif géométrique moderne */}
       <motion.div 
-        className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.02)_1px,transparent_1px),linear-gradient(45deg,rgba(212,175,55,0.02)_1px,transparent_1px)] bg-[size:50px_50px] -z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.5 }}
+        className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.03)_1px,transparent_1px),linear-gradient(45deg,rgba(168,85,247,0.02)_1px,transparent_1px)] bg-[size:60px_60px] -z-10"
+        initial={{ opacity: 0, scale: 1.1 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 2, ease: "easeOut" }}
       />
       
       {/* Particules dorées subtiles */}
@@ -157,82 +157,111 @@ const AboutSection = () => {
       </div>
       
       <div className="container-custom">
-        {/* Titre de la section */}
+        {/* Titre de la section - Style Stripe */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="text-center mb-24"
         >
-          <h2 className="text-3xl font-bold text-secondary-900 mb-4 font-display">À propos de ChapeChape Residence</h2>
+          {/* Badge premium */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-primary-100 to-secondary-100 text-primary-700 text-sm font-medium mb-6 border border-primary-200"
+          >
+            <span className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
+            Excellence & Innovation
+          </motion.div>
+          
+          <h2 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-primary-600 to-secondary-600 bg-clip-text text-transparent mb-6 font-display leading-tight">
+            À propos de <br className="md:hidden" />
+            <span className="relative">
+              ChapeChape Residence
+              <motion.div
+                initial={{ width: 0 }}
+                whileInView={{ width: "100%" }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: 0.8 }}
+                className="absolute -bottom-2 left-0 h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"
+              />
+            </span>
+          </h2>
+          
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-secondary-600 max-w-2xl mx-auto"
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
           >
-            Découvrez notre vision, nos valeurs et l'équipe qui fait de ChapeChape Residence une référence en Afrique de l'Ouest.
+            Découvrez notre vision, nos valeurs et l'équipe qui fait de ChapeChape Residence 
+            <span className="text-primary-600 font-medium">une référence en Afrique de l'Ouest</span>.
           </motion.p>
           
-          {/* Ligne décorative dorée */}
+          {/* Éléments décoratifs modernes */}
           <motion.div 
-            initial={{ width: 0 }}
-            whileInView={{ width: "80px" }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="h-1 bg-primary-300 mx-auto mt-6"
-          />
+            transition={{ duration: 1, delay: 0.6 }}
+            className="flex justify-center items-center space-x-4 mt-8"
+          >
+            <div className="w-12 h-px bg-gradient-to-r from-transparent to-primary-300"></div>
+            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
+            <div className="w-16 h-px bg-gradient-to-r from-primary-300 to-secondary-300"></div>
+            <div className="w-2 h-2 bg-secondary-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+            <div className="w-12 h-px bg-gradient-to-r from-secondary-300 to-transparent"></div>
+          </motion.div>
         </motion.div>
         
-        {/* Section Notre Vision */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-20">
+        {/* Section Notre Vision avec Animation Futuriste */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-32">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-white p-6 rounded-xl shadow-md border border-primary-100"
+            transition={{ duration: 0.8, delay: 0.1 }}
+            className="bg-white/80 backdrop-blur-sm p-10 rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-500 group"
           >
             <motion.h3 
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-2xl font-bold text-secondary-900 mb-4 inline-flex items-center"
+              transition={{ duration: 0.6 }}
+              className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-primary-600 bg-clip-text text-transparent mb-6 inline-flex items-center group-hover:scale-105 transition-transform duration-300"
             >
-              <span className="text-primary-300 mr-2">🌟</span>
+              <motion.span 
+                initial={{ rotate: 0 }}
+                whileInView={{ rotate: 360 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: 0.3 }}
+                className="text-3xl mr-3"
+              >
+                🌟
+              </motion.span>
               Notre Vision
             </motion.h3>
             <motion.p 
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-secondary-700 mb-6"
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-gray-700 mb-8 text-lg leading-relaxed"
             >
-              ChapeChapeRésidence aspire à devenir la référence en Afrique de l'Ouest pour la réservation, la gestion et la valorisation de résidences meublées et de logements temporaires. Nous visons à simplifier l'accès à des hébergements de qualité, en connectant efficacement propriétaires et locataires grâce à une plateforme numérique intuitive et sécurisée.
+              ChapeChapeRésidence aspire à devenir 
+              <span className="font-semibold text-primary-600">la référence en Afrique de l'Ouest</span> 
+              pour la réservation, la gestion et la valorisation de résidences meublées et de logements temporaires. 
+              Nous visons à simplifier l'accès à des hébergements de qualité, en connectant efficacement 
+              propriétaires et locataires grâce à une 
+              <span className="font-semibold text-secondary-600">plateforme numérique intuitive et sécurisée</span>.
             </motion.p>
-            
-            {/* Ajout d'une illustration distinctive */}
-            <div className="mt-4 flex justify-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="w-24 h-24 bg-primary-50 rounded-full flex items-center justify-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12 text-primary-400">
-                  <path d="M11.7 2.805a.75.75 0 01.6 0A60.65 60.65 0 0122.83 8.72a.75.75 0 01-.231 1.337 49.949 49.949 0 00-9.902 3.912l-.003.002-.34.18a.75.75 0 01-.707 0A50.009 50.009 0 007.5 12.174v-.224c0-.131.067-.248.172-.311a54.614 54.614 0 014.653-2.52.75.75 0 00-.65-1.352 56.129 56.129 0 00-4.78 2.589 1.858 1.858 0 00-.859 1.228 49.803 49.803 0 00-4.634-1.527.75.75 0 01-.231-1.337A60.653 60.653 0 0111.7 2.805z" />
-                  <path d="M13.06 15.473a48.45 48.45 0 017.666-3.282c.134 1.414.22 2.843.255 4.285a.75.75 0 01-.46.71 47.878 47.878 0 00-8.105 4.342.75.75 0 01-.832 0 47.877 47.877 0 00-8.104-4.342.75.75 0 01-.461-.71c.035-1.442.121-2.87.255-4.286A48.4 48.4 0 016 13.18v1.27a1.5 1.5 0 00-.14 2.508c-.09.38-.222.753-.397 1.11.452.213.901.434 1.346.661a6.729 6.729 0 00.551-1.608 1.5 1.5 0 00.14-2.67v-.645a48.549 48.549 0 013.44 1.668 2.25 2.25 0 002.12 0z" />
-                  <path d="M4.462 19.462c.42-.419.753-.89 1-1.394.453.213.902.434 1.347.661a6.743 6.743 0 01-1.286 1.794.75.75 0 11-1.06-1.06z" />
-                </svg>
-              </motion.div>
-            </div>
           </motion.div>
           
+          {/* Animation Ville 3D Futuriste */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -240,11 +269,196 @@ const AboutSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="rounded-xl overflow-hidden shadow-lg"
           >
-            <div className="bg-[url('/assets/vision.jpg')] h-[300px] bg-cover bg-center"></div>
+            <div className="relative w-full h-[300px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 overflow-hidden">
+              {/* Background Grid */}
+              <div className="absolute inset-0 opacity-20">
+                <svg className="w-full h-full" viewBox="0 0 400 300">
+                  <defs>
+                    <pattern id="grid-vision" width="20" height="20" patternUnits="userSpaceOnUse">
+                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid-vision)" className="text-slate-400" />
+                </svg>
+              </div>
+
+              {/* Mini-ville 3D Isométrique */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-80 h-60">
+                  {/* Buildings avec illumination séquentielle */}
+                  {[
+                    { x: 60, y: 120, w: 25, h: 50, delay: 0, color: 'from-blue-400 to-blue-600' },
+                    { x: 95, y: 100, w: 20, h: 70, delay: 1, color: 'from-indigo-400 to-indigo-600' },
+                    { x: 125, y: 110, w: 30, h: 60, delay: 2, color: 'from-purple-400 to-purple-600' },
+                    { x: 165, y: 90, w: 22, h: 80, delay: 3, color: 'from-blue-500 to-blue-700' },
+                    { x: 195, y: 105, w: 28, h: 65, delay: 4, color: 'from-indigo-500 to-indigo-700' },
+                    { x: 230, y: 95, w: 24, h: 75, delay: 5, color: 'from-purple-500 to-purple-700' },
+                  ].map((building, index) => (
+                    <motion.div
+                      key={index}
+                      className="absolute"
+                      style={{ left: building.x, top: building.y }}
+                      animate={{
+                        boxShadow: [
+                          '0 0 0 rgba(251, 191, 36, 0)',
+                          '0 0 15px rgba(251, 191, 36, 0.6)',
+                          '0 0 0 rgba(251, 191, 36, 0)'
+                        ]
+                      }}
+                      transition={{
+                        duration: 6,
+                        repeat: Infinity,
+                        delay: building.delay
+                      }}
+                    >
+                      {/* Building Face */}
+                      <div 
+                        className={`bg-gradient-to-b ${building.color} rounded-t-sm`}
+                        style={{ width: building.w, height: building.h }}
+                      />
+                      {/* Building Side */}
+                      <div 
+                        className={`absolute top-0 bg-gradient-to-b ${building.color.replace('400', '300').replace('500', '400').replace('600', '500').replace('700', '600')}`}
+                        style={{ 
+                          left: building.w, 
+                          width: building.w * 0.25, 
+                          height: building.h,
+                          transform: 'skewY(-30deg) scaleY(0.866)',
+                          filter: 'brightness(0.8)'
+                        }}
+                      />
+                      {/* Building Top */}
+                      <div 
+                        className={`absolute bg-gradient-to-br ${building.color.replace('400', '200').replace('500', '300').replace('600', '400').replace('700', '500')}`}
+                        style={{ 
+                          top: -building.w * 0.12,
+                          width: building.w, 
+                          height: building.w * 0.25,
+                          transform: 'skewX(-30deg) scaleX(1.366)',
+                          filter: 'brightness(1.2)'
+                        }}
+                      />
+                      
+                      {/* Windows avec éclairage */}
+                      {Array.from({ length: Math.floor(building.h / 12) }).map((_, windowRow) => (
+                        <div key={windowRow} className="absolute flex gap-0.5" style={{ top: 8 + windowRow * 12, left: 3 }}>
+                          {Array.from({ length: Math.floor(building.w / 6) }).map((_, windowCol) => (
+                            <motion.div
+                              key={windowCol}
+                              className="w-1 h-1.5 bg-yellow-300 rounded-sm"
+                              animate={{
+                                opacity: [0.2, 1, 0.2],
+                                backgroundColor: ['#fde047', '#facc15', '#fde047']
+                              }}
+                              transition={{
+                                duration: 2 + Math.random(),
+                                repeat: Infinity,
+                                delay: building.delay + windowRow * 0.1 + windowCol * 0.05
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </motion.div>
+                  ))}
+
+                  {/* Drones de livraison */}
+                  {[0, 1, 2].map((droneIndex) => (
+                    <motion.div
+                      key={droneIndex}
+                      className="absolute w-2 h-2 bg-primary-500 rounded-full shadow-lg"
+                      animate={{
+                        x: [40, 280, 40],
+                        y: [40 + droneIndex * 25, 60 + droneIndex * 15, 40 + droneIndex * 25],
+                      }}
+                      transition={{
+                        duration: 8,
+                        repeat: Infinity,
+                        delay: droneIndex * 2,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      {/* Hélices */}
+                      <motion.div 
+                        className="absolute -top-0.5 -left-0.5 w-3 h-3 border border-primary-400 rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 0.1, repeat: Infinity, ease: "linear" }}
+                      />
+                    </motion.div>
+                  ))}
+
+                  {/* Hologramme Smartphone Central */}
+                  <motion.div 
+                    className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                    animate={{
+                      y: [0, -8, 0],
+                      rotateY: [0, 360]
+                    }}
+                    transition={{
+                      y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                      rotateY: { duration: 6, repeat: Infinity, ease: "linear" }
+                    }}
+                  >
+                    <div className="w-12 h-18 bg-gradient-to-b from-slate-800 to-slate-900 rounded-lg shadow-xl border border-primary-400 relative overflow-hidden">
+                      {/* Écran */}
+                      <div className="absolute inset-0.5 bg-gradient-to-b from-blue-900 to-blue-800 rounded-md p-0.5">
+                        {/* Données qui changent */}
+                        <motion.div 
+                          className="text-xs text-white font-mono leading-tight text-center"
+                          animate={{
+                            opacity: [1, 0, 1]
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity
+                          }}
+                        >
+                          <div className="text-xs">€850</div>
+                          <div className="text-green-400 text-xs">Libre</div>
+                          <div className="text-xs">3ch</div>
+                        </motion.div>
+                      </div>
+                      
+                      {/* Glow effect */}
+                      <motion.div 
+                        className="absolute inset-0 bg-primary-400 rounded-lg opacity-30 blur-sm"
+                        animate={{
+                          scale: [1, 1.1, 1],
+                          opacity: [0.3, 0.5, 0.3]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity
+                        }}
+                      />
+                    </div>
+                  </motion.div>
+
+                  {/* Particules dorées connectant les bâtiments */}
+                  {Array.from({ length: 6 }).map((_, particleIndex) => (
+                    <motion.div
+                      key={particleIndex}
+                      className="absolute w-0.5 h-0.5 bg-primary-400 rounded-full"
+                      animate={{
+                        x: [Math.random() * 300, Math.random() * 300],
+                        y: [Math.random() * 180, Math.random() * 180],
+                        opacity: [0, 1, 0]
+                      }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        delay: particleIndex * 0.7,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
         
-        {/* Section Notre Culture d'Entreprise */}
+        {/* Section Notre Culture d'Entreprise avec Animation Collaborative */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-20 md:flex-row-reverse">
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -272,24 +486,9 @@ const AboutSection = () => {
             >
               Nous cultivons une culture d'innovation, de proximité et de responsabilité. Chez ChapeChapeRésidence, chaque membre de l'équipe est encouragé à proposer des idées novatrices, à rester à l'écoute des besoins des utilisateurs et à agir avec intégrité. Nous valorisons la collaboration, l'agilité et l'engagement envers l'excellence du service.
             </motion.p>
-            
-            {/* Ajout d'une illustration distinctive */}
-            <div className="mt-4 flex justify-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="w-24 h-24 bg-primary-50 rounded-full flex items-center justify-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12 text-primary-400">
-                  <path fillRule="evenodd" d="M8.25 6.75a3.75 3.75 0 117.5 0 3.75 3.75 0 01-7.5 0zM15.75 9.75a3 3 0 116 0 3 3 0 01-6 0zM2.25 9.75a3 3 0 116 0 3 3 0 01-6 0zM6.31 15.117A6.745 6.745 0 0112 12a6.745 6.745 0 016.709 7.498.75.75 0 01-.372.568A12.696 12.696 0 0112 21.75c-2.305 0-4.47-.612-6.337-1.684a.75.75 0 01-.372-.568 6.787 6.787 0 011.019-4.38z" />
-                  <path d="M5.082 14.254a8.287 8.287 0 00-1.308 5.135 9.687 9.687 0 01-1.764-.44l-.115-.04a.563.563 0 01-.373-.487l-.01-.121a3.75 3.75 0 013.57-4.047zM20.226 19.389a8.287 8.287 0 00-1.308-5.135 3.75 3.75 0 013.57 4.047l-.01.121a.563.563 0 01-.373.486l-.115.04c-.567.2-1.156.349-1.764.441z" />
-                </svg>
-              </motion.div>
-            </div>
           </motion.div>
           
+          {/* Animation Équipe Collaborative */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -297,7 +496,181 @@ const AboutSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="rounded-xl overflow-hidden shadow-lg md:order-1"
           >
-            <div className="bg-[url('/assets/culture.jpg')] h-[300px] bg-cover bg-center"></div>
+            <div className="relative w-full h-[300px] bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
+              {/* Confettis dorés subtils en arrière-plan */}
+              {Array.from({ length: 12 }).map((_, index) => (
+                <motion.div
+                  key={index}
+                  className="absolute w-1 h-1 bg-primary-400 rounded-full"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`
+                  }}
+                  animate={{
+                    y: [0, -20, 0],
+                    opacity: [0.3, 0.8, 0.3],
+                    scale: [0.5, 1, 0.5]
+                  }}
+                  transition={{
+                    duration: 3 + Math.random() * 2,
+                    repeat: Infinity,
+                    delay: index * 0.2,
+                    ease: "easeInOut"
+                  }}
+                />
+              ))}
+
+              {/* 5 Avatars en cercle */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-48 h-48">
+                  {[
+                    { angle: 0, name: 'A', color: 'from-blue-400 to-blue-600', value: 'innovation' },
+                    { angle: 72, name: 'S', color: 'from-green-400 to-green-600', value: 'proximite' },
+                    { angle: 144, name: 'M', color: 'from-purple-400 to-purple-600', value: 'responsabilite' },
+                    { angle: 216, name: 'L', color: 'from-orange-400 to-orange-600', value: 'collaboration' },
+                    { angle: 288, name: 'K', color: 'from-pink-400 to-pink-600', value: 'excellence' }
+                  ].map((avatar, index) => {
+                    const radius = 80;
+                    const x = Math.cos((avatar.angle * Math.PI) / 180) * radius;
+                    const y = Math.sin((avatar.angle * Math.PI) / 180) * radius;
+                    
+                    return (
+                      <motion.div
+                        key={index}
+                        className="absolute w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                        style={{
+                          left: `calc(50% + ${x}px - 24px)`,
+                          top: `calc(50% + ${y}px - 24px)`
+                        }}
+                        animate={{
+                          scale: [1, 1.1, 1],
+                          boxShadow: [
+                            '0 4px 6px rgba(0, 0, 0, 0.1)',
+                            '0 8px 25px rgba(251, 191, 36, 0.3)',
+                            '0 4px 6px rgba(0, 0, 0, 0.1)'
+                          ]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: index * 0.4,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <div className={`w-full h-full rounded-full bg-gradient-to-br ${avatar.color} flex items-center justify-center`}>
+                          {avatar.name}
+                        </div>
+                        
+                        {/* Badge de valeur qui apparaît/disparaît */}
+                        <motion.div
+                          className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-primary-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap"
+                          animate={{
+                            opacity: [0, 1, 1, 0],
+                            y: [5, 0, 0, 5],
+                            scale: [0.8, 1, 1, 0.8]
+                          }}
+                          transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            delay: index * 0.8,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          {avatar.value}
+                        </motion.div>
+                      </motion.div>
+                    );
+                  })}
+
+                  {/* Icônes dorées qui se passent entre les avatars */}
+                  {[
+                    { icon: '💡', path: [0, 72], delay: 0 }, // Innovation
+                    { icon: '❤️', path: [72, 144], delay: 1 }, // Proximité
+                    { icon: '🛡️', path: [144, 216], delay: 2 }, // Responsabilité
+                    { icon: '🤝', path: [216, 288], delay: 3 }, // Collaboration
+                    { icon: '⭐', path: [288, 0], delay: 4 } // Excellence
+                  ].map((iconData, index) => {
+                    const startAngle = iconData.path[0];
+                    const endAngle = iconData.path[1];
+                    const radius = 80;
+                    
+                    const startX = Math.cos((startAngle * Math.PI) / 180) * radius;
+                    const startY = Math.sin((startAngle * Math.PI) / 180) * radius;
+                    const endX = Math.cos((endAngle * Math.PI) / 180) * radius;
+                    const endY = Math.sin((endAngle * Math.PI) / 180) * radius;
+                    
+                    return (
+                      <motion.div
+                        key={index}
+                        className="absolute w-6 h-6 flex items-center justify-center text-lg"
+                        style={{
+                          left: `calc(50% + ${startX}px - 12px)`,
+                          top: `calc(50% + ${startY}px - 12px)`
+                        }}
+                        animate={{
+                          x: [0, endX - startX],
+                          y: [0, endY - startY],
+                          scale: [0.8, 1.2, 0.8],
+                          rotate: [0, 180, 360]
+                        }}
+                        transition={{
+                          duration: 5,
+                          repeat: Infinity,
+                          delay: iconData.delay,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        {iconData.icon}
+                      </motion.div>
+                    );
+                  })}
+
+                  {/* Lignes de connexion animées entre les personnages */}
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 192 192">
+                    {[0, 1, 2, 3, 4].map((index) => {
+                      const nextIndex = (index + 1) % 5;
+                      const angle1 = index * 72;
+                      const angle2 = nextIndex * 72;
+                      const radius = 80;
+                      
+                      const x1 = 96 + Math.cos((angle1 * Math.PI) / 180) * radius;
+                      const y1 = 96 + Math.sin((angle1 * Math.PI) / 180) * radius;
+                      const x2 = 96 + Math.cos((angle2 * Math.PI) / 180) * radius;
+                      const y2 = 96 + Math.sin((angle2 * Math.PI) / 180) * radius;
+                      
+                      return (
+                        <motion.line
+                          key={index}
+                          x1={x1}
+                          y1={y1}
+                          x2={x2}
+                          y2={y2}
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                          strokeDasharray="5,5"
+                          animate={{
+                            strokeDashoffset: [0, -10],
+                            opacity: [0.3, 0.8, 0.3]
+                          }}
+                          transition={{
+                            strokeDashoffset: {
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "linear"
+                            },
+                            opacity: {
+                              duration: 3,
+                              repeat: Infinity,
+                              delay: index * 0.6
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                  </svg>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
         

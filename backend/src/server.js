@@ -1,3 +1,9 @@
+// IMPORTANT: Sentry instrument.js doit être importé en TOUT PREMIER
+require('../instrument');
+
+// New Relic doit être importé en SECOND, avant les autres modules
+require('../newrelic');
+
 const dotenv = require('dotenv');
 const path = require('path');
 

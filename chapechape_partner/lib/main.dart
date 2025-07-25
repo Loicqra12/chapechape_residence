@@ -46,6 +46,7 @@ import 'core/blocs/help/help_bloc.dart';
 import 'core/blocs/theme/theme_bloc.dart';
 import 'core/blocs/settings/settings_bloc.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'core/utils/app_bloc_observer.dart';
 // Temporairement désactivé pour résoudre les problèmes de build
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -62,6 +63,9 @@ Future<void> main() async {
 
   // Configurer le système de logging
   _setupLogging();
+  
+  // Configurer l'observateur de blocs pour le débogage
+  Bloc.observer = AppBlocObserver();
 
   // Initialiser les données de localisation française
   await initializeDateFormatting('fr_FR', null);

@@ -9,6 +9,7 @@ import '../../core/models/blog_post_model.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/blog_service.dart';
+import '../../core/services/logger_service.dart';
 
 class BlogAndTipsWidget extends StatefulWidget {
   final List<BlogPost>? blogPosts;
@@ -36,6 +37,7 @@ class BlogAndTipsWidget extends StatefulWidget {
 
 class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
   final BlogService _blogService = BlogService();
+  final LoggerService _logger = LoggerService();
   List<BlogPost> _blogPosts = [];
   bool _isLoading = true;
   
@@ -66,7 +68,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Erreur lors du chargement des articles de blog: $e');
+      _logger.error('Erreur lors du chargement des articles de blog: $e');
       setState(() {
         _blogPosts = [];
         _isLoading = false;

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+
 import '../constants/app_assets.dart' as assets;
 
 /// Enum qui définit les différents types de résidences

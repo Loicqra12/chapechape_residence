@@ -38,8 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _logger.debug('HomeScreen initialisé');
     // Initialiser le chargement des données dès la création du widget
     _initializeData();
+  }
+  
+  @override
+  void dispose() {
+    _logger.debug('HomeScreen détruit - nettoyage des ressources');
+    // Libération des ressources si nécessaire
+    super.dispose();
   }
   
   // Méthode pour initialiser les données de manière ordonnée
@@ -69,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -151,19 +160,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Augmenter la hauteur pour éviter le débordement
                   height: 450,
                   width: constraints.maxWidth,
-                  child: BlocBuilder<ResidenceBloc, ResidenceState>(
-                    builder: (context, state) {
-                      // Utiliser les résidences chargées ou préservées en cas d'erreur
-                      final residences = state is ResidencesLoaded 
+                  child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
+                    selector: (state) => {
+                      'residences': state is ResidencesLoaded 
                           ? state.residences 
                           : (state is ResidenceError && state.preservedResidences != null)
                               ? state.preservedResidences!
-                              : [];
+                              : [],
+                      'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
+                    },
+                    builder: (context, data) {
+                      final residences = data['residences'] as List;
+                      final isLoading = data['isLoading'] as bool;
                               
                       return SpecialResidencesWidget(
                         title: "Résidences Spéciales",
                         filterType: ResidenceType.luxury,
-                        isLoading: state is ResidenceLoading || state is ResidenceRefreshing,
+                        isLoading: isLoading,
                         items: residences,
                       );
                     },
@@ -199,17 +212,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Augmenter la hauteur pour éviter le débordement
                   height: 420,
                   width: constraints.maxWidth,
-                  child: BlocBuilder<ResidenceBloc, ResidenceState>(
-                    builder: (context, state) {
-                      // Utiliser les résidences chargées ou préservées en cas d'erreur
-                      final residences = state is ResidencesLoaded 
+                  child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
+                    selector: (state) => {
+                      'residences': state is ResidencesLoaded 
                           ? state.residences 
                           : (state is ResidenceError && state.preservedResidences != null)
                               ? state.preservedResidences!
-                              : [];
+                              : [],
+                      'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
+                    },
+                    builder: (context, data) {
+                      final residences = data['residences'] as List;
+                      final isLoading = data['isLoading'] as bool;
                               
                       return FeaturedListings(
-                        isLoading: state is ResidenceLoading || state is ResidenceRefreshing,
+                        isLoading: isLoading,
                         listings: residences,
                         onSeeAllPressed: () {
                           context.push('/search');
@@ -225,13 +242,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Témoignages clients (commun à tous)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: TestimonialsWidget(),
+                  child: TestimonialsWidget(
+                    key: const Key('home_testimonials'),
+                  ),
                 ),
                 
                 // Section blog et conseils (commune à tous)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: BlogAndTipsWidget(),
+                  child: BlogAndTipsWidget(
+                    key: const Key('home_blog_tips'),
+                  ),
                 ),
                 
                 // Footer (commun à tous)
@@ -244,8 +265,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget d'en-tête de section réutilisable
+  // Widget d'en-tête de section réutilisable avec support du mode sombre
   Widget _buildSectionHeader(BoxConstraints constraints, String title, String subtitle) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       width: constraints.maxWidth,
       margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
@@ -255,18 +278,21 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black87,
             ),
+            semanticsLabel: 'Section: $title',
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Colors.grey,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
             ),
+            semanticsLabel: subtitle,
           ),
         ],
       ),
@@ -275,23 +301,28 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Section d'incitation à l'inscription (visible uniquement pour les non-connectés)
   Widget _buildSignUpPrompt(BuildContext context, BoxConstraints constraints) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         // Ne montrer que pour les utilisateurs non connectés
         if (state is Authenticated) {
+          _logger.debug('Utilisateur authentifié, masquage du bloc d\'invitation à l\'inscription');
           return const SizedBox.shrink();
         }
+
+        _logger.debug('Affichage du bloc d\'invitation à l\'inscription pour utilisateur non authentifié');
         
         return Container(
           width: constraints.maxWidth,
           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
           padding: const EdgeInsets.all(20.0),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDarkMode ? Colors.grey[850] : Colors.white,
             borderRadius: BorderRadius.circular(16.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -303,22 +334,25 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Column(
             children: [
-              const Text(
+              Text(
                 'Rejoignez ChapeChape Résidences',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
                 ),
                 textAlign: TextAlign.center,
+                semanticsLabel: 'Invitation à rejoindre ChapeChape Résidences',
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Créez un compte pour accéder à des fonctionnalités exclusives, enregistrer vos favoris et recevoir des offres personnalisées.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black87,
+                  color: isDarkMode ? Colors.grey[300] : Colors.black87,
                 ),
                 textAlign: TextAlign.center,
+                semanticsLabel: 'Avantages à créer un compte sur ChapeChape Résidences',
               ),
               const SizedBox(height: 24),
               Wrap(
@@ -328,24 +362,52 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   SizedBox(
                     width: 140,
-                    child: ElevatedButton(
-                      onPressed: () => context.push('/register'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    child: Tooltip(
+                      message: 'Créer un nouveau compte',
+                      child: ElevatedButton(
+                        onPressed: () {
+                          _logger.info('Navigation vers l\'écran d\'inscription depuis la section d\'invitation');
+                          context.push('/register');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'S\'inscrire',
+                          semanticsLabel: 'Bouton pour créer un nouveau compte',
                         ),
                       ),
-                      child: const Text('S\'inscrire'),
                     ),
                   ),
                   SizedBox(
                     width: 140,
-                    child: TextButton(
-                      onPressed: () => context.push('/login'),
-                      child: const Text('Se connecter'),
+                    child: Tooltip(
+                      message: 'Se connecter à votre compte existant',
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _logger.info('Navigation vers l\'écran de connexion depuis la section d\'invitation');
+                          context.push('/login');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Theme.of(context).primaryColor),
+                          foregroundColor: Theme.of(context).primaryColor,
+                          backgroundColor: isDarkMode ? Colors.transparent : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Se connecter',
+                          semanticsLabel: 'Bouton pour se connecter avec un compte existant',
+                        ),
+                      ),
                     ),
                   ),
                 ],

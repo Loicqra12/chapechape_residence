@@ -76,133 +76,251 @@ const services = [
   }
 ]
 
-const Services = () => {
+export default function Services() {
   return (
-    <div className="bg-white">
-      {/* Hero section */}
-      <div className="relative bg-secondary-900 py-24 px-6 sm:py-32 sm:px-12">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary-900 to-secondary-800 opacity-90" />
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-20" 
-            style={{ backgroundImage: 'url(/assets/services/hero-bg.jpg)' }}
-          />
+    <div className="bg-secondary-50 dark:bg-secondary-900">
+      {/* Hero section - Style Stripe Premium */}
+      <div className="relative isolate overflow-hidden bg-gradient-to-br from-secondary-900 via-secondary-800 to-secondary-900 dark:from-secondary-800 dark:via-secondary-900 dark:to-secondary-800 py-24 sm:py-32">
+        {/* Background premium avec motifs */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(212,175,55,0.1),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(168,85,247,0.06),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.02)_1px,transparent_1px),linear-gradient(45deg,rgba(168,85,247,0.01)_1px,transparent_1px)] bg-[size:80px_80px]" />
         </div>
-        <div className="relative mx-auto max-w-7xl">
+        
+        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="text-center"
           >
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            {/* Badge premium */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-primary-100 to-secondary-100 text-primary-700 text-sm font-medium mb-8 border border-primary-200"
+            >
+              <span className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
+              Solutions Premium
+            </motion.div>
+            
+            <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-white via-primary-200 to-secondary-200 bg-clip-text text-transparent mb-8 font-display leading-tight">
               Nos Services
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 1, delay: 0.8 }}
+                className="h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full mx-auto mt-4 max-w-md"
+              />
             </h1>
-            <p className="mt-6 max-w-lg mx-auto text-xl text-primary-200">
-              Des solutions complètes et personnalisées pour les propriétaires et locataires.
-            </p>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="mt-8 max-w-3xl mx-auto text-xl text-primary-100 leading-relaxed"
+            >
+              Des solutions complètes et personnalisées pour les 
+              <span className="text-primary-300 font-medium"> propriétaires</span> et 
+              <span className="text-secondary-300 font-medium"> locataires</span>.
+            </motion.p>
           </motion.div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="container-custom py-16 sm:py-24">
-        {/* Introduction */}
-        <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-secondary-900 mb-6">
-            Des Services Adaptés à Vos Besoins
-          </h2>
-          <p className="text-lg text-secondary-600">
-            ChapeChape Residence met à votre disposition une gamme complète de services 
-            pour faciliter la location et la gestion de biens immobiliers. Que vous soyez 
-            propriétaire ou locataire, notre équipe professionnelle est là pour vous 
-            offrir une expérience sans tracas.
-          </p>
-        </div>
-
-        {/* Liste des services */}
-        <div className="space-y-24">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 sm:py-24">
+        {/* Services Cards - Grid Layout avec Stagger Effect */}
+        <div className="space-y-16">
           {services.map((service, index) => (
             <motion.div
               key={service.id}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 80, rotateX: 15 }}
+              whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
+              transition={{ 
+                duration: 0.8, 
+                delay: index * 0.2, // Stagger effect 0.2s
+                ease: "easeOut"
+              }}
               className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-8 lg:gap-16`}
             >
               <div className="md:w-1/2">
-                <div className="bg-primary-50 p-8 rounded-xl h-full flex flex-col justify-center">
-                  <div className="text-primary-500 mb-6">
+                <motion.div 
+                  whileHover={{ 
+                    scale: 1.02,
+                    rotateY: 5,
+                    rotateX: -2
+                  }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="bg-white/90 dark:bg-secondary-800/90 backdrop-blur-sm p-10 rounded-3xl h-full flex flex-col justify-center shadow-xl border border-gray-100 dark:border-secondary-700 hover:shadow-2xl hover:shadow-primary-500/20 hover:border-primary-300/50 transition-all duration-500 group relative overflow-hidden"
+                  style={{
+                    transformStyle: 'preserve-3d'
+                  }}
+                >
+                  {/* Glow doré au hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary-400/10 via-transparent to-secondary-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+                  
+                  {/* Micro-animations des icônes spécifiques */}
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: index * 0.2 + 0.3 }}
+                    whileHover={{
+                      scale: service.id === 'tenants' ? 1.1 : 1.05,
+                      rotate: service.id === 'owners' ? 5 : 0,
+                      y: service.id === 'concierge' ? -5 : 0
+                    }}
+                    className="text-primary-500 dark:text-primary-400 mb-8 group-hover:scale-110 transition-transform duration-300 relative z-10"
+                  >
                     {service.icon}
-                  </div>
-                  <h3 className="text-2xl font-bold text-secondary-900 mb-4">{service.title}</h3>
-                  <p className="text-secondary-600 mb-8">{service.description}</p>
-                  <ul className="space-y-3">
+                  </motion.div>
+                  
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-900 dark:from-white to-primary-600 dark:to-primary-400 bg-clip-text text-transparent mb-6 font-display group-hover:scale-105 transition-transform duration-300">
+                    {service.title}
+                  </h3>
+                  
+                  <p className="text-gray-700 dark:text-gray-300 mb-10 text-lg leading-relaxed">
+                    {service.description}
+                  </p>
+                  
+                  <ul className="space-y-4">
                     {service.features.map((feature, i) => (
-                      <li key={i} className="flex items-start">
-                        <svg className="h-6 w-6 text-primary-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="text-secondary-700">{feature}</span>
-                      </li>
+                      <motion.li 
+                        key={i} 
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: (index * 0.2) + (i * 0.1) }}
+                        className="flex items-start group/item"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center mr-4 mt-0.5 group-hover/item:scale-110 transition-transform duration-200">
+                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-gray-700 dark:text-gray-300 font-medium group-hover/item:text-primary-600 dark:group-hover/item:text-primary-400 transition-colors duration-200">
+                          {feature}
+                        </span>
+                      </motion.li>
                     ))}
                   </ul>
-                  <div className="mt-8">
-                    <a 
+                  
+                  <div className="mt-10">
+                    <motion.a 
                       href={`/services/${service.id}`} 
-                      className="btn-secondary"
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: (index * 0.2) + 0.3 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="inline-flex items-center px-6 py-3 rounded-2xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-medium hover:from-primary-600 hover:to-secondary-600 transition-all duration-300 shadow-lg hover:shadow-xl group/btn"
                     >
                       En savoir plus
-                    </a>
+                      <motion.svg 
+                        className="ml-2 h-4 w-4"
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                        whileHover={{ x: 5 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </motion.svg>
+                    </motion.a>
                   </div>
-                </div>
+                </motion.div>
               </div>
+              
               <div className="md:w-1/2 flex items-center justify-center">
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-xl">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
+                  whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: index * 0.2 }}
+                  whileHover={{ scale: 1.05, rotate: 1 }}
+                  className="relative w-full aspect-video rounded-3xl overflow-hidden shadow-2xl group/image"
+                >
                   <img 
                     src={`/assets/services/${service.id}.jpg`}
                     alt={service.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover/image:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/70 to-transparent">
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <h4 className="text-xl font-bold text-white">{service.title}</h4>
-                      <p className="text-sm text-primary-200">ChapeChape Residence</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent group-hover/image:from-primary-900/80">
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <h4 className="text-2xl font-bold text-white mb-2 group-hover/image:scale-105 transition-transform duration-300">
+                        {service.title}
+                      </h4>
+                      <p className="text-primary-200 font-medium">ChapeChape Residence</p>
                     </div>
                   </div>
-                </div>
+                  
+                  {/* Overlay premium */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-secondary-500/10 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300" />
+                </motion.div>
               </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Appel à l'action */}
-        <div className="mt-24 bg-secondary-900 rounded-2xl p-8 sm:p-12 text-center">
+        {/* Appel à l'action - Style Premium */}
+        <motion.div 
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="mt-32 bg-gradient-to-br from-gray-900 via-primary-900 to-secondary-900 dark:from-secondary-800 dark:via-secondary-900 dark:to-primary-900 rounded-3xl p-12 sm:p-16 text-center relative overflow-hidden"
+        >
+          {/* Background pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(45deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:60px_60px]" />
+          
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative z-10"
           >
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Besoin d'un service personnalisé ?
+            {/* Badge */}
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-primary-200 text-sm font-medium mb-8 border border-white/20">
+              <span className="w-2 h-2 bg-primary-400 rounded-full mr-2 animate-pulse"></span>
+              Service Personnalisé
+            </div>
+            
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 font-display">
+              Besoin d'un service 
+              <span className="bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent"> personnalisé</span> ?
             </h2>
-            <p className="text-lg text-primary-200 mb-8 max-w-2xl mx-auto">
+            
+            <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
               Notre équipe est disponible pour discuter de vos besoins spécifiques et vous 
-              proposer des solutions adaptées.
+              proposer des solutions adaptées à votre situation unique.
             </p>
-            <a
+            
+            <motion.a
               href="/contact"
-              className="btn-primary bg-primary-300 hover:bg-primary-400 text-secondary-900"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-flex items-center px-8 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold text-lg hover:from-primary-400 hover:to-secondary-400 transition-all duration-300 shadow-2xl hover:shadow-primary-500/25 group"
             >
               Demander un devis
-            </a>
+              <motion.svg 
+                className="ml-3 h-5 w-5" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </motion.svg>
+            </motion.a>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
 }
-
-export default Services 

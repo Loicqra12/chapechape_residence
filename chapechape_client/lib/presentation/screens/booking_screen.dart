@@ -240,8 +240,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
           ],
         ),
-        
-        // Afficher le résultat de la vérification de disponibilité
+                // Afficher le résultat de la vérification de disponibilité
         BlocListener<BookingBloc, booking_states.BookingState>(
           listener: (context, state) {
             if (state is booking_states.ResidenceAvailabilityChecked) {
@@ -257,14 +256,75 @@ class _BookingScreenState extends State<BookingScreen> {
           child: _isAvailabilityChecked
               ? Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    _isAvailable
-                        ? 'Cette résidence est disponible pour les dates sélectionnées'
-                        : 'Cette résidence n\'est pas disponible pour les dates sélectionnées',
-                    style: TextStyle(
-                      color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: _isAvailable 
+                              ? AppTheme.successColor.withOpacity(0.1) 
+                              : AppTheme.errorColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(
+                            color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  _isAvailable ? Icons.check_circle : Icons.error,
+                                  color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _isAvailable
+                                        ? 'Résidence disponible pour les dates sélectionnées!'
+                                        : 'Cette résidence n\'est pas disponible pour ces dates',
+                                    style: TextStyle(
+                                      color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (!_isAvailable) ...[  
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Essayez de sélectionner d\'autres dates ou une autre résidence.',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  // Proposer de nouvelles dates (date d'aujourd'hui + 7 jours)
+                                  final newStartDate = DateTime.now().add(const Duration(days: 7));
+                                  final newEndDate = newStartDate.add(const Duration(days: 3));
+                                  
+                                  setState(() {
+                                    _checkInDate = newStartDate;
+                                    _checkOutDate = newEndDate;
+                                    _isAvailabilityChecked = false;
+                                  });
+                                  
+                                  // Vérifier automatiquement la disponibilité pour ces nouvelles dates
+                                  _checkAvailability();
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Theme.of(context).primaryColor,
+                                ),
+                                child: const Text('Essayer des dates dans 1 semaine'),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : const SizedBox.shrink(),
@@ -374,10 +434,33 @@ class _BookingScreenState extends State<BookingScreen> {
           // Rediriger vers l'écran de paiement ou de confirmation
           context.go('/booking-confirmation/${state.booking.id}');
         } else if (state is booking_states.BookingError) {
-          // Afficher une erreur
+          // Afficher une erreur plus détaillée
+          String errorMessage = state.message;
+          
+          // Traiter les messages d'erreur spécifiques
+          if (errorMessage.contains('n\'est pas disponible pour ces dates')) {
+            errorMessage = 'Cette résidence n\'est plus disponible pour les dates sélectionnées. Veuillez essayer d\'autres dates.';
+          }
+          
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: AppTheme.errorColor,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
           );
+          
+          // Si l'erreur concerne la disponibilité, on réinitialise le check
+          if (errorMessage.contains('disponible')) {
+            setState(() {
+              _isAvailabilityChecked = false;
+            });
+          }
         }
       },
       child: ElevatedButton(

@@ -13,6 +13,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/config/app_config_manager.dart'; // Import AppConfigManager
+import '../../core/services/logger_service.dart'; // Import LoggerService
 
 /// Widget pour afficher les annonces et résidences en vedette
 /// 
@@ -50,6 +51,7 @@ class FeaturedListings extends StatefulWidget {
 
 class _FeaturedListingsState extends State<FeaturedListings> {
   final ScrollController _scrollController = ScrollController();
+  final LoggerService _logger = LoggerService(); // Initialiser le logger
   int _hoveredIndex = -1;
 
   @override
@@ -60,14 +62,14 @@ class _FeaturedListingsState extends State<FeaturedListings> {
 
   @override
   Widget build(BuildContext context) {
-    print('🏠 FeaturedListings.build - isLoading: ${widget.isLoading}, listings.length: ${widget.listings.length}');
+    _logger.debug('FeaturedListings.build - isLoading: ${widget.isLoading}, listings.length: ${widget.listings.length}');
     if (widget.listings.isNotEmpty) {
-      print('🏠 Premier élément: ${widget.listings.first.runtimeType}');
+      _logger.debug('Premier élément: ${widget.listings.first.runtimeType}');
       if (widget.listings.first is Map) {
-        print('🏠 Contenu du premier élément (Map): ${widget.listings.first}');
+        _logger.debug('Contenu du premier élément (Map): ${widget.listings.first}');
       }
     } else {
-      print('🏠 Aucun élément à afficher');
+      _logger.debug('Aucun élément à afficher');
     }
     
     return LayoutBuilder(
@@ -151,11 +153,11 @@ class _FeaturedListingsState extends State<FeaturedListings> {
 
   Widget _buildListingsList(BuildContext context) {
     if (widget.listings.isEmpty) {
-      print('🏠 _buildListingsList - Aucune résidence trouvée');
+      _logger.debug('_buildListingsList - Aucune résidence trouvée');
       return _buildEmptyState(context);
     }
 
-    print('🏠 _buildListingsList - ${widget.listings.length} résidences trouvées');
+    _logger.debug('_buildListingsList - ${widget.listings.length} résidences trouvées');
     return SizedBox(
       height: 330, // Augmenter la hauteur du conteneur de liste
       child: Stack(
@@ -678,6 +680,23 @@ class _FeaturedListingsState extends State<FeaturedListings> {
       );
     }
     
+    // Vérifier si c'est un asset local
+    if (_isLocalAsset(imageUrl)) {
+      _logger.debug('Chargement d\'asset local: $imageUrl');
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          _logger.error('Erreur de chargement d\'asset local: $error');
+          return Image.asset(
+            AppAssets.placeholderImage,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    }
+    
+    // Si c'est une URL réseau, utiliser CachedNetworkImage
     // Récupérer le token d'authentification pour les images
     return FutureBuilder<String?>(
       future: const FlutterSecureStorage().read(key: 'token'),
@@ -689,7 +708,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         
         final token = snapshot.data;
         
-        // S'assurer que imageUrl n'est jamais null ici (bien qu'il ait déjà été vérifié plus haut)
+        // S'assurer que imageUrl n'est jamais null ici
         final nonNullImageUrl = imageUrl ?? AppAssets.placeholderImage;
         
         return CachedNetworkImage(
@@ -715,18 +734,35 @@ class _FeaturedListingsState extends State<FeaturedListings> {
   }
 
   // Amélioration de l'affichage des erreurs avec une tentative de chargement sans token
+  // Vérifier si l'URL est un asset local
+  bool _isLocalAsset(String url) {
+    return url.startsWith('assets/') || 
+           url.startsWith('asset/') || 
+           url.startsWith('./assets/') || 
+           url.startsWith('/assets/');
+  }
+
   Widget _buildImageErrorWithFallback(String? url) {
     // Si l'URL est null, afficher le widget d'erreur par défaut
     if (url == null) {
-      print('⚠️ URL d\'image nulle');
+      _logger.warning('URL d\'image nulle');
       return _buildDefaultErrorWidget();
     }
     
-    print('! Traitement de l\'URL d\'image: $url');
+    // Si c'est un asset local, utiliser Image.asset
+    if (_isLocalAsset(url)) {
+      _logger.debug('URL d\'asset local détectée dans errorWidget: $url');
+      return Image.asset(
+        AppAssets.placeholderImage,
+        fit: BoxFit.cover,
+      );
+    }
+    
+    _logger.debug('Traitement de l\'URL d\'image: $url');
     
     // Pour les URLs externes ou déjà complètes, essayer de les charger directement
     if (url.startsWith('http')) {
-      print('! URL externe ou complète détectée: $url');
+      _logger.debug('URL externe ou complète détectée: $url');
       
       // Déterminer si c'est une URL avec ou sans le sous-dossier 'residences'
       String alternativeUrl = '';
@@ -743,17 +779,17 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         fit: BoxFit.cover,
         placeholder: (context, url) => _buildImagePlaceholder(),
         errorWidget: (context, url, error) {
-          print('! Erreur de chargement d\'URL externe: $error ($url)');
+          _logger.warning('Erreur de chargement d\'URL externe: $error ($url)');
           
           // Si une URL alternative est disponible, l'essayer
           if (alternativeUrl.isNotEmpty) {
-            print('! Tentative avec URL alternative: $alternativeUrl');
+            _logger.debug('Tentative avec URL alternative: $alternativeUrl');
             return CachedNetworkImage(
               imageUrl: alternativeUrl,
               fit: BoxFit.cover,
               placeholder: (context, url) => _buildImagePlaceholder(),
               errorWidget: (context, url, error) {
-                print('! Erreur aussi avec l\'URL alternative: $error');
+                _logger.error('Erreur aussi avec l\'URL alternative: $error');
                 return _buildDefaultErrorWidget();
               },
             );
@@ -769,14 +805,14 @@ class _FeaturedListingsState extends State<FeaturedListings> {
       // Utiliser AppConfigManager pour construire l'URL
       final String fullUrl = AppConfigManager.getResidenceImageUrl(url);
       
-      print('! URL relative convertie en URL complète: $fullUrl');
+      _logger.debug('URL relative convertie en URL complète: $fullUrl');
       
       return CachedNetworkImage(
         imageUrl: fullUrl,
         fit: BoxFit.cover,
         placeholder: (context, url) => _buildImagePlaceholder(),
         errorWidget: (context, url, error) {
-          print('! Erreur de chargement après conversion: $error ($fullUrl)');
+          _logger.warning('Erreur de chargement après conversion: $error ($fullUrl)');
           
           // Tenter avec le chemin alternatif (ajouter ou supprimer /residences/)
           String alternativeUrl = '';
@@ -786,14 +822,14 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             alternativeUrl = AppConfigManager.getResidenceImageUrl(url.replaceFirst('/uploads/', '/uploads/residences/'));
           }
           
-          print('! Tentative avec le chemin alternatif: $alternativeUrl');
+          _logger.debug('Tentative avec le chemin alternatif: $alternativeUrl');
           
           return CachedNetworkImage(
             imageUrl: alternativeUrl,
             fit: BoxFit.cover,
             placeholder: (context, url) => _buildImagePlaceholder(),
             errorWidget: (context, url, error) {
-              print('! Erreur également avec le chemin alternatif: $error');
+              _logger.error('Erreur également avec le chemin alternatif: $error');
               return _buildDefaultErrorWidget();
             },
           );
@@ -802,7 +838,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     }
     
     // Fallback pour les autres cas
-    print('! Format d\'URL non reconnu, utilisation de l\'image par défaut');
+    _logger.warning('Format d\'URL non reconnu, utilisation de l\'image par défaut');
     return Image.asset(
       AppAssets.placeholderImage,
       fit: BoxFit.cover,

@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart'; // Import pour debugPrint
 
 class Booking {
   final String id;
@@ -110,26 +111,59 @@ class Booking {
   }
 
   factory Booking.fromJson(Map<String, dynamic> json) {
+    // Vérifier si les données sont imbriquées dans un objet 'data'
+    final Map<String, dynamic> data = json.containsKey('data') ? json['data'] as Map<String, dynamic> : json;
+    
+    // Déboguer la réponse pour identifier les champs qui pourraient être null
+    debugPrint('Désérialisation réservation avec données: $data');
+    
+    // Extraction sécurisée des champs avec gestion des null pour éviter les erreurs de cast
+    final String idValue = data['_id']?.toString() ?? '';
+    final String userIdValue = data['user']?.toString() ?? data['userId']?.toString() ?? '';
+    final String residenceIdValue = data['residence']?.toString() ?? '';
+    final String residenceNameValue = data['residenceName']?.toString() ?? 'Résidence';
+    final String statusValue = data['status']?.toString() ?? 'pending';
+    final String? paymentIdValue = data['paymentId']?.toString();
+    final String? paymentStatusValue = data['paymentStatus']?.toString() ?? 'pending';
+    final String? cancellationReasonValue = 
+      data['cancellationReason'] == null ? null : data['cancellationReason'].toString();
+    final String? specialRequestsValue = 
+      data['specialRequests'] == null ? null : data['specialRequests'].toString();
+    
+    // Gestion prudente du champ cancellationPolicy qui peut être null ou avoir un format différent
+    String cancellationPolicyIdValue = '';
+    if (data['cancellationPolicy'] != null) {
+      cancellationPolicyIdValue = data['cancellationPolicy'] is Map 
+        ? data['cancellationPolicy']['_id']?.toString() ?? ''
+        : data['cancellationPolicy'].toString();
+    } else if (data['cancellationPolicyId'] != null) {
+      cancellationPolicyIdValue = data['cancellationPolicyId'].toString();
+    }
+    
     return Booking(
-      id: json['_id'] as String,
-      userId: json['user'] ?? json['userId'] ?? '',
-      residenceId: json['residence'] as String,
-      residenceName: json['residenceName'] as String? ?? 'Résidence',
-      checkIn: DateTime.parse(json['checkIn'] as String),
-      checkOut: DateTime.parse(json['checkOut'] as String),
-      numberOfGuests: json['numberOfGuests'] as int,
-      totalPrice: (json['totalPrice'] as num).toDouble(),
-      status: json['status'] as String,
-      paymentId: json['paymentId'],
-      paymentStatus: json['paymentStatus'] ?? 'pending',
-      cancellationReason: json['cancellationReason'] ?? json['reason'],
-      specialRequests: json['specialRequests'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
-      modifications: json['modifications'] != null
-          ? List<Map<String, dynamic>>.from(json['modifications'] as List)
-          : null,
-      cancellationPolicyId: json['cancellationPolicyId'] as String,
+      id: idValue,
+      userId: userIdValue,
+      residenceId: residenceIdValue,
+      residenceName: residenceNameValue,
+      checkIn: data['checkIn'] != null ? DateTime.parse(data['checkIn'] as String) : DateTime.now(),
+      checkOut: data['checkOut'] != null ? DateTime.parse(data['checkOut'] as String) : DateTime.now().add(const Duration(days: 1)),
+      numberOfGuests: data['numberOfGuests'] != null ? (data['numberOfGuests'] as num).toInt() : 1,
+      totalPrice: data['totalPrice'] != null ? (data['totalPrice'] as num).toDouble() : 0.0,
+      status: statusValue,
+      paymentId: paymentIdValue,
+      paymentStatus: paymentStatusValue,
+      cancellationReason: cancellationReasonValue,
+      specialRequests: specialRequestsValue,
+      createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt'] as String) : null,
+      updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt'] as String) : null,
+      modifications: data['modifications'] != null
+          ? List<Map<String, dynamic>>.from(
+              (data['modifications'] as List<dynamic>).map(
+                (item) => (item as Map<dynamic, dynamic>).cast<String, dynamic>(),
+              ),
+            )
+          : <Map<String, dynamic>>[],
+      cancellationPolicyId: cancellationPolicyIdValue,
     );
   }
 }

@@ -4,7 +4,8 @@ const blockedIPSchema = new mongoose.Schema({
     ip: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     reason: {
         type: String,
@@ -33,8 +34,7 @@ const blockedIPSchema = new mongoose.Schema({
     }
 });
 
-// Index pour améliorer les performances et pour l'expiration automatique
-blockedIPSchema.index({ ip: 1 }, { unique: true });
+// Index pour l'expiration automatique (IP index déjà créé par unique: true)
 blockedIPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('BlockedIP', blockedIPSchema);

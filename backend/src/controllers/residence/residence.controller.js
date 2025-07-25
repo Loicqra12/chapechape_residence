@@ -52,6 +52,29 @@ exports.createResidence = asyncHandler(async (req, res) => {
     }
 
     try {
+        // Préparer la structure de géolocalisation si les données sont présentes
+        if (residenceData.latitude !== undefined && residenceData.longitude !== undefined) {
+            console.log('Données de géolocalisation détectées:', {
+                latitude: residenceData.latitude,
+                longitude: residenceData.longitude,
+                formattedAddress: residenceData.formattedAddress
+            });
+            
+            // Construire la structure locationData
+            residenceData.locationData = {
+                coordinates: {
+                    latitude: parseFloat(residenceData.latitude),
+                    longitude: parseFloat(residenceData.longitude)
+                },
+                formattedAddress: residenceData.formattedAddress || '',
+                address: residenceData.address,
+                city: residenceData.city,
+                country: residenceData.country || 'CI'
+            };
+            
+            console.log('Structure locationData construite:', residenceData.locationData);
+        }
+        
         // Créer la résidence de base
         console.log('Création de la résidence avec les données:', residenceData);
         const residence = await Residence.create(residenceData);
@@ -178,9 +201,38 @@ exports.updateResidence = asyncHandler(async (req, res) => {
         throw new apiError('Non autorisé à modifier cette résidence', 403);
     }
 
+    // Préparer les données de mise à jour
+    const updateData = { ...req.body };
+    
+    // Gérer la structure de géolocalisation
+    console.log('Données de géolocalisation reçues:', {
+        latitude: updateData.latitude,
+        longitude: updateData.longitude,
+        formattedAddress: updateData.formattedAddress,
+        address: updateData.address,
+        city: updateData.city
+    });
+
+    // Si nous avons reçu des coordonnées GPS, mettre à jour la structure locationData
+    if (updateData.latitude !== undefined && updateData.longitude !== undefined) {
+        // Créer/mettre à jour la structure locationData complète
+        updateData.locationData = {
+            coordinates: {
+                latitude: parseFloat(updateData.latitude),
+                longitude: parseFloat(updateData.longitude)
+            },
+            formattedAddress: updateData.formattedAddress || residence.locationData?.formattedAddress,
+            address: updateData.address || residence.address,
+            city: updateData.city || residence.city,
+            country: updateData.country || residence.locationData?.country || 'CI'
+        };
+        
+        console.log('Structure locationData mise à jour:', updateData.locationData);
+    }
+
     residence = await Residence.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updateData,
         {
             new: true,
             runValidators: true

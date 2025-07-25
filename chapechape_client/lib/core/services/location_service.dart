@@ -8,7 +8,7 @@ import '../models/country.dart';
 import '../models/region.dart';
 import '../models/neighborhood.dart';
 import 'map_provider/map_service_interface.dart';
-import 'map_provider/osm_map_service.dart';
+import 'map_provider/google_maps_service.dart';
 import 'location_cache_service.dart';
 
 class LocationService {
@@ -18,8 +18,8 @@ class LocationService {
   List<Region> _regions = [];
   List<Neighborhood> _neighborhoods = [];
   
-  // Service cartographique utilisé (peut être changé facilement)
-  final MapServiceInterface _mapService = OSMMapService();
+  // Service cartographique utilisé (Google Maps au lieu d'OSM)
+  final MapServiceInterface _mapService = GoogleMapsService();
   
   // Service de cache
   final LocationCacheService _cacheService = LocationCacheService();

@@ -4,6 +4,7 @@ import 'dart:async';
 
 import '../../core/models/city.dart';
 import '../../core/models/country.dart';
+import '../../core/models/region.dart';
 import '../../core/services/location_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
@@ -129,10 +130,33 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
   void _loadCities() {
     if (_selectedCountry == null || _selectedRegion == null) return;
     
-    _availableCities = _locationService.getCitiesByRegion(
-      _selectedCountry!.code, 
-      _selectedRegion!
-    );
+    // D'abord, obtenir toutes les régions du pays sélectionné
+    final regions = _locationService.getRegionsByCountry(_selectedCountry!.code);
+    
+    // Trouver la région par son nom pour obtenir son ID
+    Region? region;
+    try {
+      region = regions.firstWhere(
+        (r) => r.name.toLowerCase() == _selectedRegion!.toLowerCase()
+      );
+    } catch (e) {
+      print('Région non trouvée par son nom: $_selectedRegion');
+      region = null;
+    }
+    
+    if (region != null) {
+      // Utiliser l'ID de la région pour obtenir les villes
+      _availableCities = _locationService.getCitiesByRegion(
+        _selectedCountry!.code, 
+        region.id
+      );
+      
+      print('Chargement des villes pour la région: ${region.name} (${region.id}). Nombre de villes trouvées: ${_availableCities.length}');
+    } else {
+      print('Région non trouvée: $_selectedRegion');
+      _availableCities = [];
+    }
+    
     setState(() {});
     
     // Si une ville est déjà sélectionnée, charger ses quartiers
@@ -620,13 +644,13 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
       );
     }
     
-    // Liste des régions
+    // Liste des régions - en utilisant la même structure que pour les pays
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: 3,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 2,
+        childAspectRatio: 1.3,
       ),
       itemCount: regions.length,
       itemBuilder: (context, index) {
@@ -636,7 +660,6 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         return InkWell(
           onTap: () => _selectRegion(region),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
               borderRadius: BorderRadius.circular(8),
@@ -656,7 +679,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                 Text(
                   region,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected ? AppTheme.primaryColor : Colors.black,
                   ),
@@ -696,32 +719,52 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
       );
     }
     
-    // Liste des villes
-    return ListView.builder(
+    // Liste des villes - en utilisant la même structure que pour les pays
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.3,
+      ),
       itemCount: cities.length,
       itemBuilder: (context, index) {
         final city = cities[index];
         final isSelected = _selectedCity?.id == city.id;
         
-        return ListTile(
-          title: Text(
-            city.name,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppTheme.primaryColor : Colors.black,
+        return InkWell(
+          onTap: () => _selectCity(city),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: isSelected 
+                  ? Border.all(color: AppTheme.primaryColor) 
+                  : Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.location_city,
+                  size: 20,
+                  color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  city.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-          subtitle: Text(city.region),
-          leading: Icon(
-            Icons.location_city,
-            color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
-          ),
-          selected: isSelected,
-          selectedTileColor: AppTheme.primaryColor.withOpacity(0.1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          onTap: () => _selectCity(city),
         );
       },
     );
@@ -754,31 +797,52 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
       );
     }
     
-    // Liste des quartiers
-    return ListView.builder(
+    // Liste des quartiers - en utilisant la même structure que pour les pays
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.3,
+      ),
       itemCount: neighborhoods.length,
       itemBuilder: (context, index) {
         final neighborhood = neighborhoods[index];
         final isSelected = _selectedNeighborhood == neighborhood;
         
-        return ListTile(
-          title: Text(
-            neighborhood,
-            style: TextStyle(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppTheme.primaryColor : Colors.black,
+        return InkWell(
+          onTap: () => _selectNeighborhood(neighborhood),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: isSelected 
+                  ? Border.all(color: AppTheme.primaryColor) 
+                  : Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: 20,
+                  color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  neighborhood,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-          leading: Icon(
-            Icons.location_on,
-            color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
-          ),
-          selected: isSelected,
-          selectedTileColor: AppTheme.primaryColor.withOpacity(0.1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          onTap: () => _selectNeighborhood(neighborhood),
         );
       },
     );

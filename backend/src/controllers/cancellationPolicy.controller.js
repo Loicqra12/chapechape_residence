@@ -1,5 +1,5 @@
 const asyncHandler = require('../middlewares/async.middleware');
-const { ApiError } = require('../utils/apiError');
+const ApiError = require('../utils/apiError');
 const CancellationPolicy = require('../models/cancellationPolicy.model');
 const Residence = require('../models/residence.model');
 

@@ -272,7 +272,7 @@ class ImageOptimizationService {
     return '${size.toStringAsFixed(2)} Mo';
   }
   
-  /// Construit un widget d'image optimisé pour les résidences avec chargement progressif
+  /// Construit un widget d'image optimisé qui gère automatiquement les assets locaux et les images réseau
   /// Supporte les images Cloudinary pour des optimisations avancées
   Widget buildOptimizedImage({
     required String imageUrl,
@@ -282,20 +282,7 @@ class ImageOptimizationService {
     Widget? placeholder,
     Widget? errorWidget,
   }) {
-    // Vérifier si l'URL est valide
-    if (!isImageUrlValid(imageUrl)) {
-      return errorWidget ?? Container(
-        width: width,
-        height: height,
-        color: Colors.grey[200],
-        child: const Icon(Icons.broken_image, color: Colors.grey),
-      );
-    }
-    
-    // Détecter si c'est une URL Cloudinary
-    final bool isCloudinaryUrl = imageUrl.contains('cloudinary.com');
-    
-    // Placeholder par défaut si non fourni
+    // Définir les widgets par défaut pour les placeholders et erreurs
     final defaultPlaceholder = Container(
       width: width,
       height: height,
@@ -305,7 +292,6 @@ class ImageOptimizationService {
       ),
     );
     
-    // Widget d'erreur par défaut si non fourni
     final defaultErrorWidget = Container(
       width: width,
       height: height,
@@ -323,6 +309,30 @@ class ImageOptimizationService {
         ],
       ),
     );
+    
+    // Vérifier si l'URL est valide
+    if (!isImageUrlValid(imageUrl)) {
+      _logger.warning('URL d\'image invalide: $imageUrl');
+      return errorWidget ?? defaultErrorWidget;
+    }
+    
+    // Si c'est un asset local, utiliser Image.asset au lieu de CachedNetworkImage
+    if (isLocalAsset(imageUrl)) {
+      _logger.debug('Traitement de l\'URL d\'image comme asset local: $imageUrl');
+      return Image.asset(
+        imageUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) {
+          _logger.warning('Erreur lors du chargement d\'asset local: $error ($imageUrl)');
+          return errorWidget ?? defaultErrorWidget;
+        },
+      );
+    }
+    
+    // Détecter si c'est une URL Cloudinary
+    final bool isCloudinaryUrl = imageUrl.contains('cloudinary.com');
     
     // Si c'est une URL Cloudinary et que le feature flag est activé,
     // utiliser une stratégie avancée de chargement progressif
@@ -385,6 +395,9 @@ class ImageOptimizationService {
   /// Détermine si une URL d'image est valide (vérification simple sans appel réseau)
   bool isImageUrlValid(String url) {
     try {
+      // Si c'est un asset local, c'est valide mais pas une URL réseau
+      if (isLocalAsset(url)) return true;
+      
       // Vérification simple et rapide, sans appel réseau
       final uri = Uri.parse(url);
       return uri.isAbsolute && 
@@ -398,6 +411,14 @@ class ImageOptimizationService {
       _logger.error('🖼️ URL d\'image invalide: $url', e, StackTrace.current);
       return false;
     }
+  }
+  
+  /// Vérifie si l'URL est un chemin d'asset local ou une URL réseau
+  bool isLocalAsset(String url) {
+    return url.startsWith('assets/') || 
+           (!url.startsWith('http://') && 
+            !url.startsWith('https://') && 
+            !url.startsWith('/uploads/'));
   }
   
   /// Vérifie de manière approfondie si une URL d'image est valide (avec appel réseau)

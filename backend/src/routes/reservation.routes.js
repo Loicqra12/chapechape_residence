@@ -10,7 +10,7 @@ const {
     calculateModificationFeesSchema,
     checkAvailabilitySchema
 } = require('../validations/reservation.validation');
-const { ApiError } = require('../utils/apiError');
+const ApiError = require('../utils/apiError');
 
 // Routes nécessitant une authentification
 router.use(protect);

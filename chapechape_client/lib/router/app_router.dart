@@ -16,6 +16,7 @@ import '../core/services/api_service.dart';
 import '../core/blocs/chat/chat_bloc.dart' as chat;
 import '../core/blocs/auth/auth_bloc.dart';
 import '../core/blocs/auth/auth_state.dart';
+import '../presentation/screens/nearby_residences/nearby_residences_screen.dart';
 import 'package:chapechape_client/presentation/screens/booking/booking_history_screen.dart' as booking;
 import 'package:chapechape_client/presentation/screens/booking/booking_confirmation_screen.dart' as booking;
 import 'package:chapechape_client/presentation/screens/booking/booking_modify_screen.dart' as booking;
@@ -26,6 +27,8 @@ import 'package:chapechape_client/presentation/screens/settings/temperature_scre
 import 'package:chapechape_client/presentation/screens/settings/display_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/about_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings_screen.dart';
+import 'package:chapechape_client/presentation/screens/full_map_screen.dart';
 
 class AppRouter {
   static late final ApiService _apiService;
@@ -85,6 +88,26 @@ class AppRouter {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
+        path: '/full-map',
+        name: 'full-map',
+        builder: (context, state) {
+          final Map<String, dynamic> extra = state.extra as Map<String, dynamic>? ?? {};
+          final centerLat = extra['centerLat'] ?? 0.0;
+          final centerLng = extra['centerLng'] ?? 0.0;
+          final title = extra['title'] as String?;
+          final residenceId = extra['residenceId'] as String?;
+          final radius = extra['radius'] as double? ?? 5.0;
+          
+          return FullMapScreen(
+            centerLat: centerLat,
+            centerLng: centerLng,
+            title: title,
+            residenceId: residenceId,
+            searchRadius: radius, // Utilisation du rayon pour la recherche
+          );
+        },
+      ),
+      GoRoute(
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
@@ -101,6 +124,11 @@ class AppRouter {
             path: '/home',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/nearby',
+            name: 'nearby',
+            builder: (context, state) => const NearbyResidencesScreen(),
           ),
           GoRoute(
             path: '/favorites',
@@ -327,6 +355,24 @@ class AppRouter {
         builder: (context, state) => ResidenceDetailsScreen(
           residenceId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: '/map-fullscreen',
+        name: 'map_fullscreen',
+        builder: (context, state) {
+          // Récupérer les paramètres de la carte en plein écran depuis extra
+          final extra = state.extra as Map<String, dynamic>?;
+          if (extra == null) {
+            return const SizedBox(); // Redirection si pas de paramètres
+          }
+          
+          return FullMapScreen(
+            centerLat: extra['lat'] as double,
+            centerLng: extra['lng'] as double,
+            title: extra['title'] as String?,
+            residenceId: extra['residenceId'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: '/residences/:id',

@@ -162,45 +162,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // Gérer les tentatives de chargement et les erreurs
     try {
-      return CachedNetworkImage(
-        imageUrl: imageUrl,
-        imageBuilder: (context, imageProvider) => CircleAvatar(
-          radius: 60,
-          backgroundImage: imageProvider,
-        ),
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      imageBuilder: (context, imageProvider) => CircleAvatar(
+        radius: 60,
+        backgroundImage: imageProvider,
+      ),
         // Utiliser progressIndicatorBuilder au lieu de placeholder
         // pour éviter les problèmes d'assertion dans octo_image
         progressIndicatorBuilder: (context, url, progress) => CircleAvatar(
-          radius: 60,
-          backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.5),
+        radius: 60,
+        backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.5),
           child: CircularProgressIndicator(
             value: progress.progress,
             color: theme.colorScheme.primary,
           ),
-        ),
-        errorWidget: (context, url, error) {
-          debugPrint('Erreur de chargement d\'image: $error, URL: $url');
-          // Fallback à l'initiale du nom en cas d'erreur
-          return CircleAvatar(
-            radius: 60,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
+      ),
+      errorWidget: (context, url, error) {
+        debugPrint('Erreur de chargement d\'image: $error, URL: $url');
+        // Fallback à l'initiale du nom en cas d'erreur
+        return CircleAvatar(
+          radius: 60,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: Text(
               fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
-              style: TextStyle(
-                fontSize: 48,
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
+            style: TextStyle(
+              fontSize: 48,
+              color: theme.colorScheme.onPrimaryContainer,
             ),
-          );
-        },
+          ),
+        );
+      },
         // Optimisation pour réseaux africains à débit limité
         memCacheHeight: 300,
         memCacheWidth: 300,
         maxHeightDiskCache: 600,
         maxWidthDiskCache: 600,
         // Timeouts adaptés aux réseaux lents
-        fadeOutDuration: const Duration(milliseconds: 200),
-        fadeInDuration: const Duration(milliseconds: 300),
+      fadeOutDuration: const Duration(milliseconds: 200),
+      fadeInDuration: const Duration(milliseconds: 300),
         // Configuration du cache et de la politique de rechargement
         cacheKey: 'profile_${DateTime.now().millisecondsSinceEpoch}',
         useOldImageOnUrlChange: false,
@@ -724,7 +724,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ));
   } // Fin de la méthode build
    
-  Widget _buildInfoTile({
+   Widget _buildInfoTile({
     required IconData icon,
     required String title,
     required String subtitle,

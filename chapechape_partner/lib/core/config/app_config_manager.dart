@@ -120,9 +120,9 @@ class AppConfigManager {
             _config = {
               'appName': 'ChapeChape Partner (Dev)',
               // Suppression du suffixe /api pour éviter les problèmes de chemin
-              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
-              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
-              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.66:4000/ws',
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.70:4000/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -195,9 +195,9 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Partner (Fallback)',
-        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000/api',
-        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.66:4000',
-        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.66:4000/ws',
+        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000/api',
+        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000',
+        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.70:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -209,9 +209,9 @@ class AppConfigManager {
 
   // Accesseurs de la configuration avec sécurité pour null
   static String get appName => _config['appName'] as String? ?? 'ChapeChape Partner';
-  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.66:4000/api';
-  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.66:4000';
-  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.66:4000/ws';
+  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.70:4000/api';
+  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.70:4000';
+  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.70:4000/ws';
   static String get apiVersion => _config['apiVersion'] as String? ?? 'v1';
   static int get apiTimeout => _config['apiTimeout'] as int? ?? 30000;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int? ?? 5000;
@@ -414,7 +414,7 @@ class AppConfigManager {
   }
   
   /// Obtient l'adresse IP actuelle du serveur
-  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.66';
+  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.70';
   
   /// Obtient le port actuel du serveur
   static int get serverPort => _ipDetectionService?.serverPort ?? 4000;

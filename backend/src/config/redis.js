@@ -36,5 +36,28 @@ const createRedisClient = () => {
     return client;
 };
 
-// Exporter une instance unique du client Redis
-module.exports = createRedisClient();
+// Créer une instance unique du client Redis
+const client = createRedisClient();
+
+// Exporter la fonction createRedisClient comme export principal
+const redisExport = createRedisClient;
+
+// Ajouter le client comme propriété pour la rétro-compatibilité
+Object.keys(client).forEach(key => {
+    redisExport[key] = client[key];
+});
+
+// Ajouter les méthodes du client au module export
+Object.getOwnPropertyNames(Object.getPrototypeOf(client)).forEach(key => {
+    if (key !== 'constructor') {
+        // Vérifier si la propriété est une fonction avant d'appliquer .bind()
+        if (typeof client[key] === 'function') {
+            redisExport[key] = client[key].bind(client);
+        } else {
+            // Pour les getter/setter ou autres propriétés, copier la référence
+            redisExport[key] = client[key];
+        }
+    }
+});
+
+module.exports = redisExport;

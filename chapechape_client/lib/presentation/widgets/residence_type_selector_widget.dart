@@ -34,7 +34,7 @@ class ResidenceCategory {
 
 class ResidenceTypeSelectorWidget extends StatefulWidget {
   final List<ResidenceCategory> categories;
-  final Function(ResidenceType)? onTypeSelected;
+  final Function(ResidenceType?)? onTypeSelected;
   final ResidenceType? initialType;
   final bool showCategories;
   final String? initialCategoryId;
@@ -101,67 +101,81 @@ class _ResidenceTypeSelectorWidgetState
   }
 
   Widget _buildCategoriesSelector() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDarkMode ? Colors.grey[800] : Colors.white;
+    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
+    final selectedTextColor = isDarkMode ? Colors.white : Colors.white;
+    final iconColor = isDarkMode ? Colors.white70 : AppTheme.primaryColor;
+    final selectedIconColor = isDarkMode ? Colors.white : Colors.white;
+    final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey.withOpacity(0.3);
+
     return Container(
-      height: 80,
-      margin: const EdgeInsets.only(bottom: 12),
+      height: 130, // Hauteur augmentée pour correspondre au sélecteur de type
+      margin: const EdgeInsets.only(bottom: 16), // Marge inférieure ajustée
+      clipBehavior: Clip.hardEdge, // Ajouté pour la cohérence et pour éviter le débordement visuel
       decoration: BoxDecoration(
-        color: Colors.white,
+        // Pas de couleur de fond ici, chaque carte aura la sienne
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        // Pas d'ombre globale ici, chaque carte aura la sienne si nécessaire
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: widget.categories.length,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // Padding vertical ajouté
         itemBuilder: (context, index) {
           final category = widget.categories[index];
           final isSelected = category.id == _selectedCategoryId;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6), // Espacement horizontal entre les cartes
             child: InkWell(
               onTap: () {
                 setState(() {
                   _selectedCategoryId = category.id;
-                  // Réinitialiser la sélection de type
-                  _selectedType = null;
+                  _selectedType = null; // Réinitialiser le type sélectionné
+                  if (widget.onTypeSelected != null) {
+                    widget.onTypeSelected!(null); // Notifier qu'aucun type n'est sélectionné
+                  }
                 });
                 _updateFilteredTypes();
               },
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                width: 120,
-                padding: const EdgeInsets.all(8),
+                width: 110, // Largeur ajustée
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12), // Padding interne ajusté
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.white,
+                  color: isSelected ? Theme.of(context).primaryColor : cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected
-                        ? AppTheme.primaryColor
-                        : Colors.grey.withOpacity(0.3),
+                    color: isSelected ? Theme.of(context).primaryColor : borderColor!,
+                    width: 1,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       category.icon,
-                      size: 24,
-                      color: isSelected ? Colors.white : AppTheme.primaryColor,
+                      size: 32, // Taille de l'icône augmentée
+                      color: isSelected ? selectedIconColor : iconColor,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8), // Espacement ajusté
                     Text(
                       category.name,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        color: isSelected ? selectedTextColor : textColor,
+                        fontSize: 13, // Taille de police ajustée
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                       ),
                     ),
                   ],
@@ -176,7 +190,8 @@ class _ResidenceTypeSelectorWidgetState
 
   Widget _buildTypesSelector() {
     return Container(
-      height: 130,
+      height: 132, // Augmenté de 2 pixels pour résoudre le débordement
+      clipBehavior: Clip.hardEdge, // Ajouté pour éviter tout débordement visuel
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),

@@ -40,13 +40,48 @@ const residenceSchema = mongoose.Schema({
     type: String,
     required: [true, 'La ville est requise']
   },
+  // Structure améliorée pour les données de géolocalisation
+  locationData: {
+    coordinates: {
+      latitude: {
+        type: Number,
+        default: 0
+      },
+      longitude: {
+        type: Number,
+        default: 0
+      }
+    },
+    formattedAddress: {
+      type: String,
+      trim: true
+    },
+    // Champs maintenus pour compatibilité avec le code existant
+    address: {
+      type: String,
+      required: [true, 'L\'adresse est requise']
+    },
+    city: {
+      type: String,
+      required: [true, 'La ville est requise']
+    },
+    country: {
+      type: String,
+      default: 'CI' // Côte d'Ivoire par défaut
+    }
+  },
+  // Maintenir les champs précédents pour compatibilité descendante
   latitude: {
     type: Number,
-    default: 0
+    default: function() {
+      return this.locationData?.coordinates?.latitude || 0;
+    }
   },
   longitude: {
     type: Number,
-    default: 0
+    default: function() {
+      return this.locationData?.coordinates?.longitude || 0;
+    }
   },
   images: [String],
   bedrooms: {
@@ -241,6 +276,16 @@ residenceSchema.index({ cancellationPolicy: 1 });
 
 // Virtual pour la rétrocompatibilité avec le frontend
 residenceSchema.virtual('location').get(function() {
+  // Si nous avons des données dans la nouvelle structure, les utiliser
+  if (this.locationData && this.locationData.coordinates) {
+    return {
+      address: this.locationData.address || this.address,
+      city: this.locationData.city || this.city,
+      formattedAddress: this.locationData.formattedAddress,
+      coordinates: [this.locationData.coordinates.longitude, this.locationData.coordinates.latitude]
+    };
+  }
+  // Sinon utiliser les anciennes données
   return {
     address: this.address,
     city: this.city,
@@ -255,24 +300,71 @@ residenceSchema.methods.isAvailableForDates = async function(startDate, endDate)
 };
 
 residenceSchema.methods.calculateTotalPrice = async function(startDate, endDate) {
-  // Implémentation simplifiée: calculer le nombre de jours entre les dates
   const start = new Date(startDate);
   const end = new Date(endDate);
-  const days = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
   
-  // Utiliser le prix par jour/mois de la résidence
-  let pricePerDay;
-  if (this.pricePeriod === 'day') {
-    pricePerDay = this.price;
-  } else if (this.pricePeriod === 'month') {
-    pricePerDay = this.price / 30; // Prix par jour estimé
-  } else {
-    pricePerDay = this.price; // Utiliser le prix directement
+  // Différentes méthodes de calcul selon la période de tarification
+  switch(this.pricePeriod) {
+    case 'hour':
+      // Calculer le nombre d'heures entre les dates
+      const hours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+      console.log(`[Price] Calcul pour résidence horaire: ${hours} heures à ${this.price} par heure`);
+      return parseFloat((hours * this.price).toFixed(2)); // Forcer un nombre à virgule flottante
+    
+    case 'day':
+      // Calculer le nombre de jours entre les dates
+      const daysForDay = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+      console.log(`[Price] Calcul pour résidence journalière: ${daysForDay} jours à ${this.price} par jour`);
+      return parseFloat((daysForDay * this.price).toFixed(2));
+    
+    case 'week':
+      // Calculer le nombre de semaines entre les dates
+      const weeks = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24 * 7)));
+      console.log(`[Price] Calcul pour résidence hebdomadaire: ${weeks} semaines à ${this.price} par semaine`);
+      return parseFloat((weeks * this.price).toFixed(2));
+    
+    case 'month':
+    default:
+      // Calculer le nombre de mois approximatif (base 30 jours)
+      const daysForMonth = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+      const months = daysForMonth / 30;
+      console.log(`[Price] Calcul pour résidence mensuelle: ${daysForMonth} jours (${months.toFixed(2)} mois) à ${this.price} par mois`);
+      return parseFloat((months * this.price).toFixed(2));
   }
-  
-  // Calculer le prix total
-  return days * pricePerDay;
 };
+
+// Ajout d'index pour améliorer les performances des requêtes
+
+// Index géospatial pour les recherches par proximité
+residenceSchema.index({ 'locationData.coordinates.latitude': 1, 'locationData.coordinates.longitude': 1 });
+
+// Index 2dsphere pour les recherches géospatiales avancées (nearby, radius, etc.)
+residenceSchema.index({
+  'locationData.coordinates': '2dsphere'
+});
+
+// Index composé pour les recherches par ville et prix (filtres courants)
+residenceSchema.index({ city: 1, price: 1 });
+
+// Index composés pour les recherches et tris les plus courants
+residenceSchema.index({ featured: -1, price: 1 }); // Pour les résidences en vedette
+residenceSchema.index({ createdAt: -1 }); // Pour les résidences récentes
+residenceSchema.index({ rating: -1 }); // Pour les meilleures notes
+
+// Index pour les recherches par propriétaire
+residenceSchema.index({ owner: 1 });
+
+// Index texte pour la recherche full-text
+residenceSchema.index({ title: 'text', description: 'text' }, {
+  weights: {
+    title: 10,
+    description: 5
+  },
+  name: 'residence_text_index'
+});
+
+// Index pour améliorer les performances des recherches par type et capacité
+residenceSchema.index({ type: 1, capacity: 1 });
 
 const Residence = mongoose.model('Residence', residenceSchema);
 module.exports = Residence;

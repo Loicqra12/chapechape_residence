@@ -920,7 +920,7 @@ class ResidenceService {
     if (imageUrls.isEmpty) {
       print("❌ Aucune image trouvée, utilisation de l'image par défaut");
       // Utiliser une image en ligne sécurisée pour éviter les problèmes d'assets manquants
-      imageUrls.add('https://via.placeholder.com/300x200?text=ChapeChape+Residence');
+      imageUrls.add('assets/images/placeholders/residence_standard.jpg');
       
       // Déboguer pourquoi aucune image n'a été trouvée
       if (imagesData != null) {
@@ -1144,6 +1144,38 @@ class ResidenceService {
       return popularResidences;
     } on DioException catch (e) {
       throw _handleDioError(e);
+    }
+  }
+
+  // Soumettre un commentaire pour une résidence
+  Future<bool> submitReview({
+    required String residenceId,
+    required double rating,
+    required String comment,
+  }) async {
+    try {
+      _logger.info('💬 Soumission d\'un commentaire pour la résidence $residenceId');
+      
+      // Appeler l'API pour enregistrer le commentaire
+      final response = await _apiService.post(
+        '/reviews',
+        data: {
+          'residenceId': residenceId,
+          'rating': rating,
+          'comment': comment,
+        },
+      );
+      
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        _logger.info('💬 Commentaire soumis avec succès');
+        return true;
+      } else {
+        _logger.error('💬 Erreur lors de la soumission du commentaire: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      _logger.error('💬 Exception lors de la soumission du commentaire', e);
+      return false;
     }
   }
 }

@@ -196,16 +196,24 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
               ),
             ] else ...[
               Container(
-                height: 260,
+                height: 280, // Légère augmentation de la hauteur
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      Colors.white.withOpacity(0.8),
-                      Colors.white.withOpacity(0.0),
-                      Colors.white.withOpacity(0.0),
-                      Colors.white.withOpacity(0.8),
+                      Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.8)
+                        : Colors.white.withOpacity(0.8),
+                      Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.0)
+                        : Colors.white.withOpacity(0.0),
+                      Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.0)
+                        : Colors.white.withOpacity(0.0),
+                      Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.8)
+                        : Colors.white.withOpacity(0.8),
                     ],
                     stops: const [0.0, 0.05, 0.95, 1.0],
                   ),
@@ -213,8 +221,9 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
                 child: ListView(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(), // Meilleure sensation de défilement
                   children: _buildCategoryItems(context),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Ajout de padding vertical
                 ),
               ),
               
@@ -309,55 +318,92 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
     required ResidenceType type,
   }) {
     final bool isMobile = context.screenWidth <= 600;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      width: isMobile ? 100 : 120, // Réduction de la largeur pour un design plus compact
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4), // Marges réduites
+      width: isMobile ? 110 : 130, // Largeur optimisée pour affichage
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), // Marges améliorées
       child: InkWell(
         onTap: () {
           _onCategoryTap(type);
         },
-        borderRadius: BorderRadius.circular(12),
-        splashColor: AppTheme.primaryColor.withOpacity(0.1),
-        highlightColor: AppTheme.primaryColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        splashColor: AppTheme.primaryColor.withOpacity(0.2),
+        highlightColor: AppTheme.primaryColor.withOpacity(0.1),
         child: Card(
-          elevation: 2, // Ombre plus légère
-          shadowColor: AppTheme.primaryColor.withOpacity(0.2),
+          elevation: 3, // Ombre légèrement plus prononcée pour la profondeur
+          shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+          color: isDarkMode ? Color(0xFF2D2D2D) : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: AppTheme.primaryColor.withOpacity(0.05),
-              width: 0.5, // Bordure plus fine
+              color: type == widget.filterType
+                ? AppTheme.primaryColor
+                : isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+              width: type == widget.filterType ? 2.0 : 0.5,
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(8), // Padding réduit
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Indicateur de sélection
+                if (type == widget.filterType)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 Container(
-                  width: 50, // Taille de l'icône réduite
-                  height: 50,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: isDarkMode
+                      ? AppTheme.primaryColor.withOpacity(0.2)
+                      : AppTheme.primaryColor.withOpacity(0.1),
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Icon(
                     icon,
-                    size: 28, // Icône plus petite
+                    size: 30,
                     color: AppTheme.primaryColor,
+                    semanticLabel: 'Icône pour $title',
                   ),
                 )
-                .animate()
+                .animate(autoPlay: true, onPlay: (controller) => controller.repeat())
+                .shimmer(
+                  duration: 2000.ms,
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                )
                 .scaleXY(
-                  duration: 700.ms,
+                  duration: 2000.ms,
                   curve: Curves.easeInOut,
                   begin: 1.0,
                   end: 1.05,
                 )
                 .then()
                 .scaleXY(
-                  duration: 700.ms,
+                  duration: 2000.ms,
                   curve: Curves.easeInOut,
                   begin: 1.05,
                   end: 1.0,
@@ -368,10 +414,11 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  semanticsLabel: 'Catégorie: $title',
                   style: TextStyle(
-                    fontSize: context.responsiveFontSize(14), // Police plus petite
+                    fontSize: context.responsiveFontSize(14),
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
               ],
@@ -381,8 +428,8 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
       ),
     )
     .animate()
-    .fadeIn(duration: 400.ms)
-    .slideY(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutQuad);
+    .fadeIn(duration: 500.ms, curve: Curves.easeOut)
+    .slideY(begin: 0.1, end: 0, duration: 500.ms, curve: Curves.easeOutQuint);
   }
 
   List<Widget> _buildDefaultCategories(BuildContext context) {

@@ -53,6 +53,33 @@ class Residence {
   double get discountPercentage => hasDiscount ? ((price - discountPrice!) / price) * 100 : 0;
   String get discountBadge => hasDiscount ? '${discountPercentage.round()}% OFF' : '';
   
+  // Getters pour coordonnées GPS
+  double? get latitude {
+    try {
+      if (coordinates.length > 1) {
+        // Dans notre getter coordinates, longitude est à l'index 0, latitude à l'index 1
+        return coordinates[1];
+      }
+      return null;
+    } catch (e) {
+      print('Erreur lors de l\'accès à latitude: $e');
+      return null;
+    }
+  }
+  
+  double? get longitude {
+    try {
+      if (coordinates.length > 0) {
+        // Dans notre getter coordinates, longitude est à l'index 0
+        return coordinates[0];
+      }
+      return null;
+    } catch (e) {
+      print('Erreur lors de l\'accès à longitude: $e');
+      return null;
+    }
+  }
+  
   // Formatage des prix
   String get formattedPrice => PriceFormatter.formatPrice(price, withCurrency: true, currency: currency);
   String get formattedDiscountPrice => hasDiscount ? PriceFormatter.formatPrice(discountPrice!, withCurrency: true, currency: currency) : formattedPrice;
@@ -87,10 +114,40 @@ class Residence {
   String get address => location.containsKey('address') ? location['address'] as String : '';
   String get formattedAddress => location.displayAddress;
   bool get isFavorite => priceDetails != null && priceDetails!.containsKey('isFavorite') ? priceDetails!['isFavorite'] as bool : false;
-  List<double> get coordinates => 
-      location.containsKey('coordinates') ? 
-      (location['coordinates'] as List).map((e) => double.parse(e.toString())).toList() :
-      [0.0, 0.0];
+  List<double> get coordinates {
+    // Cas 1: Format ancien (liste [longitude, latitude])
+    if (location.containsKey('coordinates')) {
+      if (location['coordinates'] is List) {
+        return (location['coordinates'] as List).map((e) => double.parse(e.toString())).toList();
+      } 
+      // Cas 2: Nouveau format (objet {latitude, longitude})
+      else if (location['coordinates'] is Map) {
+        var coords = location['coordinates'] as Map;
+        if (coords.containsKey('longitude') && coords.containsKey('latitude')) {
+          return [coords['longitude'] is num ? coords['longitude'].toDouble() : double.parse(coords['longitude'].toString()),
+                  coords['latitude'] is num ? coords['latitude'].toDouble() : double.parse(coords['latitude'].toString())];
+        }
+      }
+    }
+    // Cas 3: Coordonnées directement dans l'objet
+    else if (location.containsKey('longitude') && location.containsKey('latitude')) {
+      return [location['longitude'] is num ? location['longitude'].toDouble() : double.parse(location['longitude'].toString()),
+              location['latitude'] is num ? location['latitude'].toDouble() : double.parse(location['latitude'].toString())];
+    }
+    // Cas 4: Coordonnées dans locationData
+    else if (location.containsKey('locationData') && location['locationData'] is Map) {
+      var locData = location['locationData'] as Map;
+      if (locData.containsKey('coordinates') && locData['coordinates'] is Map) {
+        var coords = locData['coordinates'] as Map;
+        if (coords.containsKey('longitude') && coords.containsKey('latitude')) {
+          return [coords['longitude'] is num ? coords['longitude'].toDouble() : double.parse(coords['longitude'].toString()),
+                  coords['latitude'] is num ? coords['latitude'].toDouble() : double.parse(coords['latitude'].toString())];
+        }
+      }
+    }
+    // Valeur par défaut
+    return [0.0, 0.0];
+  }
   
   // Méthodes d'accès rapide pour les commodités
   bool get hasParking => amenities.contains('parking');
@@ -102,7 +159,7 @@ class Residence {
   // Propriétés pour compatibilité avec l'ancien code
   String get name => title;
   double get surface => squareMeters;
-  String get imageUrl => images.isNotEmpty ? images.first : 'https://via.placeholder.com/300x200?text=ChapeChape+Residence';
+  String get imageUrl => images.isNotEmpty ? images.first : 'assets/images/placeholders/residence_standard.jpg';
   List<String> get imageUrls => images;
   String get status => isAvailable ? 'available' : 'unavailable';
   String get pricePerNight => '${price.toStringAsFixed(0)} FCFA/nuit';
@@ -239,7 +296,7 @@ class Residence {
       shortDescription: json['shortDescription'] as String? ?? '',
       images: json['images'] != null
           ? List<String>.from(json['images'] as List)
-          : ['https://via.placeholder.com/300x200?text=ChapeChape+Residence'],
+          : ['assets/images/placeholders/residence_standard.jpg'],
       price: json['price'] != null
           ? double.parse(json['price'].toString())
           : 0.0,
@@ -268,7 +325,9 @@ class Residence {
       isVerified: json['isVerified'] as bool? ?? false,
       isNew: json['isNew'] as bool? ?? false,
       rating: json['rating'] != null
-          ? double.parse(json['rating'].toString())
+          ? (json['rating'] is Map
+              ? ((json['rating']['overall'] as num?)?.toDouble() ?? 0.0)
+              : double.tryParse(json['rating'].toString()) ?? 0.0)
           : 0.0,
       reviewCount: json['reviewCount'] as int? ?? 0,
       currency: json['currency'] as String? ?? 'XOF',

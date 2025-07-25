@@ -1,6 +1,8 @@
 const availabilityService = require('../services/availability.service');
-const { ApiError } = require('../utils/apiError');
+const ApiError = require('../utils/apiError');
 const asyncHandler = require('../middlewares/async.middleware');
+const Availability = require('../models/availability.model');
+const Residence = require('../models/residence.model');
 
 /**
  * Vérifier la disponibilité d'une résidence pour des dates données
@@ -116,4 +118,79 @@ exports.updatePricing = asyncHandler(async (req, res) => {
     success: true,
     data: updated
   });
+});
+
+/**
+ * Nouvel endpoint spécifique pour la vérification de disponibilité avec format harmonisé
+ * pour correspondre à l'application client Flutter
+ * @route GET /availability/check
+ */
+exports.checkAvailabilityForFlutterApp = asyncHandler(async (req, res) => {
+  const { residenceId, checkIn, checkOut } = req.query;
+  
+  // Validation des paramètres
+  if (!residenceId || !checkIn || !checkOut) {
+    throw new ApiError('Veuillez fournir residenceId, checkIn et checkOut', 400);
+  }
+
+  console.log(`[Availability] Vérification pour résidence: ${residenceId}, dates: ${checkIn} -> ${checkOut}`);
+  
+  try {
+    // Convertir les dates en objets Date
+    const startDate = new Date(checkIn);
+    const endDate = new Date(checkOut);
+    
+    // Vérifier si les dates sont valides
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new ApiError('Dates invalides', 400);
+    }
+    
+    if (startDate >= endDate) {
+      throw new ApiError('La date de départ doit être ultérieure à la date d\'arrivée', 400);
+    }
+
+    // Récupérer la résidence
+    const residence = await Residence.findById(residenceId);
+    if (!residence) {
+      throw new ApiError('Résidence introuvable', 404);
+    }
+    
+    // IMPORTANT: Utiliser la méthode isPeriodAvailable du modèle Availability
+    // C'est la même méthode que celle utilisée lors de la création de réservation
+    // Note: isPeriodAvailable retourne directement un booléen, pas un objet
+    const isAvailable = await Availability.isPeriodAvailable(residenceId, startDate, endDate);
+    
+    console.log(`[Availability] Résultat: ${isAvailable ? 'Disponible' : 'Non disponible'}`);
+    
+    // Si la période n'est pas disponible, nous pourrions récupérer les dates en conflit
+    // Mais puisque isPeriodAvailable ne retourne pas cette information, nous laissons un tableau vide
+    let conflictDates = [];
+    
+    // Si nécessaire, on pourrait faire une requête supplémentaire pour obtenir les dates bloquées
+    if (!isAvailable) {
+      // Note: Cette partie pourrait être améliorée en faisant une requête supplémentaire
+      // pour obtenir les dates exactes qui sont en conflit
+    }
+    
+    // Calculer le prix pour cette période
+    const price = await residence.calculateTotalPrice(startDate, endDate);
+    
+    // Renvoyer la réponse au format attendu par le client Flutter
+    res.status(200).json({
+      success: true,
+      data: {
+        isAvailable: isAvailable,
+        price: price,
+        conflictDates: conflictDates,
+        residenceId: residenceId,
+        message: isAvailable 
+          ? 'La résidence est disponible pour ces dates' 
+          : 'La résidence n\'est pas disponible pour ces dates'
+      }
+    });
+  } catch (error) {
+    console.error(`[Availability] Erreur: ${error.message}`);
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(`Erreur lors de la vérification de disponibilité: ${error.message}`, 500);
+  }
 });

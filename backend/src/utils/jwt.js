@@ -64,8 +64,22 @@ const verifyToken = (token, keyType = 'JWT_SECRET') => {
     }
 };
 
+/**
+ * Fonction simplifiée pour générer un token (pour compatibilité avec les tests)
+ * @param {string} userId - ID de l'utilisateur
+ * @returns {string} - Token JWT généré
+ */
+const generateToken = (userId) => {
+    return jwt.sign(
+        { id: userId },
+        process.env.JWT_SECRET || 'chapechaperesidencessecret',
+        { expiresIn: '24h' }
+    );
+};
+
 module.exports = {
     generateAccessToken,
     generateRefreshToken,
-    verifyToken
+    verifyToken,
+    generateToken
 };

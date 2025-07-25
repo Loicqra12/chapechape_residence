@@ -52,6 +52,11 @@ class Residence {
   final String? cityCode;
   final String? cityName;
   
+  // Coordonnées GPS
+  final double? latitude;
+  final double? longitude;
+  final String? formattedAddress;
+  
   // Statut de suppression
   final bool? deleted;
   
@@ -108,6 +113,9 @@ class Residence {
     this.regionName,
     this.cityCode,
     this.cityName,
+    this.latitude,
+    this.longitude,
+    this.formattedAddress,
     this.deleted,
     this.currency = 'FCFA',
     this.stars = 0,
@@ -213,6 +221,25 @@ class Residence {
     String? cityCode = json['cityCode']?.toString();
     String? cityName = json['cityName']?.toString();
     
+    // Extraire les coordonnées GPS
+    double? latitude;
+    double? longitude;
+    String? formattedAddress;
+    
+    if (json['latitude'] != null) {
+      latitude = (json['latitude'] is String) 
+          ? double.tryParse(json['latitude']) 
+          : (json['latitude'] as num?)?.toDouble();
+    }
+    
+    if (json['longitude'] != null) {
+      longitude = (json['longitude'] is String) 
+          ? double.tryParse(json['longitude']) 
+          : (json['longitude'] as num?)?.toDouble();
+    }
+    
+    formattedAddress = json['formattedAddress']?.toString();
+    
     // Extraire la devise du prix (avec FCFA comme valeur par défaut)
     final currency = json['currency']?.toString() ?? 'FCFA';
     
@@ -273,6 +300,9 @@ class Residence {
       regionName: regionName,
       cityCode: cityCode,
       cityName: cityName,
+      latitude: latitude,
+      longitude: longitude,
+      formattedAddress: formattedAddress,
       deleted: deleted,
       currency: currency,
       stars: stars,
@@ -330,6 +360,9 @@ class Residence {
       'regionName': regionName,
       'cityCode': cityCode,
       'cityName': cityName,
+      'latitude': latitude,
+      'longitude': longitude,
+      'formattedAddress': formattedAddress,
       'deleted': deleted,
       'stars': stars,
       'nearbyPlaces': nearbyPlaces,

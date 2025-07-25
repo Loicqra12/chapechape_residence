@@ -9,6 +9,7 @@ import '../../core/services/recommendation_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/services/logger_service.dart';
 
 /// Widget qui affiche les résidences recommandées personnalisées
 /// 
@@ -42,7 +43,7 @@ class RecommendedResidencesWidget extends StatefulWidget {
 
 class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidget> {
   final RecommendationService _recommendationService = RecommendationService();
-  
+  final LoggerService _logger = LoggerService();
   List<Residence> _recommendations = [];
   bool _isLoading = true;
   int _hoveredIndex = -1;
@@ -68,7 +69,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
         _isLoading = false;
       });
     } catch (e) {
-      print('Erreur lors du chargement des recommandations: $e');
+      _logger.error('Erreur lors du chargement des recommandations: $e');
       setState(() {
         _recommendations = [];
         _isLoading = false;
@@ -205,7 +206,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                       child: CachedNetworkImage(
                         imageUrl: residence.images.isNotEmpty 
                             ? residence.images.first 
-                            : 'https://via.placeholder.com/300x200',
+                            : 'assets/images/placeholders/residence_premium.jpg',
                         height: 140,
                         width: double.infinity,
                         fit: BoxFit.cover,

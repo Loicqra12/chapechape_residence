@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
+import '../../core/services/logger_service.dart';
 import 'package:intl/intl.dart';
 
 class DateRangePickerWidget extends StatefulWidget {
@@ -22,31 +23,65 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
   late TabController _tabController;
   bool _isFlexibleDates = false;
   
+  // Service de journalisation
+  final _logger = LoggerService();
+  
   // Options pour les dates flexibles
   String _selectedFlexibleOption = 'Un weekend';
-  String _selectedMonth = '';
+  DateTime? _selectedMonthDate;
+  String _selectedMonthFormatted = '';
   int _selectedMonthIndex = 0;
   
   // Options pour les dates exactes
   String _selectedFlexibility = 'Dates exactes';
   
-  final List<String> _flexibleOptions = ['Un weekend', 'Une semaine', 'Un mois'];
-  final List<String> _flexibilityOptions = ['Dates exactes', '± 1 jour', '± 2 jours', '± 3 jours'];
+  final List<Map<String, String>> _flexibleOptions = [
+    {'text': 'Un weekend', 'value': 'weekend'},
+    {'text': 'Une semaine', 'value': 'week'},
+    {'text': 'Un mois', 'value': 'month'},
+  ];
+  
+  final List<String> _flexibilityOptions = [
+    'Dates exactes',
+    '±1 jour',
+    '±2 jours',
+    '±3 jours',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _selectedDateRange = widget.initialDateRange;
+    
+    // Valider la plage de dates initiale
+    final now = DateTime.now();
+    if (widget.initialDateRange != null) {
+      // Si les dates initiales sont dans le passé, les ajuster au présent
+      if (widget.initialDateRange!.start.isBefore(now)) {
+        final endDelta = widget.initialDateRange!.duration;
+        _selectedDateRange = DateTimeRange(
+          start: now,
+          end: now.add(endDelta),
+        );
+        _logger.info('DateRangePickerWidget: Dates initiales ajustées car dans le passé - Durée préservée: ${endDelta.inDays} jours');
+      } else {
+        _selectedDateRange = widget.initialDateRange;
+        _logger.info('DateRangePickerWidget: Dates initiales valides - Plage: ${DateFormat('dd/MM/yyyy').format(widget.initialDateRange!.start)} à ${DateFormat('dd/MM/yyyy').format(widget.initialDateRange!.end)}');
+      }
+    } else {
+      _logger.debug('DateRangePickerWidget: Aucune date initiale fournie');
+    }
+    
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
     
     // Initialiser le mois sélectionné au mois courant
-    final now = DateTime.now();
-    _selectedMonth = _formatMonth(now);
+    _selectedMonthDate = DateTime(now.year, now.month, 1);
+    _selectedMonthFormatted = _formatMonth(now);
   }
 
   @override
   void dispose() {
+    _logger.debug('DateRangePickerWidget: Nettoyage des ressources');
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
@@ -126,7 +161,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                       children: [
                         Text(
                           _isFlexibleDates
-                              ? '$_selectedFlexibleOption en ${_selectedMonth.split(' ').first}'
+                              ? '${_selectedFlexibleOption} en ${_selectedMonthFormatted.split(' ').first}'
                               : _getSelectedDateRangeText(),
                           style: TextStyle(
                             fontSize: context.responsiveFontSize(16),
@@ -204,13 +239,35 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
 
   // Construction de l'onglet calendrier
   Widget _buildCalendarTab(StateSetter setModalState) {
+    // Normaliser la date à minuit pour éviter les problèmes de comparaison avec les heures
+    final DateTime nowRaw = DateTime.now();
+    final DateTime now = DateTime(nowRaw.year, nowRaw.month, nowRaw.day);
+    
+    _logger.debug('DateRangePickerWidget: Date normalisée: ${now.toString()}');
+    
+    // Si date initiale sélectionnée, la normaliser aussi à minuit
+    DateTime? initialDateRaw = _selectedDateRange?.start;
+    DateTime? initialDate;
+    
+    if (initialDateRaw != null) {
+      initialDate = DateTime(initialDateRaw.year, initialDateRaw.month, initialDateRaw.day);
+      _logger.debug('DateRangePickerWidget: Date initiale normalisée: ${initialDate.toString()}');
+    }
+    
+    // Vérifier si la date initiale est valide (pas avant aujourd'hui)
+    final validInitialDate = (initialDate != null && !initialDate.isBefore(now))
+        ? initialDate
+        : now;
+        
+    _logger.debug('DateRangePickerWidget: Date initiale valide: ${validInitialDate.toString()}');
+    
     return Column(
       children: [
         Expanded(
           child: CalendarDatePicker(
-            initialDate: _selectedDateRange?.start ?? DateTime.now(),
-            firstDate: DateTime.now(),
-            lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+            initialDate: validInitialDate,
+            firstDate: now,
+            lastDate: now.add(const Duration(days: 365 * 2)),
             onDateChanged: (date) {
               setModalState(() {
                 if (_selectedDateRange == null) {
@@ -218,8 +275,12 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                     start: date,
                     end: date.add(const Duration(days: 2)),
                   );
-                } else if (_selectedDateRange!.start == date || 
-                          _selectedDateRange!.end == date) {
+                } else if (_selectedDateRange!.start.year == date.year && 
+                          _selectedDateRange!.start.month == date.month && 
+                          _selectedDateRange!.start.day == date.day ||
+                          _selectedDateRange!.end.year == date.year && 
+                          _selectedDateRange!.end.month == date.month && 
+                          _selectedDateRange!.end.day == date.day) {
                   _selectedDateRange = null;
                 } else if (date.isBefore(_selectedDateRange!.start)) {
                   _selectedDateRange = DateTimeRange(
@@ -232,45 +293,64 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                     end: date,
                   );
                 }
+                
+                if (_selectedDateRange != null) {
+                  _logger.info('DateRangePickerWidget: Sélection de dates mise à jour: ${DateFormat('dd/MM/yyyy').format(_selectedDateRange!.start)} à ${DateFormat('dd/MM/yyyy').format(_selectedDateRange!.end)}');
+                } else {
+                  _logger.info('DateRangePickerWidget: Sélection de dates effacée');
+                }
               });
             },
             selectableDayPredicate: (date) {
-              // Vous pouvez ajouter une logique pour désactiver certaines dates
-              return true;
+              // Ne permettre que les dates à partir d'aujourd'hui (comparaison sur les jours uniquement)
+              return date.isAtSameMomentAs(now) || date.isAfter(now);
             },
           ),
         ),
         
         // Options de flexibilité pour les dates exactes
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: _flexibilityOptions.map((option) {
                 final isSelected = _selectedFlexibility == option;
+                final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                final primaryColor = Theme.of(context).primaryColor;
+                final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
+                final backgroundColor = isSelected 
+                    ? primaryColor.withOpacity(0.1) 
+                    : (isDarkMode ? Colors.grey[800] : Colors.white);
+                final textColor = isSelected 
+                    ? primaryColor 
+                    : (isDarkMode ? Colors.white70 : Colors.black87);
+                    
                 return GestureDetector(
                   onTap: () {
                     setModalState(() {
                       _selectedFlexibility = option;
+                      _logger.info('DateRangePickerWidget: Flexibilité sélectionnée: $_selectedFlexibility');
                     });
                   },
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+                        color: isSelected ? primaryColor : borderColor!,
                         width: 1,
                       ),
                       borderRadius: BorderRadius.circular(25),
-                      color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+                      color: backgroundColor,
                     ),
                     child: Text(
                       option,
                       style: TextStyle(
-                        color: isSelected ? AppTheme.primaryColor : Colors.black,
+                        color: textColor,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 13,
                       ),
                     ),
                   ),
@@ -286,7 +366,8 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
   // Construction de l'onglet dates flexibles
   Widget _buildFlexibleDatesTab(StateSetter setModalState) {
     // Générer les 3 prochains mois
-    final now = DateTime.now();
+    final DateTime nowRaw = DateTime.now();
+    final DateTime now = DateTime(nowRaw.year, nowRaw.month, nowRaw.day);
     final months = List.generate(3, (index) {
       final month = DateTime(now.year, now.month + index);
       return {
@@ -295,40 +376,59 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
       };
     });
 
+    // Thème et couleurs
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+    final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
+    final backgroundColor = isDarkMode ? Colors.grey[800] : Colors.white;
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final headingColor = isDarkMode ? Colors.white : Colors.black;
+
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Options de durée
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: _flexibleOptions.map((option) {
-                  final isSelected = _selectedFlexibleOption == option;
+                  final isSelected = _selectedFlexibleOption == option['text'];
+                  final optionBgColor = isSelected 
+                      ? primaryColor.withOpacity(0.1) 
+                      : backgroundColor;
+                  final optionTextColor = isSelected 
+                      ? primaryColor 
+                      : textColor;
+                      
                   return GestureDetector(
                     onTap: () {
                       setModalState(() {
-                        _selectedFlexibleOption = option;
+                        _selectedFlexibleOption = option['text']!;
+                        _logger.info('DateRangePickerWidget: Option flexible sélectionnée: ${option['text']}');
                       });
                     },
                     child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      margin: const EdgeInsets.only(right: 8, bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+                          color: isSelected ? primaryColor : borderColor!,
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(25),
-                        color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+                        color: optionBgColor,
                       ),
                       child: Text(
-                        option,
+                        option['text']!,
                         style: TextStyle(
-                          color: isSelected ? AppTheme.primaryColor : Colors.black,
+                          color: optionTextColor,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -336,69 +436,78 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                 }).toList(),
               ),
             ),
-            
-            const SizedBox(height: 24),
-            const Text(
-              'Quand voulez-vous partir ?',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Text(
-              'Choisissez 3 mois au maximum',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            
-            const SizedBox(height: 16),
+
             // Sélection des mois
-            Row(
-              children: months.map((month) {
-                final isSelected = _selectedMonth == month['formatted'];
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setModalState(() {
-                        _selectedMonth = month['formatted'] as String;
-                        _selectedMonthIndex = months.indexOf(month);
-                      });
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
-                          width: 1,
+            Text(
+              'Mois',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: headingColor,
+              ),
+              semanticsLabel: 'Sélection du mois',
+            ),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 20) / 3;
+                
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: months.map((month) {
+                    final DateTime monthDate = month['date'] as DateTime;
+                    final isSelected = _selectedMonthDate != null && 
+                        monthDate.month == _selectedMonthDate!.month && 
+                        monthDate.year == _selectedMonthDate!.year;
+                    final monthBgColor = isSelected 
+                        ? primaryColor.withOpacity(0.1) 
+                        : backgroundColor;
+                    final monthTextColor = isSelected 
+                        ? primaryColor 
+                        : textColor;
+                        
+                    return GestureDetector(
+                      onTap: () {
+                        setModalState(() {
+                          if (isSelected) {
+                            _selectedMonthDate = null;
+                            _selectedMonthFormatted = '';
+                            _selectedMonthIndex = 0;
+                            _logger.info('DateRangePickerWidget: Sélection de mois effacée');
+                          } else {
+                            _selectedMonthDate = monthDate;
+                            _selectedMonthFormatted = month['formatted'] as String;
+                            _selectedMonthIndex = months.indexOf(month);
+                            _logger.info('DateRangePickerWidget: Mois sélectionné: ${month['formatted']}');
+                          }
+                        });
+                      },
+                      child: Container(
+                        width: itemWidth,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isSelected ? primaryColor : borderColor!,
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          color: monthBgColor,
                         ),
-                        borderRadius: BorderRadius.circular(8),
-                        color: isSelected ? AppTheme.primaryColor.withOpacity(0.05) : Colors.white,
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.calendar_today, size: 30),
-                          const SizedBox(height: 8),
-                          Text(
-                            (month['formatted'] as String).split(' ').first,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          month['formatted'] as String,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: monthTextColor,
+                            fontSize: 14,
                           ),
-                          Text(
-                            (month['formatted'] as String).split(' ').last,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                          semanticsLabel: 'Mois de ${month['formatted']}',
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ],
         ),
@@ -442,44 +551,63 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
 
   @override
   Widget build(BuildContext context) {
+    // Détecter le mode sombre
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+    
+    // Couleurs adaptatives selon le mode
+    final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
+    final textColor = isDarkMode 
+        ? (_selectedDateRange != null ? Colors.white : Colors.grey[400])
+        : (_selectedDateRange != null ? Colors.black : Colors.grey[600]);
+    final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
+    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: _selectDateRange,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border.all(color: borderColor!),
             borderRadius: BorderRadius.circular(10),
+            color: backgroundColor,
           ),
-            child: Row(
-              children: [
-              Icon(Icons.calendar_today, size: 20, color: AppTheme.primaryColor),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.calendar_today, size: 20, color: primaryColor),
               const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _selectedDateRange != null
-                      ? _getSelectedDateRangeText()
-                      : 'Sélectionner des dates',
-                    style: TextStyle(
-                    color: _selectedDateRange != null ? Colors.black : Colors.grey,
-                    ),
+              Expanded(
+                child: Text(
+                  _selectedDateRange != null
+                    ? _getSelectedDateRangeText()
+                    : 'Sélectionner des dates',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 14,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  semanticsLabel: _selectedDateRange != null
+                    ? 'Dates sélectionnées: ${_getSelectedDateRangeText()}'
+                    : 'Appuyez pour sélectionner des dates',
                 ),
-                if (_selectedDateRange != null)
-                  IconButton(
-                  icon: const Icon(Icons.clear, size: 16),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() {
-                        _selectedDateRange = null;
+              ),
+              if (_selectedDateRange != null)
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDateRange = null;
                       widget.onDateRangeSelected(null);
                     });
-                    },
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(Icons.clear, size: 16, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
                   ),
-              ],
+                ),
+            ],
           ),
         ),
       ),

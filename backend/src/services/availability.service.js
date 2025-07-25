@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Availability = require('../models/availability.model');
 const Residence = require('../models/residence.model');
-const { ApiError } = require('../utils/apiError');
+const ApiError = require('../utils/apiError');
 const Reservation = require('../models/reservation.model');
 const moment = require('moment');
 

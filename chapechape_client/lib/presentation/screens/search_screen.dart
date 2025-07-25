@@ -219,7 +219,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResidenceCard(Residence residence) {
-    final imageUrl = residence.imageUrl ?? 'https://via.placeholder.com/300x200?text=ChapeChape+Residence';
+    final imageUrl = residence.imageUrl ?? 'assets/images/placeholders/residence_standard.jpg';
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -244,7 +244,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Image.network(
-                    'https://via.placeholder.com/300x200?text=ChapeChape+Residence',
+                    'assets/images/placeholders/residence_standard.jpg',
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(

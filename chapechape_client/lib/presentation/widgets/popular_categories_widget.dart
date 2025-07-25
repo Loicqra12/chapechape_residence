@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
+
 import '../../core/models/residence_type_enum.dart';
 import '../../core/utils/responsive_utils.dart';
+import '../../core/services/logger_service.dart';
+import '../../core/theme/app_theme.dart';
 
-/// Widget affichant les catégories populaires avec des visuels attractifs
+/// Widget amélioré affichant les catégories populaires avec des visuels attractifs,
+/// animations fluides, et support du mode sombre.
+/// 
+/// Ce widget supporte différents styles d'affichage (grille, carrousel, liste)
+/// et s'adapte automatiquement aux différentes tailles d'écran.
 class PopularCategoriesWidget extends StatefulWidget {
   /// Titre de la section
   final String title;
@@ -34,10 +43,13 @@ class PopularCategoriesWidget extends StatefulWidget {
   State<PopularCategoriesWidget> createState() => _PopularCategoriesWidgetState();
 }
 
-class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
+class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with SingleTickerProviderStateMixin {
+  final LoggerService _logger = LoggerService();
   int _hoveredIndex = -1;
   final _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
+  late AnimationController _animationController;
+  bool _isLoading = true;
   
   // Liste des catégories populaires avec leurs types associés, images et icônes
   final List<Map<String, dynamic>> _popularCategories = [
@@ -134,7 +146,15 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   @override
   void initState() {
     super.initState();
-    // Écouteur pour le carousel
+    _logger.debug('PopularCategoriesWidget - initState');
+    
+    // Initialisation de l'AnimationController pour les animations complexes
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
+    // Initialisation du PageController pour le carousel
     if (widget.viewStyle == 'carousel') {
       _pageController.addListener(() {
         int next = _pageController.page!.round();
@@ -145,27 +165,74 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
         }
       });
     }
+    
+    // Simuler un chargement pour les animations d'entrée
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _animationController.forward();
+      }
+    });
   }
   
   @override
   void dispose() {
+    _logger.debug('PopularCategoriesWidget - dispose');
     _pageController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
   
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(),
+        _buildHeader(isDarkMode),
         const SizedBox(height: 16),
-        _buildCategoriesSection(),
+        // Afficher un widget de chargement ou les catégories
+        _isLoading 
+          ? _buildLoadingState(isDarkMode) 
+          : _buildCategoriesSection(isDarkMode),
       ],
     );
   }
   
-  Widget _buildHeader() {
+  // Widget de chargement avec shimmer effect
+  Widget _buildLoadingState(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Shimmer.fromColors(
+        baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+        highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: widget.itemsPerRow,
+            childAspectRatio: 1.1,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: 4, // Afficher 4 éléments de chargement
+          itemBuilder: (context, index) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildHeader(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -173,19 +240,21 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
         children: [
           Text(
             widget.title,
+            semanticsLabel: 'Titre de section: ${widget.title}',
             style: TextStyle(
               fontSize: context.responsiveFontSize(20),
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
           if (widget.subtitle != null) ...[
             const SizedBox(height: 4),
             Text(
               widget.subtitle!,
+              semanticsLabel: 'Description: ${widget.subtitle}',
               style: TextStyle(
                 fontSize: context.responsiveFontSize(14),
-                color: Colors.grey[600],
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
             ),
           ],
@@ -197,20 +266,20 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
     );
   }
   
-  Widget _buildCategoriesSection() {
+  Widget _buildCategoriesSection(bool isDarkMode) {
     switch (widget.viewStyle) {
       case 'carousel':
-        return _buildCarouselView();
+        return _buildCarouselView(isDarkMode);
       case 'list':
-        return _buildListView();
+        return _buildListView(isDarkMode);
       case 'grid':
       default:
-        return _buildGridView();
+        return _buildGridView(isDarkMode);
     }
   }
   
   // Affichage en grille (par défaut)
-  Widget _buildGridView() {
+  Widget _buildGridView(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
@@ -218,23 +287,27 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: widget.itemsPerRow,
-          childAspectRatio: 1.1,
+          // Augmenter légèrement le ratio pour éviter le débordement
+          childAspectRatio: 1.2,
           crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          mainAxisSpacing: 14,
         ),
         itemCount: _popularCategories.length,
         itemBuilder: (context, index) {
           final category = _popularCategories[index];
           final isHovered = _hoveredIndex == index;
           
-          return _buildGridItem(category, index, isHovered);
+          return _buildGridItem(category, index, isHovered, isDarkMode)
+            .animate()
+            .fadeIn(duration: 400.ms, delay: (100 * index).ms, curve: Curves.easeOutQuad)
+            .slideY(begin: 0.2, end: 0, duration: 400.ms, delay: (100 * index).ms, curve: Curves.easeOutQuad);
         },
       ),
     );
   }
   
   // Affichage en carousel
-  Widget _buildCarouselView() {
+  Widget _buildCarouselView(bool isDarkMode) {
     return SizedBox(
       height: 180,
       child: PageView.builder(
@@ -250,7 +323,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
               horizontal: 8,
               vertical: isActive ? 0 : 8,
             ),
-            child: _buildCarouselItem(category, index, isActive),
+            child: _buildCarouselItem(category, index, isActive, isDarkMode),
           );
         },
       ),
@@ -258,7 +331,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   }
   
   // Affichage en liste
-  Widget _buildListView() {
+  Widget _buildListView(bool isDarkMode) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -276,20 +349,26 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   }
   
   // Item de la grille
-  Widget _buildGridItem(Map<String, dynamic> category, int index, bool isHovered) {
+  Widget _buildGridItem(Map<String, dynamic> category, int index, bool isHovered, bool isDarkMode) {
     return MouseRegion(
       onEnter: (_) => setState(() => _hoveredIndex = index),
       onExit: (_) => setState(() => _hoveredIndex = -1),
-      child: GestureDetector(
-        onTap: () => _navigateToCategory(category),
+      child: InkWell(
+        onTap: () {
+          _navigateToCategory(category);
+        },
+        borderRadius: BorderRadius.circular(16), // Rayon plus grand pour un look plus moderne
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isHovered ? 0.15 : 0.08),
-                blurRadius: isHovered ? 8 : 4,
-                offset: Offset(0, isHovered ? 4 : 2),
+                color: isDarkMode 
+                  ? AppTheme.primaryColor.withOpacity(0.2) 
+                  : Colors.black.withOpacity(0.1),
+                blurRadius: 12,
+                spreadRadius: 1,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -427,17 +506,20 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   }
   
   // Item du carousel
-  Widget _buildCarouselItem(Map<String, dynamic> category, int index, bool isActive) {
+  Widget _buildCarouselItem(Map<String, dynamic> category, int index, bool isActive, bool isDarkMode) {
     return GestureDetector(
-      onTap: () => _navigateToCategory(category['type']),
+      onTap: () => _navigateToCategory(category),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isActive ? 0.15 : 0.08),
-              blurRadius: isActive ? 8 : 4,
+              color: isDarkMode
+                ? AppTheme.primaryColor.withOpacity(isActive ? 0.25 : 0.15)
+                : Colors.black.withOpacity(isActive ? 0.15 : 0.08),
+              blurRadius: isActive ? 10 : 6,
+              spreadRadius: isActive ? 1 : 0,
               offset: Offset(0, isActive ? 4 : 2),
             ),
           ],
@@ -678,17 +760,20 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> {
   
   // Navigation vers la page de catégorie
   void _navigateToCategory(Map<String, dynamic> category) {
-    // Navigation vers la page de recherche avec tous les types de la catégorie
-    final categoryTypes = category['categoryTypes'] as List<ResidenceType>;
-    final typeCodes = categoryTypes.map((type) => type.typeCode).join(',');
+    _logger.info('Navigation vers la catégorie: ${category['title']}');
     
-    print('📱 Navigation vers la catégorie: ${category['title']} avec types: $typeCodes');
-    context.pushNamed(
-      'search_results',
-      queryParameters: {
-        'category': category['title'],
-        'types': typeCodes,
-      },
-    );
+    // Obtenir les types de la catégorie
+    final List<ResidenceType> types = category['categoryTypes'] as List<ResidenceType>;
+    if (types.isNotEmpty) {
+      final ResidenceType mainType = types.first;
+      
+      // Utiliser GoRouter pour naviguer vers la page de recherche avec le filtre
+      context.push('/search?type=${mainType.toString().split('.').last}');
+      
+      // Retour haptique pour feedback utilisateur
+      HapticFeedback.mediumImpact();
+    } else {
+      _logger.warning('Aucun type trouvé pour la catégorie: ${category['title']}');
+    }
   }
 }

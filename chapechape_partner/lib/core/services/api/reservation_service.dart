@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import '../../models/reservation/reservation.dart';
+import '../../config/app_config.dart';
 
 class ReservationService {
   final Dio _dio;
-  static const String baseUrl = 'http://192.168.1.66:4000';
+  // URL dynamique basée sur AppConfig
+  String get baseUrl => AppConfig.apiUrl.replaceAll('/api', '');
 
   ReservationService(this._dio);
 
@@ -20,7 +22,7 @@ class ReservationService {
       if (endDate != null) queryParams['endDate'] = endDate.toIso8601String();
 
       final response = await _dio.get(
-        '$baseUrl/api/reservations/my-reservations',
+        '${baseUrl}/api/reservations/my-reservations',
         queryParameters: queryParams,
         options: Options(
           headers: {
@@ -48,7 +50,7 @@ class ReservationService {
       print("Récupération de la réservation avec ID: $id");
       
       final response = await _dio.get(
-        '$baseUrl/api/reservations/$id',
+        '${baseUrl}/api/reservations/$id',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -78,7 +80,7 @@ class ReservationService {
     try {
       // Essayer avec my-reservations (pour les clients)
       final response = await _dio.get(
-        '$baseUrl/api/reservations/my-reservations',
+        '${baseUrl}/api/reservations/my-reservations',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -113,7 +115,7 @@ class ReservationService {
   Future<List<Reservation>> getResidenceReservations(String residenceId) async {
     try {
       final response = await _dio.get(
-        '$baseUrl/api/reservations/residence/$residenceId',
+        '${baseUrl}/api/reservations/residence/$residenceId',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -142,7 +144,7 @@ class ReservationService {
       }
       
       await _dio.patch(
-        '$baseUrl/api/reservations/$id/status',
+        '${baseUrl}/api/reservations/$id/status',
         data: {'status': status.name},
         options: Options(
           headers: {
@@ -177,7 +179,7 @@ class ReservationService {
     try {
       // Utiliser la méthode PATCH qui correspond à l'API backend
       await _dio.patch(
-        '$baseUrl/api/reservations/$id/cancel',
+        '${baseUrl}/api/reservations/$id/cancel',
         data: {'reason': reason},
         options: Options(
           headers: {
@@ -212,7 +214,7 @@ class ReservationService {
   Future<void> addNote(String id, String note) async {
     try {
       await _dio.post(
-        '$baseUrl/api/reservations/$id/notes',
+        '${baseUrl}/api/reservations/$id/notes',
         data: {'note': note},
         options: Options(
           headers: {
@@ -233,7 +235,7 @@ class ReservationService {
       
       // D'abord, récupérer les résidences du partenaire
       final residenceResponse = await _dio.get(
-        '$baseUrl/api/residences/my-residences',
+        '${baseUrl}/api/residences/my-residences',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -263,7 +265,7 @@ class ReservationService {
       for (final residenceId in residenceIds) {
         try {
           final response = await _dio.get(
-            '$baseUrl/api/reservations/residence/$residenceId',
+            '${baseUrl}/api/reservations/residence/$residenceId',
             options: Options(
               headers: {
                 'Content-Type': 'application/json',
@@ -301,7 +303,7 @@ class ReservationService {
       print("Récupération directe des réservations partenaire...");
       
       final response = await _dio.get(
-        '$baseUrl/api/reservations/partner-reservations',
+        '${baseUrl}/api/reservations/partner-reservations',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -329,7 +331,7 @@ class ReservationService {
   Future<Reservation?> createReservation(Map<String, dynamic> reservationData) async {
     try {
       final response = await _dio.post(
-        '$baseUrl/api/reservations',
+        '${baseUrl}/api/reservations',
         data: reservationData,
         options: Options(
           headers: {
@@ -352,7 +354,7 @@ class ReservationService {
   Future<Reservation?> updateReservation(String id, Map<String, dynamic> reservationData) async {
     try {
       final response = await _dio.put(
-        '$baseUrl/api/reservations/$id',
+        '${baseUrl}/api/reservations/$id',
         data: reservationData,
         options: Options(
           headers: {

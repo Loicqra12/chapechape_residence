@@ -12,7 +12,7 @@ module.exports = {
         '**/tests/**/*.test.js',
         '**/tests/unit/**/*.test.js'
     ],
-    setupFilesAfterEnv: ['./tests/setup.js'],
+    setupFilesAfterEnv: ['./tests/setupTests.js'],
     testTimeout: 60000,
     forceExit: true,
     detectOpenHandles: true
