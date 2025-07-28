@@ -7,17 +7,18 @@
     "@emotion/styled": "^11.11.0",
     "@headlessui/react": "^2.0.0",
     "@heroicons/react": "^2.1.1",
-    "@mui/icons-material": "^5.15.10",
-    "@mui/material": "^5.15.10",
+    "@mui/icons-material": "^5.18.0",
+    "@mui/material": "^5.18.0",
     "@react-pdf/renderer": "^4.2.4",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.6.7",
     "chart.js": "^4.4.1",
-    "date-fns": "^3.3.1",
+    "date-fns": "^3.6.0",
     "framer-motion": "^11.0.5",
     "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.525.0",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-big-calendar": "^1.8.6",
@@ -59,6 +60,6 @@
   "devDependencies": {
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.17"
   }
 }

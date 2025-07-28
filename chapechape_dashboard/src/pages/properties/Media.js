@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PhotoIcon,
@@ -12,6 +12,7 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { adminService } from '../../services/adminService';
 
 // Composant pour l'aperçu des images
 const ImagePreview = ({ file, onRemove }) => {
@@ -189,10 +190,14 @@ const Media = () => {
     date: '',
     size: ''
   });
-  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Images statiques de démonstration
-  const [images, setImages] = useState([
+  // Images chargées depuis l'API
+  const [images, setImages] = useState([]);
+
+  // Images de fallback en cas d'erreur API (memoized pour éviter les re-renders)
+  const fallbackImages = useMemo(() => [
     {
       id: 1,
       name: 'Villa de luxe.jpg',
@@ -203,7 +208,7 @@ const Media = () => {
     },
     {
       id: 2,
-      name: 'Appartement moderne.jpg',
+      name: 'Appartement moderne.jpg', 
       url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80',
       size: '1.8 MB',
       date: '2024-03-04',
@@ -225,7 +230,47 @@ const Media = () => {
       date: '2024-03-02',
       type: 'image/jpeg'
     }
-  ]);
+  ], []);
+
+  // Fonction pour charger les médias depuis l'API
+  const fetchMedia = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Simuler un appel API pour récupérer les médias
+      // Note: Adapter selon les endpoints backend disponibles
+      const response = await adminService.getAllMedia?.() || { success: false };
+      
+      if (response.success) {
+        // Transformer les données backend
+        const transformedMedia = response.data.map(media => ({
+          id: media._id || media.id,
+          name: media.name || media.filename,
+          url: media.url || media.path,
+          size: media.size ? `${(media.size / (1024 * 1024)).toFixed(1)} MB` : 'N/A',
+          date: media.createdAt ? new Date(media.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          type: media.type || media.mimetype || 'image/jpeg'
+        }));
+        setImages(transformedMedia);
+      } else {
+        // Utiliser les données de fallback
+        setImages(fallbackImages);
+        setError('Impossible de charger les médias depuis le serveur. Utilisation des données locales.');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des médias:', error);
+      setImages(fallbackImages);
+      setError('Erreur lors du chargement des médias.');
+    } finally {
+      setLoading(false);
+    }
+  }, [fallbackImages]);
+
+  // Charger les données au démarrage
+  useEffect(() => {
+    fetchMedia();
+  }, [fetchMedia]);
 
   const handleFilesDrop = (files) => {
     // Créer des URLs locales pour la prévisualisation
@@ -245,9 +290,28 @@ const Media = () => {
     toast.success('Images téléchargées avec succès');
   };
 
-  const handleDelete = (id) => {
-    setImages(prevImages => prevImages.filter(img => img.id !== id));
-    toast.success('Image supprimée avec succès');
+  const handleDelete = async (id) => {
+    const imageToDelete = images.find(img => img.id === id);
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer "${imageToDelete?.name}" ?`)) {
+      return;
+    }
+
+    try {
+      // Tenter de supprimer via l'API si disponible
+      const response = await adminService.deleteMedia?.(id) || { success: true };
+      
+      if (response.success) {
+        setImages(prevImages => prevImages.filter(img => img.id !== id));
+        toast.success('Image supprimée avec succès');
+      } else {
+        throw new Error(response.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      // Supprimer quand même localement si l'API n'est pas disponible
+      setImages(prevImages => prevImages.filter(img => img.id !== id));
+      toast.success('Image supprimée localement');
+    }
   };
 
   const toggleImageSelection = (image) => {

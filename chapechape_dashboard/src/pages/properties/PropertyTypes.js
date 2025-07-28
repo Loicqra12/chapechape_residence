@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BuildingOfficeIcon,
@@ -14,6 +14,7 @@ import {
   BriefcaseIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { adminService } from '../../services/adminService';
 
 const propertyTypes = [
   {
@@ -345,27 +346,97 @@ const PropertyTypeModal = ({ isOpen, onClose, type, onSave }) => {
 const PropertyTypes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
-  const [types, setTypes] = useState(propertyTypes);
+  const [types, setTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Charger les types de propriétés depuis l'API
+  const fetchPropertyTypes = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getAllPropertyTypes();
+      
+      if (response.success) {
+        // Transformer les données backend pour correspondre à l'interface
+        const transformedTypes = response.data.map(type => ({
+          id: type._id || type.id,
+          name: type.name,
+          icon: type.icon || BuildingOfficeIcon, // Fallback icon
+          description: type.description,
+          features: type.features || [],
+          color: type.color || 'blue'
+        }));
+        setTypes(transformedTypes);
+      } else {
+        // En cas d'erreur API, utiliser les données de fallback
+        setTypes(propertyTypes);
+        setError('Impossible de charger les types de propriétés depuis le serveur. Utilisation des données locales.');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des types de propriétés:', error);
+      setTypes(propertyTypes); // Fallback vers les données mockées
+      setError('Erreur lors du chargement des types de propriétés.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Charger les données au démarrage du composant
+  useEffect(() => {
+    fetchPropertyTypes();
+  }, [fetchPropertyTypes]);
 
   const handleEdit = (type) => {
     setSelectedType(type);
     setIsModalOpen(true);
   };
 
-  const handleDelete = (type) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le type "${type.name}" ?`)) {
-      setTypes(prev => prev.filter(t => t.id !== type.id));
-      toast.success('Type de propriété supprimé avec succès');
+  const handleDelete = async (type) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le type "${type.name}" ?`)) {
+      return;
+    }
+
+    try {
+      const response = await adminService.deletePropertyType(type.id);
+      if (response.success) {
+        setTypes(prev => prev.filter(t => t.id !== type.id));
+        toast.success('Type de propriété supprimé avec succès');
+      } else {
+        throw new Error(response.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error(error.message || 'Erreur lors de la suppression du type de propriété');
     }
   };
 
-  const handleSave = (formData) => {
-    if (selectedType) {
-      setTypes(prev => prev.map(t => t.id === selectedType.id ? formData : t));
-      toast.success('Type de propriété mis à jour avec succès');
-    } else {
-      setTypes(prev => [...prev, formData]);
-      toast.success('Type de propriété créé avec succès');
+  const handleSave = async (formData) => {
+    try {
+      let response;
+      if (selectedType) {
+        // Mise à jour
+        response = await adminService.updatePropertyType(selectedType.id, formData);
+        if (response.success) {
+          setTypes(prev => prev.map(t => t.id === selectedType.id ? { ...formData, id: selectedType.id } : t));
+          toast.success('Type de propriété mis à jour avec succès');
+        } else {
+          throw new Error(response.error || 'Erreur lors de la mise à jour');
+        }
+      } else {
+        // Création
+        response = await adminService.createPropertyType(formData);
+        if (response.success) {
+          const newType = { ...formData, id: response.data._id || response.data.id };
+          setTypes(prev => [...prev, newType]);
+          toast.success('Type de propriété créé avec succès');
+        } else {
+          throw new Error(response.error || 'Erreur lors de la création');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error(error.message || 'Erreur lors de la sauvegarde du type de propriété');
     }
   };
 

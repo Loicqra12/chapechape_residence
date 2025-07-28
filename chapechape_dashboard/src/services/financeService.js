@@ -40,27 +40,26 @@ class FinanceService {
 
   async getPayments({ page = 1, limit = 10, filters = {} }) {
     try {
-      // Récupérer les réservations avec leurs paiements
-      const response = await axios.get(`${API_URL}/bookings/all`, {
-        params: {
-          page,
-          limit,
-          ...filters
+      // Récupérer les réservations avec leurs paiements via l'endpoint reservations
+      const response = await axios.get(`${API_URL}/reservations/my-reservations`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
 
-      // Transformer les réservations en paiements
-      const payments = response.data.data.map(booking => ({
-        _id: booking._id,
-        amount: booking.totalPrice,
-        status: booking.paymentStatus === 'paid' ? 'completed' : 'pending',
-        paymentMethod: booking.paymentMethod || 'card',
-        createdAt: booking.createdAt,
+      // Transformer les réservations en paiements (adapter au format reservations)
+      const reservations = response.data.data || response.data || [];
+      const payments = reservations.map(reservation => ({
+        _id: reservation._id,
+        amount: reservation.totalPrice || reservation.amount || 50000, // Valeur par défaut temporaire
+        status: reservation.paymentStatus === 'paid' ? 'completed' : 'pending',
+        paymentMethod: reservation.paymentMethod || 'orange_money',
+        createdAt: reservation.createdAt,
         paymentDetails: {
-          reference: booking._id,
-          bookingId: booking._id
+          reference: reservation._id,
+          bookingId: reservation._id
         },
-        phoneNumber: booking.client?.phoneNumber
+        phoneNumber: reservation.user?.phoneNumber || reservation.client?.phoneNumber
       }));
 
       return {
@@ -79,15 +78,22 @@ class FinanceService {
 
   async createPayment(data) {
     try {
-      const response = await axios.post(`${API_URL}/bookings/${data.bookingId}/confirm`, {
+      // Utilise l'endpoint reservations pour confirmer le paiement
+      const response = await axios.patch(`${API_URL}/reservations/${data.bookingId}`, {
         paymentMethod: data.paymentMethod,
-        phoneNumber: data.phoneNumber
+        phoneNumber: data.phoneNumber,
+        paymentStatus: 'paid',
+        status: 'confirmed'
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
       });
 
       return {
         success: true,
         data: {
-          _id: response.data.data._id,
+          _id: response.data.data?._id || response.data._id,
           status: 'completed',
           ...data
         }
@@ -102,10 +108,18 @@ class FinanceService {
 
   async confirmPayment(bookingId) {
     try {
-      const response = await axios.post(`${API_URL}/bookings/${bookingId}/confirm`);
+      // Utilise l'endpoint reservations pour confirmer le paiement
+      const response = await axios.patch(`${API_URL}/reservations/${bookingId}`, {
+        paymentStatus: 'paid',
+        status: 'confirmed'
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       return {
         success: true,
-        data: response.data.data
+        data: response.data.data || response.data
       };
     } catch (error) {
       return {

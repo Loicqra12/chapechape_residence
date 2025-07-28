@@ -40,6 +40,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ImageUpload from '../../components/common/ImageUpload';
+import { adminService } from '../../services/adminService';
 
 const ClientsPage = () => {
   const [clients, setClients] = useState([]);
@@ -62,65 +63,33 @@ const ClientsPage = () => {
 
   const loadClients = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // TODO: Remplacer par l'appel API réel
-      const mockClients = [
-        {
-          id: 1,
-          name: 'Jean Dupont',
-          email: 'jean.dupont@example.com',
-          phone: '+33 6 12 34 56 78',
-          status: 'active',
-          verified: true,
-          createdAt: '2025-01-15T10:30:00',
-          lastLogin: '2025-03-05T15:45:00',
-          bookingsCount: 5,
-          avatar: null,
-          bookings: [
-            {
-              id: 1,
-              residenceName: "Villa Côte d'Azur",
-              checkIn: '2025-04-01',
-              checkOut: '2025-04-07',
-              status: 'confirmed',
-              totalPrice: 1200
-            },
-            {
-              id: 2,
-              residenceName: 'Appartement Paris Centre',
-              checkIn: '2025-05-15',
-              checkOut: '2025-05-20',
-              status: 'pending',
-              totalPrice: 800
-            }
-          ]
-        },
-        {
-          id: 2,
-          name: 'Marie Martin',
-          email: 'marie.martin@example.com',
-          phone: '+33 6 98 76 54 32',
-          status: 'active',
-          verified: false,
-          createdAt: '2025-02-20T14:20:00',
-          lastLogin: '2025-03-04T10:15:00',
-          bookingsCount: 2,
-          avatar: null,
-          bookings: [
-            {
-              id: 3,
-              residenceName: 'Chalet Alpes',
-              checkIn: '2025-04-10',
-              checkOut: '2025-04-15',
-              status: 'confirmed',
-              totalPrice: 1500
-            }
-          ]
-        }
-      ];
-      setClients(mockClients);
+      const response = await adminService.getAllClients();
+      if (response.success) {
+        // Transformer les données backend pour correspondre à l'interface
+        const transformedClients = response.data.map(client => ({
+          id: client._id || client.id,
+          name: `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.name || 'Utilisateur',
+          email: client.email,
+          phone: client.phoneNumber || client.phone,
+          status: client.status || 'active',
+          verified: client.isVerified || client.verified || false,
+          createdAt: client.createdAt,
+          lastLogin: client.lastLogin,
+          bookingsCount: client.bookingsCount || 0,
+          avatar: client.profileImage || client.avatar,
+          bookings: client.bookings || [] // Sera chargé séparément si nécessaire
+        }));
+        setClients(transformedClients);
+      } else {
+        throw new Error(response.error || 'Erreur lors du chargement des clients');
+      }
     } catch (error) {
-      setError('Erreur lors du chargement des clients');
+      console.error('Erreur lors du chargement des clients:', error);
+      setError(error.message || 'Erreur lors du chargement des clients');
+      // En cas d'erreur, utiliser des données de fallback
+      setClients([]);
     }
     setLoading(false);
   };
@@ -146,8 +115,67 @@ const ClientsPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // TODO: Implémenter la logique de sauvegarde
-    handleCloseDialog();
+    const formData = new FormData(event.target);
+    const clientData = {
+      firstName: formData.get('firstName'),
+      lastName: formData.get('lastName'),
+      email: formData.get('email'),
+      phoneNumber: formData.get('phone'),
+      status: formData.get('status') || 'active'
+    };
+
+    try {
+      let response;
+      if (selectedClient && selectedClient.id) {
+        // Mise à jour d'un client existant
+        response = await adminService.updateClient(selectedClient.id, clientData);
+      } else {
+        // Création d'un nouveau client (si implémenté côté backend)
+        console.log('Création de nouveaux clients non implémentée');
+        return;
+      }
+
+      if (response.success) {
+        await loadClients(); // Recharger la liste
+        handleCloseDialog();
+      } else {
+        setError(response.error || 'Erreur lors de la sauvegarde du client');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      setError('Erreur lors de la sauvegarde du client');
+    }
+  };
+
+  const handleDeleteClient = async (clientId) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
+      try {
+        const response = await adminService.deleteClient(clientId);
+        if (response.success) {
+          await loadClients(); // Recharger la liste
+        } else {
+          setError(response.error || 'Erreur lors de la suppression du client');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        setError('Erreur lors de la suppression du client');
+      }
+    }
+  };
+
+  const handleToggleClientStatus = async (clientId, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      const response = await adminService.updateClient(clientId, { status: newStatus });
+      if (response.success) {
+        await loadClients(); // Recharger la liste
+      } else {
+        setError(response.error || 'Erreur lors de la mise à jour du statut');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      setError('Erreur lors de la mise à jour du statut');
+    }
   };
 
   const handleVerificationFilterChange = (event, newFilter) => {

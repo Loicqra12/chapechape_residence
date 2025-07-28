@@ -13,57 +13,53 @@ class BookingService {
 
   async getBookings({ page = 1, limit = 10, sort, filters }) {
     try {
-      const response = await axios.get(`${API_URL}/bookings/all`, {
-        ...this.getAuthHeader(),
-        params: {
-          page,
-          limit,
-          sort: sort ? `${sort.field}:${sort.direction}` : undefined,
-          status: filters?.status,
-          search: filters?.searchQuery,
-          startDate: filters?.startDate,
-          endDate: filters?.endDate,
-          residence: filters?.residence,
-          partner: filters?.partner
-        }
+      // Pour le moment, utiliser my-reservations
+      // TODO: Implémenter une route admin spécifique pour toutes les réservations
+      const response = await axios.get(`${API_URL}/reservations/my-reservations`, {
+        ...this.getAuthHeader()
       });
 
-      const { data, pagination } = response.data;
+      // Réponse directe depuis reservations endpoint  
+      const reservations = response.data.data || response.data || [];
+      
       return {
-        bookings: data.map(booking => ({
-          _id: booking._id,
-          visitDate: booking.visitDate,
-          visitTime: booking.visitTime,
-          status: booking.status,
-          residence: booking.residence ? {
-            _id: booking.residence._id,
-            ...booking.residenceProperties,
-            location: booking.locationDisplay
+        bookings: reservations.map(reservation => ({
+          _id: reservation._id,
+          visitDate: reservation.visitDate || reservation.createdAt,
+          visitTime: reservation.visitTime || '09:00',
+          status: reservation.status || 'confirmed',
+          residence: reservation.residence ? {
+            _id: reservation.residence._id,
+            title: reservation.residence.title,
+            location: reservation.residence.location,
+            address: reservation.residence.address,
+            city: reservation.residence.city
           } : null,
-          client: booking.client ? {
-            _id: booking.client._id,
-            name: `${booking.client.firstName} ${booking.client.lastName}`,
-            email: booking.client.email
+          client: reservation.user ? {
+            _id: reservation.user._id,
+            name: `${reservation.user.firstName || ''} ${reservation.user.lastName || ''}`.trim(),
+            email: reservation.user.email
           } : null,
-          partner: booking.partner ? {
-            _id: booking.partner._id,
-            name: booking.partner.name,
-            email: booking.partner.email
+          partner: reservation.partner ? {
+            _id: reservation.partner._id,
+            name: reservation.partner.name,
+            email: reservation.partner.email
           } : null,
-          notes: booking.notes,
-          feedback: booking.feedback,
-          cancellation: booking.cancellationReason ? {
-            reason: booking.cancellationReason,
-            date: booking.cancelledAt,
-            by: booking.cancelledBy
+          notes: reservation.notes,
+          feedback: reservation.feedback,
+          cancellation: reservation.cancellationReason ? {
+            reason: reservation.cancellationReason,
+            date: reservation.cancelledAt,
+            by: reservation.cancelledBy
           } : null,
-          createdAt: booking.createdAt,
-          updatedAt: booking.updatedAt
+          createdAt: reservation.createdAt,
+          updatedAt: reservation.updatedAt
         })),
-        total: pagination.total,
-        pages: pagination.pages,
-        page: pagination.page,
-        limit: pagination.limit
+        // Pagination simple pour le fallback
+        total: reservations.length,
+        pages: 1,
+        page: 1,
+        limit: reservations.length
       };
     } catch (error) {
       if (error.response?.status === 401) {
@@ -77,37 +73,40 @@ class BookingService {
 
   async getBookingById(id) {
     try {
-      const response = await axios.get(`${API_URL}/bookings/${id}`, this.getAuthHeader());
-      const booking = response.data.data;
+      // Utilise l'endpoint reservations au lieu de bookings
+      const response = await axios.get(`${API_URL}/reservations/${id}`, this.getAuthHeader());
+      const reservation = response.data.data || response.data;
       return {
-        _id: booking._id,
-        visitDate: booking.visitDate,
-        visitTime: booking.visitTime,
-        status: booking.status,
-        residence: booking.residence ? {
-          _id: booking.residence._id,
-          ...booking.residenceProperties,
-          location: booking.locationDisplay
+        _id: reservation._id,
+        visitDate: reservation.visitDate || reservation.createdAt,
+        visitTime: reservation.visitTime || '09:00',
+        status: reservation.status || 'confirmed',
+        residence: reservation.residence ? {
+          _id: reservation.residence._id,
+          title: reservation.residence.title,
+          location: reservation.residence.location,
+          address: reservation.residence.address,
+          city: reservation.residence.city
         } : null,
-        client: booking.client ? {
-          _id: booking.client._id,
-          name: `${booking.client.firstName} ${booking.client.lastName}`,
-          email: booking.client.email
+        client: reservation.user ? {
+          _id: reservation.user._id,
+          name: `${reservation.user.firstName || ''} ${reservation.user.lastName || ''}`.trim(),
+          email: reservation.user.email
         } : null,
-        partner: booking.partner ? {
-          _id: booking.partner._id,
-          name: booking.partner.name,
-          email: booking.partner.email
+        partner: reservation.partner ? {
+          _id: reservation.partner._id,
+          name: reservation.partner.name,
+          email: reservation.partner.email
         } : null,
-        notes: booking.notes,
-        feedback: booking.feedback,
-        cancellation: booking.cancellationReason ? {
-          reason: booking.cancellationReason,
-          date: booking.cancelledAt,
-          by: booking.cancelledBy
+        notes: reservation.notes,
+        feedback: reservation.feedback,
+        cancellation: reservation.cancellationReason ? {
+          reason: reservation.cancellationReason,
+          date: reservation.cancelledAt,
+          by: reservation.cancelledBy
         } : null,
-        createdAt: booking.createdAt,
-        updatedAt: booking.updatedAt
+        createdAt: reservation.createdAt,
+        updatedAt: reservation.updatedAt
       };
     } catch (error) {
       if (error.response?.status === 401) {
@@ -121,12 +120,13 @@ class BookingService {
 
   async confirmBooking(id) {
     try {
-      const response = await axios.post(
-        `${API_URL}/bookings/${id}/confirm`,
-        {},
+      // Utilise l'endpoint reservations pour confirmer
+      const response = await axios.patch(
+        `${API_URL}/reservations/${id}`,
+        { status: 'confirmed' },
         this.getAuthHeader()
       );
-      return this._transformBooking(response.data.data);
+      return this._transformReservation(response.data.data || response.data);
     } catch (error) {
       if (error.response?.status === 401) {
         window.location.href = '/login';
@@ -139,12 +139,17 @@ class BookingService {
 
   async cancelBooking(id, reason) {
     try {
-      const response = await axios.post(
-        `${API_URL}/bookings/${id}/cancel`,
-        { reason },
+      // Utilise l'endpoint reservations pour annuler
+      const response = await axios.patch(
+        `${API_URL}/reservations/${id}`,
+        { 
+          status: 'cancelled',
+          cancellationReason: reason,
+          cancelledAt: new Date().toISOString()
+        },
         this.getAuthHeader()
       );
-      return this._transformBooking(response.data.data);
+      return this._transformReservation(response.data.data || response.data);
     } catch (error) {
       if (error.response?.status === 401) {
         window.location.href = '/login';
@@ -157,12 +162,17 @@ class BookingService {
 
   async completeBooking(id, feedback) {
     try {
-      const response = await axios.post(
-        `${API_URL}/bookings/${id}/complete`,
-        feedback,
+      // Utilise l'endpoint reservations pour marquer comme terminé
+      const response = await axios.patch(
+        `${API_URL}/reservations/${id}`,
+        { 
+          status: 'completed',
+          feedback: feedback,
+          completedAt: new Date().toISOString()
+        },
         this.getAuthHeader()
       );
-      return this._transformBooking(response.data.data);
+      return this._transformReservation(response.data.data || response.data);
     } catch (error) {
       if (error.response?.status === 401) {
         window.location.href = '/login';
@@ -175,10 +185,11 @@ class BookingService {
 
   async bulkUpdateStatus(ids, status) {
     try {
+      // Utilise l'endpoint reservations pour les mises à jour groupées
       const promises = ids.map(id => 
-        axios.post(
-          `${API_URL}/bookings/${id}/${status}`,
-          {},
+        axios.patch(
+          `${API_URL}/reservations/${id}`,
+          { status: status },
           this.getAuthHeader()
         )
       );
@@ -194,36 +205,38 @@ class BookingService {
     }
   }
 
-  _transformBooking(booking) {
+  _transformReservation(reservation) {
     return {
-      _id: booking._id,
-      visitDate: booking.visitDate,
-      visitTime: booking.visitTime,
-      status: booking.status,
-      residence: booking.residence ? {
-        _id: booking.residence._id,
-        ...booking.residenceProperties,
-        location: booking.locationDisplay
+      _id: reservation._id,
+      visitDate: reservation.visitDate || reservation.createdAt,
+      visitTime: reservation.visitTime || '09:00',
+      status: reservation.status || 'confirmed',
+      residence: reservation.residence ? {
+        _id: reservation.residence._id,
+        title: reservation.residence.title,
+        location: reservation.residence.location,
+        address: reservation.residence.address,
+        city: reservation.residence.city
       } : null,
-      client: booking.client ? {
-        _id: booking.client._id,
-        name: `${booking.client.firstName} ${booking.client.lastName}`,
-        email: booking.client.email
+      client: reservation.user ? {
+        _id: reservation.user._id,
+        name: `${reservation.user.firstName || ''} ${reservation.user.lastName || ''}`.trim(),
+        email: reservation.user.email
       } : null,
-      partner: booking.partner ? {
-        _id: booking.partner._id,
-        name: booking.partner.name,
-        email: booking.partner.email
+      partner: reservation.partner ? {
+        _id: reservation.partner._id,
+        name: reservation.partner.name,
+        email: reservation.partner.email
       } : null,
-      notes: booking.notes,
-      feedback: booking.feedback,
-      cancellation: booking.cancellationReason ? {
-        reason: booking.cancellationReason,
-        date: booking.cancelledAt,
-        by: booking.cancelledBy
+      notes: reservation.notes,
+      feedback: reservation.feedback,
+      cancellation: reservation.cancellationReason ? {
+        reason: reservation.cancellationReason,
+        date: reservation.cancelledAt,
+        by: reservation.cancelledBy
       } : null,
-      createdAt: booking.createdAt,
-      updatedAt: booking.updatedAt
+      createdAt: reservation.createdAt,
+      updatedAt: reservation.updatedAt
     };
   }
 }

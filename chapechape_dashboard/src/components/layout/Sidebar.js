@@ -40,7 +40,13 @@ const Sidebar = () => {
   };
 
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+    const newCollapsedState = !isCollapsed;
+    setIsCollapsed(newCollapsedState);
+    
+    // Émettre un événement pour notifier le Layout
+    window.dispatchEvent(new CustomEvent('sidebarToggle', {
+      detail: { isCollapsed: newCollapsedState }
+    }));
   };
 
   const getMenuItems = () => {
@@ -150,12 +156,14 @@ const Sidebar = () => {
 
     return (
       <div key={item.name} className="my-1">
-        <button
+        <motion.button
           onClick={() => hasSubmenu ? toggleSubmenu(item.name) : navigate(item.path)}
-          className={`w-full flex items-center px-6 py-3 mx-2 rounded-xl transition-all duration-200 group ${
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={`w-full flex items-center px-4 py-3 mx-3 rounded-card transition-all duration-200 group relative ${
             (hasSubmenu && isExpanded) || (!hasSubmenu && isActive)
-              ? 'bg-white bg-opacity-20 text-white'
-              : 'text-gray-300 hover:bg-white hover:bg-opacity-10'
+              ? 'bg-white/20 text-white border-l-3 border-accent-500'
+              : 'text-gray-200 hover:bg-white/10 hover:text-white'
           }`}
         >
           <item.icon className="w-6 h-6 flex-shrink-0" />
@@ -171,7 +179,7 @@ const Sidebar = () => {
               )}
             </>
           )}
-        </button>
+        </motion.button>
 
         {hasSubmenu && isExpanded && !isCollapsed && (
           <motion.div
@@ -202,25 +210,43 @@ const Sidebar = () => {
 
   return (
     <motion.div
-      animate={{ width: isCollapsed ? '5rem' : '16rem' }}
-      className="bg-gradient-to-b from-[#1A237E] to-[#283593] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-30"
+      animate={{ width: isCollapsed ? '72px' : '260px' }}
+      className="h-screen transition-all duration-300 ease-smooth fixed left-0 top-0 z-30 shadow-2xl font-inter"
+      style={{
+        background: 'linear-gradient(180deg, #1E1B4B 0%, #312E81 50%, #1E293B 100%)',
+        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+      }}
     >
-      <div className="flex items-center justify-between h-16 border-b border-white/10">
-        <div className="flex items-center px-4 bg-white/10 h-full w-full">
-          <Link to="/" className="flex items-center">
-            <img
+      <div className="flex items-center justify-between h-20 border-b border-white/10 relative">
+        <div className="flex items-center justify-center px-6 h-full w-full">
+          <Link to="/" className="flex items-center group">
+            <motion.img
               src="/assets/logo.png"
               alt="ChapeChape"
-              className="h-8"
+              className="h-10 transition-all duration-300 group-hover:scale-105"
+              whileHover={{ scale: 1.05, rotate: 2 }}
+              style={{ filter: 'brightness(1.1) contrast(1.1)' }}
             />
+            {!isCollapsed && (
+              <motion.span 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="ml-3 text-white font-semibold text-lg tracking-wide"
+              >
+                ChapeChape
+              </motion.span>
+            )}
           </Link>
         </div>
         <button
           onClick={toggleSidebar}
-          className="absolute -right-4 top-8 bg-white rounded-full p-1 shadow-lg transform transition-transform hover:scale-110"
+          className="absolute -right-3 top-8 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full p-2 shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-xl hover:from-amber-300 hover:to-yellow-400"
+          style={{
+            boxShadow: '0 4px 15px rgba(217, 119, 6, 0.4)'
+          }}
         >
           <ChevronDoubleLeftIcon 
-            className={`w-4 h-4 text-[#1A237E] transition-transform duration-200 ${
+            className={`w-3 h-3 text-slate-800 transition-transform duration-200 ${
               isCollapsed ? 'rotate-180' : ''
             }`}
           />

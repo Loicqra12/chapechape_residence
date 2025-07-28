@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   WifiIcon,
@@ -16,6 +16,7 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { adminService } from '../../services/adminService';
 
 const amenities = [
   {
@@ -345,27 +346,97 @@ const AmenityModal = ({ isOpen, onClose, amenity, onSave }) => {
 const Amenities = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAmenity, setSelectedAmenity] = useState(null);
-  const [amenitiesList, setAmenitiesList] = useState(amenities);
+  const [amenitiesList, setAmenitiesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Charger les amenities depuis l'API
+  const fetchAmenities = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getAllAmenities();
+      
+      if (response.success) {
+        // Transformer les données backend pour correspondre à l'interface
+        const transformedAmenities = response.data.map(amenity => ({
+          id: amenity._id || amenity.id,
+          name: amenity.name,
+          icon: amenity.icon || WifiIcon, // Fallback icon
+          description: amenity.description,
+          features: amenity.features || [],
+          color: amenity.color || 'blue'
+        }));
+        setAmenitiesList(transformedAmenities);
+      } else {
+        // En cas d'erreur API, utiliser les données de fallback
+        setAmenitiesList(amenities);
+        setError('Impossible de charger les amenities depuis le serveur. Utilisation des données locales.');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des amenities:', error);
+      setAmenitiesList(amenities); // Fallback vers les données mockées
+      setError('Erreur lors du chargement des amenities.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Charger les données au démarrage du composant
+  useEffect(() => {
+    fetchAmenities();
+  }, [fetchAmenities]);
 
   const handleEdit = (amenity) => {
     setSelectedAmenity(amenity);
     setIsModalOpen(true);
   };
 
-  const handleDelete = (amenity) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'équipement "${amenity.name}" ?`)) {
-      setAmenitiesList(prev => prev.filter(a => a.id !== amenity.id));
-      toast.success('Équipement supprimé avec succès');
+  const handleDelete = async (amenity) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'équipement "${amenity.name}" ?`)) {
+      return;
+    }
+
+    try {
+      const response = await adminService.deleteAmenity(amenity.id);
+      if (response.success) {
+        setAmenitiesList(prev => prev.filter(a => a.id !== amenity.id));
+        toast.success('Équipement supprimé avec succès');
+      } else {
+        throw new Error(response.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error(error.message || 'Erreur lors de la suppression de l\'équipement');
     }
   };
 
-  const handleSave = (formData) => {
-    if (selectedAmenity) {
-      setAmenitiesList(prev => prev.map(a => a.id === selectedAmenity.id ? formData : a));
-      toast.success('Équipement mis à jour avec succès');
-    } else {
-      setAmenitiesList(prev => [...prev, formData]);
-      toast.success('Équipement créé avec succès');
+  const handleSave = async (formData) => {
+    try {
+      let response;
+      if (selectedAmenity) {
+        // Mise à jour
+        response = await adminService.updateAmenity(selectedAmenity.id, formData);
+        if (response.success) {
+          setAmenitiesList(prev => prev.map(a => a.id === selectedAmenity.id ? { ...formData, id: selectedAmenity.id } : a));
+          toast.success('Équipement mis à jour avec succès');
+        } else {
+          throw new Error(response.error || 'Erreur lors de la mise à jour');
+        }
+      } else {
+        // Création
+        response = await adminService.createAmenity(formData);
+        if (response.success) {
+          const newAmenity = { ...formData, id: response.data._id || response.data.id };
+          setAmenitiesList(prev => [...prev, newAmenity]);
+          toast.success('Équipement créé avec succès');
+        } else {
+          throw new Error(response.error || 'Erreur lors de la création');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error(error.message || 'Erreur lors de la sauvegarde de l\'équipement');
     }
   };
 

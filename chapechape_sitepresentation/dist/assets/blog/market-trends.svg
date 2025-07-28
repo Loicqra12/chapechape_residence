@@ -1,0 +1,64 @@
+<svg width="400" height="250" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d2d2d;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4AF37;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#D4AF37;stop-opacity:0.2" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="400" height="250" fill="url(#bgGradient)"/>
+  
+  <!-- Chart background -->
+  <rect x="50" y="50" width="300" height="150" fill="#333" rx="8"/>
+  
+  <!-- Grid lines -->
+  <g stroke="#555" stroke-width="1" opacity="0.5">
+    <line x1="50" y1="80" x2="350" y2="80"/>
+    <line x1="50" y1="110" x2="350" y2="110"/>
+    <line x1="50" y1="140" x2="350" y2="140"/>
+    <line x1="50" y1="170" x2="350" y2="170"/>
+    
+    <line x1="100" y1="50" x2="100" y2="200"/>
+    <line x1="150" y1="50" x2="150" y2="200"/>
+    <line x1="200" y1="50" x2="200" y2="200"/>
+    <line x1="250" y1="50" x2="250" y2="200"/>
+    <line x1="300" y1="50" x2="300" y2="200"/>
+  </g>
+  
+  <!-- Chart line -->
+  <polyline points="70,160 120,140 170,120 220,100 270,90 320,80" 
+            fill="none" stroke="#D4AF37" stroke-width="3"/>
+  
+  <!-- Chart area -->
+  <polygon points="70,160 120,140 170,120 220,100 270,90 320,80 320,200 70,200" 
+           fill="url(#chartGradient)"/>
+  
+  <!-- Data points -->
+  <circle cx="70" cy="160" r="4" fill="#D4AF37"/>
+  <circle cx="120" cy="140" r="4" fill="#D4AF37"/>
+  <circle cx="170" cy="120" r="4" fill="#D4AF37"/>
+  <circle cx="220" cy="100" r="4" fill="#D4AF37"/>
+  <circle cx="270" cy="90" r="4" fill="#D4AF37"/>
+  <circle cx="320" cy="80" r="4" fill="#D4AF37"/>
+  
+  <!-- Title -->
+  <text x="200" y="30" text-anchor="middle" fill="#D4AF37" font-family="Arial, sans-serif" font-size="16" font-weight="bold">
+    Marché Immobilier 2024
+  </text>
+  
+  <!-- Building icons -->
+  <g fill="#D4AF37" opacity="0.3">
+    <rect x="20" y="180" width="15" height="25" rx="2"/>
+    <rect x="25" y="175" width="15" height="30" rx="2"/>
+    <rect x="30" y="170" width="15" height="35" rx="2"/>
+    
+    <rect x="355" y="185" width="15" height="20" rx="2"/>
+    <rect x="360" y="180" width="15" height="25" rx="2"/>
+    <rect x="365" y="175" width="15" height="30" rx="2"/>
+  </g>
+</svg>

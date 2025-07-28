@@ -42,6 +42,7 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { adminService } from '../../services/adminService';
 
 const PartnersPage = () => {
   const [partners, setPartners] = useState([]);
@@ -58,30 +59,40 @@ const PartnersPage = () => {
 
   const loadPartners = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // TODO: Remplacer par l'appel API réel
-      const mockPartners = [
-        {
-          id: 1,
-          name: 'Immobilier Luxe SARL',
-          contactName: 'Marie Martin',
-          email: 'contact@immoluxe.fr',
-          phone: '+33 1 23 45 67 89',
-          status: 'active',
-          verified: true,
-          createdAt: '2025-01-10T09:00:00',
-          lastActive: '2025-03-06T14:30:00',
-          propertiesCount: 12,
-          rating: 4.5,
-          type: 'agency',
-          address: '15 Avenue des Champs-Élysées, 75008 Paris',
-          avatar: null,
-        },
-        // Ajouter d'autres partenaires mockés...
-      ];
-      setPartners(mockPartners);
+      const response = await adminService.getAllPartners();
+      if (response.success) {
+        // Transformer les données backend pour correspondre à l'interface
+        const transformedPartners = response.data.map(partner => ({
+          id: partner._id || partner.id,
+          name: partner.companyName || partner.businessName || partner.name || `${partner.firstName || ''} ${partner.lastName || ''}`.trim() || 'Partenaire',
+          contactName: `${partner.firstName || ''} ${partner.lastName || ''}`.trim() || partner.contactName || 'Contact',
+          email: partner.email,
+          phone: partner.phoneNumber || partner.phone,
+          status: partner.status || 'active',
+          verified: partner.verificationStatus === 'verified' || partner.verified || false,
+          createdAt: partner.createdAt,
+          lastActive: partner.lastLogin || partner.lastActive,
+          propertiesCount: partner.residencesCount || partner.propertiesCount || 0,
+          rating: partner.rating || 0,
+          type: partner.partnerType || partner.type || 'individual',
+          address: partner.address || partner.businessAddress,
+          avatar: partner.profileImage || partner.avatar,
+          // Champs additionnels pour les partenaires
+          businessType: partner.businessType,
+          documents: partner.documents || [],
+          verificationStatus: partner.verificationStatus || 'pending'
+        }));
+        setPartners(transformedPartners);
+      } else {
+        throw new Error(response.error || 'Erreur lors du chargement des partenaires');
+      }
     } catch (error) {
-      setError('Erreur lors du chargement des partenaires');
+      console.error('Erreur lors du chargement des partenaires:', error);
+      setError(error.message || 'Erreur lors du chargement des partenaires');
+      // En cas d'erreur, utiliser des données de fallback
+      setPartners([]);
     }
     setLoading(false);
   };

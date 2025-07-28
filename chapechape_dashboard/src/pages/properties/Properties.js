@@ -1,22 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
-  MapPinIcon,
-  HomeIcon,
-  BanknotesIcon,
-  XMarkIcon,
-  ArrowPathIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  MapPinIcon,
+  BanknotesIcon,
+  HomeIcon,
   BuildingOfficeIcon,
   HomeModernIcon,
-  BeakerIcon
+  EyeIcon,
+  PencilIcon,
+  TrashIcon,
+  BeakerIcon,
+  CheckIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { adminService } from '../../services/adminService';
 
-const PropertyCard = ({ property }) => {
+const PropertyCard = ({ property, onValidate, onReject, onDelete, onVerify }) => {
   const statusColors = {
     available: 'bg-green-100 text-green-800',
     unavailable: 'bg-red-100 text-red-800',
@@ -87,16 +93,71 @@ const PropertyCard = ({ property }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <BanknotesIcon className="w-5 h-5 text-primary mr-1" />
             <span className="text-xl font-bold text-primary">
               {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(property.price)}
             </span>
           </div>
-          <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200">
+          <div className="flex items-center space-x-2">
+            {property.featured && (
+              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                ⭐ Mise en avant
+              </span>
+            )}
+            {property.verified && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                ✓ Vérifiée
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between space-x-2">
+          <button className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm">
             Voir détails
           </button>
+          
+          <div className="flex space-x-1">
+            {!property.verified && (
+              <button 
+                onClick={() => onVerify(property.id)}
+                className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors duration-200"
+                title="Vérifier la propriété"
+              >
+                <CheckIcon className="w-4 h-4" />
+              </button>
+            )}
+            
+            {property.status === 'pending' && (
+              <>
+                <button 
+                  onClick={() => onValidate(property.id)}
+                  className="p-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors duration-200"
+                  title="Valider la propriété"
+                >
+                  <CheckCircleIcon className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => onReject(property.id)}
+                  className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors duration-200"
+                  title="Rejeter la propriété"
+                >
+                  <XCircleIcon className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            
+            <button 
+              onClick={() => onDelete(property.id)}
+              className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors duration-200"
+              title="Supprimer la propriété"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -142,39 +203,125 @@ const Properties = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams({
+      const queryParams = {
         page: pagination.page,
         limit: pagination.limit,
         ...filters,
         search: searchTerm
-      });
+      };
 
-      const response = await fetch(`/api/properties?${queryParams}`);
-      const data = await response.json();
+      const response = await adminService.getAllProperties(queryParams);
 
-      if (data.success) {
-        setProperties(data.data);
+      if (response.success) {
+        // Transformer les données backend pour correspondre à l'interface
+        const transformedProperties = response.data.map(property => ({
+          id: property._id || property.id,
+          title: property.title,
+          description: property.description,
+          price: property.price,
+          type: property.type || 'apartment',
+          city: property.city,
+          address: property.address,
+          images: property.images || [],
+          status: property.status || 'available',
+          bedrooms: property.bedrooms || 0,
+          bathrooms: property.bathrooms || 0,
+          area: property.area || 0,
+          amenities: property.amenities || [],
+          partner: property.partner,
+          createdAt: property.createdAt,
+          // Champs additionnels pour l'interface
+          stars: property.stars || 0,
+          featured: property.featured || false,
+          verified: property.verified || false
+        }));
+        
+        setProperties(transformedProperties);
         setPagination(prev => ({
           ...prev,
-          total: data.pagination.total,
-          pages: data.pagination.pages
+          total: response.pagination?.total || transformedProperties.length,
+          pages: response.pagination?.pages || Math.ceil(transformedProperties.length / pagination.limit)
         }));
       } else {
-        throw new Error(data.message || 'Erreur lors du chargement des propriétés');
+        throw new Error(response.error || 'Erreur lors du chargement des propriétés');
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error('Erreur lors du chargement des propriétés:', error);
+      toast.error(error.message || 'Erreur lors du chargement des propriétés');
+      // En cas d'erreur, utiliser des données de fallback
+      setProperties([]);
     } finally {
       setLoading(false);
+    }
+  }, [pagination.page, pagination.limit, filters, searchTerm]);
+
+  // Handlers CRUD pour les propriétés
+  const handleValidateProperty = async (propertyId) => {
+    try {
+      const response = await adminService.validateProperty(propertyId);
+      if (response.success) {
+        toast.success('Propriété validée avec succès');
+        fetchProperties(); // Recharger la liste
+      } else {
+        throw new Error(response.error || 'Erreur lors de la validation');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors de la validation');
+    }
+  };
+
+  const handleRejectProperty = async (propertyId, reason = '') => {
+    try {
+      const response = await adminService.rejectProperty(propertyId, reason);
+      if (response.success) {
+        toast.success('Propriété rejetée avec succès');
+        fetchProperties(); // Recharger la liste
+      } else {
+        throw new Error(response.error || 'Erreur lors du rejet');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors du rejet');
+    }
+  };
+
+  const handleDeleteProperty = async (propertyId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette propriété ?')) {
+      return;
+    }
+    
+    try {
+      const response = await adminService.deleteProperty(propertyId);
+      if (response.success) {
+        toast.success('Propriété supprimée avec succès');
+        fetchProperties(); // Recharger la liste
+      } else {
+        throw new Error(response.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors de la suppression');
+    }
+  };
+
+  const handleVerifyProperty = async (propertyId) => {
+    try {
+      const response = await adminService.verifyProperty(propertyId);
+      if (response.success) {
+        toast.success('Propriété vérifiée avec succès');
+        fetchProperties(); // Recharger la liste
+      } else {
+        throw new Error(response.error || 'Erreur lors de la vérification');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors de la vérification');
     }
   };
 
   useEffect(() => {
     fetchProperties();
-  }, [pagination.page, filters, searchTerm]);
+  }, [fetchProperties]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -366,7 +513,14 @@ const Properties = () => {
         <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
             {properties.map(property => (
-              <PropertyCard key={property._id} property={property} />
+              <PropertyCard 
+                key={property._id || property.id} 
+                property={property}
+                onValidate={handleValidateProperty}
+                onReject={handleRejectProperty}
+                onDelete={handleDeleteProperty}
+                onVerify={handleVerifyProperty}
+              />
             ))}
           </AnimatePresence>
         </motion.div>
