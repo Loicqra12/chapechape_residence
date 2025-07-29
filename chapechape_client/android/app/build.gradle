@@ -63,8 +63,8 @@ android {
 
     defaultConfig {
         applicationId "com.chapechape.client"
-        minSdkVersion project.hasProperty('minSdkVersion') ? project.minSdkVersion : 23
-        targetSdkVersion project.hasProperty('targetSdkVersion') ? project.targetSdkVersion : 34
+        minSdk = 23 // Version minimale requise pour Firebase Auth
+        targetSdk = 34 // Cibler une version récente mais stable d'Android
         versionCode 1
         versionName "1.0.0"
         
