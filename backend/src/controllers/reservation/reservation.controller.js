@@ -30,17 +30,51 @@ exports.createReservation = asyncHandler(async (req, res) => {
 });
 
 /**
- * Obtenir toutes les réservations d'un utilisateur
+ * Obtenir toutes les réservations d'un utilisateur (filtrées selon le rôle)
  * @route GET /api/reservations/my-reservations
  */
 exports.getUserReservations = asyncHandler(async (req, res) => {
-    const reservations = await Reservation.find({ user: req.user._id })
+    let filter = {};
+    
+    // Filtrage dynamique selon le rôle utilisateur
+    switch (req.user.role) {
+        case 'client':
+            // Client voit ses propres réservations
+            filter = { user: req.user._id };
+            console.log('INFO: Filtrage CLIENT - user:', req.user._id);
+            break;
+            
+        case 'partner':
+            // Partner voit les réservations de ses résidences
+            filter = { partner: req.user._id };
+            console.log('INFO: Filtrage PARTNER - partner:', req.user._id);
+            break;
+            
+        case 'admin':
+        case 'superadmin':
+        case 'owner':
+            // Admins voient toutes les réservations
+            filter = {};
+            console.log('INFO: Filtrage ADMIN/SUPERADMIN/OWNER - aucune restriction');
+            break;
+            
+        default:
+            // Par défaut, comportement client (sécurité)
+            filter = { user: req.user._id };
+            console.log('WARN: Rôle non reconnu, filtrage par défaut CLIENT');
+    }
+
+    const reservations = await Reservation.find(filter)
         .populate({
             path: 'residence',
             select: 'title images location address city',
             populate: { path: 'cancellationPolicy' }
         })
+        .populate('user', 'firstName lastName phoneNumber email')
+        .populate('cancellationPolicy')
         .sort('-createdAt');
+
+    console.log(`INFO: ${reservations.length} réservations trouvées pour le rôle ${req.user.role}`);
 
     res.status(200).json({
         success: true,
