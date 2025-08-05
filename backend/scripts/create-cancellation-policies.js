@@ -9,7 +9,7 @@ async function createCancellationPolicies() {
     const isProduction = environment === 'production';
     
     console.log(`🔌 Connexion à MongoDB (${environment})...`);
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
     console.log('✅ Connecté à MongoDB');
 
     // Vérifier si des politiques existent déjà
