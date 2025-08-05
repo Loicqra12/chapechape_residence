@@ -39,6 +39,22 @@ class BookingService {
         finalTotal: residence.price * moment(bookingData.checkOut).diff(moment(bookingData.checkIn), 'days')
       };
 
+      // Récupérer la politique d'annulation par défaut
+      let cancellationPolicyId;
+      if (residence.cancellationPolicy) {
+        cancellationPolicyId = residence.cancellationPolicy;
+      } else {
+        // Récupérer la vraie politique par défaut depuis la base
+        const defaultPolicy = await CancellationPolicy.findOne({ isDefault: true });
+        
+        if (!defaultPolicy) {
+          throw new ApiError('Aucune politique d\'annulation par défaut trouvée. Veuillez configurer les politiques d\'annulation.', 500);
+        }
+        
+        cancellationPolicyId = defaultPolicy._id;
+        console.log('INFO: Utilisation de la politique d\'annulation par défaut existante:', defaultPolicy.name, 'pour le booking');
+      }
+
       // Créer la réservation
       const booking = await Booking.create({
         residence: bookingData.residenceId,
@@ -48,6 +64,7 @@ class BookingService {
         guests: bookingData.guests,
         totalPrice: priceDetails.finalTotal,
         specialRequests: bookingData.specialRequests,
+        cancellationPolicy: cancellationPolicyId,
         status: 'pending'
       });
 
@@ -164,8 +181,8 @@ class BookingService {
       }
       
       if (!cancellationPolicy) {
-        // Utiliser la politique "Flexible" par défaut
-        cancellationPolicy = await CancellationPolicy.findOne({ name: 'Flexible' });
+        // Utiliser la vraie politique par défaut
+        cancellationPolicy = await CancellationPolicy.findOne({ isDefault: true });
       }
       
       // Calculer le temps restant avant le check-in
@@ -263,8 +280,8 @@ class BookingService {
         }
         
         if (!cancellationPolicy) {
-          // Utiliser la politique "Flexible" par défaut
-          cancellationPolicy = await CancellationPolicy.findOne({ name: 'Flexible' });
+          // Utiliser la vraie politique par défaut
+          cancellationPolicy = await CancellationPolicy.findOne({ isDefault: true });
         }
         
         // Calculer le temps restant avant le check-in

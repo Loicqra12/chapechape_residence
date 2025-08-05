@@ -25,24 +25,18 @@ const createReservation = async (reservationBody) => {
       throw new apiError('Résidence non trouvée', 404);
     }
 
-    // Si la résidence n'a pas de politique d'annulation, créer une politique par défaut
+    // Si la résidence n'a pas de politique d'annulation, utiliser la politique par défaut existante
     let cancellationPolicyId;
     if (!residence.cancellationPolicy) {
-      // Utiliser une politique d'annulation par défaut (stricte)
-      const defaultPolicy = {
-        _id: new mongoose.Types.ObjectId(),
-        name: 'Politique par défaut',
-        description: 'Politique d\'annulation par défaut (stricte)',
-        refundPercentages: [
-          { hoursBeforeCheckIn: 168, percentage: 50 }, // 7 jours avant: 50% de remboursement
-          { hoursBeforeCheckIn: 72, percentage: 25 },  // 3 jours avant: 25% de remboursement
-          { hoursBeforeCheckIn: 24, percentage: 0 }    // 1 jour avant: aucun remboursement
-        ],
-        modificationFeePercentage: 10
-      };
+      // Récupérer la vraie politique par défaut depuis la base
+      const defaultPolicy = await CancellationPolicy.findOne({ isDefault: true });
+      
+      if (!defaultPolicy) {
+        throw new apiError('Aucune politique d\'annulation par défaut trouvée. Veuillez configurer les politiques d\'annulation.', 500);
+      }
       
       cancellationPolicyId = defaultPolicy._id;
-      console.log('INFO: Utilisation d\'une politique d\'annulation par défaut pour la résidence', residence._id);
+      console.log('INFO: Utilisation de la politique d\'annulation par défaut existante:', defaultPolicy.name, 'pour la résidence', residence._id);
     } else {
       cancellationPolicyId = residence.cancellationPolicy._id;
     }
