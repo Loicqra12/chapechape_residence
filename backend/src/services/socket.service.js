@@ -154,6 +154,153 @@ class SocketService {
     static isUserOnline(userId) {
         return userSockets.has(userId) && userSockets.get(userId).size > 0;
     }
+
+    // ✅ PHASE 0 BIS : Événements Reservation manquants critiques
+
+    /**
+     * Émet un événement de changement de statut de réservation
+     * @param {Object} reservation - Réservation avec user et partner peuplés
+     * @param {String} oldStatus - Ancien statut
+     * @param {String} newStatus - Nouveau statut
+     */
+    static emitReservationStatusChange(reservation, oldStatus, newStatus) {
+        try {
+            if (!io || !reservation) return;
+
+            const eventData = {
+                reservationId: reservation._id,
+                oldStatus,
+                newStatus,
+                timestamp: new Date().toISOString(),
+                userId: reservation.user?._id,
+                partnerId: reservation.partner?._id || reservation.partner,
+                residenceId: reservation.residence?._id || reservation.residence,
+                residenceTitle: reservation.residence?.title
+            };
+
+            // Notifier le client (user)
+            if (reservation.user?._id) {
+                io.to(`user_${reservation.user._id}`).emit('reservation_status_changed', eventData);
+            }
+
+            // Notifier le partenaire
+            if (reservation.partner) {
+                const partnerId = reservation.partner._id || reservation.partner;
+                io.to(`user_${partnerId}`).emit('partner_reservation_status_changed', eventData);
+            }
+
+            // Notifier dans la salle de la résidence
+            if (reservation.residence) {
+                const residenceId = reservation.residence._id || reservation.residence;
+                io.to(`residence_${residenceId}`).emit('residence_reservation_update', eventData);
+            }
+
+            logger.info(`Événement WebSocket émis pour réservation ${reservation._id}: ${oldStatus} → ${newStatus}`);
+        } catch (error) {
+            logger.error('Erreur lors de l\'émission de l\'événement changement statut réservation:', error);
+        }
+    }
+
+    /**
+     * Émet un événement de nouvelle réservation créée
+     * @param {Object} reservation - Réservation avec user, partner et residence peuplés
+     */
+    static emitNewReservation(reservation) {
+        try {
+            if (!io || !reservation) return;
+
+            const eventData = {
+                reservationId: reservation._id,
+                status: reservation.status,
+                paymentStatus: reservation.paymentStatus,
+                timestamp: new Date().toISOString(),
+                userId: reservation.user?._id,
+                partnerId: reservation.partner?._id || reservation.partner,
+                residenceId: reservation.residence?._id || reservation.residence,
+                residenceTitle: reservation.residence?.title,
+                checkIn: reservation.checkIn,
+                checkOut: reservation.checkOut,
+                totalPrice: reservation.totalPrice
+            };
+
+            // Notifier le partenaire (nouvelle réservation reçue)
+            if (reservation.partner) {
+                const partnerId = reservation.partner._id || reservation.partner;
+                io.to(`user_${partnerId}`).emit('new_reservation_received', eventData);
+            }
+
+            // Notifier dans la salle de la résidence pour admins/stats
+            if (reservation.residence) {
+                const residenceId = reservation.residence._id || reservation.residence;
+                io.to(`residence_${residenceId}`).emit('residence_new_reservation', eventData);
+            }
+
+            logger.info(`Événement WebSocket nouvelle réservation émis pour ${reservation._id}`);
+        } catch (error) {
+            logger.error('Erreur lors de l\'émission de l\'événement nouvelle réservation:', error);
+        }
+    }
+
+    /**
+     * Émet un événement de notification de délai de paiement
+     * @param {Object} reservation - Réservation avec user peuplé
+     * @param {Date} deadline - Date limite de paiement
+     */
+    static emitPaymentDeadlineNotification(reservation, deadline) {
+        try {
+            if (!io || !reservation || !reservation.user) return;
+
+            const timeLeft = Math.max(0, Math.ceil((deadline - new Date()) / (1000 * 60))); // Minutes
+
+            const eventData = {
+                reservationId: reservation._id,
+                deadline: deadline.toISOString(),
+                timeLeftMinutes: timeLeft,
+                amount: reservation.totalPrice,
+                residenceTitle: reservation.residence?.title,
+                timestamp: new Date().toISOString()
+            };
+
+            // Notifier le client uniquement
+            io.to(`user_${reservation.user._id}`).emit('payment_deadline_warning', eventData);
+
+            logger.info(`Notification délai paiement WebSocket envoyée pour réservation ${reservation._id} (${timeLeft} min restantes)`);
+        } catch (error) {
+            logger.error('Erreur lors de l\'émission de la notification délai paiement:', error);
+        }
+    }
+
+    /**
+     * Émet un événement d'expiration de réservation
+     * @param {Object} reservation - Réservation avec user et partner peuplés
+     */
+    static emitReservationExpired(reservation) {
+        try {
+            if (!io || !reservation) return;
+
+            const eventData = {
+                reservationId: reservation._id,
+                expiredAt: new Date().toISOString(),
+                residenceTitle: reservation.residence?.title,
+                amount: reservation.totalPrice
+            };
+
+            // Notifier le client
+            if (reservation.user?._id) {
+                io.to(`user_${reservation.user._id}`).emit('reservation_expired', eventData);
+            }
+
+            // Notifier le partenaire
+            if (reservation.partner) {
+                const partnerId = reservation.partner._id || reservation.partner;
+                io.to(`user_${partnerId}`).emit('partner_reservation_expired', eventData);
+            }
+
+            logger.info(`Événement expiration réservation WebSocket émis pour ${reservation._id}`);
+        } catch (error) {
+            logger.error('Erreur lors de l\'émission de l\'événement expiration réservation:', error);
+        }
+    }
 }
 
 module.exports = SocketService;

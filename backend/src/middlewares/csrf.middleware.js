@@ -27,11 +27,14 @@ const csrfProtection = csrf({
  * À utiliser sur les routes sensibles nécessitant une protection CSRF
  */
 const csrfMiddleware = (req, res, next) => {
-  // Bypass pour les applications mobiles (détection par header ou route)
+  // Bypass pour les applications mobiles (détection élargie)
   if (
     req.path.startsWith("/api/mobile/") ||
     req.headers["x-mobile-app"] === "true" ||
     req.headers["user-agent"]?.includes("ChapeChapeApp") ||
+    req.headers["user-agent"]?.includes("Dart/") ||  // Flutter apps
+    req.headers["user-agent"]?.includes("Flutter") ||
+    req.headers["content-type"]?.includes("application/json") ||  // API calls génériques
     (req.path.startsWith("/api/auth/") && req.headers["content-type"]?.includes("application/json"))
   ) {
     return next();

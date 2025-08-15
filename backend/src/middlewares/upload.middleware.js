@@ -52,20 +52,84 @@ const documentStorage = multer.diskStorage({
     }
 });
 
-// Filtre pour les types de fichiers avec validation renforcée
-const fileFilter = (req, file, cb) => {
-    // Liste des extensions d'images autorisées
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-    // Vérification de l'extension
-    const ext = path.extname(file.originalname).toLowerCase();
-    
-    if (!file.mimetype.startsWith('image') || !allowedExtensions.includes(ext)) {
-        logger.warn(`Type de fichier non autorisé: ${file.originalname} (${file.mimetype})`);
-        return cb(new ApiError('Seules les images aux formats JPG, JPEG, PNG, GIF et WEBP sont autorisées!', 400), false);
-    }
+// 🔒 SÉCURITÉ CRITIQUE : Magic numbers pour validation de signatures de fichiers
+const MAGIC_NUMBERS = {
+    // Images JPEG
+    'image/jpeg': [
+        [0xFF, 0xD8, 0xFF, 0xE0], // JPEG JFIF
+        [0xFF, 0xD8, 0xFF, 0xE1], // JPEG Exif
+        [0xFF, 0xD8, 0xFF, 0xE2], // JPEG
+        [0xFF, 0xD8, 0xFF, 0xE3], // JPEG
+        [0xFF, 0xD8, 0xFF, 0xE8], // JPEG SPIFF
+        [0xFF, 0xD8, 0xFF, 0xDB]  // JPEG
+    ],
+    // Images PNG
+    'image/png': [
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] // PNG signature
+    ],
+    // Images GIF
+    'image/gif': [
+        [0x47, 0x49, 0x46, 0x38, 0x37, 0x61], // GIF87a
+        [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]  // GIF89a
+    ],
+    // Images WebP
+    'image/webp': [
+        [0x52, 0x49, 0x46, 0x46] // RIFF (les 4 premiers bytes, suivi de WEBP)
+    ]
+};
 
-    // Vérification supplémentaire du magic number (à implémenter plus tard)
-    // TODO: Vérifier les premiers octets du fichier pour confirmer qu'il s'agit bien d'une image
+/**
+ * Vérifie la signature magic number d'un fichier
+ * @param {Buffer} buffer - Buffer du fichier
+ * @param {string} mimeType - Type MIME déclaré
+ * @returns {boolean} - True si la signature correspond au type MIME
+ */
+function verifyMagicNumber(buffer, mimeType) {
+    const signatures = MAGIC_NUMBERS[mimeType];
+    if (!signatures) return false;
+    
+    return signatures.some(signature => {
+        if (buffer.length < signature.length) return false;
+        
+        // Vérification spéciale pour WebP
+        if (mimeType === 'image/webp') {
+            return buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+                   buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+        }
+        
+        // Vérification standard
+        return signature.every((byte, index) => buffer[index] === byte);
+    });
+}
+
+// 🔒 Filtre pour les types de fichiers avec validation ULTRA-RENFORCÉE
+const fileFilter = (req, file, cb) => {
+    // Liste des extensions et types MIME autorisés (double vérification)
+    const allowedTypes = {
+        'image/jpeg': ['.jpg', '.jpeg'],
+        'image/png': ['.png'],
+        'image/gif': ['.gif'],
+        'image/webp': ['.webp']
+    };
+    
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mimeType = file.mimetype;
+    
+    // Vérification stricte : type MIME ET extension doivent correspondre
+    if (!allowedTypes[mimeType] || !allowedTypes[mimeType].includes(ext)) {
+        logger.warn(`🚨 SÉCURITÉ : Type de fichier non autorisé: ${file.originalname} (${mimeType})`);
+        return cb(new ApiError('🔒 SÉCURITÉ : Seules les images aux formats JPG, JPEG, PNG, GIF et WEBP sont autorisées!', 400), false);
+    }
+    
+    // Vérification du nom de fichier pour éviter les injections
+    const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    if (sanitizedFilename !== file.originalname) {
+        logger.warn(`🔒 Nom de fichier potentiellement dangereux sanitisé: ${file.originalname} → ${sanitizedFilename}`);
+        file.originalname = sanitizedFilename;
+    }
+    
+    // Stocker les informations pour la vérification magic number ultérieure
+    file.expectedMimeType = mimeType;
     
     cb(null, true);
 };
@@ -135,57 +199,103 @@ const standardUploads = {
     document: documentUpload
 };
 
-// Version sécurisée avec scan antivirus
+/**
+ * 🔒 Middleware de post-vérification des magic numbers
+ * Vérifie la signature réelle du fichier après upload pour détecter les tentatives de spoofing
+ */
+const verifyMagicNumbers = (req, res, next) => {
+    try {
+        const files = req.files || (req.file ? [req.file] : []);
+        
+        for (const file of files) {
+            if (file && file.path && file.expectedMimeType) {
+                // Lire les premiers bytes du fichier
+                const buffer = fs.readFileSync(file.path);
+                const first12Bytes = buffer.slice(0, 12);
+                
+                // Vérifier la signature magic number
+                if (!verifyMagicNumber(first12Bytes, file.expectedMimeType)) {
+                    // Supprimer le fichier malveillant
+                    fs.unlinkSync(file.path);
+                    logger.error(`🚨 SÉCURITÉ CRITIQUE : Tentative d'upload de fichier avec signature falsifiée détectée: ${file.originalname} (MIME: ${file.expectedMimeType})`);
+                    
+                    return res.status(400).json({
+                        success: false,
+                        message: '🔒 SÉCURITÉ : Fichier rejeté - signature non conforme au type déclaré',
+                        error: 'INVALID_FILE_SIGNATURE'
+                    });
+                }
+                
+                logger.info(`✅ Signature magic number validée pour: ${file.originalname} (${file.expectedMimeType})`);
+            }
+        }
+        
+        next();
+    } catch (error) {
+        logger.error('🚨 Erreur lors de la vérification des magic numbers:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la validation du fichier'
+        });
+    }
+};
+
+// Version sécurisée avec scan antivirus ET vérification magic numbers
 const secureUploads = {
     /**
-     * Upload sécurisé pour les images de résidences avec scan antivirus
+     * Upload sécurisé pour les images de résidences avec scan antivirus + magic numbers
      * @param {string} fieldname - Nom du champ de formulaire
      * @returns {Array<Function>} Middlewares pour upload sécurisé
      */
     residence: (fieldname) => [
         residenceUpload.single(fieldname),
+        verifyMagicNumbers,
         virusScan.scanSingleFile
     ],
 
     /**
-     * Upload sécurisé pour les images de résidences (multiple) avec scan antivirus
+     * Upload sécurisé pour les images de résidences (multiple) avec scan antivirus + magic numbers
      * @param {string} fieldname - Nom du champ de formulaire
      * @param {number} maxCount - Nombre maximum de fichiers à uploader
      * @returns {Array<Function>} Middlewares pour upload sécurisé
      */
     residenceMultiple: (fieldname, maxCount = 10) => [
         residenceUpload.array(fieldname, maxCount),
+        verifyMagicNumbers,
         virusScan.scanMultipleFiles
     ],
 
     /**
-     * Upload sécurisé pour les images de profil avec scan antivirus
+     * Upload sécurisé pour les images de profil avec scan antivirus + magic numbers
      * @param {string} fieldname - Nom du champ de formulaire
      * @returns {Array<Function>} Middlewares pour upload sécurisé
      */
     profile: (fieldname) => [
         profileUpload.single(fieldname),
+        verifyMagicNumbers,
         virusScan.scanSingleFile
     ],
 
     /**
-     * Upload sécurisé pour les documents avec scan antivirus
+     * Upload sécurisé pour les documents avec scan antivirus + magic numbers
      * @param {string} fieldname - Nom du champ de formulaire
      * @returns {Array<Function>} Middlewares pour upload sécurisé
      */
     document: (fieldname) => [
         documentUpload.single(fieldname),
+        verifyMagicNumbers,
         virusScan.scanSingleFile
     ],
 
     /**
-     * Upload sécurisé pour plusieurs documents avec scan antivirus
+     * Upload sécurisé pour plusieurs documents avec scan antivirus + magic numbers
      * @param {string} fieldname - Nom du champ de formulaire
      * @param {number} maxCount - Nombre maximum de fichiers à uploader
      * @returns {Array<Function>} Middlewares pour upload sécurisé
      */
     documentMultiple: (fieldname, maxCount = 5) => [
         documentUpload.array(fieldname, maxCount),
+        verifyMagicNumbers,
         virusScan.scanMultipleFiles
     ]
 };

@@ -49,6 +49,8 @@ const deviceRoutes = require("./routes/device.routes");
 const smsRoutes = require("./routes/sms.routes");
 // Import des routes website
 const websiteRoutes = require("./routes/website.routes");
+// Import des routes pricing (tarification dynamique)
+const pricingRoutes = require("./routes/pricing.routes");
 
 const app = express();
 
@@ -79,7 +81,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Route de test pour l'email - uniquement en environnement non-production
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_ROUTES !== 'false') {
   app.post("/api/public-test/email", async (req, res) => {
   try {
     const emailService = require('./services/email.service');
@@ -132,8 +134,8 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Route de test pour OneSignal - uniquement en environnement non-production
-if (process.env.NODE_ENV !== 'production') {
+// 🔒 Route de test pour OneSignal - STRICTEMENT développement uniquement
+if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !== 'false') {
   app.post("/api/public-test/notification", async (req, res) => {
   try {
     const oneSignalService = require('./services/onesignal.service');
@@ -218,9 +220,12 @@ app.use(
     origin: [
       "http://localhost:3000", // Frontend client
       "http://localhost:3001", // Frontend partenaire
+      "http://localhost:3002", // Dashboard local
+      "http://localhost:3003", // Dashboard local alternatif
       "https://admin.chapechaperesidence.com", // Dashboard admin
       process.env.CLIENT_URL,
       process.env.PARTNER_URL,
+      process.env.DASHBOARD_URL, // Dashboard URL depuis env
     ],
     credentials: true, // Pour permettre les cookies avec CORS
     exposedHeaders: ["X-CSRF-Token", "Authorization"], // Exposer les en-têtes nécessaires
@@ -290,7 +295,7 @@ app.use("/api/auth/register", generateCsrfToken);
 
 // Protection CSRF pour les routes mutatives sensibles
 app.use("/api/bookings", csrfMiddleware);
-app.use("/api/payments", csrfMiddleware);
+// app.use("/api/payments", csrfMiddleware); // ✅ DÉSACTIVÉ pour apps mobiles Flutter
 app.use("/api/users", csrfMiddleware);
 
 // Temporairement désactivé pour les résidences pour permettre la création
@@ -322,14 +327,18 @@ app.use("/api/promotions", promotionRoutes); // Ajout des routes pour la gestion
 app.use("/api/maps", mapsRoutes); // Ajout des routes pour la géolocalisation et les cartes
 app.use("/api/cancellation-policies", cancellationPolicyRoutes); // Routes pour les politiques d'annulation
 app.use("/api/website", websiteRoutes); // Routes pour le site vitrine (contact, newsletter)
+app.use("/api/pricing", pricingRoutes); // Routes pour la tarification dynamique CinetPay - ✅ Réactivé après correction bug d'import auth
 // app.use("/api/blog", cache(1800), blogRoutes); // Routes pour le blog dynamique (temporairement désactivé pour diagnostic)
 
-// Routes de test (uniquement en environnement de développement)
-if (process.env.NODE_ENV === 'development') {
-  // Ajouter les routes de test AVANT le middleware d'authentification pour permettre un accès sans authentification
-  console.log('Routes de test activées en environnement de développement');
-  // S'assurer que ces routes sont accessibles sans authentification
+// 🔒 SÉCURITÉ CRITIQUE : Routes de test (STRICTEMENT désactivées en production)
+// Double vérification pour s'assurer qu'aucune route de test n'est exposée en production
+if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !== 'false') {
+  console.log('⚠️ Routes de test activées en environnement de développement UNIQUEMENT');
+  console.log('🚨 CES ROUTES SONT AUTOMATIQUEMENT DÉSACTIVÉES EN PRODUCTION');
   app.use("/api/test", testRoutes);
+} else if (process.env.NODE_ENV === 'production') {
+  // Log explicite en production pour confirmer la désactivation
+  console.log('✅ SÉCURITÉ : Routes de test DÉSACTIVÉES en production');
 }
 
 // Route de test
@@ -359,11 +368,14 @@ app.get("/api/csrf-token", (req, res) => {
   });
 });
 
-// Route de test Sentry (selon documentation officielle)
-if (process.env.NODE_ENV === 'development') {
+// 🔒 Route de test Sentry (STRICTEMENT développement uniquement)
+if (process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_ROUTES !== 'false') {
   app.get("/debug-sentry", function mainHandler(req, res) {
+    console.log('⚠️ Route de debug Sentry appelée - Développement uniquement');
     throw new Error("Test Sentry - Erreur intentionnelle pour vérifier la capture!");
   });
+} else if (process.env.NODE_ENV === 'production') {
+  console.log('✅ SÉCURITÉ : Route debug Sentry DÉSACTIVÉE en production');
 }
 
 // Middleware de sécurité pour les fichiers

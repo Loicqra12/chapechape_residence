@@ -15,11 +15,25 @@ exports.BOOKING_STATUS = {
     REFUNDED: 'refunded'
 };
 
-// Statuts de paiement
+// Statuts de paiement (harmonisés)
 exports.PAYMENT_STATUS = {
     PENDING: 'pending',
-    COMPLETED: 'completed',
+    PAID: 'paid',        // ✅ HARMONISÉ - était 'completed'
     FAILED: 'failed',
+    CANCELLED: 'cancelled',
+    REFUNDED: 'refunded'
+};
+
+// Statuts de réservation (complets)
+exports.RESERVATION_STATUS = {
+    PENDING: 'pending',
+    AWAITING_APPROVAL: 'awaiting_approval',
+    PAYMENT_PENDING: 'payment_pending',
+    CONFIRMED: 'confirmed',
+    IN_STAY: 'in_stay',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+    EXPIRED: 'expired',
     REFUNDED: 'refunded'
 };
 

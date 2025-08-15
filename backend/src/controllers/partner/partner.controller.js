@@ -1,7 +1,7 @@
 const Partner = require('../../models/partner.model');
 const User = require('../../models/user.model');
 const Residence = require('../../models/residence.model');
-const Booking = require('../../models/booking.model');
+const Reservation = require('../../models/reservation.model');
 const Payment = require('../../models/payment.model');
 const statsService = require('../../services/stats.service');
 const dashboardService = require('../../services/dashboard.service');
@@ -195,18 +195,15 @@ exports.getPartnerResidences = asyncHandler(async (req, res) => {
     });
 });
 
-// Obtenir les réservations des résidences du partenaire
+// Obtenir les réservations du partenaire (MIGRÉ vers Reservation)
 exports.getPartnerBookings = asyncHandler(async (req, res) => {
-    const residences = await Residence.find({ partner: req.user.id });
-    const residenceIds = residences.map(residence => residence._id);
-
-    const bookings = await Booking.find({
-        residence: { $in: residenceIds }
-    }).populate('residence user');
+    const reservations = await Reservation.find({
+        partner: req.user.id
+    }).populate('residence user cancellationPolicy');
 
     res.status(200).json({
         success: true,
-        data: bookings
+        data: reservations
     });
 });
 

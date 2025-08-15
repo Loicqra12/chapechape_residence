@@ -47,7 +47,7 @@
  *           description: Prix total de la réservation
  *         status:
  *           type: string
- *           enum: [pending, confirmed, cancelled, completed, refunded]
+ *           enum: [pending, awaiting_approval, payment_pending, confirmed, in_stay, cancelled, completed, expired, refunded]
  *           default: pending
  *           description: Statut actuel de la réservation
  *         paymentStatus:

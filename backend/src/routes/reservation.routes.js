@@ -49,4 +49,39 @@ router.route('/:id/check-availability')
 router.route('/:id/modification-fees')
     .post(validate(calculateModificationFeesSchema), reservationController.calculateModificationFees);
 
+// ✅ NOUVELLES ROUTES - INTEGRATION RESERVATIONMODE
+// Routes d'approbation (Partner seulement)
+router.route('/:id/approve')
+    .patch(async (req, res, next) => {
+        if (req.user.role !== 'partner') {
+            return next(new ApiError('Accès réservé aux partenaires', 403));
+        }
+        next();
+    }, reservationController.approveReservation);
+
+router.route('/:id/reject')
+    .patch(async (req, res, next) => {
+        if (req.user.role !== 'partner') {
+            return next(new ApiError('Accès réservé aux partenaires', 403));
+        }
+        next();
+    }, reservationController.rejectReservation);
+
+// Routes de check-in/out (Partner seulement)
+router.route('/:id/checkin')
+    .patch(async (req, res, next) => {
+        if (req.user.role !== 'partner') {
+            return next(new ApiError('Accès réservé aux partenaires', 403));
+        }
+        next();
+    }, reservationController.performCheckin);
+
+router.route('/:id/checkout')
+    .patch(async (req, res, next) => {
+        if (req.user.role !== 'partner') {
+            return next(new ApiError('Accès réservé aux partenaires', 403));
+        }
+        next();
+    }, reservationController.performCheckout);
+
 module.exports = router;

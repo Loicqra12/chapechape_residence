@@ -258,7 +258,7 @@
  *         name: status
  *         schema:
  *           type: string
- *           enum: [pending, processing, completed, failed, refunded]
+ *           enum: [pending, paid, failed, cancelled, refunded]
  *         description: Filtrer par statut de paiement (optionnel)
  *       - in: query
  *         name: limit

@@ -29,7 +29,7 @@
  *           description: Devise du paiement
  *         status:
  *           type: string
- *           enum: [pending, processing, completed, failed, refunded]
+ *           enum: [pending, paid, failed, cancelled, refunded]
  *           default: pending
  *           description: Statut du paiement
  *         paymentMethod:
@@ -86,7 +86,7 @@
  *         reservation: "60d21b4667d0d8992e610c86"
  *         amount: 50000
  *         currency: "XOF"
- *         status: "completed"
+ *         status: "paid"
  *         paymentMethod: "orange_money"
  *         paymentProvider: "orange"
  *         transactionId: "tx_123456789"

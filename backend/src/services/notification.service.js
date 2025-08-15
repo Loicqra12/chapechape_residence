@@ -24,6 +24,7 @@ class NotificationService {
                 return notification;
             }
 
+
             // Envoyer un email de notification si activé dans les préférences de l'utilisateur
             if (user.email && (!user.notificationSettings || user.notificationSettings.emailEnabled !== false)) {
                 await emailService.sendNotificationEmail(user, notification);
@@ -371,6 +372,73 @@ class NotificationService {
     }
 
     /**
+     * Programme des rappels d'arrivée et de départ pour une Réservation (Reservation)
+     * Conserve la version Booking pour compatibilité, mais privilégie cette méthode.
+     * @param {Object} reservation - Objet Reservation (peut contenir différents alias de champs)
+     * @returns {Promise<{success: boolean, message: string}>}
+     */
+    async scheduleReservationReminders(reservation) {
+        try {
+            const clientId = reservation.user?._id || reservation.user || reservation.client;
+            const residence = reservation.residence || {};
+            const residenceName = residence.title || residence.name || 'votre résidence';
+
+            // Support de multiples champs selon variantes de modèle
+            const checkInRaw = reservation.checkIn || reservation.checkInDate || reservation.startDate;
+            const checkOutRaw = reservation.checkOut || reservation.checkOutDate || reservation.endDate;
+
+            const arrivalData = {
+                reservationId: reservation._id,
+                residenceName,
+                arrivalDate: checkInRaw ? new Date(checkInRaw).toLocaleDateString('fr-FR') : undefined,
+                arrivalTime: reservation.checkInTime || '14:00',
+                address: residence.location?.formattedAddress || residence.address
+            };
+
+            const departureData = {
+                reservationId: reservation._id,
+                residenceName,
+                departureDate: checkOutRaw ? new Date(checkOutRaw).toLocaleDateString('fr-FR') : undefined,
+                departureTime: reservation.checkOutTime || '12:00'
+            };
+
+            const now = new Date();
+            const arrivalDate = checkInRaw ? new Date(checkInRaw) : null;
+            const departureDate = checkOutRaw ? new Date(checkOutRaw) : null;
+
+            // Note: setTimeout n'est pas fiable pour de longs délais en production
+            if (arrivalDate && arrivalDate > now) {
+                const dayBeforeArrival = new Date(arrivalDate);
+                dayBeforeArrival.setDate(dayBeforeArrival.getDate() - 1);
+                const delayArrival = Math.max(0, dayBeforeArrival.getTime() - now.getTime());
+                if (delayArrival < 2147483647) {
+                    setTimeout(() => {
+                        this.notifyClient(clientId, notificationTypes.CLIENT.ARRIVAL_REMINDER, arrivalData);
+                    }, delayArrival);
+                    logger.info(`(Reservation) Rappel d'arrivée programmé pour le client ${clientId} dans ${Math.round(delayArrival/3600000)}h`);
+                }
+            }
+
+            if (departureDate && departureDate > now) {
+                const dayBeforeDeparture = new Date(departureDate);
+                dayBeforeDeparture.setDate(dayBeforeDeparture.getDate() - 1);
+                const delayDeparture = Math.max(0, dayBeforeDeparture.getTime() - now.getTime());
+                if (delayDeparture < 2147483647) {
+                    setTimeout(() => {
+                        this.notifyClient(clientId, notificationTypes.CLIENT.DEPARTURE_REMINDER, departureData);
+                    }, delayDeparture);
+                    logger.info(`(Reservation) Rappel de départ programmé pour le client ${clientId} dans ${Math.round(delayDeparture/3600000)}h`);
+                }
+            }
+
+            return { success: true, message: 'Rappels Réservation programmés avec succès' };
+        } catch (error) {
+            logger.error('Erreur lors de la programmation des rappels (Reservation):', error);
+            throw error;
+        }
+    }
+
+    /**
      * Envoie une notification concernant une résidence populaire ou à disponibilité limitée
      * @param {Array} clientIds - Liste des IDs clients à notifier
      * @param {Object} residence - Objet de résidence
@@ -436,6 +504,373 @@ class NotificationService {
             );
         } catch (error) {
             logger.error('Erreur lors de l\'envoi des statistiques mensuelles:', error);
+            throw error;
+        }
+    }
+
+    // ✅ PHASE 0 BIS : Méthodes manquantes critiques pour payment-timer.service.js
+    
+    /**
+     * Envoie une notification de délai de paiement
+     * @param {Object} reservation - Réservation avec user et residence peuplés
+     * @param {Date} deadline - Date limite de paiement
+     */
+    async sendPaymentDeadlineNotification(reservation, deadline) {
+        try {
+            if (!reservation || !reservation.user || !deadline) {
+                logger.warn('Données insuffisantes pour notification délai paiement');
+                return null;
+            }
+
+            const timeLeft = Math.max(0, Math.ceil((deadline - new Date()) / (1000 * 60))); // Minutes restantes
+            
+            const message = `⏰ Paiement requis ! ${timeLeft} min restantes pour votre réservation à ${reservation.residence?.title || 'la résidence'}. Montant: ${reservation.totalPrice || 0} XOF`;
+
+            // Notification push/email standard
+            const notification = await this.createNotification(
+                reservation.user._id,
+                notificationTypes.CLIENT.PAYMENT_PENDING,
+                message,
+                {
+                    reservationId: reservation._id.toString(),
+                    deadline: deadline.toISOString(),
+                    timeLeftMinutes: timeLeft,
+                    amount: reservation.totalPrice
+                }
+            );
+
+            // SMS de délai si disponible (Twilio)
+            if (reservation.user.phoneNumber) {
+                try {
+                    const twilioService = require('./twilio.service');
+                    await twilioService.sendReservationNotification(reservation, 'payment_deadline', {
+                        deadline: reservation.ttlSnapshot?.paymentTTLMinutes ? 
+                                 new Date(Date.now() + (reservation.ttlSnapshot.paymentTTLMinutes * 60 * 1000)) : 
+                                 new Date(Date.now() + (24 * 60 * 60 * 1000))
+                    });
+                } catch (smsError) {
+                    logger.error('Erreur envoi SMS délai paiement:', smsError);
+                }
+            }
+
+            logger.info(`Notification délai paiement envoyée pour réservation ${reservation._id}`);
+            return notification;
+
+        } catch (error) {
+            logger.error('Erreur notification délai paiement:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Envoie une notification d'expiration de réservation
+     * @param {Object} reservation - Réservation avec user et residence peuplés
+     */
+    async sendReservationExpiredNotification(reservation) {
+        try {
+            if (!reservation || !reservation.user) {
+                logger.warn('Données insuffisantes pour notification expiration');
+                return null;
+            }
+
+            const message = `❌ Réservation expirée. Le délai de paiement pour "${reservation.residence?.title || 'votre réservation'}" a expiré. La réservation a été annulée automatiquement.`;
+
+            // Notification Client
+            const clientNotification = await this.createNotification(
+                reservation.user._id,
+                notificationTypes.CLIENT.PAYMENT_EXPIRED,
+                message,
+                {
+                    reservationId: reservation._id.toString(),
+                    expiredAt: new Date().toISOString(),
+                    amount: reservation.totalPrice
+                }
+            );
+
+            // Notification Partner si disponible
+            if (reservation.partner) {
+                const partnerMessage = `📊 Réservation expirée. La réservation de ${reservation.user.firstName || 'Client'} pour "${reservation.residence?.title || 'résidence'}" a expiré (délai paiement dépassé).`;
+                
+                await this.createNotification(
+                    reservation.partner,
+                    notificationTypes.PARTNER.BOOKING_EXPIRED,
+                    partnerMessage,
+                    {
+                        reservationId: reservation._id.toString(),
+                        clientName: reservation.user.firstName + ' ' + (reservation.user.lastName || ''),
+                        expiredAt: new Date().toISOString()
+                    }
+                );
+            }
+
+            // SMS d'expiration si disponible
+            if (reservation.user.phoneNumber) {
+                try {
+                    const twilioService = require('./twilio.service');
+                    await twilioService.sendReservationNotification(reservation, 'expired');
+                } catch (smsError) {
+                    logger.error('Erreur envoi SMS expiration:', smsError);
+                }
+            }
+
+            logger.info(`Notification expiration envoyée pour réservation ${reservation._id}`);
+            return clientNotification;
+
+        } catch (error) {
+            logger.error('Erreur notification expiration:', error);
+            throw error;
+        }
+    }
+
+    // ===============================
+    // ✅ NOUVELLES MÉTHODES PAYOUT
+    // ===============================
+
+    /**
+     * Notifier la création d'un payout
+     * @param {Object} partner Partner bénéficiaire
+     * @param {Object} payoutData Données du payout
+     */
+    async sendPayoutCreated(partner, payoutData) {
+        try {
+            const message = `Nouveau reversement programmé: ${payoutData.amount} ${payoutData.currency}`;
+            
+            // Notification push/email partner
+            await this.createNotification(
+                partner._id,
+                'PAYOUT_CREATED',
+                message,
+                {
+                    payout_id: payoutData.payout_id,
+                    amount: payoutData.amount,
+                    currency: payoutData.currency,
+                    scheduled_for: payoutData.scheduled_for
+                }
+            );
+
+            // SMS si numéro disponible
+            if (partner.phoneNumber) {
+                try {
+                    const twilioService = require('./twilio.service');
+                    await twilioService.sendSMS(
+                        partner.phoneNumber,
+                        `ChapeChape: Reversement de ${payoutData.amount} ${payoutData.currency} programmé pour ${new Date(payoutData.scheduled_for).toLocaleDateString('fr-FR')}. Vous recevrez une confirmation de transfert.`
+                    );
+                } catch (smsError) {
+                    logger.error('Erreur SMS payout créé:', smsError);
+                }
+            }
+
+            logger.info(`Notification payout créé envoyée au partner ${partner._id}`);
+
+        } catch (error) {
+            logger.error('Erreur notification payout créé:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'initiation d'un payout
+     * @param {Object} partner Partner bénéficiaire  
+     * @param {Object} payoutData Données du payout
+     */
+    async sendPayoutInitiated(partner, payoutData) {
+        try {
+            const message = payoutData.requires_confirmation ? 
+                `Transfert de ${payoutData.amount} ${payoutData.currency} initié. Confirmation email requise.` :
+                `Transfert de ${payoutData.amount} ${payoutData.currency} en cours de traitement.`;
+            
+            await this.createNotification(
+                partner._id,
+                'PAYOUT_INITIATED',
+                message,
+                {
+                    transaction_id: payoutData.transaction_id,
+                    amount: payoutData.amount,
+                    currency: payoutData.currency,
+                    requires_confirmation: payoutData.requires_confirmation
+                }
+            );
+
+            // SMS informatif
+            if (partner.phoneNumber) {
+                try {
+                    const twilioService = require('./twilio.service');
+                    const smsMessage = payoutData.requires_confirmation ?
+                        `ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} initié (ID: ${payoutData.transaction_id}). Vérifiez vos emails pour confirmation.` :
+                        `ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} en cours (ID: ${payoutData.transaction_id}).`;
+                    
+                    await twilioService.sendSMS(partner.phoneNumber, smsMessage);
+                } catch (smsError) {
+                    logger.error('Erreur SMS payout initié:', smsError);
+                }
+            }
+
+            logger.info(`Notification payout initié envoyée au partner ${partner._id}`);
+
+        } catch (error) {
+            logger.error('Erreur notification payout initié:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier la finalisation réussie d'un payout
+     * @param {Object} partner Partner bénéficiaire
+     * @param {Object} payoutData Données du payout
+     */
+    async sendPayoutCompleted(partner, payoutData) {
+        try {
+            const message = `Transfert réussi: ${payoutData.amount} ${payoutData.currency} crédité sur votre compte`;
+            
+            await this.createNotification(
+                partner._id,
+                'PAYOUT_COMPLETED',
+                message,
+                {
+                    transaction_id: payoutData.transaction_id,
+                    amount: payoutData.amount,
+                    currency: payoutData.currency,
+                    completed_at: payoutData.completed_at
+                }
+            );
+
+            // SMS de confirmation
+            if (partner.phoneNumber) {
+                try {
+                    const twilioService = require('./twilio.service');
+                    await twilioService.sendSMS(
+                        partner.phoneNumber,
+                        `✅ ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} réussi ! Fonds crédités sur votre compte (ID: ${payoutData.transaction_id}).`
+                    );
+                } catch (smsError) {
+                    logger.error('Erreur SMS payout complété:', smsError);
+                }
+            }
+
+            // Email de reçu détaillé
+            const user = await User.findById(partner._id);
+            if (user && user.email) {
+                try {
+                    const emailService = require('./email.service');
+                    await emailService.sendPayoutReceiptEmail(user, payoutData);
+                } catch (emailError) {
+                    logger.error('Erreur email reçu payout:', emailError);
+                }
+            }
+
+            logger.info(`Notification payout complété envoyée au partner ${partner._id}`);
+
+        } catch (error) {
+            logger.error('Erreur notification payout complété:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'échec d'un payout
+     * @param {Object} partner Partner bénéficiaire
+     * @param {Object} payoutData Données du payout
+     */
+    async sendPayoutFailed(partner, payoutData) {
+        try {
+            const message = payoutData.will_retry ? 
+                `Transfert temporairement échoué: ${payoutData.reason}. Nouvelle tentative programmée.` :
+                `Transfert échoué définitivement: ${payoutData.reason}. Contactez le support.`;
+            
+            await this.createNotification(
+                partner._id,
+                'PAYOUT_FAILED',
+                message,
+                {
+                    payout_id: payoutData.payout_id,
+                    amount: payoutData.amount,
+                    currency: payoutData.currency,
+                    reason: payoutData.reason,
+                    will_retry: payoutData.will_retry
+                }
+            );
+
+            // SMS d'alerte
+            if (partner.phoneNumber) {
+                try {
+                    const twilioService = require('./twilio.service');
+                    const smsMessage = payoutData.will_retry ?
+                        `⚠️ ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} temporairement échoué (${payoutData.reason}). Nouvelle tentative en cours.` :
+                        `❌ ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} échoué (${payoutData.reason}). Contactez le support: support@chapechape.com`;
+                    
+                    await twilioService.sendSMS(partner.phoneNumber, smsMessage);
+                } catch (smsError) {
+                    logger.error('Erreur SMS payout échoué:', smsError);
+                }
+            }
+
+            // Email d'alerte si échec définitif
+            if (!payoutData.will_retry) {
+                const user = await User.findById(partner._id);
+                if (user && user.email) {
+                    try {
+                        const emailService = require('./email.service');
+                        await emailService.sendPayoutFailureEmail(user, payoutData);
+                    } catch (emailError) {
+                        logger.error('Erreur email payout échoué:', emailError);
+                    }
+                }
+            }
+
+            logger.info(`Notification payout échoué envoyée au partner ${partner._id}`);
+
+        } catch (error) {
+            logger.error('Erreur notification payout échoué:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier un solde CinetPay insuffisant (pour admins)
+     * @param {number} currentBalance Solde actuel
+     * @param {number} requiredAmount Montant requis
+     */
+    async sendInsufficientBalanceAlert(currentBalance, requiredAmount) {
+        try {
+            // Notifier tous les admins
+            const admins = await User.find({ 
+                role: { $in: ['admin', 'superadmin'] },
+                isActive: true
+            });
+
+            const message = `⚠️ Solde CinetPay insuffisant: ${currentBalance} XOF disponible, ${requiredAmount} XOF requis pour payouts`;
+
+            for (const admin of admins) {
+                await this.createNotification(
+                    admin._id,
+                    'INSUFFICIENT_BALANCE',
+                    message,
+                    {
+                        current_balance: currentBalance,
+                        required_amount: requiredAmount,
+                        shortage: requiredAmount - currentBalance
+                    }
+                );
+
+                // SMS urgent pour admins
+                if (admin.phoneNumber) {
+                    try {
+                        const twilioService = require('./twilio.service');
+                        await twilioService.sendSMS(
+                            admin.phoneNumber,
+                            `🚨 URGENT ChapeChape: Solde CinetPay insuffisant (${currentBalance} XOF). Rechargement requis pour continuer les payouts.`
+                        );
+                    } catch (smsError) {
+                        logger.error('Erreur SMS solde insuffisant:', smsError);
+                    }
+                }
+            }
+
+            logger.warn(`Alerte solde insuffisant envoyée à ${admins.length} admins`);
+
+        } catch (error) {
+            logger.error('Erreur notification solde insuffisant:', error);
             throw error;
         }
     }

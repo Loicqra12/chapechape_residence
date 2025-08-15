@@ -32,6 +32,15 @@ const CLIENT = {
   POPULAR_RESIDENCE: 'client_popular_residence',   // 🔥 Résidence populaire
   LIMITED_AVAILABILITY: 'client_limited_availability', // 🔥 Disponibilité limitée
   NEARBY_RESIDENCE: 'client_nearby_residence',     // 📍 Résidence à proximité
+  
+  // Nouveaux types pour reservationMode
+  PAYMENT_PENDING: 'client_payment_pending',       // 💳 Paiement en attente (mode instant)
+  AWAITING_APPROVAL: 'client_awaiting_approval',   // ⏳ En attente d'approbation (mode approval_required)
+  BOOKING_APPROVED: 'client_booking_approved',     // ✅ Réservation approuvée par l'hôte
+  BOOKING_REJECTED: 'client_booking_rejected',     // ❌ Réservation refusée par l'hôte
+  PAYMENT_EXPIRED: 'client_payment_expired',       // ⏰ Délai de paiement expiré
+  CHECKIN_READY: 'client_checkin_ready',           // 🏠 Prêt pour le check-in
+  CHECKOUT_REMINDER: 'client_checkout_reminder',   // 🚪 Rappel de check-out
 };
 
 module.exports = {

@@ -1,5 +1,5 @@
 const Residence = require('../models/residence.model');
-const Booking = require('../models/booking.model');
+const Reservation = require('../models/reservation.model');
 const Review = require('../models/review.model');
 const { Message, Conversation } = require('../models/message.model');
 
@@ -36,10 +36,10 @@ class DashboardService {
             const residenceIds = residences.map(r => r._id);
 
             // Calculer le taux d'occupation
-            const totalBookings = await Booking.countDocuments({
+            const totalBookings = await Reservation.countDocuments({
                 residence: { $in: residenceIds },
                 status: { $in: ['confirmed', 'completed'] },
-                visitDate: {
+                checkIn: {
                     $gte: new Date(new Date().setMonth(new Date().getMonth() - 1))
                 }
             });
@@ -85,7 +85,7 @@ class DashboardService {
             });
 
             // Statistiques des réservations
-            const bookingStats = await Booking.aggregate([
+            const bookingStats = await Reservation.aggregate([
                 {
                     $match: {
                         residence: { $in: residenceIds },
@@ -166,7 +166,7 @@ class DashboardService {
                 : 0;
 
             // Obtenir les meilleures résidences
-            const bestPerformingResidences = await Booking.aggregate([
+            const bestPerformingResidences = await Reservation.aggregate([
                 {
                     $match: {
                         residence: { $in: residenceIds },
@@ -177,7 +177,7 @@ class DashboardService {
                 {
                     $group: {
                         _id: '$residence',
-                        revenue: { $sum: '$totalAmount' },
+                        revenue: { $sum: '$totalPrice' },
                         bookings: { $sum: 1 }
                     }
                 },
@@ -206,7 +206,7 @@ class DashboardService {
             });
 
             // Calculer les revenus par catégorie
-            const revenueByCategory = await Booking.aggregate([
+            const revenueByCategory = await Reservation.aggregate([
                 {
                     $match: {
                         residence: { $in: residenceIds },
@@ -228,7 +228,7 @@ class DashboardService {
                 {
                     $group: {
                         _id: '$residenceDetails.category',
-                        revenue: { $sum: '$totalAmount' },
+                        revenue: { $sum: '$totalPrice' },
                         count: { $sum: 1 }
                     }
                 }
@@ -267,18 +267,18 @@ class DashboardService {
             const startOfToday = new Date(now.setHours(0, 0, 0, 0));
 
             // Récupérer les réservations actives
-            const activeBookings = await Booking.find({
+            const activeBookings = await Reservation.find({
                 residence: { $in: residenceIds },
                 status: { $in: ['confirmed', 'pending'] },
-                visitDate: { $gte: startOfToday }
+                checkIn: { $gte: startOfToday }
             }).populate('residence', 'name imageUrl')
               .populate('client', 'name avatar')
-              .sort('visitDate visitTime');
+              .sort('checkIn');
 
             // Récupérer les visites du jour
             const todayVisits = activeBookings.map(booking => ({
                 id: booking._id,
-                time: booking.visitTime,
+                time: booking.checkIn,
                 client: {
                     id: booking.client._id,
                     name: booking.client.name,
@@ -296,7 +296,7 @@ class DashboardService {
             const last24Hours = new Date(now.setHours(now.getHours() - 24));
 
             // Réservations récentes
-            const recentBookings = await Booking.find({
+            const recentBookings = await Reservation.find({
                 residence: { $in: residenceIds },
                 createdAt: { $gte: last24Hours }
             }).populate('residence', 'name')
@@ -363,7 +363,7 @@ class DashboardService {
             // Statistiques en temps réel
             const realTimeStats = {
                 active_bookings: activeBookings.length,
-                pending_requests: await Booking.countDocuments({
+                pending_requests: await Reservation.countDocuments({
                     residence: { $in: residenceIds },
                     status: 'pending'
                 }),
@@ -379,22 +379,22 @@ class DashboardService {
     }
 
     async calculateRevenueForPeriod(residenceIds, startDate) {
-        const bookings = await Booking.find({
+        const bookings = await Reservation.find({
             residence: { $in: residenceIds },
             status: 'completed',
             createdAt: { $gte: startDate }
-        }).select('totalAmount');
+        }).select('totalPrice');
 
-        return bookings.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
+        return bookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
     }
 
     async calculateTotalRevenue(residenceIds) {
-        const completedBookings = await Booking.find({
+        const completedBookings = await Reservation.find({
             residence: { $in: residenceIds },
             status: 'completed'
-        }).select('totalAmount');
+        }).select('totalPrice');
 
-        return completedBookings.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
+        return completedBookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
     }
 
     async calculateAverageRating(residenceIds) {
@@ -421,7 +421,7 @@ class DashboardService {
             const lastWeek = new Date(now.setDate(now.getDate() - 7));
 
             // Tendances de réservation par mois (6 derniers mois)
-            const bookingTrends = await Booking.aggregate([
+            const bookingTrends = await Reservation.aggregate([
                 {
                     $match: {
                         residence: { $in: residenceIds },
@@ -435,14 +435,14 @@ class DashboardService {
                             month: { $month: '$createdAt' }
                         },
                         count: { $sum: 1 },
-                        revenue: { $sum: '$totalAmount' }
+                        revenue: { $sum: '$totalPrice' }
                     }
                 },
                 { $sort: { '_id.year': 1, '_id.month': 1 } }
             ]);
 
             // Statistiques par statut
-            const statusStats = await Booking.aggregate([
+            const statusStats = await Reservation.aggregate([
                 {
                     $match: {
                         residence: { $in: residenceIds },
@@ -453,7 +453,7 @@ class DashboardService {
                     $group: {
                         _id: '$status',
                         count: { $sum: 1 },
-                        revenue: { $sum: '$totalAmount' }
+                        revenue: { $sum: '$totalPrice' }
                     }
                 }
             ]);
@@ -488,12 +488,12 @@ class DashboardService {
 
             // Performance par résidence
             const residencePerformance = await Promise.all(residences.map(async (residence) => {
-                const bookings = await Booking.countDocuments({
+                const bookings = await Reservation.countDocuments({
                     residence: residence._id,
                     status: { $in: ['confirmed', 'completed'] }
                 });
 
-                const revenue = await Booking.aggregate([
+                const revenue = await Reservation.aggregate([
                     {
                         $match: {
                             residence: residence._id,
@@ -503,7 +503,7 @@ class DashboardService {
                     {
                         $group: {
                             _id: null,
-                            total: { $sum: '$totalAmount' }
+                            total: { $sum: '$totalPrice' }
                         }
                     }
                 ]);
@@ -532,7 +532,7 @@ class DashboardService {
             }));
 
             // Types de résidences les plus populaires
-            const typeStats = await Booking.aggregate([
+            const typeStats = await Reservation.aggregate([
                 {
                     $match: {
                         residence: { $in: residenceIds },
@@ -552,7 +552,7 @@ class DashboardService {
                     $group: {
                         _id: '$residenceInfo.type',
                         count: { $sum: 1 },
-                        revenue: { $sum: '$totalAmount' }
+                        revenue: { $sum: '$totalPrice' }
                     }
                 }
             ]);

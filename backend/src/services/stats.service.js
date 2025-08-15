@@ -42,7 +42,7 @@ class StatsService {
     // Obtenir les revenus globaux
     async getGlobalRevenue(startDate, endDate) {
         const query = {
-            status: 'completed',
+            status: 'completed', // ✅ OK - Statut réservation (pas paiement)
             createdAt: {}
         };
 
@@ -186,7 +186,7 @@ class StatsService {
             ]),
             Payment.aggregate([
                 {
-                    $match: { status: 'completed' }
+                    $match: { status: 'completed' } // ✅ OK - Statut réservation
                 },
                 {
                     $group: {

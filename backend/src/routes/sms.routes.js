@@ -18,4 +18,11 @@ router.route('/booking')
 router.route('/payment-instructions')
     .post(authorize('admin', 'partenaire'), smsController.sendPaymentInstructions);
 
+// Alias explicites côté Réservation (compatibilité et clarté Partner)
+router.route('/reservation')
+    .post(authorize('admin', 'partenaire'), smsController.sendBookingNotification);
+
+router.route('/reservation/payment-instructions')
+    .post(authorize('admin', 'partenaire'), smsController.sendPaymentInstructions);
+
 module.exports = router;

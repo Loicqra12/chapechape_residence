@@ -1,6 +1,7 @@
 const ApiError = require('../../utils/apiError');
 const reservationService = require('../../services/reservation.service');
 const SocketService = require('../../services/socket.service');
+const PricingService = require('../../services/pricing.service'); // TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
 const asyncHandler = require('../../middlewares/async');
 const Reservation = require('../../models/reservation.model');
 const Residence = require('../../models/residence.model');
@@ -45,7 +46,7 @@ exports.getUserReservations = asyncHandler(async (req, res) => {
             break;
             
         case 'partner':
-            // Partner voit les réservations de ses résidences
+            // Partner voit uniquement les réservations associées à son ID partenaire
             filter = { partner: req.user._id };
             console.log('INFO: Filtrage PARTNER - partner:', req.user._id);
             break;
@@ -415,5 +416,348 @@ exports.checkAvailability = asyncHandler(async (req, res) => {
         data: {
             isAvailable
         }
+    });
+});
+
+// ✅ NOUVEAUX CONTRÔLEURS - INTEGRATION RESERVATIONMODE
+/**
+ * Approuver une réservation
+ * @route PATCH /api/reservations/:id/approve
+ */
+exports.approveReservation = asyncHandler(async (req, res) => {
+    const reservation = await Reservation.findById(req.params.id)
+        .populate('residence')
+        .populate('user');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier que le partner est propriétaire de la résidence
+    const getIdValue = (input) => {
+        if (typeof input === 'string') return input;
+        return input?._id?.toString() || input?.toString();
+    };
+
+    const currentPartnerId = getIdValue(req.user._id);
+    const reservationPartnerId = getIdValue(reservation.partner);
+    const residencePartnerId = getIdValue(reservation.residence.partner);
+
+    if (currentPartnerId !== reservationPartnerId && currentPartnerId !== residencePartnerId) {
+        throw new ApiError('Accès non autorisé à cette réservation', 403);
+    }
+
+    // Vérifier que la réservation est en attente d'approbation
+    if (reservation.status !== 'awaiting_approval') {
+        throw new ApiError('Cette réservation ne peut pas être approuvée dans son état actuel', 400);
+    }
+
+    // Mettre à jour le statut
+    const oldStatus = reservation.status;
+    reservation.status = 'confirmed';
+    reservation.paymentStatus = 'pending'; // Le client doit maintenant payer
+    await reservation.save();
+
+    // ✅ PHASE 1 : Activer timer de paiement après approbation
+    try {
+        // Populate pour notifications
+        const populatedReservation = await Reservation.findById(reservation._id)
+            .populate('user', 'phoneNumber firstName lastName')
+            .populate('residence', 'title')
+            .populate('partner', 'phoneNumber firstName lastName');
+
+        // Démarrer timer de paiement (TTL depuis snapshot ou défaut)
+        const paymentTTL = reservation.ttlSnapshot?.paymentTTLMinutes || 30;
+        await paymentTimerService.startPaymentTimer(reservation._id, paymentTTL);
+
+        // Notifications agenda service
+        await agendaService.notifyReservationStatusChange(reservation._id, oldStatus, 'confirmed');
+
+        // WebSocket notifications avec nouvelles méthodes
+        await SocketService.emitReservationStatusChange(populatedReservation, oldStatus, 'confirmed');
+
+    } catch (timerError) {
+        // Log sans bloquer la réponse
+        console.error('Erreur activation timers après approbation:', timerError);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Réservation approuvée avec succès',
+        data: reservation
+    });
+});
+
+/**
+ * Rejeter une réservation
+ * @route PATCH /api/reservations/:id/reject
+ */
+exports.rejectReservation = asyncHandler(async (req, res) => {
+    const { reason } = req.body; // Motif optionnel du rejet
+
+    const reservation = await Reservation.findById(req.params.id)
+        .populate('residence')
+        .populate('user');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier l'ownership comme pour l'approbation
+    const getIdValue = (input) => {
+        if (typeof input === 'string') return input;
+        return input?._id?.toString() || input?.toString();
+    };
+
+    const currentPartnerId = getIdValue(req.user._id);
+    const reservationPartnerId = getIdValue(reservation.partner);
+    const residencePartnerId = getIdValue(reservation.residence.partner);
+
+    if (currentPartnerId !== reservationPartnerId && currentPartnerId !== residencePartnerId) {
+        throw new ApiError('Accès non autorisé à cette réservation', 403);
+    }
+
+    // Vérifier que la réservation peut être rejetée
+    if (!['awaiting_approval', 'pending'].includes(reservation.status)) {
+        throw new ApiError('Cette réservation ne peut pas être rejetée dans son état actuel', 400);
+    }
+
+    // Mettre à jour le statut
+    const oldStatus = reservation.status;
+    reservation.status = 'cancelled';
+    if (reason) {
+        reservation.cancellationDetails = {
+            ...reservation.cancellationDetails,
+            reason: reason,
+            cancelledBy: 'partner',
+            cancelledAt: new Date()
+        };
+    }
+    await reservation.save();
+
+    // ✅ PHASE 1 : Libérer inventaire et notifier après rejet
+    try {
+        // Populate pour notifications complètes
+        const populatedReservation = await Reservation.findById(reservation._id)
+            .populate('user', 'phoneNumber firstName lastName')
+            .populate('residence', 'title')
+            .populate('partner', 'phoneNumber firstName lastName');
+
+        // Libérer les dates (disponibilité → 'available')
+        await availabilityService.updateAvailabilityForReservation(
+            reservation.residence,
+            reservation.checkIn,
+            reservation.checkOut,
+            reservation._id,
+            'available'
+        );
+
+        // Notifications agenda service
+        await agendaService.notifyReservationStatusChange(reservation._id, oldStatus, 'cancelled');
+
+        // WebSocket notifications
+        await SocketService.emitReservationStatusChange(populatedReservation, oldStatus, 'cancelled');
+
+    } catch (cleanupError) {
+        // Log sans bloquer la réponse
+        console.error('Erreur nettoyage après rejet:', cleanupError);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Réservation rejetée avec succès',
+        data: reservation
+    });
+});
+
+/**
+ * ✅ PHASE 1 : Confirmer le paiement d'une réservation
+ * @route PATCH /api/reservations/:id/confirm-payment
+ */
+exports.confirmPayment = asyncHandler(async (req, res) => {
+    const { paymentMethod, transactionId, paymentData } = req.body;
+
+    const reservation = await Reservation.findById(req.params.id)
+        .populate('residence')
+        .populate('user')
+        .populate('partner');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier ownership (client ou admin peuvent confirmer paiement)
+    const getIdValue = (input) => {
+        if (typeof input === 'string') return input;
+        return input?._id?.toString() || input?.toString();
+    };
+
+    const currentUserId = getIdValue(req.user._id);
+    const reservationUserId = getIdValue(reservation.user._id || reservation.user);
+
+    // Seuls le client propriétaire ou admin/superadmin peuvent confirmer
+    if (currentUserId !== reservationUserId && !['admin', 'superadmin'].includes(req.user.role)) {
+        throw new ApiError('Accès non autorisé pour confirmer le paiement', 403);
+    }
+
+    // Vérifier que la réservation nécessite un paiement
+    if (reservation.paymentStatus !== 'pending') {
+        throw new ApiError('Cette réservation ne nécessite pas de confirmation de paiement', 400);
+    }
+
+    // Vérifier que la réservation n'a pas expiré
+    if (reservation.status === 'expired') {
+        throw new ApiError('Cette réservation a expiré, impossible de confirmer le paiement', 400);
+    }
+
+    // ✅ PHASE 1 : Logique de confirmation avec timer integration
+    try {
+        const oldPaymentStatus = reservation.paymentStatus;
+        
+        // Arrêter le timer de paiement et confirmer
+        const timerResult = await paymentTimerService.confirmPaymentAndStopTimer(reservation._id, {
+            method: paymentMethod,
+            transactionId,
+            ...paymentData
+        });
+
+        // Recharger la réservation mise à jour par le timer service
+        const updatedReservation = await Reservation.findById(reservation._id)
+            .populate('user', 'phoneNumber firstName lastName')
+            .populate('residence', 'title')
+            .populate('partner', 'phoneNumber firstName lastName');
+
+        // Notifications agenda service
+        await agendaService.notifyReservationStatusChange(
+            reservation._id, 
+            oldPaymentStatus, 
+            updatedReservation.paymentStatus
+        );
+
+        // WebSocket notifications
+        await SocketService.emitReservationStatusChange(
+            updatedReservation, 
+            `payment_${oldPaymentStatus}`, 
+            `payment_${updatedReservation.paymentStatus}`
+        );
+
+        // Programmer rappel check-in si nécessaire
+        if (updatedReservation.status === 'confirmed' && updatedReservation.checkIn) {
+            await agendaService.scheduleReservationReminder(reservation._id, updatedReservation.checkIn);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Paiement confirmé avec succès',
+            data: updatedReservation,
+            timerInfo: timerResult
+        });
+
+    } catch (timerError) {
+        console.error('Erreur confirmation paiement avec timer:', timerError);
+        throw new ApiError('Erreur lors de la confirmation du paiement', 500);
+    }
+});
+
+/**
+ * Effectuer le check-in d'une réservation
+ * @route PATCH /api/reservations/:id/checkin
+ */
+exports.performCheckin = asyncHandler(async (req, res) => {
+    const reservation = await Reservation.findById(req.params.id)
+        .populate('residence')
+        .populate('user');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier l'ownership
+    const getIdValue = (input) => {
+        if (typeof input === 'string') return input;
+        return input?._id?.toString() || input?.toString();
+    };
+
+    const currentPartnerId = getIdValue(req.user._id);
+    const reservationPartnerId = getIdValue(reservation.partner);
+    const residencePartnerId = getIdValue(reservation.residence.partner);
+
+    if (currentPartnerId !== reservationPartnerId && currentPartnerId !== residencePartnerId) {
+        throw new ApiError('Accès non autorisé à cette réservation', 403);
+    }
+
+    // Vérifier que la réservation peut être check-in
+    if (reservation.status !== 'confirmed' || reservation.paymentStatus !== 'paid') {
+        throw new ApiError('Cette réservation ne peut pas être check-in (statut ou paiement incorrect)', 400);
+    }
+
+    // Vérifier que c'est le bon moment pour check-in (tolérance de 2h avant)
+    const now = new Date();
+    const checkInTime = new Date(reservation.checkIn);
+    const twoHoursBefore = new Date(checkInTime.getTime() - 2 * 60 * 60 * 1000);
+
+    if (now < twoHoursBefore) {
+        throw new ApiError('Le check-in ne peut être effectué que 2 heures avant l\'heure prévue', 400);
+    }
+
+    // Effectuer le check-in
+    reservation.status = 'confirmed'; // Statut confirmé après check-in
+    reservation.actualCheckIn = now;
+    await reservation.save();
+
+    // Notifier via websocket
+    await SocketService.notifyReservationStatusUpdate(reservation);
+
+    res.status(200).json({
+        success: true,
+        message: 'Check-in effectué avec succès',
+        data: reservation
+    });
+});
+
+/**
+ * Effectuer le check-out d'une réservation
+ * @route PATCH /api/reservations/:id/checkout
+ */
+exports.performCheckout = asyncHandler(async (req, res) => {
+    const reservation = await Reservation.findById(req.params.id)
+        .populate('residence')
+        .populate('user');
+
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    // Vérifier l'ownership
+    const getIdValue = (input) => {
+        if (typeof input === 'string') return input;
+        return input?._id?.toString() || input?.toString();
+    };
+
+    const currentPartnerId = getIdValue(req.user._id);
+    const reservationPartnerId = getIdValue(reservation.partner);
+    const residencePartnerId = getIdValue(reservation.residence.partner);
+
+    if (currentPartnerId !== reservationPartnerId && currentPartnerId !== residencePartnerId) {
+        throw new ApiError('Accès non autorisé à cette réservation', 403);
+    }
+
+    // Vérifier que la réservation peut être check-out
+    if (reservation.status !== 'confirmed' || !reservation.actualCheckIn) {
+        throw new ApiError('Cette réservation ne peut pas être check-out (doit être confirmée avec check-in effectué)', 400);
+    }
+
+    // Effectuer le check-out
+    reservation.status = 'completed';
+    reservation.actualCheckOut = new Date();
+    await reservation.save();
+
+    // Notifier via websocket
+    await SocketService.notifyReservationStatusUpdate(reservation);
+
+    res.status(200).json({
+        success: true,
+        message: 'Check-out effectué avec succès',
+        data: reservation
     });
 });

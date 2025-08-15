@@ -14,4 +14,7 @@ router.post('/:paymentId/refund', protect, validate(paymentValidation.requestRef
 // Webhook Stripe (pas de protection car appelé par Stripe)
 router.post('/webhook', express.raw({ type: 'application/json' }), paymentController.handleStripeWebhook);
 
+// Webhook CinetPay (pas de protection car appelé par CinetPay)
+router.post('/cinetpay/webhook', express.urlencoded({ extended: true }), paymentController.handleCinetPayWebhook);
+
 module.exports = router;

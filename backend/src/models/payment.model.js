@@ -16,8 +16,27 @@ const paymentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
-        default: 'pending'
+        enum: [
+            'pending',        // En attente paiement (statut métier canonique)
+            'paid',           // ✅ HARMONISÉ - Paiement réussi (était 'completed')
+            'failed',         // Échec du paiement
+            'cancelled',      // Paiement annulé par l'utilisateur
+            'refunded'        // Remboursement effectué
+        ],
+        default: 'pending'    // ✅ ALIGNÉ - Statut initial métier
+    },
+    
+    // Sous-statuts techniques (provider-specific)
+    providerStatus: {
+        type: String,
+        enum: [
+            'created',        // Paiement créé mais pas encore initié
+            'redirected',     // Client redirigé vers provider
+            'processing',     // En cours de traitement provider
+            'otp_required',   // OTP requis
+            'validated'       // Validé côté provider
+        ],
+        default: 'created'
     },
     paymentMethod: {
         type: String,

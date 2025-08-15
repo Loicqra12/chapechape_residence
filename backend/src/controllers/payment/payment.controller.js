@@ -62,6 +62,10 @@ exports.createPaymentIntent = async (req, res) => {
             case 'djamo':
                 paymentProvider = 'djamo';
                 break;
+            case 'cinetpay':
+            case 'mobile_money':
+                paymentProvider = 'cinetpay';
+                break;
             default:
                 return res.status(400).json({
                     success: false,
@@ -144,13 +148,13 @@ exports.confirmPayment = async (req, res) => {
         await payment.save();
 
         // Si le paiement est complété, mettre à jour la réservation
-        if (statusResponse.status === 'completed') {
+        if (statusResponse.status === 'paid') { // ✅ HARMONISÉ - était 'completed'
             const reservation = await Reservation.findById(payment.reservation);
             if (reservation) {
                 // Vérifier s'il n'y a pas d'autres paiements complétés
                 const otherCompletedPayments = await Payment.find({
                     reservation: payment.reservation,
-                    status: 'completed',
+                    status: 'paid', // ✅ HARMONISÉ - était 'completed'
                     _id: { $ne: paymentId }
                 });
 
@@ -237,7 +241,7 @@ async function updateReservationStatus(reservationId) {
 
     const payments = await Payment.find({ reservation: reservationId });
     
-    const completedPayments = payments.filter(p => p.status === 'completed');
+    const completedPayments = payments.filter(p => p.status === 'paid'); // ✅ HARMONISÉ - était 'completed'
     const refundedPayments = payments.filter(p => p.status === 'refunded');
 
     if (completedPayments.length === 1 && refundedPayments.length > 0) {
@@ -296,7 +300,7 @@ exports.requestRefund = async (req, res) => {
     }
 };
 
-// Webhook pour les événements de paiement
+// Webhook pour les événements de paiement Stripe
 exports.handleStripeWebhook = async (req, res) => {
     try {
         const event = req.body;
@@ -315,6 +319,57 @@ exports.handleStripeWebhook = async (req, res) => {
 
         res.json({ received: true });
     } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Webhook pour les événements de paiement CinetPay
+exports.handleCinetPayWebhook = async (req, res) => {
+    try {
+        const cinetPayService = require('../../services/cinetpay.service');
+        const webhookData = req.body;
+
+        // Log de la notification CinetPay
+        console.log('Webhook CinetPay reçu:', webhookData);
+
+        // Traiter la notification via le service CinetPay
+        const result = await cinetPayService.processWebhook(webhookData);
+
+        if (result.success) {
+            // Rechercher le paiement correspondant
+            const payment = await Payment.findOne({ 
+                transactionId: result.transactionId 
+            }).populate('reservation');
+
+            if (payment) {
+                // Mettre à jour le statut du paiement
+                payment.status = result.status;
+                payment.providerResponse = result.webhookData;
+                await payment.save();
+
+                // Mettre à jour le statut de la réservation si paiement confirmé
+                if (result.status === 'paid' && payment.reservation) { // ✅ HARMONISÉ - était 'completed'
+                    payment.reservation.paymentStatus = 'paid';
+                    payment.reservation.status = 'confirmed';
+                    await payment.reservation.save();
+
+                    console.log(`Paiement CinetPay confirmé pour réservation ${payment.reservation._id}`);
+                }
+            }
+
+            res.json({ 
+                success: true, 
+                message: 'Webhook traité avec succès' 
+            });
+        } else {
+            throw new Error(result.error || 'Erreur traitement webhook');
+        }
+
+    } catch (error) {
+        console.error('Erreur webhook CinetPay:', error);
         res.status(400).json({
             success: false,
             message: error.message

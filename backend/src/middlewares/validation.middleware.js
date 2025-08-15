@@ -1,5 +1,6 @@
 const ApiError = require('../utils/apiError');
 const { ERROR_MESSAGES } = require('../utils/constants');
+const { validationResult } = require('express-validator');
 
 // Middleware de validation générique
 const validate = (schema) => {
@@ -137,8 +138,22 @@ const validateMongoId = (paramName = 'id') => {
     };
 };
 
+// Middleware de validation pour express-validator
+const validateExpressValidator = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            message: 'Erreurs de validation',
+            errors: errors.array()
+        });
+    }
+    next();
+};
+
 module.exports = {
-    validate,
+    validate: validateExpressValidator, // Pour express-validator (utilisé dans pricing.routes.js)
+    validateJoi: validate, // Pour Joi (utilisé ailleurs)
     validateParams,
     validateQuery,
     validateFiles,

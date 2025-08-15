@@ -113,6 +113,31 @@ const residenceSchema = mongoose.Schema({
     enum: ['available', 'unavailable', 'maintenance'],
     default: 'available'
   },
+  // ✅ AJOUT : Mode de réservation pour différencier les flux
+  reservationMode: {
+    type: String,
+    enum: ['instant', 'approval_required'],
+    default: 'instant',
+    required: true
+  },
+  // ✅ PHASE 0 : Délai de paiement (minutes) - obligatoire pour le mode instant et approval_required
+  paymentTTLMinutes: {
+    type: Number,
+    default: 60, // 1 heure par défaut
+    min: [5, 'Délai minimum de paiement : 5 minutes'],
+    max: [1440, 'Délai maximum de paiement : 24 heures'],
+    required: true
+  },
+  // ✅ PHASE 0 : Délai d'acceptation hôte (minutes) - pour mode approval_required uniquement
+  hostAcceptTTLMinutes: {
+    type: Number,
+    default: 480, // 8 heures par défaut
+    min: [30, 'Délai minimum d\'acceptation : 30 minutes'],
+    max: [2880, 'Délai maximum d\'acceptation : 48 heures'],
+    required: function() {
+      return this.reservationMode === 'approval_required';
+    }
+  },
   partner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -251,6 +276,13 @@ const residenceSchema = mongoose.Schema({
     type: String,
     enum: ['cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer']
   }],
+  // Mode de réservation configuré par le partenaire
+  reservationMode: {
+    type: String,
+    enum: ['instant', 'approval_required'],
+    default: 'instant',
+    required: [true, 'Le mode de réservation est requis']
+  },
   // Champs pour la suppression douce
   deleted: {
     type: Boolean,

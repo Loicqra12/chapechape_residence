@@ -71,7 +71,7 @@ const getUserPayments = {
   query: Joi.object().keys({
     limit: Joi.number().integer().min(1).optional().default(10),
     page: Joi.number().integer().min(1).optional().default(1),
-    status: Joi.string().optional().valid('pending', 'completed', 'failed', 'refunded', 'partially_refunded'),
+    status: Joi.string().optional().valid('pending', 'paid', 'failed', 'refunded', 'cancelled'), // ✅ HARMONISÉ - 'completed' → 'paid'
     sortBy: Joi.string().optional().valid('createdAt:desc', 'createdAt:asc', 'amount:desc', 'amount:asc'),
     fromDate: Joi.date().optional(),
     toDate: Joi.date().optional().min(Joi.ref('fromDate')).messages({

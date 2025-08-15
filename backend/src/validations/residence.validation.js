@@ -27,7 +27,9 @@ const createResidence = {
             startDate: Joi.date().iso(),
             endDate: Joi.date().iso().min(Joi.ref('startDate'))
         }),
-        status: Joi.string().valid('available', 'unavailable', 'maintenance')
+        status: Joi.string().valid('available', 'unavailable', 'maintenance'),
+        // Nouveau: validation du mode de réservation
+        reservationMode: Joi.string().valid('instant', 'approval_required')
     })
 };
 
@@ -60,7 +62,9 @@ const updateResidence = {
             startDate: Joi.date().iso(),
             endDate: Joi.date().iso().min(Joi.ref('startDate'))
         }),
-        status: Joi.string().valid('available', 'unavailable', 'maintenance')
+        status: Joi.string().valid('available', 'unavailable', 'maintenance'),
+        // Nouveau: validation du mode de réservation
+        reservationMode: Joi.string().valid('instant', 'approval_required')
     }).min(1)
 };
 

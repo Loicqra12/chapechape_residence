@@ -15,8 +15,18 @@ class TwilioService {
       process.env.TWILIO_AUTH_TOKEN
     );
     this.twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+    this.twilioWhatsAppNumber = process.env.TWILIO_WHATSAPP_NUMBER;
     this.isConfigured = true;
+    
+    // Vérifier si WhatsApp est configuré
+    this.isWhatsAppConfigured = !!this.twilioWhatsAppNumber;
+    
     logger.info('Service Twilio initialisé avec succès');
+    if (this.isWhatsAppConfigured) {
+      logger.info('WhatsApp Business configuré avec le numéro:', this.twilioWhatsAppNumber);
+    } else {
+      logger.warn('WhatsApp Business non configuré - variable TWILIO_WHATSAPP_NUMBER manquante');
+    }
   }
 
   async sendSMS(to, body) {
@@ -48,7 +58,167 @@ class TwilioService {
     }
   }
 
-  // Méthode spécifique pour les notifications de réservation
+  // ===== WHATSAPP BUSINESS METHODS =====
+  
+  async sendWhatsAppMessage(to, body) {
+    if (!this.isConfigured) {
+      logger.error('Tentative d\'envoi de WhatsApp sans configuration Twilio complète');
+      throw new Error('Service Twilio non configuré');
+    }
+    
+    if (!this.isWhatsAppConfigured) {
+      logger.error('Tentative d\'envoi de WhatsApp sans configuration WhatsApp Business');
+      throw new Error('WhatsApp Business non configuré - variable TWILIO_WHATSAPP_NUMBER manquante');
+    }
+
+    try {
+      // Formatage international du numéro si nécessaire
+      let formattedNumber = to;
+      if (!to.startsWith('+')) {
+        // Ajout du préfixe international pour les pays d'Afrique de l'Ouest si absent
+        formattedNumber = `+225${to}`; 
+      }
+
+      const message = await this.client.messages.create({
+        body,
+        from: this.twilioWhatsAppNumber,
+        to: `whatsapp:${formattedNumber}`
+      });
+      
+      logger.info(`WhatsApp envoyé avec succès à ${formattedNumber}. SID: ${message.sid}`);
+      return message;
+    } catch (error) {
+      logger.error(`Erreur lors de l'envoi du WhatsApp: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // Méthode spécifique pour les notifications de réservation WhatsApp
+  async sendWhatsAppBookingNotification(booking, type) {
+    if (!booking) {
+      throw new Error('Booking object is required');
+    }
+
+    // Si le client n'a pas de numéro de téléphone, impossible d'envoyer un WhatsApp
+    if (!booking.client || !booking.client.phoneNumber) {
+      logger.warn(`Impossible d'envoyer un WhatsApp pour la réservation ${booking._id}: Numéro de téléphone manquant`);
+      return null;
+    }
+
+    let message;
+    const residenceName = booking.residence?.title || 'votre résidence';
+    const formattedDate = new Date(booking.visitDate).toLocaleDateString('fr-FR');
+
+    switch (type) {
+      case 'confirmation':
+        message = `🏠 *ChapeChape Résidence*\n\n✅ *Réservation confirmée !*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n⏰ Heure: *${booking.visitTime}*\n\n🙏 Merci de votre confiance !\n\n📱 Vous pouvez nous répondre directement ici pour toute question.`;
+        break;
+      case 'reminder':
+        message = `🏠 *ChapeChape Résidence*\n\n⏰ *Rappel de visite*\n\n🏡 Résidence: *${residenceName}*\n📅 Demain: *${formattedDate}*\n⏰ Heure: *${booking.visitTime}*\n\n👋 À très bientôt !`;
+        break;
+      case 'cancellation':
+        message = `🏠 *ChapeChape Résidence*\n\n❌ *Réservation annulée*\n\n😔 Nous sommes désolés, votre réservation pour *${residenceName}* a été annulée.\n\n📞 Contactez-nous pour plus d'informations.`;
+        break;
+      case 'payment':
+        message = `🏠 *ChapeChape Résidence*\n\n💳 *Paiement requis*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n\n💰 Méthodes de paiement disponibles:\n• 🟠 Orange Money\n• 🔵 Wave\n• 🟡 MTN Money\n• 💵 Espèces lors de la visite\n\n💬 Répondez ici pour choisir votre méthode !`;
+        break;
+      default:
+        message = `🏠 *ChapeChape Résidence*\n\n📋 *Mise à jour de réservation*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n\n📱 Consultez l'application pour plus de détails.`;
+    }
+
+    return this.sendWhatsAppMessage(booking.client.phoneNumber, message);
+  }
+
+  // Méthode spécifique pour envoyer des instructions de paiement WhatsApp (version riche)
+  async sendWhatsAppPaymentInstructions(booking, paymentMethod) {
+    if (!booking || !booking.client || !booking.client.phoneNumber) {
+      logger.warn(`Impossible d'envoyer des instructions de paiement WhatsApp: Données manquantes`);
+      return null;
+    }
+    
+    const amount = booking.amount || '(montant dû)';
+    const reference = `CHAPE${booking._id.toString().substring(0, 6)}`;
+    const residenceName = booking.residence?.title || 'votre résidence';
+    const formattedDate = new Date(booking.visitDate).toLocaleDateString('fr-FR');
+    
+    let messageBody;
+    
+    switch(paymentMethod) {
+      case 'wave':
+        messageBody = `🏠 *ChapeChape Résidence*\n\n💳 *Instructions Paiement Wave*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n💰 Montant: *${amount} FCFA*\n\n🔵 *Étapes Wave:*\n1️⃣ Ouvrez votre app Wave\n2️⃣ Envoyez vers: *+225 07 07 07 07 07*\n3️⃣ Montant: *${amount} FCFA*\n4️⃣ Référence: *${reference}*\n\n✅ Confirmation automatique après paiement !`;
+        break;
+      case 'orange_money':
+        messageBody = `🏠 *ChapeChape Résidence*\n\n💳 *Instructions Orange Money*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n💰 Montant: *${amount} FCFA*\n\n🟠 *Étapes Orange Money:*\n1️⃣ Composez: *#144*72#*\n2️⃣ Code marchand: *${reference}*\n3️⃣ Montant: *${amount}*\n4️⃣ Confirmez avec votre PIN\n\n✅ Confirmation automatique après paiement !`;
+        break;
+      case 'mtn_money':
+        messageBody = `🏠 *ChapeChape Résidence*\n\n💳 *Instructions MTN Money*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n💰 Montant: *${amount} FCFA*\n\n🟡 *Étapes MTN Money:*\n1️⃣ Composez: *133#*\n2️⃣ Choisir "Transfert d'argent"\n3️⃣ Référence: *${reference}*\n4️⃣ Montant: *${amount}*\n\n✅ Confirmation automatique après paiement !`;
+        break;
+      case 'moov_money':
+        messageBody = `🏠 *ChapeChape Résidence*\n\n💳 *Instructions Moov Money*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n💰 Montant: *${amount} FCFA*\n\n🔴 *Étapes Moov Money:*\n1️⃣ Composez: *155#*\n2️⃣ Choisir "Paiement marchand"\n3️⃣ Référence: *${reference}*\n4️⃣ Montant: *${amount}*\n\n✅ Confirmation automatique après paiement !`;
+        break;
+      default:
+        messageBody = `🏠 *ChapeChape Résidence*\n\n💳 *Finalisation du paiement*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n💰 Montant: *${amount} FCFA*\n\n💬 Répondez à ce message pour choisir votre méthode de paiement:\n• Wave\n• Orange Money\n• MTN Money\n• Moov Money\n\n📞 Assistance: +225 07 07 07 07 07`;
+    }
+    
+    logger.info(`Envoi d'instructions de paiement WhatsApp ${paymentMethod} pour la réservation ${booking._id}`);
+    return this.sendWhatsAppMessage(booking.client.phoneNumber, messageBody);
+  }
+
+  // ===== FIN WHATSAPP METHODS =====
+
+  // ✅ NOUVELLE MÉTHODE - Notifications pour le modèle Reservation (migré)
+  async sendReservationNotification(reservation, type, options = {}) {
+    if (!reservation) {
+      throw new Error('Reservation object is required');
+    }
+
+    // Si le client n'a pas de numéro de téléphone, impossible d'envoyer un SMS
+    if (!reservation.user || !reservation.user.phoneNumber) {
+      logger.warn(`Impossible d'envoyer un SMS pour la réservation ${reservation._id}: Numéro de téléphone manquant`);
+      return null;
+    }
+
+    let message;
+    const residenceName = reservation.residence?.title || 'votre résidence';
+    const checkInDate = new Date(reservation.checkIn).toLocaleDateString('fr-FR');
+    const checkOutDate = new Date(reservation.checkOut).toLocaleDateString('fr-FR');
+
+    switch (type) {
+      case 'confirmation':
+        message = `ChapeChape: Votre réservation pour "${residenceName}" est confirmée du ${checkInDate} au ${checkOutDate}. Merci de votre confiance!`;
+        break;
+      case 'reminder':
+      case 'arrival_reminder':
+        message = `ChapeChape: Rappel de votre arrivée à "${residenceName}" prévue demain ${checkInDate}. Bon séjour!`;
+        break;
+      case 'departure_reminder':
+        message = `ChapeChape: Rappel de votre départ de "${residenceName}" prévu demain ${checkOutDate}. Merci pour votre séjour!`;
+        break;
+      case 'cancellation':
+        message = `ChapeChape: Nous sommes désolés, votre réservation pour "${residenceName}" a été annulée. Contactez-nous pour plus d'informations.`;
+        break;
+      case 'payment':
+      case 'payment_deadline':
+        const deadline = options.deadline ? new Date(options.deadline).toLocaleDateString('fr-FR') : 'bientôt';
+        message = `ChapeChape: Paiement requis avant ${deadline} pour votre réservation à "${residenceName}". Orange Money, Wave, MTN Money ou espèces acceptés.`;
+        break;
+      case 'expired':
+        message = `ChapeChape: Votre réservation pour "${residenceName}" a expiré car le paiement n'a pas été effectué dans les délais.`;
+        break;
+      case 'approved':
+        message = `ChapeChape: Bonne nouvelle! Votre réservation pour "${residenceName}" a été approuvée. Procédez au paiement pour confirmer.`;
+        break;
+      case 'rejected':
+        message = `ChapeChape: Votre demande de réservation pour "${residenceName}" n'a pas pu être acceptée. Contactez-nous pour plus d'informations.`;
+        break;
+      default:
+        message = `ChapeChape: Mise à jour de votre réservation pour "${residenceName}" du ${checkInDate} au ${checkOutDate}. Consultez l'application pour plus de détails.`;
+    }
+
+    return this.sendSMS(reservation.user.phoneNumber, message);
+  }
+
+  // Méthode spécifique pour les notifications de réservation (LEGACY - Booking)
   async sendBookingNotification(booking, type) {
     if (!booking) {
       throw new Error('Booking object is required');
@@ -83,6 +253,34 @@ class TwilioService {
     }
 
     return this.sendSMS(booking.client.phoneNumber, message);
+  }
+
+  // Méthode spécifique pour envoyer des instructions de paiement Reservation
+  async sendReservationPaymentInstructions(reservation, paymentMethod = 'mobile') {
+    if (!reservation || !reservation.user || !reservation.user.phoneNumber) {
+      logger.warn(`Impossible d'envoyer des instructions de paiement: Données manquantes`);
+      return null;
+    }
+
+    const residenceName = reservation.residence?.title || 'votre résidence';
+    const amount = reservation.totalPrice || 'le montant requis';
+    
+    let message;
+    switch (paymentMethod) {
+      case 'orange_money':
+        message = `ChapeChape: Pour finaliser votre réservation "${residenceName}", composez *144# et suivez les instructions pour payer ${amount} FCFA.`;
+        break;
+      case 'wave':
+        message = `ChapeChape: Pour finaliser votre réservation "${residenceName}", utilisez l'app Wave pour payer ${amount} FCFA vers notre numéro marchand.`;
+        break;
+      case 'mtn_money':
+        message = `ChapeChape: Pour finaliser votre réservation "${residenceName}", composez *126# et suivez les instructions pour payer ${amount} FCFA.`;
+        break;
+      default:
+        message = `ChapeChape: Instructions de paiement pour "${residenceName}": ${amount} FCFA via Orange Money (*144#), Wave, MTN Money (*126#) ou espèces. Réf: ${reservation._id.toString().substr(-6)}`;
+    }
+
+    return this.sendSMS(reservation.user.phoneNumber, message);
   }
 
   // Méthode spécifique pour envoyer des instructions de paiement adaptées aux méthodes africaines

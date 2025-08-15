@@ -94,8 +94,9 @@ router.get('/:id', getResidence);
 // Routes qui nécessitent des droits de partenaire ou d'administrateur
 router.use(authorize('partner', 'admin'));
 
-router.post('/', createResidence);
-router.put('/:id', updateResidence);
+// Ajout de la validation Joi pour la création et la mise à jour
+router.post('/', validate(residenceValidation.createResidence), createResidence);
+router.put('/:id', validate(residenceValidation.updateResidence), updateResidence);
 router.delete('/:id', deleteResidence);
 
 // Routes pour la gestion des images

@@ -10,7 +10,9 @@ const {
     sendMessage,
     markAsRead,
     uploadAttachment,
-    createConversation
+    createConversation,
+    sendWhatsAppMessage,
+    testWhatsAppSend
 } = require('../controllers/message.controller');
 
 // Middleware d'authentification pour toutes les routes
@@ -33,5 +35,17 @@ router.route('/conversations/:id/attachments')
 
 router.route('/conversations/:id/read')
     .patch(validate(messageValidation.markAsRead), markAsRead);
+
+// ===== WHATSAPP BUSINESS ROUTES =====
+
+// Route pour tester l'envoi WhatsApp simple (développement)
+router.route('/whatsapp/test')
+    .post(testWhatsAppSend);
+
+// Route pour envoyer un message WhatsApp dans une conversation
+router.route('/conversations/:id/whatsapp')
+    .post(sendWhatsAppMessage);
+
+// ===== FIN WHATSAPP ROUTES =====
 
 module.exports = router;

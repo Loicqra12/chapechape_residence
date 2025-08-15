@@ -480,3 +480,147 @@ exports.markAsRead = asyncHandler(async (req, res) => {
 
     res.json({ success: true, data: { message: 'Conversation marquée comme lue' } });
 });
+
+// ===== WHATSAPP BUSINESS CONTROLLERS =====
+
+// @desc    Test WhatsApp send (development)
+// @route   POST /api/messages/whatsapp/test
+// @access  Private
+exports.testWhatsAppSend = asyncHandler(async (req, res) => {
+    const { phoneNumber, message } = req.body;
+    
+    if (!phoneNumber || !message) {
+        return res.status(400).json({
+            success: false,
+            error: 'phoneNumber et message sont requis'
+        });
+    }
+    
+    try {
+        const twilioService = require('../services/twilio.service');
+        const result = await twilioService.sendWhatsAppMessage(phoneNumber, message);
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                sid: result.sid,
+                status: result.status,
+                to: result.to,
+                message: 'WhatsApp envoyé avec succès'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// @desc    Send WhatsApp message in a conversation
+// @route   POST /api/messages/conversations/:id/whatsapp
+// @access  Private
+exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
+    const { content, phoneNumber } = req.body;
+    const conversationId = req.params.id;
+    
+    if (!content) {
+        return res.status(400).json({
+            success: false,
+            error: 'Le contenu du message est requis'
+        });
+    }
+    
+    // Vérifier que la conversation existe
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+        return res.status(404).json({
+            success: false,
+            error: 'Conversation non trouvée'
+        });
+    }
+    
+    // Vérifier que l'utilisateur est participant à cette conversation
+    if (!conversation.participants.some(p => p.toString() === req.user.id)) {
+        return res.status(403).json({
+            success: false,
+            error: 'Non autorisé à envoyer des messages dans cette conversation'
+        });
+    }
+    
+    try {
+        // 1. Envoyer le WhatsApp via Twilio
+        const twilioService = require('../services/twilio.service');
+        let targetPhoneNumber = phoneNumber;
+        
+        // Si pas de numéro fourni, essayer de le récupérer depuis la conversation
+        if (!targetPhoneNumber) {
+            // Récupérer les participants avec leurs infos complètes
+            await conversation.populate('participants', 'phoneNumber name');
+            
+            // Trouver le participant qui n'est pas l'expéditeur
+            const otherParticipant = conversation.participants.find(
+                p => p._id.toString() !== req.user.id
+            );
+            
+            if (otherParticipant && otherParticipant.phoneNumber) {
+                targetPhoneNumber = otherParticipant.phoneNumber;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Numéro de téléphone non trouvé pour cette conversation'
+                });
+            }
+        }
+        
+        const twilioResult = await twilioService.sendWhatsAppMessage(
+            targetPhoneNumber,
+            content
+        );
+        
+        // 2. Enregistrer le message dans la base de données
+        const message = await Message.create({
+            conversation: conversationId,
+            sender: req.user.id,
+            content,
+            platform: 'whatsapp',
+            twilioSid: twilioResult.sid,
+            phoneNumber: targetPhoneNumber
+        });
+        
+        // 3. Mettre à jour la conversation
+        conversation.lastMessage = message._id;
+        conversation.updatedAt = Date.now();
+        await conversation.save();
+        
+        // 4. Populate les données pour la réponse
+        await message.populate('sender', 'name avatar');
+        
+        // 5. Notifications WebSocket temps réel (optionnel)
+        try {
+            const socketService = require('../services/socket.service');
+            await socketService.notifyNewMessage(message, conversation);
+        } catch (socketError) {
+            console.error('Erreur lors de la notification WebSocket:', socketError);
+            // Continue même en cas d'erreur
+        }
+        
+        res.status(201).json({
+            success: true,
+            data: {
+                message,
+                whatsappSid: twilioResult.sid,
+                sentTo: targetPhoneNumber
+            }
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi WhatsApp:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ===== FIN WHATSAPP CONTROLLERS =====

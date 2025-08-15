@@ -8,6 +8,9 @@ try {
     console.log('Stripe non configuré');
 }
 
+// Import du service CinetPay
+const cinetPayService = require('./cinetpay.service');
+
 class PaymentService {
     constructor() {
         this.providers = {
@@ -16,7 +19,8 @@ class PaymentService {
             mtn: this.mtnMoneyPayment,
             moov: this.moovMoneyPayment,
             wave: this.wavePayment,
-            djamo: this.djamoPayment
+            djamo: this.djamoPayment,
+            cinetpay: this.cinetPayPayment
         };
     }
 
@@ -107,6 +111,32 @@ class PaymentService {
         };
     }
 
+    // CinetPay Payment - Intégration API réelle
+    async cinetPayPayment(paymentData) {
+        try {
+            const response = await cinetPayService.initiatePayment(
+                paymentData, 
+                paymentData.user, 
+                paymentData.reservation
+            );
+            
+            if (response.success) {
+                return {
+                    transactionId: response.transactionId,
+                    status: response.status,
+                    paymentUrl: response.paymentUrl,
+                    paymentToken: response.paymentToken,
+                    provider: 'cinetpay',
+                    providerResponse: response
+                };
+            } else {
+                throw new Error(response.error || 'Erreur CinetPay');
+            }
+        } catch (error) {
+            throw new Error(`CinetPay: ${error.message}`);
+        }
+    }
+
     // Simulateur de requête de paiement (à remplacer par de vraies intégrations API)
     async simulatePaymentRequest(provider, paymentData) {
         return new Promise((resolve) => {
@@ -129,7 +159,7 @@ class PaymentService {
         return new Promise((resolve) => {
             setTimeout(() => {
                 resolve({
-                    status: 'completed', // Toujours completed après OTP
+                    status: 'paid', // ✅ HARMONISÉ - était 'completed'
                     message: 'Paiement confirmé avec succès'
                 });
             }, 1000);

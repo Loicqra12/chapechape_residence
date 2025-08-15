@@ -83,7 +83,7 @@ const updateStatusSchema = {
     body: Joi.object().keys({
         status: Joi.string()
             .required()
-            .valid('pending', 'confirmed', 'cancelled', 'completed', 'refunded')
+            .valid('pending', 'awaiting_approval', 'payment_pending', 'confirmed', 'in_stay', 'cancelled', 'completed', 'expired', 'refunded') // ✅ ALIGNÉ - statuts réservation complets
             .messages({
                 'any.only': 'Statut invalide',
                 'string.base': 'Statut doit être une chaîne de caractères'

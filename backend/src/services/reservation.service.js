@@ -7,6 +7,8 @@ const User = require('../models/user.model');
 const CancellationPolicy = require('../models/cancellationPolicy.model');
 const emailService = require('./email.service');
 const availabilityService = require('./availability.service');
+const PricingService = require('./pricing.service');
+const notificationService = require('./notification.service');
 
 /**
  * Créer une nouvelle réservation
@@ -51,11 +53,161 @@ const createReservation = async (reservationBody) => {
       throw new apiError('La résidence n\'est pas disponible pour ces dates', 400);
     }
 
-    // Calculer le prix total
-    const totalPrice = await residence.calculateTotalPrice(
-      reservationBody.checkIn,
-      reservationBody.checkOut
-    );
+    // ✅ AJOUT : Calcul intelligent du prix selon le type de réservation
+    let totalPrice;
+    let bookingType = reservationBody.bookingType || 'day'; // Défaut : journalier
+    let duration = { hours: 0, days: 0, weeks: 0, months: 0 };
+    let pricingDetails = {};
+
+    // Déterminer automatiquement le type de réservation si non spécifié
+    if (!reservationBody.bookingType && residence.pricePeriod) {
+      bookingType = residence.pricePeriod;
+    }
+
+    // Calculer la durée selon le type de réservation
+    const checkInDate = new Date(reservationBody.checkIn);
+    const checkOutDate = new Date(reservationBody.checkOut);
+    const timeDiff = checkOutDate - checkInDate;
+
+    switch (bookingType) {
+      case 'hour':
+        duration.hours = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60)));
+        break;
+      case 'day':
+        duration.days = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
+        break;
+      case 'week':
+        duration.weeks = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24 * 7)));
+        break;
+      case 'month':
+        duration.months = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24 * 30)));
+        break;
+    }
+
+    // Construire les détails de pricing selon le type
+    if (bookingType === 'hour' && residence.hourlyRates) {
+      const rates = residence.hourlyRates;
+      const hours = duration.hours;
+      
+      if (hours === 1 && rates.oneHour > 0) {
+        totalPrice = rates.oneHour;
+        pricingDetails = {
+          rateType: 'oneHour',
+          rateValue: rates.oneHour,
+          calculationMethod: 'hourly',
+          basePeriod: '1 hour',
+          multiplier: 1,
+          breakdown: { baseRate: rates.oneHour, finalAmount: rates.oneHour }
+        };
+      } else if (hours === 2 && rates.twoHours > 0) {
+        totalPrice = rates.twoHours;
+        pricingDetails = {
+          rateType: 'twoHours',
+          rateValue: rates.twoHours,
+          calculationMethod: 'hourly',
+          basePeriod: '2 hours',
+          multiplier: 1,
+          breakdown: { baseRate: rates.twoHours, finalAmount: rates.twoHours }
+        };
+      } else if (hours === 3 && rates.threeHours > 0) {
+        totalPrice = rates.threeHours;
+        pricingDetails = {
+          rateType: 'threeHours',
+          rateValue: rates.threeHours,
+          calculationMethod: 'hourly',
+          basePeriod: '3 hours',
+          multiplier: 1,
+          breakdown: { baseRate: rates.threeHours, finalAmount: rates.threeHours }
+        };
+      } else {
+        // Calcul pour plus de 3 heures
+        const baseThreeHours = rates.threeHours > 0 ? rates.threeHours : (residence.price / 24) * 3;
+        const additionalHours = Math.max(0, hours - 3);
+        const additionalRate = rates.additionalHour > 0 ? rates.additionalHour : (residence.price / 24);
+        totalPrice = baseThreeHours + (additionalHours * additionalRate);
+        
+        pricingDetails = {
+          rateType: 'threeHours_plus',
+          rateValue: additionalRate,
+          calculationMethod: 'hourly',
+          basePeriod: '3+ hours',
+          multiplier: hours,
+          breakdown: {
+            baseRate: baseThreeHours,
+            additionalCharges: additionalHours * additionalRate,
+            finalAmount: totalPrice
+          }
+        };
+      }
+    } else if (bookingType === 'day' && residence.dailyRates) {
+      const rates = residence.dailyRates;
+      const days = duration.days;
+      
+      // Utiliser les tarifs journaliers si disponibles
+      if (rates.fullDay > 0) {
+        totalPrice = rates.fullDay * days;
+        pricingDetails = {
+          rateType: 'fullDay',
+          rateValue: rates.fullDay,
+          calculationMethod: 'daily',
+          basePeriod: '1 day',
+          multiplier: days,
+          breakdown: { baseRate: rates.fullDay, finalAmount: totalPrice }
+        };
+      } else {
+        // Fallback vers le calcul standard
+        totalPrice = await residence.calculateTotalPrice(checkInDate, checkOutDate);
+        pricingDetails = {
+          rateType: 'standard',
+          rateValue: residence.price,
+          calculationMethod: 'daily',
+          basePeriod: '1 day',
+          multiplier: days,
+          breakdown: { baseRate: residence.price, finalAmount: totalPrice }
+        };
+      }
+    } else {
+      // Utiliser la méthode standard de la résidence
+      totalPrice = await residence.calculateTotalPrice(checkInDate, checkOutDate);
+      pricingDetails = {
+        rateType: 'standard',
+        rateValue: residence.price,
+        calculationMethod: residence.pricePeriod || 'daily',
+        basePeriod: residence.pricePeriod || 'day',
+        multiplier: duration[bookingType] || 1,
+        breakdown: { baseRate: residence.price, finalAmount: totalPrice }
+      };
+    }
+
+    // ✅ INTÉGRATION TARIFICATION DYNAMIQUE CINETPAY
+    // Appliquer la tarification dynamique optimisée selon la méthode de paiement
+    let dynamicPricing = null;
+    let finalTotalPrice = totalPrice;
+    
+    try {
+      // Déterminer la méthode de paiement (depuis le body ou par défaut MTN Money)
+      const paymentMethod = reservationBody.paymentMethod || 'mtn_money';
+      const payoutMethod = reservationBody.payoutMethod || null;
+      
+      console.log(`Calcul de la tarification dynamique pour ${totalPrice} XOF avec méthode: ${paymentMethod}`);
+      
+      // Calculer la tarification optimisée
+      dynamicPricing = PricingService.calculateOptimalPricing(
+        totalPrice,
+        paymentMethod,
+        payoutMethod
+      );
+      
+      // Utiliser le prix client final (avec frais service optimisés)
+      finalTotalPrice = dynamicPricing.totalClientPrice;
+      
+      console.log(`Tarification dynamique appliquée: ${totalPrice} XOF → ${finalTotalPrice} XOF (économies: ${dynamicPricing.savingsVsExpensive} XOF)`);
+      
+    } catch (pricingError) {
+      console.error('Erreur lors du calcul de la tarification dynamique:', pricingError);
+      // En cas d'erreur, continuer avec le prix de base (fallback)
+      console.warn('Utilisation du prix de base en fallback');
+    }
 
     // Vérifier si la résidence a un partenaire associé et gérer ce cas de façon robuste
     let partnerId = null;
@@ -97,14 +249,69 @@ const createReservation = async (reservationBody) => {
     console.log(`Création de réservation avec partenaire: ${partnerId}`);
     
     // Créer la réservation avec tous les champs requis et un partenaire valide
+    // ✅ NOUVEAU : Logique de mode de réservation avancé - imposée par la résidence (contrôle partenaire)
+    const reservationMode = residence.reservationMode || 'instant';
+    const paymentTimerMinutes = reservationBody.paymentTimerDuration || 30;
+    
+    // Déterminer le statut initial selon le mode
+    let initialStatus = 'pending';
+    let paymentDeadline = null;
+    
+    if (reservationMode === 'instant') {
+      // Mode instantané : passage direct en attente paiement avec timer
+      initialStatus = 'payment_pending';
+      paymentDeadline = new Date(Date.now() + paymentTimerMinutes * 60 * 1000);
+    } else if (reservationMode === 'approval_required') {
+      // Mode approbation : attendre validation du partenaire
+      initialStatus = 'awaiting_approval';
+    }
+    
+    // Générer les codes QR sécurisés
+    const generateSecureCode = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const qrCode = {
+      checkInCode: generateSecureCode(),
+      checkOutCode: generateSecureCode(),
+      generatedAt: new Date()
+    };
+
     const reservation = await Reservation.create([{
       ...reservationBody,
       // Utiliser le partenaire déterminé par la logique ci-dessus
       partner: partnerId,
       user: reservationBody.user || reservationBody.client, // Assurer la compatibilité entre user/client
-      totalPrice,
+      totalPrice: finalTotalPrice, // ✅ Utiliser le prix avec tarification dynamique
+      basePrice: totalPrice, // ✅ Conserver le prix de base pour référence
+      // ✅ AJOUT : Inclure les nouvelles données de réservation flexible
+      bookingType,
+      duration,
+      pricingDetails,
+      // ✅ INTÉGRATION : Données de tarification dynamique CinetPay
+      dynamicPricing: dynamicPricing,
+      paymentMethod: reservationBody.paymentMethod || 'mtn_money',
+      payoutMethod: reservationBody.payoutMethod || dynamicPricing?.payoutMethod,
       cancellationPolicy: cancellationPolicyId,
-      status: 'pending'
+      
+      // ✅ NOUVEAU : Champs système de paiement avancé
+      status: initialStatus,
+      reservationMode,
+      paymentDeadline,
+      paymentTimerDuration: paymentTimerMinutes,
+      qrCode,
+      
+      // ✅ PHASE 0 : Snapshots lecture seule (immutable après création)
+      reservationModeSnapshot: residence.reservationMode,
+      ttlSnapshot: {
+        paymentTTLMinutes: residence.paymentTTLMinutes,
+        hostAcceptTTLMinutes: residence.hostAcceptTTLMinutes
+      },
+      
+      // Historique du statut initial
+      statusHistory: [{
+        status: initialStatus,
+        paymentStatus: 'pending',
+        changedAt: new Date(),
+        reason: `Réservation créée en mode ${reservationMode}`
+      }]
     }], { session });
     
     // Journaliser les IDs pour faciliter le débogage
@@ -169,6 +376,18 @@ const createReservation = async (reservationBody) => {
     } catch (emailError) {
       console.error('Erreur lors de l\'envoi des emails de confirmation:', emailError);
       // Ne pas faire échouer la réservation si l'envoi d'email échoue
+    }
+
+    // Programmer les rappels arrivée/départ pour la réservation (non bloquant)
+    try {
+      // Exécuter en arrière-plan pour ne pas retarder la réponse API
+      Promise.resolve(
+        notificationService.scheduleReservationReminders(reservation[0])
+      ).catch((err) => {
+        console.error('Erreur programmation rappels (Reservation):', err);
+      });
+    } catch (schedErr) {
+      console.error('Erreur inattendue lors du scheduling des rappels:', schedErr);
     }
 
     return reservation[0];
