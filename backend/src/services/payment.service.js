@@ -11,6 +11,9 @@ try {
 // Import du service CinetPay
 const cinetPayService = require('./cinetpay.service');
 
+// Import du service Wave
+const waveService = require('./wave.service');
+
 class PaymentService {
     constructor() {
         this.providers = {
@@ -87,16 +90,30 @@ class PaymentService {
         };
     }
 
-    // Wave Payment
+    // Wave Payment - Intégration API réelle
     async wavePayment(paymentData) {
-        // Simulation d'une requête à l'API Wave
-        const response = await this.simulatePaymentRequest('wave', paymentData);
-        return {
-            transactionId: response.transactionId,
-            status: 'processing',
-            reference: response.reference,
-            providerResponse: response
-        };
+        try {
+            const response = await waveService.initiatePayment(
+                paymentData, 
+                paymentData.user, 
+                paymentData.reservation
+            );
+            
+            if (response.success) {
+                return {
+                    transactionId: response.transactionId,
+                    status: response.status,
+                    paymentUrl: response.paymentUrl,
+                    paymentToken: response.paymentToken,
+                    provider: 'wave',
+                    providerResponse: response
+                };
+            } else {
+                throw new Error(response.error || 'Erreur Wave');
+            }
+        } catch (error) {
+            throw new Error(`Wave: ${error.message}`);
+        }
     }
 
     // Djamo Payment

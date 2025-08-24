@@ -1,7 +1,11 @@
 const Payment = require('../../models/payment.model');
 const Reservation = require('../../models/reservation.model');
-const PaymentService = require('../../services/payment.service');
+const User = require('../../models/user.model');
 const { Conversation, Message } = require('../../models/message.model');
+const PaymentService = require('../../services/payment.service');
+const waveService = require('../../services/wave.service');
+const logger = require('../../utils/logger');
+const cinetPayService = require('../../services/cinetpay.service');
 
 // Créer une intention de paiement
 exports.createPaymentIntent = async (req, res) => {
@@ -41,53 +45,37 @@ exports.createPaymentIntent = async (req, res) => {
             });
         }
 
-        // Déterminer le fournisseur de paiement
         let paymentProvider;
-        switch(paymentMethod) {
-            case 'card':
-                paymentProvider = 'stripe';
-                break;
-            case 'orange_money':
-                paymentProvider = 'orange';
-                break;
-            case 'mtn_money':
-                paymentProvider = 'mtn';
-                break;
-            case 'moov_money':
-                paymentProvider = 'moov';
-                break;
-            case 'wave':
-                paymentProvider = 'wave';
-                break;
-            case 'djamo':
-                paymentProvider = 'djamo';
-                break;
-            case 'cinetpay':
-            case 'mobile_money':
-                paymentProvider = 'cinetpay';
-                break;
-            default:
-                return res.status(400).json({
-                    success: false,
-                    message: "Méthode de paiement non supportée"
-                });
-        }
-
-        // Vérifier le numéro de téléphone pour les paiements mobile
-        if (paymentMethod !== 'card' && (!phoneNumber || !/^[0-9]{10}$/.test(phoneNumber))) {
+        if (paymentMethod === 'card') {
+            paymentProvider = 'stripe';
+        } else if (paymentMethod === 'wave') {
+            paymentProvider = 'wave';
+        } else if (paymentMethod === 'cinetpay' || paymentMethod === 'mobile_money' || paymentMethod === 'om' || paymentMethod === 'momo') {
+            paymentProvider = 'cinetpay';
+        } else {
             return res.status(400).json({
                 success: false,
-                message: "Numéro de téléphone invalide"
+                message: 'Méthode de paiement non supportée'
             });
         }
 
-        // Initier le paiement avec le service approprié
+        // Vérifier le numéro de téléphone pour les méthodes mobiles avec regex plus souple
+        // Accepte les formats internationaux comme +225... et des longueurs variables (8-15 chiffres)
+        if (paymentMethod !== 'card' && (!phoneNumber || !/^\+?\d{8,15}$/.test(phoneNumber))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Numéro de téléphone invalide. Format attendu: chiffres avec ou sans préfixe +'
+            });
+        }
+
+        // Initialiser le paiement via le service approprié en passant les objets complets
         const paymentResponse = await PaymentService.initiatePayment({
             amount: reservation.totalPrice,
             paymentMethod,
             paymentProvider,
             phoneNumber,
-            reservation: reservationId
+            reservation: reservation, // Passer l'objet complet
+            user: req.user // Passer l'objet utilisateur complet
         });
 
         // Créer l'enregistrement de paiement
@@ -159,12 +147,17 @@ exports.confirmPayment = async (req, res) => {
                 });
 
                 if (otherCompletedPayments.length === 0) {
-                    reservation.paymentStatus = 'paid';
-                    reservation.status = 'confirmed';
-                    
-                    // Activer la messagerie pour cette réservation
-                    reservation.messagingEnabled = true;
-                    await reservation.save();
+                    // Utiliser updateOne pour éviter les problèmes de validation sur les anciens documents
+                    await Reservation.updateOne(
+                        { _id: payment.reservation },
+                        { 
+                            $set: {
+                                paymentStatus: 'paid',
+                                status: 'confirmed',
+                                messagingEnabled: true
+                            }
+                        }
+                    );
                     
                     // Créer une conversation entre le client et le partenaire si elle n'existe pas déjà
                     const existingConversation = await Conversation.findOne({
@@ -173,26 +166,30 @@ exports.confirmPayment = async (req, res) => {
                     
                     if (!existingConversation) {
                         // Obtenir les informations de l'utilisateur et du partenaire
-                        await reservation.populate('user partner residence');
+                        const populatedReservation = await Reservation.findById(reservation._id)
+                            .populate('user partner residence');
                         
-                        const conversation = await Conversation.create({
-                            participants: [reservation.user, reservation.partner],
-                            reservationId: reservation._id,
-                            residenceId: reservation.residence._id,
-                            createdAt: Date.now(),
-                            updatedAt: Date.now()
-                        });
+                        // Vérifier que les participants existent avant de créer la conversation
+                        if (populatedReservation && populatedReservation.user && populatedReservation.partner) {
+                            const conversation = await Conversation.create({
+                                participants: [populatedReservation.user._id, populatedReservation.partner._id],
+                                reservationId: populatedReservation._id,
+                                residenceId: populatedReservation.residence._id,
+                                createdAt: Date.now(),
+                                updatedAt: Date.now()
+                            });
                         
-                        // Envoyer un message automatique de bienvenue
-                        const message = await Message.create({
-                            conversation: conversation._id,
-                            sender: reservation.partner,
-                            content: `Merci pour votre réservation de "${reservation.residence.name}" ! N'hésitez pas à me contacter pour toute question concernant votre séjour.`
-                        });
-                        
-                        // Mettre à jour le dernier message de la conversation
-                        conversation.lastMessage = message._id;
-                        await conversation.save();
+                            // Envoyer un message automatique de bienvenue
+                            const message = await Message.create({
+                                conversation: conversation._id,
+                                sender: populatedReservation.partner._id,
+                                content: `Merci pour votre réservation de "${populatedReservation.residence.name}" ! N'hésitez pas à me contacter pour toute question concernant votre séjour.`
+                            });
+                            
+                            // Mettre à jour le dernier message de la conversation
+                            conversation.lastMessage = message._id;
+                            await conversation.save();
+                        }
                     }
                 }
             }
@@ -209,6 +206,7 @@ exports.confirmPayment = async (req, res) => {
         });
     }
 };
+
 
 // Obtenir l'historique des paiements d'un utilisateur
 exports.getUserPayments = async (req, res) => {
@@ -357,6 +355,16 @@ exports.handleCinetPayWebhook = async (req, res) => {
                     await payment.reservation.save();
 
                     console.log(`Paiement CinetPay confirmé pour réservation ${payment.reservation._id}`);
+                    
+                    // 🚀 NOUVEAU : Déclencher payout automatique
+                    try {
+                        const AutomaticPayoutService = require('../../services/automatic-payout.service');
+                        await AutomaticPayoutService.triggerAutomaticPayout(payment, payment.reservation);
+                        logger.info(`Payout automatique déclenché pour payment ${payment._id}`);
+                    } catch (payoutError) {
+                        logger.error('Erreur lors du déclenchement du payout automatique:', payoutError);
+                        // Ne pas faire échouer le webhook pour une erreur de payout
+                    }
                 }
             }
 
@@ -370,6 +378,88 @@ exports.handleCinetPayWebhook = async (req, res) => {
 
     } catch (error) {
         console.error('Erreur webhook CinetPay:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Webhook pour les événements de paiement Wave
+exports.handleWaveWebhook = async (req, res) => {
+    try {
+        const signature = req.headers['x-wave-signature'] || req.headers['wave-signature'];
+        const rawBody = req.body; // Buffer brut depuis express.raw()
+        
+        // Convertir le corps brut en objet JSON APRÈS vérification de signature
+        let webhookData;
+        try {
+            webhookData = JSON.parse(rawBody.toString('utf8'));
+        } catch (parseError) {
+            console.error('Erreur parsing webhook Wave:', parseError);
+            return res.status(400).json({
+                success: false,
+                message: 'Corps de requête JSON invalide'
+            });
+        }
+
+        // Log de la notification Wave
+        logger.info('Webhook Wave reçu:', webhookData);
+
+        // Vérifier la signature si configurée
+        if (process.env.WAVE_SIGNING_SECRET && signature) {
+            const isValid = waveService.verifySignature(rawBody, signature);
+            if (!isValid) {
+                logger.error('Signature Wave invalide');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Signature invalide'
+                });
+            }
+        }
+
+        // Traiter la notification via le service Wave
+        const result = await waveService.processWebhook(webhookData);
+
+        if (result.success) {
+            // Rechercher le paiement correspondant
+            const payment = await Payment.findOne({ 
+                transactionId: result.transactionId 
+            }).populate('reservation');
+
+            if (payment) {
+                // Mettre à jour le statut du paiement
+                payment.status = result.status;
+                payment.providerResponse = result.webhookData;
+                await payment.save();
+
+                // Mettre à jour la réservation si paiement réussi
+                if (result.status === 'paid' && payment.reservation) {
+                    payment.reservation.paymentStatus = 'paid';
+                    payment.reservation.status = 'confirmed';
+                    await payment.reservation.save();
+
+                    console.log(`Paiement Wave confirmé pour la réservation ${payment.reservation._id}`);
+                    
+                    // 🚀 NOUVEAU : Déclencher payout automatique
+                    try {
+                        const AutomaticPayoutService = require('../../services/automatic-payout.service');
+                        await AutomaticPayoutService.triggerAutomaticPayout(payment, payment.reservation);
+                        logger.info(`Payout automatique déclenché pour payment ${payment._id}`);
+                    } catch (payoutError) {
+                        logger.error('Erreur lors du déclenchement du payout automatique:', payoutError);
+                        // Ne pas faire échouer le webhook pour une erreur de payout
+                    }
+                }
+            } else {
+                console.warn('Aucun paiement trouvé pour la transaction Wave:', result.transactionId);
+            }
+        }
+
+        res.json({ received: true });
+
+    } catch (error) {
+        console.error('Erreur webhook Wave:', error);
         res.status(400).json({
             success: false,
             message: error.message

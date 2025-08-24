@@ -108,18 +108,29 @@ const payoutSchema = new mongoose.Schema({
         }
     },
     
-    // Statuts selon modèle cible
+    // Statut du payout
     status: {
         type: String,
         enum: [
-            'PAYOUT_SCHEDULED',   // Programmé pour exécution
-            'PAYOUT_PENDING',     // En cours de traitement CinetPay
-            'PAYOUT_SUCCESS',     // Transfert réussi
-            'PAYOUT_FAILED',      // Échec technique
-            'PAYOUT_CANCELLED'    // Annulé (timeout, solde insuffisant, etc.)
+            'scheduled',        // Programmé
+            'pending',          // En attente de traitement
+            'processing',       // En cours de traitement
+            'completed',        // Terminé avec succès
+            'failed',           // Échec du transfert
+            'cancelled',        // Annulé manuellement
+            'expired'           // Expiré (non traité dans les délais)
         ],
-        default: 'PAYOUT_SCHEDULED',
+        default: 'scheduled',
+        required: true,
         index: true
+    },
+    
+    // Type de déclenchement du payout
+    trigger_type: {
+        type: String,
+        enum: ['manual', 'automatic', 'scheduled'],
+        default: 'manual',
+        required: true
     },
     
     // Informations CinetPay
@@ -130,8 +141,8 @@ const payoutSchema = new mongoose.Schema({
     },
     cinetpay_info: {
         transaction_id: {
-            type: String,
-            sparse: true // Index sparse car peut être null
+            type: String
+            // Pas d'index automatique - index explicite défini plus bas
         },
         client_transaction_id: {
             type: String,
@@ -229,8 +240,8 @@ const payoutSchema = new mongoose.Schema({
 // ===============================
 payoutSchema.index({ partner: 1, status: 1 });
 payoutSchema.index({ scheduled_for: 1, status: 1 });
-payoutSchema.index({ 'cinetpay_info.transaction_id': 1 });
-payoutSchema.index({ 'cinetpay_info.client_transaction_id': 1 });
+payoutSchema.index({ 'cinetpay_info.transaction_id': 1 }); // Index nécessaire (pas unique)
+// cinetpay_info.client_transaction_id index créé automatiquement par unique: true
 payoutSchema.index({ createdAt: -1 });
 
 // ===============================

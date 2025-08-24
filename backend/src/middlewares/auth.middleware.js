@@ -6,15 +6,23 @@ const logger = require('../utils/logger');
 // Protéger les routes
 exports.protect = async (req, res, next) => {
     try {
+        logger.info('Auth middleware appelé', { 
+            url: req.originalUrl, 
+            method: req.method,
+            hasAuth: !!req.headers.authorization 
+        });
+        
         let token;
 
         // Vérifier si le token est dans les headers
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
+            logger.info('Token extrait du header Authorization');
         }
 
         // Vérifier si le token existe
         if (!token) {
+            logger.error('Token manquant dans la requête');
             return next(
                 new apiError('Non autorisé - Token non fourni', 401)
             );
@@ -25,14 +33,22 @@ exports.protect = async (req, res, next) => {
             const decoded = jwt.verifyToken(token, 'JWT_SECRET');
 
             // Ajouter l'utilisateur à la requête
+            logger.info('Token décodé avec succès', { userId: decoded.id });
             const user = await User.findById(decoded.id);
             
             // Vérifier si l'utilisateur existe
             if (!user) {
+                logger.error('Utilisateur non trouvé pour le token', { userId: decoded.id });
                 return next(
                     new apiError('L\'utilisateur associé à ce token n\'existe plus', 401)
                 );
             }
+            
+            logger.info('Utilisateur authentifié avec succès', { 
+                userId: user._id, 
+                email: user.email, 
+                role: user.role 
+            });
             
             // Vérification du changement de mot de passe désactivée temporairement
             // car la méthode hasPasswordChangedAfter n'existe pas dans le modèle User

@@ -164,8 +164,10 @@ class CinetPayService {
         } catch (error) {
             logger.error('Erreur lors de l\'initiation du paiement CinetPay:', {
                 error: error.message,
-                reservationId: reservation._id,
-                amount: paymentData.amount
+                reservationId: reservation._id.toString(),
+                amount: paymentData.amount,
+                cinetpayResponse: error.response?.data,
+                statusCode: error.response?.status
             });
 
             // Gestion des erreurs spécifiques CinetPay
@@ -200,7 +202,6 @@ class CinetPayService {
             case 'orange_money':
             case 'mtn_money':
             case 'moov_money':
-            case 'wave':
                 return 'MOBILE_MONEY';
             case 'wallet':
                 return 'WALLET';

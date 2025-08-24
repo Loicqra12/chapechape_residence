@@ -41,11 +41,11 @@ const paymentSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['card', 'orange_money', 'mtn_money', 'moov_money', 'wave', 'djamo']
+        enum: ['card', 'orange_money', 'mtn_money', 'moov_money', 'wave', 'djamo', 'mobile_money', 'om', 'momo']
     },
     paymentProvider: {
         type: String,
-        enum: ['stripe', 'orange', 'mtn', 'moov', 'wave', 'djamo'],
+        enum: ['stripe', 'orange', 'mtn', 'moov', 'wave', 'djamo', 'cinetpay'],
         required: true
     },
     transactionId: {

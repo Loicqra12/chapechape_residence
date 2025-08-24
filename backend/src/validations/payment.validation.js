@@ -13,13 +13,13 @@ const createPaymentIntent = {
       'string.empty': 'L\'ID de réservation ne peut pas être vide',
       'string.base': 'L\'ID de réservation doit être une chaîne de caractères'
     }),
-    paymentMethod: Joi.string().required().valid('card', 'mobile_money', 'om', 'momo', 'wave').messages({
+    paymentMethod: Joi.string().required().valid('card', 'mobile_money', 'om', 'momo', 'wave', 'cinetpay').messages({
       'any.required': 'La méthode de paiement est obligatoire',
       'string.empty': 'La méthode de paiement ne peut pas être vide',
-      'any.only': 'Méthode de paiement non valide, options: card, mobile_money, om, momo, wave'
+      'any.only': 'Méthode de paiement non valide, options: card, mobile_money, om, momo, wave, cinetpay'
     }),
     phoneNumber: Joi.string().when('paymentMethod', {
-      is: Joi.string().valid('mobile_money', 'om', 'momo', 'wave'),
+      is: Joi.string().valid('mobile_money', 'om', 'momo', 'wave', 'cinetpay'),
       then: Joi.string().required().pattern(/^\+?[0-9]{8,15}$/).messages({
         'any.required': 'Le numéro de téléphone est requis pour ce mode de paiement',
         'string.pattern.base': 'Format de numéro de téléphone invalide'
@@ -42,7 +42,11 @@ const confirmPayment = {
   body: Joi.object().keys({
     paymentIntentId: Joi.string().optional(),
     transactionId: Joi.string().optional(),
-    paymentProof: Joi.string().optional()
+    paymentProof: Joi.string().optional(),
+    otp: Joi.string().optional().min(4).max(10).messages({
+      'string.min': 'L\'OTP doit contenir au moins {#limit} caractères',
+      'string.max': 'L\'OTP ne peut pas dépasser {#limit} caractères'
+    })
   }).min(1).messages({
     'object.min': 'Au moins une information de confirmation est requise'
   })

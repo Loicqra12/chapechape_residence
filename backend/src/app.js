@@ -28,12 +28,14 @@ const partnerRoutes = require("./routes/partner.routes");
 const reservationRoutes = require("./routes/reservation.routes");
 const favoriteRoutes = require("./routes/favorite.routes");
 const userRoutes = require("./routes/user.routes");
-const paymentRoutes = require("./routes/payment.routes");
-const reviewRoutes = require("./routes/review.routes");
+const payoutRoutes = require("./routes/payout.routes"); // ✅ RÉACTIVÉ
+const pricingRoutes = require("./routes/pricing.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const messageRoutes = require("./routes/message.routes");
 const authRoutes = require("./routes/auth.routes");
 // const blogRoutes = require("./routes/blog.routes"); // Temporairement désactivé pour diagnostic
+const reviewRoutes = require("./routes/review.routes");
+const paymentRoutes = require("./routes/payment.routes");
 const adminRoutes = require("./routes/admin.routes");
 const superAdminRoutes = require("./routes/superadmin.routes");
 const availabilityRoutes = require("./routes/availability.routes");
@@ -49,8 +51,10 @@ const deviceRoutes = require("./routes/device.routes");
 const smsRoutes = require("./routes/sms.routes");
 // Import des routes website
 const websiteRoutes = require("./routes/website.routes");
-// Import des routes pricing (tarification dynamique)
-const pricingRoutes = require("./routes/pricing.routes");
+// Import des routes pricing (tarification dynamique) - DÉJÀ DÉCLARÉ PLUS HAUT
+// const pricingRoutes = require("./routes/pricing.routes"); // DUPLIQUÉ - SUPPRIMÉ
+// Import des routes payout (reversements partners)
+// const payoutRoutes = require("./routes/payout.routes"); // TEMPORAIREMENT DESACTIVE
 
 const app = express();
 
@@ -175,7 +179,7 @@ if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !==
   });
 }
 
-// Route de vérification de santé (health check)
+// Route de vérification de santé (health check) basique pour compatibilité
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -183,6 +187,9 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Import des routes de health checks avancés
+const healthRoutes = require("./routes/health.routes");
 
 // Importer les contrôleurs de promotion directement pour les routes publiques
 const {
@@ -328,10 +335,14 @@ app.use("/api/maps", mapsRoutes); // Ajout des routes pour la géolocalisation e
 app.use("/api/cancellation-policies", cancellationPolicyRoutes); // Routes pour les politiques d'annulation
 app.use("/api/website", websiteRoutes); // Routes pour le site vitrine (contact, newsletter)
 app.use("/api/pricing", pricingRoutes); // Routes pour la tarification dynamique CinetPay - ✅ Réactivé après correction bug d'import auth
+app.use("/api/payouts", payoutRoutes); // ✅ RÉACTIVÉ - Routes pour les reversements aux partners via CinetPay
+app.use("/api/health", healthRoutes); // Routes pour les health checks avancés
 // app.use("/api/blog", cache(1800), blogRoutes); // Routes pour le blog dynamique (temporairement désactivé pour diagnostic)
 
-// 🔒 SÉCURITÉ CRITIQUE : Routes de test (STRICTEMENT désactivées en production)
+// 🔒 SÉCURITÉ CRITIQUE : Routes de test (TEMPORAIREMENT DÉSACTIVÉES POUR DIAGNOSTIC)
 // Double vérification pour s'assurer qu'aucune route de test n'est exposée en production
+// TEMPORAIREMENT DÉSACTIVÉ POUR DIAGNOSTIC DU CRASH
+/*
 if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !== 'false') {
   console.log('⚠️ Routes de test activées en environnement de développement UNIQUEMENT');
   console.log('🚨 CES ROUTES SONT AUTOMATIQUEMENT DÉSACTIVÉES EN PRODUCTION');
@@ -340,6 +351,8 @@ if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !==
   // Log explicite en production pour confirmer la désactivation
   console.log('✅ SÉCURITÉ : Routes de test DÉSACTIVÉES en production');
 }
+*/
+console.log('🔧 DIAGNOSTIC : Routes de test temporairement désactivées');
 
 // Route de test
 app.get("/", (req, res) => {

@@ -22,6 +22,9 @@ class CinetPayTransferService {
         this.baseUrl = 'https://client.cinetpay.com/v1';
         this.mode = process.env.NODE_ENV === 'production' ? 'production' : 'test';
         
+        // Flag d'activation pour éviter de faire crasher l'app si la config est incomplète
+        this.enabled = true;
+        
         // Cache token en mémoire
         this.tokenCache = {
             token: null,
@@ -32,13 +35,17 @@ class CinetPayTransferService {
         this.maxRetries = 3;
         this.retryDelay = 2000; // 2 secondes
         
-        // Validation configuration
+        // Validation configuration (sans throw pour ne pas tuer le serveur)
         if (!this.apiKey || !this.password) {
             logger.error('CinetPay Transfer mal configuré: API Key ou Password manquant');
-            throw new Error('Configuration CinetPay Transfer incomplète');
+            this.enabled = false;
         }
         
-        logger.info(`CinetPay Transfer Service initialisé en mode ${this.mode}`);
+        logger.info(`CinetPay Transfer Service initialisé en mode ${this.mode}`, {
+            enabled: this.enabled,
+            hasApiKey: !!this.apiKey,
+            hasPassword: !!this.password
+        });
     }
 
     // ===============================
@@ -79,6 +86,12 @@ class CinetPayTransferService {
      */
     async generateToken() {
         try {
+            logger.info('Tentative d\'authentification CinetPay', {
+                apiKey: this.apiKey?.substring(0, 10) + '...',
+                baseUrl: this.baseUrl,
+                hasPassword: !!this.password
+            });
+            
             const response = await axios({
                 method: 'POST',
                 url: `${this.baseUrl}/auth/login`,
@@ -93,6 +106,12 @@ class CinetPayTransferService {
                     password: this.password
                 }),
                 timeout: 10000
+            });
+            
+            logger.info('Réponse CinetPay Auth reçue', {
+                status: response.status,
+                code: response.data?.code,
+                message: response.data?.message
             });
 
             const result = response.data;
@@ -167,13 +186,13 @@ class CinetPayTransferService {
     async hasSufficientBalance(amount) {
         try {
             const balance = await this.checkBalance();
-            const issufficient = balance.available >= amount;
+            const isSufficient = balance.available >= amount;
             
-            if (!issufficient) {
+            if (!isSufficient) {
                 logger.warn(`Solde insuffisant: ${balance.available} XOF disponible, ${amount} XOF requis`);
             }
             
-            return isufficient;
+            return isSufficient;
             
         } catch (error) {
             logger.error('Erreur vérification solde suffisant:', error);
@@ -319,14 +338,16 @@ class CinetPayTransferService {
                     payout.cinetpay_info.sending_status = 'PENDING'; // Nécessite confirmation mail
                     
                     logger.info(`Transfert initié avec succès: ${transfer.transaction_id} (Montant: ${payout.net_amount} XOF)`);
+                    logger.warn(`⚠️  CONFIRMATION EMAIL REQUISE pour ${transfer.transaction_id} - Connectez-vous à CinetPay pour confirmer`);
                     
                     return {
                         success: true,
                         transaction_id: transfer.transaction_id,
                         lot_id: transfer.lot,
-                        status: 'PENDING',
+                        status: 'PENDING_EMAIL_CONFIRMATION',
                         treatment_status: transfer.treatment_status,
-                        requires_confirmation: true // Mail confirmation requise
+                        requires_confirmation: true,
+                        confirmation_message: 'Connectez-vous à https://client.cinetpay.com pour confirmer ce transfert'
                     };
                     
                 } else {
@@ -481,7 +502,6 @@ class CinetPayTransferService {
      */
     getPaymentMethodFromChannel(channel) {
         const mapping = {
-            'wave': 'WAVECI',           // Wave Côte d'Ivoire
             'orange_money': 'OM',       // Orange Money
             'mtn_money': 'MTN',         // MTN Money
             'moov_money': 'MOOV',       // Moov Money

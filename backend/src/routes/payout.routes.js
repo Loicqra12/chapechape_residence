@@ -2,8 +2,34 @@ const express = require('express');
 const router = express.Router();
 const payoutController = require('../controllers/payout.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
-const { validate } = require('../middlewares/validation.middleware');
+const logger = require('../utils/logger');
+const { validationResult } = require('express-validator');
+
+logger.info('🔧 Routes payout chargées avec succès');
+
 const { body, param, query } = require('express-validator');
+
+// Middleware de validation pour express-validator
+const validate = (req, res, next) => {
+    logger.info('Middleware de validation express-validator appelé', { 
+        url: req.originalUrl, 
+        method: req.method 
+    });
+    
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        const errorMessage = errors.array().map(err => err.msg).join(', ');
+        logger.error('Erreur de validation', { errors: errors.array(), body: req.body });
+        return res.status(400).json({
+            success: false,
+            message: errorMessage,
+            errors: errors.array()
+        });
+    }
+    
+    logger.info('Validation réussie, passage au contrôleur');
+    next();
+};
 
 /**
  * Routes Payout - Gestion des reversements aux partners
@@ -15,7 +41,7 @@ const { body, param, query } = require('express-validator');
 // ===============================
 // MIDDLEWARE GLOBAL
 // ===============================
-router.use(authMiddleware);
+router.use(authMiddleware.protect);
 
 // ===============================
 // VALIDATION SCHEMAS
@@ -226,17 +252,208 @@ router.get('/stats/:partnerId',
 );
 
 // ===============================
+// ROUTES WAVE PAYOUTS
+// ===============================
+
+/**
+ * Initier un transfert Wave
+ * POST /api/payouts/wave/transfer
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.post('/wave/transfer',
+    [
+        body('amount').isFloat({ min: 100 }).withMessage('Montant minimum 100 FCFA'),
+        body('mobile').matches(/^\+[1-9]\d{1,14}$/).withMessage('Numéro de téléphone invalide (format: +XXXXXXXXXXX)'),
+        body('name').isLength({ min: 2, max: 255 }).withMessage('Nom requis (2-255 caractères)'),
+        body('payment_reason').optional().isLength({ max: 40 }).withMessage('Motif max 40 caractères'),
+        body('national_id').optional().isLength({ max: 255 }).withMessage('ID national max 255 caractères'),
+        validate
+    ],
+    payoutController.initiateWaveTransfer
+);
+
+/**
+ * Vérifier le statut d'un transfert Wave
+ * GET /api/payouts/wave/transfer/:waveId/status
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.get('/wave/transfer/:waveId/status',
+    [
+        param('waveId').matches(/^pt-/).withMessage('ID Wave invalide (format: pt-xxx)'),
+        validate
+    ],
+    payoutController.getWaveTransferStatus
+);
+
+/**
+ * Rechercher des transferts Wave
+ * GET /api/payouts/wave/search
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.get('/wave/search',
+    [
+        query('client_reference').optional().isLength({ min: 1 }).withMessage('Référence client requise'),
+        validate
+    ],
+    payoutController.searchWaveTransfers
+);
+
+/**
+ * Créer un batch de transferts Wave
+ * POST /api/payouts/wave/batch
+ * 
+ * Permissions: Admin, SuperAdmin uniquement
+ */
+router.post('/wave/batch',
+    [
+        body('transfers').isArray({ min: 1, max: 100 }).withMessage('Liste de transferts requise (1-100)'),
+        body('transfers.*.amount').isFloat({ min: 100 }).withMessage('Montant minimum 100 FCFA'),
+        body('transfers.*.mobile').matches(/^\+[1-9]\d{1,14}$/).withMessage('Numéro invalide'),
+        body('transfers.*.name').isLength({ min: 2, max: 255 }).withMessage('Nom requis'),
+        validate
+    ],
+    payoutController.createWaveBatch
+);
+
+/**
+ * Statut d'un batch Wave
+ * GET /api/payouts/wave/batch/:batchId/status
+ * 
+ * Permissions: Admin, SuperAdmin
+ */
+router.get('/wave/batch/:batchId/status',
+    [
+        param('batchId').matches(/^pb-/).withMessage('ID batch invalide (format: pb-xxx)'),
+        validate
+    ],
+    payoutController.getWaveBatchStatus
+);
+
+/**
+ * Annuler un transfert Wave
+ * POST /api/payouts/wave/transfer/:waveId/reverse
+ * 
+ * Permissions: Admin, SuperAdmin uniquement
+ */
+router.post('/wave/transfer/:waveId/reverse',
+    [
+        param('waveId').matches(/^pt-/).withMessage('ID Wave invalide'),
+        validate
+    ],
+    payoutController.reverseWaveTransfer
+);
+
+/**
+ * Webhook Wave Payout (pas d'authentification)
+ * POST /api/payouts/wave/webhook
+ * 
+ * Appelé par Wave lors des notifications de transfert
+ * Note: express.raw sera géré au niveau de app.js pour cette route
+ */
+
+// Créer un router spécial pour webhook sans auth
+const webhookRouter = express.Router();
+webhookRouter.post('/wave/webhook',
+    payoutController.handleWavePayoutWebhook
+);
+
+// Exporter le webhook router séparément
+module.exports.webhookRouter = webhookRouter;
+
+// ===============================
 // ROUTES CINETPAY
 // ===============================
 
 /**
- * Vérifier le solde CinetPay
- * GET /api/payouts/balance
+ * Récupérer le solde CinetPay
+ * GET /api/payouts/cinetpay/balance
  * 
- * Permissions: Admin, SuperAdmin uniquement
+ * Permissions: Partner, Admin, SuperAdmin
  */
-router.get('/balance',
+router.get('/cinetpay/balance',
     payoutController.getCinetPayBalance
+);
+
+/**
+ * Initier un transfert CinetPay
+ * POST /api/payouts/cinetpay/transfer
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.post('/cinetpay/transfer',
+    [
+        body('payout_id').notEmpty().withMessage('ID payout requis'),
+        body('amount').isFloat({ min: 100 }).withMessage('Montant minimum 100 FCFA'),
+        body('phone_number').matches(/^\+[1-9]\d{1,14}$/).withMessage('Numéro de téléphone invalide (format: +XXXXXXXXXXX)'),
+        body('first_name').optional().isString().withMessage('Prénom invalide'),
+        body('last_name').optional().isString().withMessage('Nom invalide'),
+        body('email').optional().isEmail().withMessage('Email invalide'),
+        body('channel').optional().isIn(['orange_money', 'mtn_money', 'moov_money']).withMessage('Canal invalide'),
+        validate
+    ],
+    payoutController.initiateCinetPayTransfer
+);
+
+/**
+ * Vérifier le statut d'un transfert CinetPay
+ * GET /api/payouts/cinetpay/transfer/:transferId/status
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.get('/cinetpay/transfer/:transferId/status',
+    [
+        param('transferId').notEmpty().withMessage('ID de transfert requis'),
+        validate
+    ],
+    payoutController.getCinetPayTransferStatus
+);
+
+/**
+ * Annuler un transfert CinetPay
+ * POST /api/payouts/cinetpay/transfer/:transferId/cancel
+ * 
+ * Permissions: Partner (propriétaire), Admin, SuperAdmin
+ */
+router.post('/cinetpay/transfer/:transferId/cancel',
+    [
+        param('transferId').notEmpty().withMessage('ID de transfert requis'),
+        validate
+    ],
+    payoutController.cancelCinetPayTransfer
+);
+
+/**
+ * Récupérer l'historique des transferts CinetPay
+ * GET /api/payouts/cinetpay/transfer/history
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.get('/cinetpay/transfer/history',
+    [
+        query('page').optional().isInt({ min: 1 }).withMessage('Page invalide'),
+        query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limite invalide'),
+        query('status').optional().isIn(['pending', 'completed', 'failed', 'cancelled']).withMessage('Statut invalide'),
+        validate
+    ],
+    payoutController.getCinetPayTransferHistory
+);
+
+/**
+ * Récupérer les statistiques des transferts CinetPay
+ * GET /api/payouts/cinetpay/transfer/stats
+ * 
+ * Permissions: Partner, Admin, SuperAdmin
+ */
+router.get('/cinetpay/transfer/stats',
+    [
+        query('startDate').optional().isISO8601().withMessage('Date de début invalide'),
+        query('endDate').optional().isISO8601().withMessage('Date de fin invalide'),
+        validate
+    ],
+    payoutController.getCinetPayTransferStats
 );
 
 /**
