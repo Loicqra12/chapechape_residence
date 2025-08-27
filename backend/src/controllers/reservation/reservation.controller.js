@@ -297,6 +297,8 @@ exports.modifyReservation = asyncHandler(async (req, res) => {
  */
 exports.updateReservationStatus = asyncHandler(async (req, res) => {
     const { status } = req.body;
+    const ReservationStateService = require('../../services/reservation-state.service');
+    
     const reservation = await Reservation.findById(req.params.id);
 
     if (!reservation) {
@@ -313,16 +315,20 @@ exports.updateReservationStatus = asyncHandler(async (req, res) => {
         throw new ApiError('Vous n\'êtes pas autorisé à modifier cette réservation', 403);
     }
 
-    // Mettre à jour le statut
-    reservation.status = status;
-    await reservation.save();
+    // ✅ Utiliser le service de transition atomique
+    const updatedReservation = await ReservationStateService.updateStatus(
+        req.params.id,
+        status,
+        req.user._id,
+        { reason: req.body.reason }
+    );
 
     // Notifier les clients connectés
     await SocketService.notifyBlockedDatesUpdate(reservation.residence);
 
     res.status(200).json({
         success: true,
-        data: reservation
+        data: updatedReservation
     });
 });
 

@@ -357,4 +357,25 @@ reservationSchema.pre('save', function(next) {
     next();
 });
 
+// ✅ Hook pour findOneAndUpdate - Couvre les bypasses de pre('save')
+reservationSchema.pre('findOneAndUpdate', function(next) {
+    // Activer les validateurs pour ce hook
+    this.setOptions({ runValidators: true, context: 'query' });
+    
+    const update = this.getUpdate();
+    const filter = this.getFilter();
+    
+    // Vérifier les règles métier pour les updates directs
+    if (update.status === 'confirmed' || update.status === 'in_stay') {
+        // Si paymentStatus n'est pas dans le filtre, c'est dangereux
+        if (!filter.paymentStatus) {
+            const error = new Error(`Transition vers ${update.status} requiert paymentStatus='paid' dans le filtre de l'update`);
+            error.name = 'ValidationError';
+            return next(error);
+        }
+    }
+    
+    next();
+});
+
 module.exports = mongoose.model('Reservation', reservationSchema);

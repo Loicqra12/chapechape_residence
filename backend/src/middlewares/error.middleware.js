@@ -96,6 +96,19 @@ const errorHandler = (err, req, res, next) => {
         });
     }
 
+    // Erreur de transition d'état invalide (409 Conflict)
+    if (err.message && (err.message.includes('Invalid state transition') || 
+                       err.message.includes('Transition vers') ||
+                       err.message.includes('Échec de la transition atomique'))) {
+        return res.status(409).json({
+            success: false,
+            message: err.message,
+            errorCode: errorCodes.RESERVATION.INVALID_STATE_TRANSITION,
+            errors: [],
+            data: {}
+        });
+    }
+
     // Erreur personnalisée ApiError
     if (err instanceof ApiError) {
         return res.status(err.statusCode).json({

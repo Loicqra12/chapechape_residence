@@ -19,7 +19,7 @@ const createPaymentIntent = {
       'any.only': 'Méthode de paiement non valide, options: card, mobile_money, om, momo, wave, cinetpay'
     }),
     phoneNumber: Joi.string().when('paymentMethod', {
-      is: Joi.string().valid('mobile_money', 'om', 'momo', 'wave', 'cinetpay'),
+      is: Joi.string().valid('mobile_money', 'om', 'momo', 'cinetpay'),
       then: Joi.string().required().pattern(/^\+?[0-9]{8,15}$/).messages({
         'any.required': 'Le numéro de téléphone est requis pour ce mode de paiement',
         'string.pattern.base': 'Format de numéro de téléphone invalide'
