@@ -20,9 +20,9 @@ const createPaymentIntent = {
     }),
     phoneNumber: Joi.string().when('paymentMethod', {
       is: Joi.string().valid('mobile_money', 'om', 'momo', 'cinetpay'),
-      then: Joi.string().required().pattern(/^\+?[0-9]{8,15}$/).messages({
+      then: Joi.string().required().pattern(/^(\+225|225|0)?[0-9]{8,10}$/).messages({
         'any.required': 'Le numéro de téléphone est requis pour ce mode de paiement',
-        'string.pattern.base': 'Format de numéro de téléphone invalide'
+        'string.pattern.base': 'Numéro de téléphone invalide. Formats acceptés: +2250XXXXXXXX, 2250XXXXXXXX, 0XXXXXXXX'
       }),
       otherwise: Joi.string().optional()
     }),
