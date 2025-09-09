@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:dio/dio.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter/services.dart';
+import 'package:logging/logging.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'core/config/api_config.dart';
 import 'core/config/app_config_manager.dart';
 import 'core/config/environment.dart';
@@ -29,10 +32,10 @@ import 'router/app_router.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/cache_service.dart';
 import 'core/services/sync_service.dart';
-import 'package:logging/logging.dart';
 import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
 import 'core/services/notification/twilio_service.dart';
 import 'core/services/notification/sms_service.dart';
+import 'core/services/notification/notification_manager.dart';
 import 'core/services/currency_service.dart';
 import 'core/blocs/auth/auth_event.dart';
 import 'core/services/api/payment_service.dart';
@@ -45,7 +48,8 @@ import 'core/blocs/payment/payment_bloc.dart';
 import 'core/blocs/help/help_bloc.dart';
 import 'core/blocs/theme/theme_bloc.dart';
 import 'core/blocs/settings/settings_bloc.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'presentation/blocs/pricing/pricing_bloc.dart';
+import 'core/services/api/pricing_service.dart';
 import 'core/utils/app_bloc_observer.dart';
 // Temporairement désactivé pour résoudre les problèmes de build
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -67,9 +71,9 @@ Future<void> main() async {
   // Configurer l'observateur de blocs pour le débogage
   Bloc.observer = AppBlocObserver();
 
-  // Initialiser les données de localisation française
+  // Initialiser les données de localisation et timezone
   await initializeDateFormatting('fr_FR', null);
-  Intl.defaultLocale = 'fr_FR';
+  tz.initializeTimeZones();
   
   // Initialiser les services de base
   final connectivityService = ConnectivityService();
@@ -79,9 +83,11 @@ Future<void> main() async {
 
   // Services
   final storage = const FlutterSecureStorage();
-  final apiConfig = ApiConfig.development();
   
-  await AppConfigManager.initialize(environment: Environment.development);
+  // 🚀 FORCER L'ENVIRONNEMENT PRODUCTION (au lieu de development)
+  await AppConfigManager.initialize(environment: Environment.production);
+  debugPrint('🔧 [Partner] Initialisation forcée en PRODUCTION');
+  debugPrint('🌐 [Partner] URL API finale: ${AppConfigManager.apiUrl}');
   
   // Ajouter des logs pour le token d'authentification
   storage.read(key: 'token').then((token) {
@@ -98,8 +104,9 @@ Future<void> main() async {
     Logger.root.severe('Erreur lors de la lecture du token: $error');
   });
   
+  // 🔧 UTILISER AppConfigManager.apiUrl au lieu de l'ancienne configuration
   final dio = Dio(BaseOptions(
-    baseUrl: apiConfig.baseUrl,
+    baseUrl: AppConfigManager.apiUrl,  // ← FIX: Utilise maintenant la config centralisée
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
     headers: {
@@ -108,6 +115,8 @@ Future<void> main() async {
       'x-mobile-app': 'true',  // Contourne la protection CSRF pour les applications mobiles
     },
   ));
+  
+  debugPrint('🔍 [Partner] Client Dio configuré avec baseUrl: ${dio.options.baseUrl}');
 
   // Create AuthBloc first since it's needed for the router
   final authBloc = AuthBloc(
@@ -119,7 +128,7 @@ Future<void> main() async {
   final apiService = ApiService(authBloc: authBloc);
   
   final authService = AuthService(dio);
-  final residenceService = ResidenceService(baseUrl: apiConfig.baseUrl, storage: storage);
+  final residenceService = ResidenceService(baseUrl: AppConfigManager.apiUrl, storage: storage);
   
   // Initialiser le service OneSignal
   final oneSignalService = OneSignalService();
@@ -154,8 +163,7 @@ Future<void> main() async {
 
   // Créer le repository de notification et le service
   final twilioService = TwilioService();
-  // Temporairement désactivé pour résoudre les problèmes de build
-  // await twilioService.initialize();
+  await twilioService.initialize();
   final notificationRepository = NotificationRepository(twilioService);
 
   // Initialiser le bus d'événements pour les résidences
@@ -165,6 +173,11 @@ Future<void> main() async {
   // Initialiser le service de devises
   final currencyService = CurrencyService();
   await currencyService.initialize();
+  
+  // Initialiser le NotificationManager unifié
+  final notificationManager = NotificationManager();
+  await notificationManager.initialize();
+  debugPrint('✅ NotificationManager unifié initialisé avec succès');
   
   print('Services de devises initialisés avec succès');
   
@@ -209,6 +222,10 @@ Future<void> main() async {
           lazy: false, // Assurer que l'instance est disponible immédiatement
         ),
         Provider<SmsService>(create: (_) => SmsService(apiService: apiService)),
+        Provider<NotificationManager>(
+          create: (_) => notificationManager,
+          lazy: false,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -258,6 +275,12 @@ Future<void> main() async {
           ),
           BlocProvider<SettingsBloc>(
             create: (context) => SettingsBloc(),
+          ),
+          // Ajouter le PricingBloc
+          BlocProvider<PricingBloc>(
+            create: (context) => PricingBloc(
+              pricingService: PricingService(),
+            ),
           ),
         ],
         child: MaterialApp.router(

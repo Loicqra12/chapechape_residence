@@ -186,10 +186,10 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(
+                      const Text(
                         '0 points',
                         style: TextStyle(
-                          fontSize: context.responsiveFontSize(28),
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
@@ -218,40 +218,34 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           const SizedBox(height: 24),
           
           // Comment gagner des points
-          Text(
+          const Text(
             'Comment gagner des points',
             style: TextStyle(
-              fontSize: context.responsiveFontSize(18),
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
           
-          ListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _buildRewardMethod(
-                icon: Icons.house,
-                title: 'Réserver une résidence',
-                description: 'Gagnez 100 points pour chaque nouvelle réservation',
-              ),
-              _buildRewardMethod(
-                icon: Icons.rate_review,
-                title: 'Laisser un avis',
-                description: 'Gagnez 50 points en laissant un avis détaillé',
-              ),
-              _buildRewardMethod(
-                icon: Icons.person_add,
-                title: 'Parrainer un ami',
-                description: 'Gagnez 200 points lorsqu\'un ami s\'inscrit avec votre code',
-              ),
-              _buildRewardMethod(
-                icon: Icons.calendar_month,
-                title: 'Séjours longue durée',
-                description: 'Gagnez 10 points supplémentaires par jour pour les séjours de plus de 7 jours',
-              ),
-            ],
+          _buildRewardMethod(
+            icon: Icons.house,
+            title: 'Réserver une résidence',
+            description: 'Gagnez 100 points pour chaque nouvelle réservation',
+          ),
+          _buildRewardMethod(
+            icon: Icons.rate_review,
+            title: 'Laisser un avis',
+            description: 'Gagnez 50 points en laissant un avis détaillé',
+          ),
+          _buildRewardMethod(
+            icon: Icons.person_add,
+            title: 'Parrainer un ami',
+            description: 'Gagnez 200 points lorsqu\'un ami s\'inscrit avec votre code',
+          ),
+          _buildRewardMethod(
+            icon: Icons.calendar_month,
+            title: 'Séjours longue durée',
+            description: 'Gagnez 10 points supplémentaires par jour pour les séjours de plus de 7 jours',
           ),
         ],
       ),

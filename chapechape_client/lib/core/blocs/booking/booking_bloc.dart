@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/services/booking_service.dart';
+import 'package:chapechape_client/core/services/socket_service.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/core/models/residence_model.dart';
@@ -8,6 +9,7 @@ import 'booking_state.dart';
 
 class BookingBloc extends Bloc<BookingEvent, BookingState> {
   final BookingService _bookingService;
+  final SocketService _socketService = SocketService();
 
   BookingBloc({required BookingService bookingService})
       : _bookingService = bookingService,
@@ -21,6 +23,14 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     on<UpdateBookingStatus>(_onUpdateBookingStatus);
     on<CalculateModificationFees>(_onCalculateModificationFees);
     on<UpdateBookingWithFees>(_onUpdateBookingWithFees);
+    
+    // Event handlers WebSocket pour transitions temps réel
+    on<BookingExpiredEvent>(_onBookingExpired);
+    on<BookingApprovedEvent>(_onBookingApproved);
+    on<BookingRejectedEvent>(_onBookingRejected);
+    
+    // Configurer les callbacks WebSocket pour les transitions temps réel
+    _setupWebSocketCallbacks();
   }
 
   // Charger toutes les réservations de l'utilisateur
@@ -207,5 +217,96 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     } catch (e) {
       emit(BookingError(e.toString()));
     }
+  }
+
+  /// Configure les callbacks WebSocket pour les transitions temps réel
+  void _setupWebSocketCallbacks() {
+    _socketService.setBookingCallbacks(
+      onStatusUpdated: (data) {
+        // Recharger les réservations quand un statut change
+        add(LoadUserBookings());
+      },
+      onExpired: (data) {
+        // Gérer l'expiration d'une réservation
+        final bookingId = data['bookingId'] as String?;
+        if (bookingId != null) {
+          add(LoadUserBookings());
+          // Dispatch event spécifique pour l'expiration
+          add(BookingExpiredEvent(bookingId));
+        }
+      },
+      onApproved: (data) {
+        // Gérer l'approbation d'une réservation
+        final bookingId = data['bookingId'] as String?;
+        if (bookingId != null) {
+          add(LoadUserBookings());
+          // Dispatch event spécifique pour l'approbation
+          add(BookingApprovedEvent(bookingId));
+        }
+      },
+      onRejected: (data) {
+        // Gérer le rejet d'une réservation
+        final bookingId = data['bookingId'] as String?;
+        if (bookingId != null) {
+          add(LoadUserBookings());
+          // Dispatch event spécifique pour le rejet
+          add(BookingRejectedEvent(bookingId));
+        }
+      },
+    );
+  }
+
+  /// Rejoindre la salle WebSocket pour une réservation spécifique
+  void joinBookingRoom(String bookingId) {
+    _socketService.joinBookingRoom(bookingId);
+  }
+
+  /// Quitter la salle WebSocket pour une réservation
+  void leaveBookingRoom(String bookingId) {
+    _socketService.leaveBookingRoom(bookingId);
+  }
+
+  // Event handlers WebSocket pour transitions temps réel
+  
+  /// Gérer l'expiration d'une réservation (timer SLA ou paiement)
+  Future<void> _onBookingExpired(
+    BookingExpiredEvent event,
+    Emitter<BookingState> emit,
+  ) async {
+    try {
+      emit(BookingExpired(event.bookingId));
+    } catch (e) {
+      emit(BookingError(e.toString()));
+    }
+  }
+
+  /// Gérer l'approbation d'une réservation par l'hôte
+  Future<void> _onBookingApproved(
+    BookingApprovedEvent event,
+    Emitter<BookingState> emit,
+  ) async {
+    try {
+      emit(BookingApproved(event.bookingId));
+    } catch (e) {
+      emit(BookingError(e.toString()));
+    }
+  }
+
+  /// Gérer le rejet d'une réservation par l'hôte
+  Future<void> _onBookingRejected(
+    BookingRejectedEvent event,
+    Emitter<BookingState> emit,
+  ) async {
+    try {
+      emit(BookingRejected(event.bookingId));
+    } catch (e) {
+      emit(BookingError(e.toString()));
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _socketService.clearBookingCallbacks();
+    return super.close();
   }
 }

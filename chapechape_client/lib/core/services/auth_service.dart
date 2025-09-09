@@ -47,6 +47,12 @@ class AuthService {
 
       final user = User.fromJson(response.data['user']);
       await _storage.write(key: 'token', value: response.data['token']);
+      
+      // Sauvegarder le refresh token pour la persistance
+      if (response.data['refreshToken'] != null) {
+        await _storage.write(key: 'refresh_token', value: response.data['refreshToken']);
+      }
+      
       return user;
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -82,7 +88,8 @@ class AuthService {
       final user = User.fromJson(response.data['user']);
       await _storage.write(key: 'token', value: response.data['token']);
       
-      if (rememberMe) {
+      // Toujours sauvegarder le refresh token pour la persistance
+      if (response.data['refreshToken'] != null) {
         await _storage.write(key: 'refresh_token', value: response.data['refreshToken']);
       }
       
@@ -97,9 +104,11 @@ class AuthService {
     try {
       await _apiService.post('/auth/logout');
       await _storage.delete(key: 'token');
+      await _storage.delete(key: 'refresh_token');
     } catch (e) {
-      // Même en cas d'erreur, on supprime le token local
+      // Même en cas d'erreur, on supprime tous les tokens locaux
       await _storage.delete(key: 'token');
+      await _storage.delete(key: 'refresh_token');
     }
   }
 
@@ -107,7 +116,8 @@ class AuthService {
   Future<User?> getCurrentUser() async {
     try {
       final response = await _apiService.get('/auth/me');
-      return User.fromJson(response.data);
+      // ✅ CORRECTION: Utiliser response.data['user'] au lieu de response.data
+      return User.fromJson(response.data['user']);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         // Token expiré ou invalide
@@ -118,10 +128,61 @@ class AuthService {
     }
   }
 
+  // Refresh automatique des tokens
+  Future<bool> _refreshTokenIfNeeded() async {
+    final refreshToken = await _storage.read(key: 'refresh_token');
+    if (refreshToken == null) return false;
+    
+    try {
+      final response = await _apiService.post('/auth/refresh-token', data: {
+        'refreshToken': refreshToken,
+      });
+      
+      // Sauvegarder les nouveaux tokens - utiliser 'token' au lieu de 'accessToken' pour cohérence
+      await _storage.write(key: 'token', value: response.data['token'] ?? response.data['accessToken']);
+      if (response.data['refreshToken'] != null) {
+        await _storage.write(key: 'refresh_token', value: response.data['refreshToken']);
+      }
+      
+      return true;
+    } catch (e) {
+      // Refresh token invalide, supprimer tous les tokens
+      await _storage.delete(key: 'token');
+      await _storage.delete(key: 'refresh_token');
+      return false;
+    }
+  }
+
   // Vérifier si l'utilisateur est authentifié
   Future<bool> isAuthenticated() async {
     final token = await _storage.read(key: 'token');
-    return token != null;
+    if (token == null) return false;
+    
+    try {
+      // Vérifier la validité du token en appelant l'API
+      final response = await _apiService.get('/auth/me');
+      return response.statusCode == 200;
+    } catch (e) {
+      // Token expiré, essayer de le rafraîchir
+      final refreshed = await _refreshTokenIfNeeded();
+      if (refreshed) {
+        // Réessayer avec le nouveau token
+        try {
+          final response = await _apiService.get('/auth/me');
+          return response.statusCode == 200;
+        } catch (e) {
+          // Même avec le nouveau token, ça ne marche pas
+          await _storage.delete(key: 'token');
+          await _storage.delete(key: 'refresh_token');
+          return false;
+        }
+      }
+      
+      // Pas de refresh token ou refresh échoué
+      await _storage.delete(key: 'token');
+      await _storage.delete(key: 'refresh_token');
+      return false;
+    }
   }
 
   // Mettre à jour le profil
@@ -175,10 +236,11 @@ class AuthService {
   // Connexion avec Google
   Future<User> signInWithGoogle() async {
     try {
-      // Démarrer le processus de connexion avec Google
+      // Démarrer le processus de connexion avec Google avec serverClientId
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: '150162865149-m6q57o1f68t73o8lfiumb0671qcj55da.apps.googleusercontent.com',
         scopes: ['email', 'profile'],
+        // ✅ CORRECTION: Utiliser le bon serverClientId pour obtenir idToken
+        serverClientId: '39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com',
       );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       
@@ -188,6 +250,12 @@ class AuthService {
       
       // Obtenir les détails d'authentification de la demande Google
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // 🔍 DEBUG: Vérifier les tokens reçus
+      print("🔑 Google Access Token: ${googleAuth.accessToken?.substring(0, 50)}...");
+      print("🔑 Google ID Token: ${googleAuth.idToken?.substring(0, 50)}...");
+      print("🔍 ID Token null? ${googleAuth.idToken == null}");
+      print('🟢 Google ID Token (envoyé au backend) : ${googleAuth.idToken?.substring(0, 60)}...');
       
       // Créer un nouvel identifiant d'authentification Firebase à partir du token
       final firebase_auth.AuthCredential credential = firebase_auth.GoogleAuthProvider.credential(
@@ -205,9 +273,17 @@ class AuthService {
         throw Exception('Échec de l\'authentification avec Google');
       }
       
+      // ✅ CORRECTION: Utiliser le token Google direct, pas Firebase
+      // Le token Google original est dans googleAuth.idToken
+      final String? googleIdToken = googleAuth.idToken;
+      
+      if (googleIdToken == null) {
+        throw Exception('Token Google ID manquant');
+      }
+      
       // Envoyer les informations Google à notre API pour authentifier/enregistrer l'utilisateur
       final response = await _apiService.post('/auth/google', data: {
-        'idToken': googleAuth.idToken,
+        'idToken': googleIdToken, // ← Token Google direct !
         'email': firebaseUser.email,
         'displayName': firebaseUser.displayName,
         'photoUrl': firebaseUser.photoURL,
@@ -216,6 +292,11 @@ class AuthService {
       
       // Sauvegarder le token JWT de notre backend
       await _storage.write(key: 'token', value: response.data['token']);
+      
+      // ✅ CORRECTION: Sauvegarder aussi le refresh token pour la persistance
+      if (response.data['refreshToken'] != null) {
+        await _storage.write(key: 'refresh_token', value: response.data['refreshToken']);
+      }
       
       return User.fromJson(response.data['user']);
     } catch (e) {
@@ -264,6 +345,11 @@ class AuthService {
       
       // Sauvegarder le token JWT de notre backend
       await _storage.write(key: 'token', value: response.data['token']);
+      
+      // ✅ CORRECTION: Sauvegarder aussi le refresh token pour la persistance
+      if (response.data['refreshToken'] != null) {
+        await _storage.write(key: 'refresh_token', value: response.data['refreshToken']);
+      }
       
       return User.fromJson(response.data['user']);
     } catch (e) {

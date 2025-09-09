@@ -17,6 +17,72 @@ enum PaymentMethod {
   other
 }
 
+/// Exception spécifique CinetPay
+class CinetPayException implements Exception {
+  final String message;
+  final String? code;
+
+  CinetPayException(this.message, [this.code]);
+
+  @override
+  String toString() => 'CinetPayException: $message${code != null ? ' (Code: $code)' : ''}';
+}
+
+/// Résultat de l'initiation d'un paiement Wave
+class WavePaymentResult {
+  final bool success;
+  final String? transactionId;
+  final String? paymentUrl;
+  final String? paymentToken;
+  final String? errorMessage;
+  final DateTime? expiresAt;
+
+  WavePaymentResult({
+    required this.success,
+    this.transactionId,
+    this.paymentUrl,
+    this.paymentToken,
+    this.errorMessage,
+    this.expiresAt,
+  });
+
+  bool get isExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
+}
+
+/// Statut d'un paiement Wave
+class WavePaymentStatus {
+  final String transactionId;
+  final PaymentStatus status;
+  final double? amount;
+  final String? currency;
+  final String? message;
+  final DateTime? processedAt;
+
+  WavePaymentStatus({
+    required this.transactionId,
+    required this.status,
+    this.amount,
+    this.currency,
+    this.message,
+    this.processedAt,
+  });
+
+  bool get isPaid => status == PaymentStatus.succeeded;
+  bool get isFailed => status == PaymentStatus.failed;
+  bool get isPending => status == PaymentStatus.pending;
+}
+
+/// Exception spécifique Wave
+class WaveException implements Exception {
+  final String message;
+  final String? code;
+
+  WaveException(this.message, [this.code]);
+
+  @override
+  String toString() => 'WaveException: $message${code != null ? ' (Code: $code)' : ''}';
+}
+
 /// Énumération des statuts de paiement
 enum PaymentStatus {
   pending,
@@ -293,6 +359,29 @@ class Payment {
           : null,
     );
   }
+
+  /// Crée un paiement à partir de la réponse backend
+  factory Payment.fromBackendJson(Map<String, dynamic> json) {
+    return Payment(
+      id: json['_id'] ?? json['paymentId'] as String,
+      bookingId: json['reservation'] as String,
+      userId: json['user'] ?? 'unknown',
+      amount: (json['amount'] as num).toDouble(),
+      method: _parsePaymentMethod(json['paymentMethod'] ?? json['method']),
+      status: _parsePaymentStatus(json['status']),
+      transactionId: json['transactionId'] as String?,
+      receiptUrl: json['receiptUrl'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+      isRefundable: json['isRefundable'] as bool? ?? true,
+      paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt'] as String) : null,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
+      bookingResidenceName: json['bookingResidenceName'] as String?,
+      commission: json['commission'] != null 
+          ? PaymentCommission.fromJson(json['commission'] as Map<String, dynamic>)
+          : null,
+    );
+  }
   
   /// Convertit le paiement en objet JSON
   Map<String, dynamic> toJson() {
@@ -358,6 +447,31 @@ class PaymentIntent {
       paymentParams: json['paymentParams'] as Map<String, dynamic>?,
       isTest: json['isTest'] as bool? ?? false,
       expiresAt: DateTime.parse(json['expiresAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+
+  /// Crée un PaymentIntent à partir de la réponse backend
+  factory PaymentIntent.fromBackendJson(Map<String, dynamic> json) {
+    return PaymentIntent(
+      id: json['_id'] ?? json['paymentId'] as String,
+      bookingId: json['reservation'] as String,
+      userId: json['user'] ?? 'unknown',
+      amount: (json['amount'] as num).toDouble(),
+      method: _parsePaymentMethod(json['paymentMethod'] ?? json['method']),
+      clientSecret: json['transactionId'] ?? json['paymentToken'] ?? '',
+      publicKey: json['publicKey'] as String?,
+      paymentParams: {
+        'paymentUrl': json['paymentUrl'],
+        'paymentToken': json['paymentToken'],
+        'transactionId': json['transactionId'],
+        'provider': json['paymentProvider'],
+        'providerResponse': json['providerResponse'],
+      },
+      isTest: json['isTest'] as bool? ?? false,
+      expiresAt: json['expiresAt'] != null 
+          ? DateTime.parse(json['expiresAt'] as String)
+          : DateTime.now().add(Duration(hours: 1)),
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
@@ -489,20 +603,25 @@ PaymentMethod _parsePaymentMethod(String value) {
   }
 }
 
-PaymentStatus _parsePaymentStatus(String value) {
-  switch (value) {
-    case 'pending':
-      return PaymentStatus.pending;
+PaymentStatus _parsePaymentStatus(String? value) {
+  switch (value?.toLowerCase()) {
+    case 'paid':
+    case 'completed':
+    case 'succeeded':
+    case 'success':
+      return PaymentStatus.succeeded;
     case 'processing':
       return PaymentStatus.processing;
-    case 'succeeded':
-      return PaymentStatus.succeeded;
     case 'failed':
+    case 'error':
+    case 'rejected':
       return PaymentStatus.failed;
     case 'refunded':
       return PaymentStatus.refunded;
     case 'cancelled':
+    case 'canceled':
       return PaymentStatus.cancelled;
+    case 'pending':
     default:
       return PaymentStatus.pending;
   }

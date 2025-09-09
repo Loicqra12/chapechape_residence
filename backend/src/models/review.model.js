@@ -14,20 +14,20 @@ const reviewSchema = new mongoose.Schema({
     reservation: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Reservation',
-        required: true
+        required: false
     },
     rating: {
-        overall: { type: Number, required: true, min: 1, max: 5 },
-        cleanliness: { type: Number, min: 1, max: 5, default: 0 },
-        comfort: { type: Number, min: 1, max: 5, default: 0 },
-        facilities: { type: Number, min: 1, max: 5, default: 0 },
-        value: { type: Number, min: 1, max: 5, default: 0 },
-        location: { type: Number, min: 1, max: 5, default: 0 }
+        overall: { type: Number, required: true, min: 0, max: 5 },
+        cleanliness: { type: Number, min: 0, max: 5, default: 0 },
+        comfort: { type: Number, min: 0, max: 5, default: 0 },
+        facilities: { type: Number, min: 0, max: 5, default: 0 },
+        value: { type: Number, min: 0, max: 5, default: 0 },
+        location: { type: Number, min: 0, max: 5, default: 0 }
     },
     comment: {
         type: String,
         required: true,
-        minlength: 10,
+        minlength: 1,
         maxlength: 1000
     },
     photos: [{
@@ -58,20 +58,19 @@ const reviewSchema = new mongoose.Schema({
 reviewSchema.index({ residence: 1, createdAt: -1 });
 reviewSchema.index({ user: 1, residence: 1 }, { unique: true });
 
-// Middleware pour vérifier que l'utilisateur a bien séjourné dans la résidence
+// Middleware pour vérifier que l'utilisateur a bien séjourné dans la résidence (optionnel)
 reviewSchema.pre('save', async function(next) {
-    if (this.isNew) {
+    if (this.isNew && this.reservation) {
         const Reservation = mongoose.model('Reservation');
         const reservation = await Reservation.findOne({
             _id: this.reservation,
             user: this.user,
             residence: this.residence,
             status: { $in: ['completed', 'confirmed', 'refunded'] }
-            // Retiré la validation de la date de checkout pour les tests
         });
 
         if (!reservation) {
-            next(new Error('Vous devez avoir séjourné dans cette résidence pour laisser un avis'));
+            next(new Error('Réservation invalide pour cette résidence'));
         }
     }
     next();

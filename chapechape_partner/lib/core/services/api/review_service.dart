@@ -28,7 +28,7 @@ class ReviewService {
   }) async {
     try {
       final response = await _apiService.get(
-        '/api/reviews/residence/$residenceId',
+        '/reviews/residence/$residenceId',
         queryParameters: {
           'page': page.toString(),
           'limit': limit.toString(),
@@ -56,7 +56,7 @@ class ReviewService {
   /// [reviewId] : ID de l'avis
   Future<ReviewModel> getReview(String reviewId) async {
     try {
-      final response = await _apiService.get('/api/reviews/$reviewId');
+      final response = await _apiService.get('/reviews/$reviewId');
       
       return ReviewModel.fromJson(response.data['data']);
     } catch (e) {
@@ -71,7 +71,7 @@ class ReviewService {
   Future<ReviewModel> respondToReview(String reviewId, String response) async {
     try {
       final apiResponse = await _apiService.post(
-        '/api/reviews/$reviewId/respond',
+        '/reviews/$reviewId/respond',
         data: {'response': response},
       );
       
@@ -86,7 +86,7 @@ class ReviewService {
   /// [residenceId] : ID de la résidence
   Future<Map<String, dynamic>> getReviewStats(String residenceId) async {
     try {
-      final response = await _apiService.get('/api/reviews/stats/$residenceId');
+      final response = await _apiService.get('/reviews/stats/$residenceId');
       
       return response.data['stats'] ?? {};
     } catch (e) {
@@ -101,7 +101,7 @@ class ReviewService {
   Future<void> reportReview(String reviewId, String reason) async {
     try {
       await _apiService.post(
-        '/api/reviews/$reviewId/report',
+        '/reviews/$reviewId/report',
         data: {'reason': reason},
       );
     } catch (e) {
@@ -115,7 +115,7 @@ class ReviewService {
   Future<List<ReviewModel>> getRecentPartnerReviews({int limit = 5}) async {
     try {
       final response = await _apiService.get(
-        '/api/reviews/partner/recent',
+        '/reviews/partner/recent',
         queryParameters: {
           'limit': limit.toString(),
         },
@@ -140,7 +140,7 @@ class ReviewService {
   /// Récupère le nombre total d'avis pour les résidences du partenaire
   Future<int> getTotalPartnerReviewsCount() async {
     try {
-      final response = await _apiService.get('/api/reviews/partner/count');
+      final response = await _apiService.get('/reviews/partner/count');
       
       return response.data['count'] ?? 0;
     } catch (e) {
@@ -151,7 +151,7 @@ class ReviewService {
   /// Récupère la note moyenne globale pour les résidences du partenaire
   Future<double> getAveragePartnerRating() async {
     try {
-      final response = await _apiService.get('/api/reviews/partner/average');
+      final response = await _apiService.get('/reviews/partner/average');
       
       return response.data['average']?.toDouble() ?? 0.0;
     } catch (e) {

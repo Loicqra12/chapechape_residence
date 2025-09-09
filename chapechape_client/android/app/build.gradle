@@ -30,6 +30,16 @@ if (flutterRoot == null) {
     throw new Exception("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
 
+// ✅ Configuration de signature de production
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    println "INFO: Keystore properties loaded successfully"
+} else {
+    println "WARNING: key.properties file not found - signing will be skipped"
+}
+
 // ✅ Appliquer les correctifs personnalisés si nécessaires
 apply from: "fix_plugin.gradle"
 
@@ -64,9 +74,9 @@ android {
     defaultConfig {
         applicationId "com.chapechape.client"
         minSdk = 23 // Version minimale requise pour Firebase Auth
-        targetSdk = 34 // Cibler une version récente mais stable d'Android
-        versionCode 1
-        versionName "1.0.0"
+        targetSdk = 35 // Exigence Google Play 2024+
+        versionCode 3
+        versionName "1.1.1"
         
         // Configuration OneSignal
         manifestPlaceholders = [
@@ -77,9 +87,22 @@ android {
         ]
     }
 
+    signingConfigs {
+        release {
+            keyAlias 'upload'
+            keyPassword 'chapechape2024'
+            storeFile file('upload-keystore.jks')
+            storePassword 'chapechape2024'
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
+            // ✅ Réactiver la signature pour Google Play Console
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 

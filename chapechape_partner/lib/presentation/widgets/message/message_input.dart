@@ -8,12 +8,16 @@ import '../../../core/models/message/message.dart';
 class MessageInput extends StatefulWidget {
   final Function(String content, List<MessageAttachment>? attachments) onSendMessage;
   final Function(String filePath, String? name) onAttachmentSelected;
+  final Function(String content)? onSendWhatsApp;
+  final Function(String content)? onSendSMS;
   final bool enabled;
 
   const MessageInput({
     Key? key,
     required this.onSendMessage,
     required this.onAttachmentSelected,
+    this.onSendWhatsApp,
+    this.onSendSMS,
     this.enabled = true,
   }) : super(key: key);
 
@@ -25,6 +29,7 @@ class _MessageInputState extends State<MessageInput> {
   final TextEditingController _controller = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   bool _isComposing = false;
+  String _selectedPlatform = 'chat'; // 'chat', 'whatsapp', 'sms'
 
   @override
   void dispose() {
@@ -40,7 +45,23 @@ class _MessageInputState extends State<MessageInput> {
       _isComposing = false;
     });
 
-    widget.onSendMessage(text, null);
+    // Envoyer selon la plateforme sélectionnée
+    switch (_selectedPlatform) {
+      case 'whatsapp':
+        if (widget.onSendWhatsApp != null) {
+          widget.onSendWhatsApp!(text);
+        }
+        break;
+      case 'sms':
+        if (widget.onSendSMS != null) {
+          widget.onSendSMS!(text);
+        }
+        break;
+      case 'chat':
+      default:
+        widget.onSendMessage(text, null);
+        break;
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -120,6 +141,107 @@ class _MessageInputState extends State<MessageInput> {
     );
   }
 
+  void _showPlatformSelector() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Choisir la plateforme d\'envoi',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.chat, color: Colors.blue),
+                title: Text('Chat interne'),
+                subtitle: Text('Message privé dans l\'application'),
+                trailing: _selectedPlatform == 'chat' ? Icon(Icons.check, color: Colors.blue) : null,
+                onTap: () {
+                  setState(() {
+                    _selectedPlatform = 'chat';
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              if (widget.onSendWhatsApp != null)
+                ListTile(
+                  leading: Icon(Icons.phone, color: Colors.green),
+                  title: Text('WhatsApp Business'),
+                  subtitle: Text('Envoi via WhatsApp Business'),
+                  trailing: _selectedPlatform == 'whatsapp' ? Icon(Icons.check, color: Colors.green) : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedPlatform = 'whatsapp';
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              if (widget.onSendSMS != null)
+                ListTile(
+                  leading: Icon(Icons.sms, color: Colors.orange),
+                  title: Text('SMS'),
+                  subtitle: Text('Envoi par message SMS'),
+                  trailing: _selectedPlatform == 'sms' ? Icon(Icons.check, color: Colors.orange) : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedPlatform = 'sms';
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _getPlatformIcon() {
+    switch (_selectedPlatform) {
+      case 'whatsapp':
+        return Icon(Icons.phone, color: Colors.green);
+      case 'sms':
+        return Icon(Icons.sms, color: Colors.orange);
+      case 'chat':
+      default:
+        return Icon(Icons.chat, color: Colors.blue);
+    }
+  }
+
+  Color _getPlatformColor() {
+    switch (_selectedPlatform) {
+      case 'whatsapp':
+        return Colors.green;
+      case 'sms':
+        return Colors.orange;
+      case 'chat':
+      default:
+        return Colors.blue;
+    }
+  }
+
+  String _getPlatformTooltip() {
+    switch (_selectedPlatform) {
+      case 'whatsapp':
+        return 'Envoyer via WhatsApp Business';
+      case 'sms':
+        return 'Envoyer par SMS';
+      case 'chat':
+      default:
+        return 'Envoyer via chat interne';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.enabled) {
@@ -148,6 +270,12 @@ class _MessageInputState extends State<MessageInput> {
                   _showAttachmentOptions();
                 },
               ),
+              // Bouton sélecteur de plateforme
+              IconButton(
+                icon: _getPlatformIcon(),
+                onPressed: _showPlatformSelector,
+                tooltip: _getPlatformTooltip(),
+              ),
               Expanded(
                 child: TextField(
                   controller: _controller,
@@ -169,11 +297,17 @@ class _MessageInputState extends State<MessageInput> {
                   textCapitalization: TextCapitalization.sentences,
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: _isComposing
-                    ? () => _handleSubmitted(_controller.text)
-                    : null,
+              Container(
+                decoration: BoxDecoration(
+                  color: _isComposing ? _getPlatformColor() : Colors.grey,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: _isComposing
+                      ? () => _handleSubmitted(_controller.text)
+                      : null,
+                ),
               ),
             ],
           ),

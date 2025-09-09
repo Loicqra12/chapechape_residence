@@ -69,6 +69,7 @@ class Residence {
   final List<Map<String, dynamic>> faqs;
   final Map<String, dynamic> enhancedAmenities;
   final List<String> paymentMethods;
+  final String reservationMode; // 'instant' ou 'approval_required'
 
   Residence({
     required this.id,
@@ -123,6 +124,7 @@ class Residence {
     this.faqs = const [],
     this.enhancedAmenities = const {},
     this.paymentMethods = const [],
+    this.reservationMode = 'instant', // Valeur par défaut
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -310,6 +312,7 @@ class Residence {
       faqs: faqs,
       enhancedAmenities: enhancedAmenities,
       paymentMethods: paymentMethods,
+      reservationMode: json['reservationMode'] as String? ?? 'instant',
     );
   }
 
@@ -369,6 +372,7 @@ class Residence {
       'faqs': faqs,
       'enhancedAmenities': enhancedAmenities,
       'paymentMethods': paymentMethods,
+      'reservationMode': reservationMode,
     };
   }
 

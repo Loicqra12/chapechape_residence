@@ -16,6 +16,7 @@ import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/notification_service.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
+import 'package:chapechape_client/presentation/widgets/payment_method_selector.dart';
 import 'package:chapechape_client/config/theme.dart';
 import 'package:provider/provider.dart';
 
@@ -39,6 +40,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   bool _smsSuccess = false;
   bool _smsError = false;
   String? _smsErrorMessage;
+  String? _selectedPaymentMethod;
+  bool _sendingPaymentInstructions = false;
 
   @override
   void initState() {
@@ -164,16 +167,249 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       _showPhoneVerification = false;
     });
   }
+  
+  Future<void> _sendPaymentInstructions() async {
+    if (_booking == null) return;
+    
+    // Vérifier si l'utilisateur a un numéro de téléphone vérifié
+    final userState = context.read<UserBloc>().state;
+    User? currentUser;
+    bool isPhoneVerified = false;
+    
+    if (userState is UserProfileLoaded) {
+      currentUser = userState.user;
+      isPhoneVerified = currentUser.isPhoneVerified ?? false;
+    }
+    
+    // Si le numéro n'est pas vérifié, montrer le widget de vérification
+    if (!isPhoneVerified) {
+      setState(() {
+        _showPhoneVerification = true;
+      });
+      return;
+    }
+    
+    // Afficher le sélecteur de méthode de paiement
+    _showPaymentMethodModal();
+  }
+  
+  void _showPaymentMethodModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Instructions de paiement',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            PaymentMethodSelector(
+              selectedMethod: _selectedPaymentMethod,
+              onMethodSelected: (method) {
+                setState(() {
+                  _selectedPaymentMethod = method;
+                });
+              },
+              showTitle: false,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _selectedPaymentMethod == null || _sendingPaymentInstructions
+                    ? null
+                    : () {
+                        Navigator.of(context).pop();
+                        _sendPaymentInstructionsSms(_selectedPaymentMethod!);
+                      },
+                icon: _sendingPaymentInstructions
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.send),
+                label: Text(_sendingPaymentInstructions
+                    ? 'Envoi...'
+                    : 'Envoyer les instructions'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _sendPaymentInstructionsSms(String paymentMethod) async {
+    if (_booking == null) return;
+    
+    setState(() {
+      _sendingPaymentInstructions = true;
+      _smsSuccess = false;
+      _smsError = false;
+      _smsErrorMessage = null;
+    });
+    
+    try {
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      
+      // Essayer d'envoyer via l'API backend
+      bool success = await notificationService.sendPaymentInstructionsSms(
+        bookingId: _booking!.id,
+        paymentMethod: paymentMethod,
+      );
+      
+      if (success) {
+        setState(() {
+          _smsSuccess = true;
+          _selectedPaymentMethod = paymentMethod;
+        });
+        
+        // Afficher confirmation
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Instructions de paiement ${_getPaymentMethodName(paymentMethod)} envoyées par SMS',
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      } else {
+        // Fallback : générer le message localement et l'envoyer
+        final message = notificationService.generatePaymentInstructionsMessage(
+          paymentMethod: paymentMethod,
+          amount: _booking!.totalPrice,
+          reference: 'CHAPE${_booking!.id.substring(0, 6)}',
+          residenceName: _booking!.residenceName,
+        );
+        
+        // Obtenir le numéro de téléphone de l'utilisateur
+        final userState = context.read<UserBloc>().state;
+        String phoneNumber = '';
+        
+        if (userState is UserProfileLoaded) {
+          phoneNumber = userState.user.phoneNumber;
+        }
+        
+        if (phoneNumber.isNotEmpty) {
+          success = await notificationService.sendCustomSms(
+            phoneNumber: phoneNumber,
+            message: message,
+          );
+          
+          if (success) {
+            setState(() {
+              _smsSuccess = true;
+              _selectedPaymentMethod = paymentMethod;
+            });
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Instructions de paiement envoyées par SMS'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            throw Exception('Impossible d\'envoyer le SMS');
+          }
+        } else {
+          throw Exception('Numéro de téléphone manquant');
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _smsError = true;
+        _smsErrorMessage = e.toString();
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Erreur: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sendingPaymentInstructions = false;
+        });
+      }
+    }
+  }
+  
+  String _getPaymentMethodName(String method) {
+    switch (method) {
+      case 'wave': return 'Wave';
+      case 'orange_money': return 'Orange Money';
+      case 'mtn_money': return 'MTN Money';
+      case 'moov_money': return 'Moov Money';
+      case 'credit_card': return 'Carte bancaire';
+      case 'cash': return 'Espèces';
+      default: return method;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Naviguer vers l'écran d'accueil au lieu de simplement faire pop()
-        // Cela évite que l'app redémarre lorsqu'on appuie sur retour
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        context.go('/home');
-        return false; // On empêche le comportement par défaut
+        // Comportement normal de retour - permet de revenir à l'écran précédent
+        return true; // Permettre le comportement par défaut (pop normal)
       },
       child: Scaffold(
         appBar: AppBar(
@@ -182,9 +418,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              // Même logique que dans onWillPop
-              Navigator.of(context).popUntil((route) => route.isFirst);
-              context.go('/home');
+              // Navigation normale au lieu de forcer l'accueil
+              Navigator.of(context).pop();
             },
           ),
         ),
@@ -206,6 +441,15 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(state.message)),
                   );
+                } else if (state is booking_states.BookingApproved) {
+                  // Navigation automatique vers l'écran d'approbation
+                  context.go('/booking-approved/${state.bookingId}');
+                } else if (state is booking_states.BookingRejected) {
+                  // Navigation automatique vers l'écran de rejet
+                  context.go('/booking-rejected/${state.bookingId}');
+                } else if (state is booking_states.BookingExpired) {
+                  // Navigation automatique vers l'écran d'expiration
+                  context.go('/booking-expired/${state.bookingId}');
                 }
               },
             ),
@@ -215,9 +459,12 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   _isLoading = state is PaymentLoading;
                 });
 
-                if (state is PaymentIntentCreated) {
-                  // Rediriger vers l'écran de paiement
-                  context.go('/payment/${state.paymentIntent.id}');
+                if (state is PaymentPrepared) {
+                  // Navigation vers l'écran de paiement avec l'ID de réservation
+                  context.go('/payment/${state.reservationId}');
+                } else if (state is PaymentIntentCreated) {
+                  // Rediriger vers l'écran de paiement avec l'ID de réservation
+                  context.go('/payment/${state.paymentIntent.reservationId}');
                 } else if (state is PaymentError) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(state.message)),
@@ -524,11 +771,19 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 if (!_booking!.isPaid)
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.payment),
-                      label: const Text('Instructions de paiement'),
-                      onPressed: _isSendingSms ? null : () {
-                        // TODO: Implémenter l'envoi des instructions de paiement par SMS
-                      },
+                      icon: _sendingPaymentInstructions 
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.payment),
+                      label: Text(_sendingPaymentInstructions 
+                        ? 'Envoi...' 
+                        : 'Instructions de paiement'),
+                      onPressed: _isSendingSms || _sendingPaymentInstructions 
+                        ? null 
+                        : _sendPaymentInstructions,
                     ),
                   ),
               ],

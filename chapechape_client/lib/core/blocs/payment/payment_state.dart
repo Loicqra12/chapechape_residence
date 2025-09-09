@@ -13,6 +13,22 @@ class PaymentInitial extends PaymentState {
   const PaymentInitial();
 }
 
+// État lorsque le paiement est préparé
+class PaymentPrepared extends PaymentState {
+  final String reservationId;
+  final PaymentMethod method;
+  final double amount;
+
+  const PaymentPrepared({
+    required this.reservationId,
+    required this.method,
+    required this.amount,
+  });
+
+  @override
+  List<Object> get props => [reservationId, method];
+}
+
 // État de chargement
 class PaymentLoading extends PaymentState {
   const PaymentLoading();
@@ -92,12 +108,35 @@ class RefundRequested extends PaymentState {
 
 // État lorsqu'un paiement est annulé
 class PaymentCancelled extends PaymentState {
-  final String paymentId;
+  final Payment payment;
+  final String? reason;
 
-  const PaymentCancelled(this.paymentId);
+  const PaymentCancelled({
+    required this.payment,
+    this.reason,
+  });
 
   @override
-  List<Object?> get props => [paymentId];
+  List<Object?> get props => [payment, reason];
+}
+
+class PaymentExternalLaunched extends PaymentState {
+  final String method;
+  final String paymentUrl;
+  final String transactionId;
+  final DateTime expiresAt;
+  final String? phoneNumber;
+
+  const PaymentExternalLaunched({
+    required this.method,
+    required this.paymentUrl,
+    required this.transactionId,
+    required this.expiresAt,
+    this.phoneNumber,
+  });
+
+  @override
+  List<Object?> get props => [method, paymentUrl, transactionId, expiresAt, phoneNumber];
 }
 
 // État d'erreur de paiement

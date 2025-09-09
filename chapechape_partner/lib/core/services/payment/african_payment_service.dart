@@ -40,22 +40,9 @@ class AfricanPaymentService {
   /// Récupère les méthodes de paiement acceptées par le partenaire
   Future<List<AfricanPaymentMethod>> getAcceptedPaymentMethods() async {
     try {
-      // Essayer d'abord de récupérer depuis l'API
-      try {
-        final response = await _apiService.get('/partners/payment-methods');
-        
-        if (response.statusCode == 200) {
-          final List methodsList = response.data['methods'] as List;
-          final methods = methodsList.map((method) => _parsePaymentMethod(method['type'])).toList();
-          
-          // Mettre à jour le stockage local
-          await _preferencesService.saveAcceptedMethods(methods);
-          
-          return methods;
-        }
-      } catch (apiError) {
-        debugPrint('API non disponible, utilisation du stockage local: $apiError');
-      }
+      // ⚠️ ENDPOINT NON DISPONIBLE: /partners/payment-methods n'existe pas dans le backend
+      // Utiliser uniquement le stockage local pour les méthodes de paiement
+      debugPrint('ℹ️ Utilisation du stockage local pour les méthodes de paiement (pas d\'API backend)');
       
       // Si l'API n'est pas disponible, utiliser le stockage local
       final localMethods = await _preferencesService.getAcceptedMethods();
@@ -92,32 +79,11 @@ class AfricanPaymentService {
         throw Exception(validationError);
       }
       
-      // Essayer d'abord d'enregistrer sur l'API
-      try {
-        final response = await _apiService.post('/partners/payment-methods', data: {
-          'type': method.toString().split('.').last,
-          'details': details,
-        });
-        
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          // Si l'API réussit, enregistrer également en local
-          await _preferencesService.saveMethodDetails(method, details);
-          
-          // Récupérer les méthodes acceptées et ajouter la nouvelle si elle n'existe pas déjà
-          final acceptedMethods = await _preferencesService.getAcceptedMethods();
-          if (!acceptedMethods.contains(method)) {
-            acceptedMethods.add(method);
-            await _preferencesService.saveAcceptedMethods(acceptedMethods);
-          }
-          
-          return true;
-        }
-        return false;
-      } catch (apiError) {
-        debugPrint('API non disponible, sauvegarde uniquement en local: $apiError');
-      }
+      // ⚠️ ENDPOINT NON DISPONIBLE: /partners/payment-methods n'existe pas dans le backend
+      // Sauvegarder uniquement en local jusqu'à ce que l'endpoint soit implémenté
+      debugPrint('ℹ️ Sauvegarde locale uniquement (endpoint API non disponible)');
       
-      // Si l'API n'est pas disponible, sauvegarder uniquement en local
+      // Sauvegarder uniquement en local
       await _preferencesService.saveMethodDetails(method, details);
       
       // Récupérer les méthodes acceptées et ajouter la nouvelle si elle n'existe pas déjà
@@ -137,22 +103,11 @@ class AfricanPaymentService {
   /// Supprime une méthode de paiement pour le partenaire
   Future<bool> removePaymentMethod(AfricanPaymentMethod method) async {
     try {
-      final methodId = method.toString().split('.').last;
+      // ⚠️ ENDPOINT NON DISPONIBLE: /partners/payment-methods n'existe pas dans le backend
+      // Supprimer uniquement en local jusqu'à ce que l'endpoint soit implémenté
+      debugPrint('ℹ️ Suppression locale uniquement (endpoint API non disponible)');
       
-      // Essayer d'abord de supprimer sur l'API
-      try {
-        final response = await _apiService.delete('/partners/payment-methods/$methodId');
-        if (response.statusCode == 200) {
-          // Si l'API réussit, supprimer également en local
-          await _preferencesService.removeMethod(method);
-          return true;
-        }
-        return false;
-      } catch (apiError) {
-        debugPrint('API non disponible, suppression uniquement en local: $apiError');
-      }
-      
-      // Si l'API n'est pas disponible, supprimer uniquement en local
+      // Supprimer uniquement en local
       return await _preferencesService.removeMethod(method);
     } catch (e) {
       debugPrint('❌ Erreur lors de la suppression de la méthode de paiement: $e');

@@ -1,0 +1,56 @@
+{
+  "@@locale": "en",
+  "appTitle": "ChapeChape Residence",
+  "home": "Home",
+  "favorites": "Favorites",
+  "notifications": "Notifications",
+  "messages": "Messages",
+  "profile": "Profile",
+  "search": "Search",
+  "login": "Login",
+  "register": "Sign Up",
+  "logout": "Logout",
+  "settings": "Settings",
+  "myProfile": "My Profile",
+  "language": "Language",
+  "location": "Location",
+  "menu": "Menu",
+  "wallet": "Wallet",
+  "balance": "Balance",
+  "rewards": "Rewards",
+  "loyaltyPoints": "Loyalty Points",
+  "howToEarnPoints": "How to earn points",
+  "bookResidence": "Book a residence",
+  "earnPointsBooking": "Earn 100 points for each new booking",
+  "leaveReview": "Leave a review",
+  "earnPointsReview": "Earn 50 points by leaving a detailed review",
+  "referFriend": "Refer a friend",
+  "earnPointsRefer": "Earn 200 points when a friend signs up with your code",
+  "longStays": "Long stays",
+  "earnPointsLongStay": "Earn 10 extra points per day for stays longer than 7 days",
+  "pointsValue": "1 point = 10 FCFA discount",
+  "currentLocation": "Current location: {city}",
+  "@currentLocation": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "locationUpdated": "Location updated: {city}",
+  "@locationUpdated": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "points": "{count} points",
+  "@points": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

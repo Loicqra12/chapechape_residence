@@ -19,6 +19,8 @@ import '../media/cloudinary_service.dart';
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:chapechape_partner/core/services/event_bus/residence_event_bus.dart';
+import '../../models/pricing/pricing_model.dart';
+import 'pricing_service.dart';
 
 class ResidenceService {
   final String baseUrl;
@@ -26,6 +28,7 @@ class ResidenceService {
   final FlutterSecureStorage storage;
   final ResidenceEventBus _eventBus = ResidenceEventBus();
   late Dio _dio;
+  late PricingService _pricingService;
 
   ResidenceService({
     required this.baseUrl,
@@ -54,6 +57,9 @@ class ResidenceService {
         },
       ),
     );
+    
+    // Initialiser le service de pricing
+    _pricingService = PricingService();
   }
 
   Future<Map<String, String>> _getAuthHeaders() async {
@@ -139,7 +145,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/my-residences'),
+        Uri.parse('$baseUrl/residences/my-residences'),
         headers: headers,
       );
 
@@ -186,7 +192,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/my-residences').replace(queryParameters: filters),
+        Uri.parse('$baseUrl/residences/my-residences').replace(queryParameters: filters),
         headers: headers,
       );
 
@@ -311,7 +317,7 @@ class ResidenceService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/$id?_t=$timestamp'),
+        Uri.parse('$baseUrl/residences/$id?_t=$timestamp'),
         headers: headers,
       );
 
@@ -804,7 +810,7 @@ class ResidenceService {
       // Appel API pour créer la résidence
       // Suivre la même convention que getResidences() qui fonctionne
       // C'est-à-dire inclure explicitement /api/ même si baseUrl contient déjà ce préfixe
-      final fullUrl = '$baseUrl/api/residences';
+      final fullUrl = '$baseUrl/residences';
       
       print('🏠 Création résidence - URL complète: $fullUrl');
       
@@ -892,7 +898,7 @@ class ResidenceService {
       print('Envoi de la requête avec ${images.length} images');
 
       // Utiliser http.MultipartRequest pour créer une requête multipart
-      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/api/residences/$id'));
+      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/residences/$id'));
       
       // Ajouter le token d'authentification
       request.headers['Authorization'] = 'Bearer $token';
@@ -1093,7 +1099,7 @@ class ResidenceService {
       final token = await storage.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/residences/$residenceId/images'),
       );
 
       // Ajouter tous les headers nécessaires
@@ -1179,10 +1185,11 @@ class ResidenceService {
       
       // Afficher les informations de debug (uniquement en mode développement)
       if (kDebugMode) {
-        logger.fine("URL: ${request.url}");
-        logger.fine("Headers: ${request.headers}");
-        logger.fine("Files count: ${request.files.length}");
+        _dio.interceptors.add(PrettyDioLogger());
       }
+      logger.fine("URL: ${request.url}");
+      logger.fine("Headers: ${request.headers}");
+      logger.fine("Files count: ${request.files.length}");
       
       // Envoi de la requête
       logger.info("Envoi des images au serveur...");
@@ -1280,7 +1287,7 @@ class ResidenceService {
       
       final token = await storage.read(key: 'token');
       final response = await http.post(
-        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/residences/$residenceId/images'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -1322,7 +1329,7 @@ class ResidenceService {
       print("🗑️ Début de la suppression de la résidence $id");
       final headers = await _getAuthHeaders();
       final response = await client.delete(
-        Uri.parse('$baseUrl/api/residences/$id'),
+        Uri.parse('$baseUrl/residences/$id'),
         headers: headers,
       );
 
@@ -1392,88 +1399,40 @@ class ResidenceService {
   // Méthode spécifique pour obtenir les résidences d'un partenaire
   Future<List<Residence>> getPartnerResidences() async {
     try {
-      // 1. Essayer d'abord l'endpoint standard
-      try {
-        final headers = await _getAuthHeaders();
-        // Récupérer l'ID du partenaire actuel
-        final userId = await storage.read(key: 'userId');
-        print("👤 ID du partenaire pour requête: $userId");
-        
-        if (userId == null) {
+      debugPrint('📥 Début de la récupération des résidences du partenaire');
+      
+      final headers = await _getAuthHeaders();
+      
+      // 🔧 FIX: Utiliser la route backend correcte qui existe
+      // La route /api/residences/my-residences utilise le token JWT pour identifier le partenaire
+      final response = await client.get(
+        Uri.parse('$baseUrl/residences/my-residences'),
+        headers: headers,
+      );
+
+      return _handleResponse<List<Residence>>(
+        response,
+        (data) {
+          if (data is Map<String, dynamic> && data.containsKey('data')) {
+            var dataList = data['data'];
+            if (dataList is List) {
+              List<Residence> result = [];
+              for (var item in dataList) {
+                if (item is Map<String, dynamic>) {
+                  result.add(_adaptBackendResidenceToFrontend(item));
+                }
+              }
+              debugPrint('✅ Récupéré ${result.length} résidences du partenaire');
+              return result;
+            }
+          }
           throw ApiException(
-            'ID utilisateur non trouvé. Veuillez vous reconnecter.',
-            401,
-            {'error': 'user_id_not_found'}
+            'Format de données inattendu pour les résidences du partenaire',
+            500,
+            {'error': 'unexpected_data_format'}
           );
         }
-        
-        // Construire l'URL avec l'ID du partenaire
-        final response = await client.get(
-          Uri.parse('$baseUrl/api/residences/partner/$userId'),
-          headers: headers,
-        );
-
-        return _handleResponse<List<Residence>>(
-          response,
-          (data) {
-            if (data is Map<String, dynamic> && data.containsKey('data')) {
-              var dataList = data['data'];
-              if (dataList is List) {
-                List<Residence> result = [];
-                for (var item in dataList) {
-                  if (item is Map<String, dynamic>) {
-                    result.add(_adaptBackendResidenceToFrontend(item));
-                  }
-                }
-                return result;
-              }
-            }
-            throw ApiException(
-              'Format de données inattendu pour les résidences du partenaire',
-              500,
-              {'error': 'unexpected_data_format'}
-            );
-          }
-        );
-      } catch (e) {
-        // Si la première tentative échoue, essayons une méthode alternative
-        debugPrint('⚠️ Erreur lors de la récupération des résidences via /api/residences/partner: $e');
-        debugPrint('🔄 Tentative via endpoint alternatif /partners/stats/residences...');
-        
-        // 2. Essayer l'endpoint alternatif
-        final headers = await _getAuthHeaders();
-        // Correction du chemin API - ajout du préfixe /api/
-        final response = await client.get(
-          Uri.parse('$baseUrl/api/partners/stats/residences'),
-          headers: headers,
-        );
-
-        return _handleResponse<List<Residence>>(
-          response,
-          (data) {
-            if (data is Map<String, dynamic> && data.containsKey('data')) {
-              var dataList = data['data'];
-              if (dataList is List) {
-                List<Residence> result = [];
-                for (var item in dataList) {
-                  if (item is Map<String, dynamic>) {
-                    result.add(_adaptBackendResidenceToFrontend(item));
-                  }
-                }
-                
-                // Log du succès de la récupération via l'endpoint alternatif
-                debugPrint('✅ Récupéré ${result.length} résidences via endpoint alternatif');
-                return result;
-              }
-            }
-            throw ApiException(
-              'Format de données inattendu pour les résidences du partenaire (endpoint alternatif)',
-              500,
-              {'error': 'unexpected_data_format'}
-            );
-          }
-        );
-      }
+      );
     } on SocketException {
       throw ApiException(
         'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
@@ -1629,7 +1588,7 @@ class ResidenceService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/my-residences?_t=$timestamp'),
+        Uri.parse('$baseUrl/residences/my-residences?_t=$timestamp'),
         headers: headers,
       );
 
@@ -1746,7 +1705,7 @@ class ResidenceService {
       final headers = await _getAuthHeaders();
       
       final response = await client.delete(
-        Uri.parse('$baseUrl/api/residences/$residenceId/images/$imageName'),
+        Uri.parse('$baseUrl/residences/$residenceId/images/$imageName'),
         headers: headers,
       );
       
@@ -1979,5 +1938,60 @@ class ResidenceService {
       debugPrint('Erreur lors de la mise à jour des FAQ: $e');
       return false;
     }
+  }
+
+  // ===============================
+  // MÉTHODES PRICING DYNAMIQUE
+  // ===============================
+
+  /// Calculer le pricing optimal pour une résidence
+  Future<PricingModel> calculateResidencePricing({
+    required double basePrice,
+    String? paymentMethod,
+  }) async {
+    return await _pricingService.calculateOptimalPricing(
+      basePrice: basePrice,
+      paymentMethod: paymentMethod,
+    );
+  }
+
+  /// Obtenir toutes les méthodes de paiement optimisées
+  Future<List<PaymentMethodInfo>> getOptimizedPaymentMethods() async {
+    return await _pricingService.getOptimizedPaymentMethods();
+  }
+
+  /// Analyser les économies potentielles pour un prix de résidence
+  Future<SavingsAnalysis> calculateResidenceSavings({
+    required double basePrice,
+  }) async {
+    return await _pricingService.calculateSavingsAnalysis(basePrice: basePrice);
+  }
+
+  /// Obtenir les statistiques de pricing du partner
+  Future<PricingStats> getPartnerPricingStats() async {
+    return await _pricingService.getPartnerPricingStats();
+  }
+
+  /// Calculer le pricing pour toutes les méthodes disponibles
+  Future<Map<String, PricingModel>> calculateMultiMethodPricing({
+    required double basePrice,
+  }) async {
+    return await _pricingService.calculateMultiMethodPricing(basePrice: basePrice);
+  }
+
+  /// Obtenir la méthode de paiement recommandée
+  Future<String> getRecommendedPaymentMethod(double basePrice) async {
+    return await _pricingService.getRecommendedPaymentMethod(basePrice);
+  }
+
+  /// Calculer les économies vs une méthode spécifique
+  Future<double> calculateSavingsVsMethod({
+    required double basePrice,
+    required String comparisonMethod,
+  }) async {
+    return await _pricingService.calculateSavingsVsMethod(
+      basePrice: basePrice,
+      comparisonMethod: comparisonMethod,
+    );
   }
 }

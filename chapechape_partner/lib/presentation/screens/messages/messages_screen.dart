@@ -194,6 +194,151 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  Future<void> _sendWhatsAppMessage(String content) async {
+    if (_selectedConversation == null) return;
+
+    try {
+      // Afficher un indicateur de chargement
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Envoi WhatsApp en cours...'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Utiliser l'endpoint WhatsApp du backend
+      final messageService = context.read<MessageService>();
+      final response = await messageService.getDio().post(
+        '/messages/conversations/${_selectedConversation!.id}/whatsapp',
+        data: {
+          'content': content,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Succès - afficher confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Message WhatsApp envoyé avec succès !'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Envoyer aussi le message dans le chat interne pour traçabilité
+        _sendMessage('[WhatsApp] $content', null);
+      }
+    } catch (e) {
+      // Erreur - afficher message d'erreur
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Erreur envoi WhatsApp: ${e.toString()}'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendSMSMessage(String content) async {
+    if (_selectedConversation == null) return;
+
+    try {
+      // Afficher un indicateur de chargement
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Envoi SMS en cours...'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Utiliser l'endpoint SMS du backend
+      final messageService = context.read<MessageService>();
+      final response = await messageService.getDio().post(
+        '/sms/send',
+        data: {
+          'phoneNumber': '+225XXXXXXXX', // TODO: Récupérer le vrai numéro du client
+          'message': content,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Succès - afficher confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('SMS envoyé avec succès !'),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        
+        // Envoyer aussi le message dans le chat interne pour traçabilité
+        _sendMessage('[SMS] $content', null);
+      }
+    } catch (e) {
+      // Erreur - afficher message d'erreur
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Erreur envoi SMS: ${e.toString()}'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _handleAttachmentSelected(String filePath, String? name) async {
     if (_selectedConversation != null) {
       context.read<MessageBloc>().add(UploadAttachment(
@@ -581,6 +726,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   MessageInput(
             onSendMessage: _sendMessage,
             onAttachmentSelected: _handleAttachmentSelected,
+            onSendWhatsApp: _sendWhatsAppMessage,
+            onSendSMS: _sendSMSMessage,
             enabled: _isMessagingEnabled,
           ),
         ],

@@ -3,8 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../../../core/models/dashboard/dashboard_data.dart';
+import '../../../core/models/payment/payout_model.dart';
+import '../../../core/services/api/payment_service.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../../widgets/layout/screen_app_bars.dart';
+import '../pricing/pricing_stats_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -79,6 +83,10 @@ class DashboardScreen extends StatelessWidget {
             _buildRevenueSection(context, state.dashboardData.revenue, state.period),
             const SizedBox(height: 24),
             
+            // Section Financière Payouts
+            _buildPayoutFinancialSection(context),
+            const SizedBox(height: 24),
+            
             // Section Tendances
             _buildTrendsSection(context, state.trendData, state.period),
             const SizedBox(height: 24),
@@ -89,6 +97,10 @@ class DashboardScreen extends StatelessWidget {
             
             // Ajouter la section Localisation
             _buildLocationAnalyticsSection(context),
+            const SizedBox(height: 24),
+            
+            // Section Pricing Dynamique
+            _buildPricingSection(context),
             const SizedBox(height: 24),
             
             // Ajouter la section Performances par résidence
@@ -1525,6 +1537,594 @@ class DashboardScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Section financière dédiée aux payouts avec données temps réel
+  Widget _buildPayoutFinancialSection(BuildContext context) {
+    return FutureBuilder<PayoutStats?>(
+      future: _getPayoutStats(context),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildPayoutLoadingSection(context);
+        }
+        
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _buildPayoutErrorSection(context, snapshot.error);
+        }
+        
+        final stats = snapshot.data!;
+        return _buildPayoutStatsSection(context, stats);
+      },
+    );
+  }
+
+  /// Récupère les statistiques des payouts via l'API
+  Future<PayoutStats?> _getPayoutStats(BuildContext context) async {
+    try {
+      final dio = Dio();
+      final paymentService = PaymentService(dio);
+      return await paymentService.getPayoutStats();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Section de chargement pour les payouts
+  Widget _buildPayoutLoadingSection(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(
+                'Mes Reversements',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Center(
+            child: CircularProgressIndicator(),
+          ),
+          const SizedBox(height: 20),
+          const Center(
+            child: Text('Chargement des données financières...'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Section d'erreur pour les payouts
+  Widget _buildPayoutErrorSection(BuildContext context, Object? error) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(
+                'Mes Reversements',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Center(
+            child: Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Center(
+            child: Text(
+              'Impossible de charger les données financières',
+              style: TextStyle(color: Colors.orange),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton(
+              onPressed: () {
+                // Forcer le rebuild du widget
+                (context as Element).markNeedsBuild();
+              },
+              child: const Text('Réessayer'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Section des statistiques des payouts
+  Widget _buildPayoutStatsSection(BuildContext context, PayoutStats stats) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // En-tête de la section
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet,
+                  color: Colors.blue,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mes Reversements',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Données financières en temps réel',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  // Navigation vers l'écran détaillé des payouts
+                  Navigator.pushNamed(context, '/payouts');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Voir tout',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Métriques principales
+          Row(
+            children: [
+              Expanded(
+                child: _buildPayoutMetricCard(
+                  context,
+                  'Total Reçu',
+                  stats.formattedTotalEarned,
+                  Icons.trending_up,
+                  Colors.green,
+                  isHighlighted: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPayoutMetricCard(
+                  context,
+                  'En Attente',
+                  stats.formattedTotalPending,
+                  Icons.schedule,
+                  Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPayoutMetricCard(
+                  context,
+                  'Commissions',
+                  stats.formattedTotalCommission,
+                  Icons.percent,
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPayoutMetricCard(
+                  context,
+                  'Taux Réussite',
+                  '${(stats.successRate * 100).toStringAsFixed(1)}%',
+                  Icons.check_circle,
+                  stats.successRate > 0.9 ? Colors.green : Colors.orange,
+                ),
+              ),
+            ],
+          ),
+
+          // Statistiques détaillées
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total reversements:',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    Text(
+                      '${stats.totalPayouts}',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Réussis:',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    Text(
+                      '${stats.successfulPayouts}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'En cours:',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    Text(
+                      '${stats.pendingPayouts}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                if (stats.failedPayouts > 0) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Échecs:',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      Text(
+                        '${stats.failedPayouts}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (stats.lastPayoutDate != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Dernier reversement:',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      Text(
+                        DateFormat('dd/MM/yyyy').format(stats.lastPayoutDate!),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour une métrique de payout
+  Widget _buildPayoutMetricCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color, {
+    bool isHighlighted = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isHighlighted ? color.withOpacity(0.1) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isHighlighted ? color.withOpacity(0.3) : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+              const Spacer(),
+              if (isHighlighted)
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.trending_up,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isHighlighted ? color : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Section Pricing Dynamique
+  Widget _buildPricingSection(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.trending_up, color: Colors.green, size: 20),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'Pricing Dynamique',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const PricingStatsScreen(),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.analytics_outlined, size: 14, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Détails',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            const Text(
+              'Optimisez vos revenus grâce au pricing intelligent',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            
+            Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: _buildPricingQuickStat(
+                    'Économies clients',
+                    'Calculées automatiquement',
+                    Icons.savings,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 1,
+                  child: _buildPricingQuickStat(
+                    'Méthodes optimisées',
+                    'MTN, Wave recommandés',
+                    Icons.payment,
+                    Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Encouragez vos clients à utiliser MTN Money ou Wave pour réduire les frais',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPricingQuickStat(String title, String subtitle, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }

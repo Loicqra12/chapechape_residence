@@ -15,6 +15,10 @@ class SocketService {
 
   // Callbacks
   Function(Map<String, dynamic>)? onNewMessage;
+  Function(Map<String, dynamic>)? onBookingStatusUpdated;
+  Function(Map<String, dynamic>)? onBookingExpired;
+  Function(Map<String, dynamic>)? onBookingApproved;
+  Function(Map<String, dynamic>)? onBookingRejected;
   
   // Initialisation du service
   Future<void> initialize() async {
@@ -22,12 +26,13 @@ class SocketService {
       _socket!.disconnect();
     }
 
-    final baseUrl = AppConfigManager.apiBaseUrl;
+    // Utiliser directement l'URL de base du serveur pour Socket.IO (sans /api)
+    final socketUrl = AppConfigManager.apiBaseUrl;
     _userId = await _storage.read(key: 'userId');
 
     try {
-      debugPrint('🔌 Initialisation Socket.io avec URL: $baseUrl');
-      _socket = IO.io(baseUrl, IO.OptionBuilder()
+      debugPrint('🔌 Initialisation Socket.io avec URL: $socketUrl');
+      _socket = IO.io(socketUrl, IO.OptionBuilder()
         .setTransports(['websocket'])
         .disableAutoConnect()
         .build());
@@ -70,6 +75,35 @@ class SocketService {
         onNewMessage!(data);
       }
     });
+
+    // Événements de réservation temps réel
+    _socket!.on('booking_status_updated', (data) {
+      debugPrint('🔄 Statut de réservation mis à jour via WebSocket: ${data.toString()}');
+      if (onBookingStatusUpdated != null) {
+        onBookingStatusUpdated!(data);
+      }
+    });
+
+    _socket!.on('booking_expired', (data) {
+      debugPrint('⏰ Réservation expirée via WebSocket: ${data.toString()}');
+      if (onBookingExpired != null) {
+        onBookingExpired!(data);
+      }
+    });
+
+    _socket!.on('booking_approved', (data) {
+      debugPrint('✅ Réservation approuvée via WebSocket: ${data.toString()}');
+      if (onBookingApproved != null) {
+        onBookingApproved!(data);
+      }
+    });
+
+    _socket!.on('booking_rejected', (data) {
+      debugPrint('❌ Réservation rejetée via WebSocket: ${data.toString()}');
+      if (onBookingRejected != null) {
+        onBookingRejected!(data);
+      }
+    });
   }
 
   // Rejoindre une conversation
@@ -86,6 +120,43 @@ class SocketService {
       _socket!.emit('leave_conversation', conversationId);
       debugPrint('🔌 Conversation quittée: $conversationId');
     }
+  }
+
+  // Rejoindre une salle de réservation pour écouter les transitions
+  void joinBookingRoom(String bookingId) {
+    if (_isConnected && bookingId.isNotEmpty) {
+      _socket!.emit('join_booking', bookingId);
+      debugPrint('🏠 Salle de réservation rejointe: $bookingId');
+    }
+  }
+
+  // Quitter une salle de réservation
+  void leaveBookingRoom(String bookingId) {
+    if (_isConnected && bookingId.isNotEmpty) {
+      _socket!.emit('leave_booking', bookingId);
+      debugPrint('🏠 Salle de réservation quittée: $bookingId');
+    }
+  }
+
+  // Méthodes pour enregistrer les callbacks de réservation
+  void setBookingCallbacks({
+    Function(Map<String, dynamic>)? onStatusUpdated,
+    Function(Map<String, dynamic>)? onExpired,
+    Function(Map<String, dynamic>)? onApproved,
+    Function(Map<String, dynamic>)? onRejected,
+  }) {
+    onBookingStatusUpdated = onStatusUpdated;
+    onBookingExpired = onExpired;
+    onBookingApproved = onApproved;
+    onBookingRejected = onRejected;
+  }
+
+  // Nettoyer les callbacks de réservation
+  void clearBookingCallbacks() {
+    onBookingStatusUpdated = null;
+    onBookingExpired = null;
+    onBookingApproved = null;
+    onBookingRejected = null;
   }
 
   // Déconnexion

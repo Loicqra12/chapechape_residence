@@ -14,7 +14,7 @@ class SmsService {
   Future<bool> sendSms(String phoneNumber, String message) async {
     try {
       final response = await _apiService.post(
-        '/api/sms/send',
+        '/sms/send',
         data: {
           'to': phoneNumber,
           'body': message,
@@ -35,7 +35,7 @@ class SmsService {
   Future<bool> sendBookingNotification(String bookingId, String notificationType) async {
     try {
       final response = await _apiService.post(
-        '/api/sms/booking',
+        '/sms/booking',
         data: {
           'bookingId': bookingId,
           'notificationType': notificationType,
@@ -56,7 +56,7 @@ class SmsService {
   Future<bool> sendPaymentInstructions(String bookingId, String paymentMethod) async {
     try {
       final response = await _apiService.post(
-        '/api/sms/payment-instructions',
+        '/sms/payment-instructions',
         data: {
           'bookingId': bookingId,
           'paymentMethod': paymentMethod,

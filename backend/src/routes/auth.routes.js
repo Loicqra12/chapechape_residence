@@ -195,6 +195,10 @@ router.post('/refresh-token', validateRefreshToken, refreshToken);
 // Routes protégées
 router.get('/me', protect, getMe);
 
+// Upload profile picture
+const uploadMiddleware = require('../middlewares/upload.middleware');
+router.post('/profile/picture', protect, uploadMiddleware.profile.single('profilePicture'), require('../controllers/auth/auth.controller').uploadProfilePicture);
+
 /**
  * @swagger
  * /api/auth/google:

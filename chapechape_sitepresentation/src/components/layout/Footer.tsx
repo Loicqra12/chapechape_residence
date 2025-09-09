@@ -1,11 +1,26 @@
 import { Link } from 'react-router-dom'
 
 const navigation = {
-  main: [
-    { name: 'Accueil', href: '/' },
+  company: [
     { name: 'À propos', href: '/about' },
-    { name: 'Applications', href: '/apps' },
     { name: 'Équipe', href: '/team' },
+    { name: 'Carrières', href: '/careers' },
+  ],
+  products: [
+    { name: 'App Client', href: '/apps' },
+    { name: 'App Partner', href: '/apps' },
+    { name: 'Télécharger', href: '/apps' },
+  ],
+  support: [
+    { name: 'Centre d\'aide', href: '/faq' },
+    { name: 'Contact', href: '/contact' },
+    { name: 'Support', href: 'mailto:contact@chapechaperesidence.com' },
+  ],
+  legal: [
+    { name: 'Politique de Confidentialité', href: '/politique-de-confidentialite' },
+    { name: 'Conditions d\'utilisation', href: '/conditions' },
+    { name: 'Politique de cookies', href: '/cookies' },
+    { name: 'Suppression du compte', href: '/suppression-compte' },
   ],
   social: [
     {
@@ -59,48 +74,136 @@ export default function Footer() {
   return (
     <footer className="bg-secondary-900">
       <div className="mx-auto max-w-7xl px-6 py-12 md:py-16 lg:px-8">
-        <div className="flex flex-col items-center md:flex-row md:justify-between mb-8">
-          <div className="mb-6 md:mb-0">
-            <Link to="/" aria-label="Retour à l'accueil">
-              <img 
-                src="/assets/logo.png" 
-                alt="ChapeChape Residence" 
-                className="h-12 w-auto hover:opacity-90 transition-opacity duration-200"
-              />
-            </Link>
-          </div>
-          <nav className="flex flex-wrap justify-center gap-8" aria-label="Footer">
-            {navigation.main.map((item) => (
-              <div key={item.name} className="pb-2">
-                <Link to={item.href} className="text-sm leading-6 text-primary-300 hover:text-primary-400 transition-colors duration-200">
-                  {item.name}
-                </Link>
-              </div>
-            ))}
-          </nav>
+        {/* Logo */}
+        <div className="mb-12 text-center">
+          <Link to="/" aria-label="Retour à l'accueil">
+            <img 
+              src="/assets/logo.png" 
+              alt="ChapeChape Residence" 
+              className="h-12 w-auto mx-auto hover:opacity-90 transition-opacity duration-200"
+            />
+          </Link>
         </div>
-        <div className="mt-10 space-y-4">
-          <h3 className="text-center text-primary-300 font-semibold text-lg mb-4">Suivez-nous sur</h3>
-          <div className="flex flex-wrap justify-center gap-8 md:gap-12">
-            {navigation.social.map((item) => (
-              <a 
-                key={item.name} 
-                href={item.href} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary-300 hover:text-primary-400 transition-all duration-300 hover:scale-110 transform flex flex-col items-center"
-              >
-                <span className="sr-only">{item.name}</span>
-                <item.icon className="h-8 w-8 mb-2" aria-hidden="true" />
-                <span className="text-xs font-medium text-primary-200">{item.name}</span>
-              </a>
-            ))}
+
+        {/* Navigation en 4 colonnes */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+          {/* Société */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary-300 uppercase tracking-wider mb-4">
+              Société
+            </h3>
+            <ul className="space-y-3">
+              {navigation.company.map((item) => (
+                <li key={item.name}>
+                  <Link 
+                    to={item.href} 
+                    className="text-sm text-primary-200 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Produits */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary-300 uppercase tracking-wider mb-4">
+              Produits
+            </h3>
+            <ul className="space-y-3">
+              {navigation.products.map((item) => (
+                <li key={item.name}>
+                  <Link 
+                    to={item.href} 
+                    className="text-sm text-primary-200 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Assistance */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary-300 uppercase tracking-wider mb-4">
+              Assistance
+            </h3>
+            <ul className="space-y-3">
+              {navigation.support.map((item) => (
+                <li key={item.name}>
+                  {item.href.startsWith('mailto:') ? (
+                    <a 
+                      href={item.href}
+                      className="text-sm text-primary-200 hover:text-primary-400 transition-colors duration-200"
+                    >
+                      {item.name}
+                    </a>
+                  ) : (
+                    <Link 
+                      to={item.href} 
+                      className="text-sm text-primary-200 hover:text-primary-400 transition-colors duration-200"
+                    >
+                      {item.name}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Légal & données */}
+          <div>
+            <h3 className="text-sm font-semibold text-primary-300 uppercase tracking-wider mb-4">
+              Légal & données
+            </h3>
+            <ul className="space-y-3">
+              {navigation.legal.map((item) => (
+                <li key={item.name}>
+                  <Link 
+                    to={item.href} 
+                    className="text-sm text-primary-200 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-        <div className="mt-10 border-t border-primary-300/10 pt-8">
-          <p className="text-center text-xs leading-5 text-primary-200">
-            &copy; {new Date().getFullYear()} ChapeChape Residence. Tous droits réservés.
-          </p>
+
+        {/* Bandeau bas avec réseaux sociaux */}
+        <div className="border-t border-primary-300/10 pt-8">
+          <div className="flex flex-col md:flex-row md:justify-between items-center space-y-4 md:space-y-0">
+            {/* Copyright */}
+            <p className="text-xs text-primary-200">
+              &copy; {new Date().getFullYear()} ChapeChape Residence. Tous droits réservés.
+            </p>
+            
+            {/* Réseaux sociaux */}
+            <div className="flex space-x-6">
+              {navigation.social.map((item) => (
+                <a 
+                  key={item.name} 
+                  href={item.href} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary-300 hover:text-primary-400 transition-all duration-300 hover:scale-110"
+                >
+                  <span className="sr-only">{item.name}</span>
+                  <item.icon className="h-5 w-5" aria-hidden="true" />
+                </a>
+              ))}
+            </div>
+            
+            {/* Sélecteur langue (placeholder) */}
+            <div className="flex items-center space-x-4 text-xs text-primary-200">
+              <span>🇫🇷 FR</span>
+              <span className="opacity-50">|</span>
+              <span className="opacity-50">🇬🇧 EN</span>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

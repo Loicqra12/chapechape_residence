@@ -25,6 +25,9 @@ class DashboardService extends ApiService {
     debugPrint('🔧 Dashboard Service - Timeouts configurés: 30s');
   }
   
+  // Construit un endpoint API correct avec le préfixe /api selon l'environnement
+  String _ep(String path) => AppConfig.getApiEndpoint(path);
+  
   // Méthode de journalisation qui remplace print()
   void _log(String message) {
     // En production, ces logs pourraient être envoyés à un service de télémétrie
@@ -84,7 +87,7 @@ class DashboardService extends ApiService {
     try {
       final headers = await _getAuthHeaders();
       final response = await dio.get(
-        '/partners/stats',
+        _ep('partners/stats'),
         options: Options(headers: headers),
       );
       
@@ -123,7 +126,7 @@ class DashboardService extends ApiService {
       };
       
       final response = await dio.get(
-        '/partners/stats/trends',
+        _ep('partners/stats/trends'),
         queryParameters: queryParams,
         options: Options(headers: headers),
       );
@@ -226,7 +229,7 @@ class DashboardService extends ApiService {
       };
       
       final response = await dio.get(
-        '/partners/stats/residences',
+        _ep('partners/stats/residences'),
         queryParameters: queryParams,
         options: Options(headers: headers),
       );
@@ -266,7 +269,7 @@ class DashboardService extends ApiService {
       };
       
       final response = await dio.get(
-        '/partners/earnings',
+        _ep('partners/earnings'),
         queryParameters: queryParams,
         options: Options(headers: headers),
       );
@@ -295,7 +298,7 @@ class DashboardService extends ApiService {
     try {
       final headers = await _getAuthHeaders();
       final response = await dio.get(
-        '/partners/dashboard/overview',
+        _ep('partners/dashboard/overview'),
         options: Options(headers: headers),
       );
       
@@ -335,7 +338,7 @@ class DashboardService extends ApiService {
     try {
       final headers = await _getAuthHeaders();
       final response = await dio.get(
-        '/partners/dashboard/finances',
+        _ep('partners/dashboard/finances'),
         options: Options(headers: headers),
       );
       
@@ -374,7 +377,7 @@ class DashboardService extends ApiService {
     try {
       final headers = await _getAuthHeaders();
       final response = await dio.get(
-        '/partners/dashboard/realtime',
+        _ep('partners/dashboard/realtime'),
         options: Options(headers: headers),
       );
       

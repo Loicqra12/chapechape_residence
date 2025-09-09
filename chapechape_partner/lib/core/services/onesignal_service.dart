@@ -6,7 +6,7 @@ import 'package:chapechape_partner/core/services/api/auth_service.dart';
 
 class OneSignalService {
   static final OneSignalService _instance = OneSignalService._internal();
-  static const String _appId = '45b31099-4645-4f52-ad2f-f464a4095513';
+  static const String _appId = '43531899-4645-4f52-a2bf-f4e4a4095513';
   
   final Dio _dio = Dio();
   // _authService est conservé pour une utilisation future dans l'implémentation réelle
@@ -154,7 +154,7 @@ class OneSignalService {
       _dio.options.headers['Authorization'] = 'Bearer $token';
       
       final response = await _dio.post(
-        '$_baseUrl/api/devices/register',
+        '$_baseUrl/devices/register',
         data: {
           'deviceToken': _userId,
           'userType': 'partner',  // Spécifier qu'il s'agit d'un partenaire
@@ -192,7 +192,7 @@ class OneSignalService {
       _dio.options.headers['Authorization'] = 'Bearer $token';
       
       final response = await _dio.put(
-        '$_baseUrl/api/devices/preferences',
+        '$_baseUrl/devices/preferences',
         data: data
       );
       
@@ -217,7 +217,7 @@ class OneSignalService {
       _dio.options.headers['Authorization'] = 'Bearer $token';
       
       final response = await _dio.delete(
-        '$_baseUrl/api/devices/unregister',
+        '$_baseUrl/devices/unregister',
         data: {'deviceToken': _userId}
       );
       
@@ -253,7 +253,7 @@ class OneSignalService {
       
       _dio.options.headers['Authorization'] = 'Bearer $token';
       
-      final response = await _dio.get('$_baseUrl/api/devices/preferences');
+      final response = await _dio.get('$_baseUrl/devices/preferences');
       
       return response.data['data'];
     } catch (e) {
@@ -265,17 +265,10 @@ class OneSignalService {
   // Méthode utilitaire pour obtenir le token d'authentification
   Future<String?> _getToken() async {
     try {
-      // Selon votre implémentation, utilisez la méthode appropriée pour obtenir le token
-      // C'est un exemple, adaptez selon votre AuthService
-      // Vous pourriez avoir une méthode comme getToken(), getAccessToken(), etc.
-      
-      // Exemple avec Flutter Secure Storage
-      if (_isUserAuthenticated()) {
-        return 'your_token_here'; // Remplacez par la méthode réelle pour obtenir le token
-      }
-      return null;
+      // Utiliser le service d'authentification pour obtenir le token
+      return await _authService.getToken();
     } catch (e) {
-      debugPrint(' Erreur lors de la récupération du token: $e');
+      debugPrint('❌ Erreur lors de la récupération du token: $e');
       return null;
     }
   }

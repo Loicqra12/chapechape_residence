@@ -39,6 +39,7 @@ class _MainScreenState extends State<MainScreen> {
     if (location.startsWith('/notifications')) return 2;
     if (location.startsWith('/chat')) return 3;
     if (location.startsWith('/profile')) return 4;
+    if (location.startsWith('/bookings')) return 4; // Historique des réservations = Profil
     return 0;
   }
 
@@ -66,32 +67,16 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculer les tailles d'interface en fonction de l'appareil
-    final screenSize = MediaQuery.of(context).size;
-    final bool isSmallScreen = screenSize.width < 360;
-    
-    // Définir des constantes pour la cohérence visuelle avec adaptation à la taille d'écran
-    final double iconSize = isSmallScreen ? 18.0 : 22.0;
-    final double iconSpacing = isSmallScreen ? 4.0 : 8.0;
-    final EdgeInsets iconPadding = isSmallScreen 
-        ? const EdgeInsets.all(4.0)
-        : const EdgeInsets.all(8.0);
-        
-    _logger.debug('Écran détecté: ${screenSize.width}x${screenSize.height}, isSmallScreen: $isSmallScreen');
+    _logger.debug('Construction du MainScreen');
     
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white,
         elevation: 0,
-        leadingWidth: 120,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 8.0),
-          child: Image.asset(
-            Theme.of(context).brightness == Brightness.dark 
-              ? 'assets/logos/app_logo_dark.png'
-              : 'assets/logos/app_logo.png',
-            fit: BoxFit.contain,
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => _showLocationMenu(context),
+          tooltip: 'Menu',
         ),
         title: _selectedCity != null 
           ? InkWell(
@@ -120,28 +105,14 @@ class _MainScreenState extends State<MainScreen> {
           : null,
         centerTitle: false,
         actions: [
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.menu, size: iconSize),
-                  onPressed: () => _showLocationMenu(context),
-                  constraints: BoxConstraints(),
-                  padding: iconPadding,
-                ),
-                SizedBox(width: iconSpacing),
-                IconButton(
-                  icon: Icon(Icons.notifications_outlined, size: iconSize),
-                  onPressed: () => context.go('/notifications'),
-                  constraints: BoxConstraints(),
-                  padding: iconPadding,
-                ),
-                SizedBox(width: iconSpacing),
-                const AuthButtonWidget(),
-              ],
-            ),
+          // Icône notifications
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () => context.go('/notifications'),
+            tooltip: 'Notifications',
           ),
+          // Avatar utilisateur en haut à droite
+          const AuthButtonWidget(),
         ],
       ),
       body: widget.child,

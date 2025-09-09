@@ -4,8 +4,8 @@ import '../../config/app_config.dart';
 
 class ReservationService {
   final Dio _dio;
-  // URL dynamique basée sur AppConfig
-  String get baseUrl => AppConfig.apiUrl.replaceAll('/api', '');
+  // Utilitaire pour construire des endpoints API corrects (gère le préfixe /api)
+  String _ep(String path) => AppConfig.getApiEndpoint(path);
 
   ReservationService(this._dio);
 
@@ -22,7 +22,7 @@ class ReservationService {
       if (endDate != null) queryParams['endDate'] = endDate.toIso8601String();
 
       final response = await _dio.get(
-        '${baseUrl}/api/reservations/my-reservations',
+        _ep('reservations/my-reservations'),
         queryParameters: queryParams,
         options: Options(
           headers: {
@@ -50,7 +50,7 @@ class ReservationService {
       print("Récupération de la réservation avec ID: $id");
       
       final response = await _dio.get(
-        '${baseUrl}/api/reservations/$id',
+        _ep('reservations/$id'),
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -78,9 +78,9 @@ class ReservationService {
 
   Future<List<Reservation>> getMyReservations() async {
     try {
-      // Essayer avec my-reservations (pour les clients)
+      // Utiliser l'endpoint standard qui gère automatiquement le rôle
       final response = await _dio.get(
-        '${baseUrl}/api/reservations/my-reservations',
+        _ep('reservations/my-reservations'),
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ class ReservationService {
   Future<List<Reservation>> getResidenceReservations(String residenceId) async {
     try {
       final response = await _dio.get(
-        '${baseUrl}/api/reservations/residence/$residenceId',
+        _ep('reservations/residence/$residenceId'),
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -143,9 +143,13 @@ class ReservationService {
         throw Exception('ID de réservation invalide ou manquant');
       }
       
+      // ✅ Validation préventive côté client - simplifiée
+      // Note: Le modèle Reservation côté Partner n'inclut pas paymentStatus
+      // La validation complète se fait côté serveur avec des erreurs explicites
+      
       await _dio.patch(
-        '${baseUrl}/api/reservations/$id/status',
-        data: {'status': status.name},
+        _ep('reservations/$id/status'),
+        data: {'status': status.toBackendFormat()},
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -167,6 +171,10 @@ class ReservationService {
           throw Exception('Vous n\'\u00eates pas autorisé à modifier cette réservation');
         } else if (statusCode == 404) {
           throw Exception('Réservation introuvable');
+        } else if (statusCode == 409) {
+          // ✅ Nouveau: Gestion des conflits d'état
+          final message = responseData?['message'] ?? 'Transition d\'état invalide. L\'état de la réservation a peut-être changé.';
+          throw Exception(message);
         } else if (statusCode == 500) {
           throw Exception('Erreur serveur. Veuillez réessayer plus tard ou contacter le support.');
         }
@@ -179,7 +187,7 @@ class ReservationService {
     try {
       // Utiliser la méthode PATCH qui correspond à l'API backend
       await _dio.patch(
-        '${baseUrl}/api/reservations/$id/cancel',
+        _ep('reservations/$id/cancel'),
         data: {'reason': reason},
         options: Options(
           headers: {
@@ -211,22 +219,9 @@ class ReservationService {
     }
   }
 
+  // Désactivé car l'endpoint backend n'existe pas actuellement
   Future<void> addNote(String id, String note) async {
-    try {
-      await _dio.post(
-        '${baseUrl}/api/reservations/$id/notes',
-        data: {'note': note},
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'x-mobile-app': 'true',  // Contourne la protection CSRF
-          },
-        ),
-      );
-    } catch (e) {
-      throw Exception('Erreur lors de l\'ajout de la note: ${e.toString()}');
-    }
+    throw Exception('Endpoint d\'ajout de note non disponible côté backend');
   }
 
   Future<List<Reservation>> getPartnerReservations() async {
@@ -235,7 +230,7 @@ class ReservationService {
       
       // D'abord, récupérer les résidences du partenaire
       final residenceResponse = await _dio.get(
-        '${baseUrl}/api/residences/my-residences',
+        _ep('residences/my-residences'),
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -265,7 +260,7 @@ class ReservationService {
       for (final residenceId in residenceIds) {
         try {
           final response = await _dio.get(
-            '${baseUrl}/api/reservations/residence/$residenceId',
+            _ep('reservations/residence/$residenceId'),
             options: Options(
               headers: {
                 'Content-Type': 'application/json',
@@ -302,8 +297,9 @@ class ReservationService {
     try {
       print("Récupération directe des réservations partenaire...");
       
+      // Utiliser l'endpoint unifié qui gère le rôle partenaire
       final response = await _dio.get(
-        '${baseUrl}/api/reservations/partner-reservations',
+        _ep('reservations/my-reservations'),
         options: Options(
           headers: {
             'Content-Type': 'application/json',
@@ -331,7 +327,7 @@ class ReservationService {
   Future<Reservation?> createReservation(Map<String, dynamic> reservationData) async {
     try {
       final response = await _dio.post(
-        '${baseUrl}/api/reservations',
+        _ep('reservations'),
         data: reservationData,
         options: Options(
           headers: {
@@ -354,7 +350,7 @@ class ReservationService {
   Future<Reservation?> updateReservation(String id, Map<String, dynamic> reservationData) async {
     try {
       final response = await _dio.put(
-        '${baseUrl}/api/reservations/$id',
+        _ep('reservations/$id'),
         data: reservationData,
         options: Options(
           headers: {
@@ -370,6 +366,100 @@ class ReservationService {
       return null;
     } catch (e) {
       throw Exception('Erreur lors de la mise à jour de la réservation: ${e.toString()}');
+    }
+  }
+
+  // ✅ NOUVEAUX ENDPOINTS - INTEGRATION RESERVATIONMODE
+  /// Approuver une réservation (Partner uniquement)
+  Future<Reservation?> approveReservation(String reservationId) async {
+    try {
+      final response = await _dio.patch(
+        _ep('reservations/$reservationId/approve'),
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          validateStatus: (status) => true,
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
+        return Reservation.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors de l\'approbation de la réservation: ${e.toString()}');
+    }
+  }
+
+  /// Rejeter une réservation (Partner uniquement)
+  Future<Reservation?> rejectReservation(String reservationId, {String? reason}) async {
+    try {
+      final response = await _dio.patch(
+        _ep('reservations/$reservationId/reject'),
+        data: reason != null ? {'reason': reason} : {},
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          validateStatus: (status) => true,
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
+        return Reservation.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors du rejet de la réservation: ${e.toString()}');
+    }
+  }
+
+  /// Effectuer le check-in d'une réservation (Partner uniquement)
+  Future<Reservation?> performCheckin(String reservationId) async {
+    try {
+      final response = await _dio.patch(
+        _ep('reservations/$reservationId/checkin'),
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          validateStatus: (status) => true,
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
+        return Reservation.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors du check-in: ${e.toString()}');
+    }
+  }
+
+  /// Effectuer le check-out d'une réservation (Partner uniquement)
+  Future<Reservation?> performCheckout(String reservationId) async {
+    try {
+      final response = await _dio.patch(
+        _ep('reservations/$reservationId/checkout'),
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          validateStatus: (status) => true,
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
+        return Reservation.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Erreur lors du check-out: ${e.toString()}');
     }
   }
 }

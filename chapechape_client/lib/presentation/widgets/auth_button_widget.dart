@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/config/app_config_manager.dart';
 
 class AuthButtonWidget extends StatelessWidget {
   const AuthButtonWidget({Key? key}) : super(key: key);
@@ -25,16 +26,16 @@ class AuthButtonWidget extends StatelessWidget {
                   width: 2,
                 ),
               ),
-              child: state.user.profilePicture != null &&
-                      state.user.profilePicture!.isNotEmpty
-                  ? CircleAvatar(
-                      radius: 18,
-                      backgroundImage: NetworkImage(state.user.profilePicture!),
-                    )
-                  : CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppTheme.secondaryColor.withOpacity(0.2),
-                      child: Text(
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppTheme.secondaryColor.withOpacity(0.2),
+                backgroundImage: state.user.profilePicture != null &&
+                        state.user.profilePicture!.isNotEmpty
+                    ? NetworkImage(AppConfigManager.getProfileImageUrl(state.user.profilePicture!))
+                    : null,
+                child: state.user.profilePicture == null ||
+                        state.user.profilePicture!.isEmpty
+                    ? Text(
                         state.user.firstName.isNotEmpty
                             ? state.user.firstName[0].toUpperCase()
                             : '?',
@@ -42,8 +43,9 @@ class AuthButtonWidget extends StatelessWidget {
                           color: AppTheme.primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ),
+                      )
+                    : null,
+              ),
             ),
           );
         } else {

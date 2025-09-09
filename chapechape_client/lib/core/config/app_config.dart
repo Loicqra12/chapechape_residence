@@ -13,9 +13,10 @@ class AppConfig {
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    // Initialiser le gestionnaire de configuration avec l'environnement de développement par défaut
+    // 🚀 UTILISER L'ENVIRONNEMENT DE DÉVELOPPEMENT pour le backend local
     await AppConfigManager.initialize(environment: Environment.dev);
     
+    debugPrint('🔧 [AppConfig] Initialisation forcée en PRODUCTION');
     _initialized = true;
   }
 

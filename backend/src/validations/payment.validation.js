@@ -13,13 +13,13 @@ const createPaymentIntent = {
       'string.empty': 'L\'ID de réservation ne peut pas être vide',
       'string.base': 'L\'ID de réservation doit être une chaîne de caractères'
     }),
-    paymentMethod: Joi.string().required().valid('card', 'mobile_money', 'om', 'momo', 'wave', 'cinetpay').messages({
+    paymentMethod: Joi.string().required().valid('orange_money', 'mtn_money', 'moov_money', 'wave', 'om', 'momo').messages({
       'any.required': 'La méthode de paiement est obligatoire',
       'string.empty': 'La méthode de paiement ne peut pas être vide',
-      'any.only': 'Méthode de paiement non valide, options: card, mobile_money, om, momo, wave, cinetpay'
+      'any.only': 'Méthode de paiement non valide, options: orange_money, mtn_money, moov_money, wave'
     }),
     phoneNumber: Joi.string().when('paymentMethod', {
-      is: Joi.string().valid('mobile_money', 'om', 'momo', 'cinetpay'),
+      is: Joi.string().valid('orange_money', 'mtn_money', 'moov_money', 'om', 'momo', 'wave'),
       then: Joi.string().required().pattern(/^(\+225|225|0)?[0-9]{8,10}$/).messages({
         'any.required': 'Le numéro de téléphone est requis pour ce mode de paiement',
         'string.pattern.base': 'Numéro de téléphone invalide. Formats acceptés: +2250XXXXXXXX, 2250XXXXXXXX, 0XXXXXXXX'
@@ -75,7 +75,7 @@ const getUserPayments = {
   query: Joi.object().keys({
     limit: Joi.number().integer().min(1).optional().default(10),
     page: Joi.number().integer().min(1).optional().default(1),
-    status: Joi.string().optional().valid('pending', 'paid', 'failed', 'refunded', 'cancelled'), // ✅ HARMONISÉ - 'completed' → 'paid'
+    status: Joi.string().optional().valid('pending', 'paid', 'failed', 'refunded', 'cancelled'), // 'completed' → 'paid'
     sortBy: Joi.string().optional().valid('createdAt:desc', 'createdAt:asc', 'amount:desc', 'amount:asc'),
     fromDate: Joi.date().optional(),
     toDate: Joi.date().optional().min(Joi.ref('fromDate')).messages({

@@ -8,6 +8,7 @@ import '../../../core/services/api/reservation_service.dart';
 import '../../widgets/booking/booking_sms_widget.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/shimmer_loading.dart';
+import '../../widgets/reservation/reservation_timer_widget.dart';
 
 class ReservationDetailsScreen extends StatefulWidget {
   final String reservationId;
@@ -293,6 +294,31 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
               ],
             ),
           ),
+          
+          // Timer SLA d'approbation hôte
+          if (reservation.status == ReservationStatus.awaitingApproval) ...[
+            const SizedBox(height: 16),
+            ReservationTimerWidget(
+              reservation: reservation,
+              displayMode: ReservationTimerDisplayMode.full,
+              onApprove: () {
+                _updateReservationStatus(ReservationStatus.confirmed);
+              },
+              onReject: () {
+                _updateReservationStatus(ReservationStatus.rejected);
+              },
+              onExpired: () {
+                // Auto-transition vers rejeté après expiration
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Délai d\'approbation expiré - Réservation automatiquement rejetée'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                _loadReservationDetails(); // Recharger les détails
+              },
+            ),
+          ],
           
           const SizedBox(height: 24),
           

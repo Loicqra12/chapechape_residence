@@ -226,12 +226,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       EarningsData? earningsData;
       
       try {
-        // Charger toutes les données en parallèle
+        // Charger toutes les données en parallèle avec retry automatique sur 429
         final futures = await Future.wait([
-          // 1. Dashboard Overview
-          _dashboardService.getDashboardOverview().catchError((e) {
+          // 1. Dashboard Overview avec retry
+          _retryOnRateLimit(() => _dashboardService.getDashboardOverview()).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération du dashboard overview: $e');
-            // Créer un objet vide plutôt que null pour éviter les erreurs
             return DashboardOverview(
               totalResidences: 0,
               bookings: {'total': 0, 'pending': 0, 'confirmed': 0, 'cancelled': 0, 'completed': 0},
@@ -243,10 +242,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             );
           }),
           
-          // 2. Dashboard Finances
-          _dashboardService.getDashboardFinances().catchError((e) {
+          // 2. Dashboard Finances avec retry
+          _retryOnRateLimit(() => _dashboardService.getDashboardFinances()).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération des finances: $e');
-            // Créer un objet vide plutôt que null pour éviter les erreurs
             return DashboardFinances(
               monthlyRevenue: 0.0,
               dailyRevenue: 0.0,
@@ -257,32 +255,32 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             );
           }),
           
-          // 3. Dashboard Realtime
-          _dashboardService.getDashboardRealtime().catchError((e) {
+          // 3. Dashboard Realtime avec retry
+          _retryOnRateLimit(() => _dashboardService.getDashboardRealtime()).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération des statistiques en temps réel: $e');
             return RealtimeStats.empty();
           }),
           
-          // 4. Partner Stats
-          _dashboardService.getPartnerStats().catchError((e) {
+          // 4. Partner Stats avec retry
+          _retryOnRateLimit(() => _dashboardService.getPartnerStats()).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération des statistiques du partenaire: $e');
             return PartnerStats.empty();
           }),
           
-          // 5. Trends
-          _dashboardService.getTrends(period: period).catchError((e) {
+          // 5. Trends avec retry
+          _retryOnRateLimit(() => _dashboardService.getTrends(period: period)).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération des tendances: $e');
             return TrendData.empty();
           }),
           
-          // 6. Residence Stats
-          _dashboardService.getResidenceStats().catchError((e) {
+          // 6. Residence Stats avec retry
+          _retryOnRateLimit(() => _dashboardService.getResidenceStats()).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération des statistiques des résidences: $e');
             return <ResidenceStats>[];
           }),
           
-          // 7. Earnings
-          _dashboardService.getEarnings().catchError((e) {
+          // 7. Earnings avec retry
+          _retryOnRateLimit(() => _dashboardService.getEarnings()).catchError((e) {
             debugPrint('❌ Erreur lors de la récupération des revenus: $e');
             return EarningsData.empty();
           }),
@@ -404,7 +402,38 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       await _onLoadDashboardData(LoadDashboardData(), emit);
     }
   }
-  
+
+  /// Méthode utilitaire pour retry automatique sur rate limiting (429)
+  Future<T> _retryOnRateLimit<T>(Future<T> Function() operation) async {
+    const maxRetries = 3;
+    const baseDelay = Duration(milliseconds: 500);
+    
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (e) {
+        // Vérifier si c'est une erreur 429 (rate limiting)
+        bool isRateLimited = e.toString().contains('429') || 
+                            e.toString().toLowerCase().contains('too many requests');
+        
+        if (isRateLimited && attempt < maxRetries - 1) {
+          // Attendre avec backoff exponentiel
+          final delay = Duration(milliseconds: baseDelay.inMilliseconds * (attempt + 1));
+          print('🔄 Rate limit détecté, retry #${attempt + 1} dans ${delay.inMilliseconds}ms...');
+          await Future.delayed(delay);
+          continue;
+        }
+        
+        // Si ce n'est pas du rate limiting, ou si on a épuisé les retries, relancer l'exception
+        rethrow;
+      }
+    }
+    
+    // Ne devrait jamais arriver, mais au cas où
+    throw Exception('Échec après $maxRetries tentatives');
+  }
+
+  /// Gestion des changements de période
   Future<void> _onChangePeriod(
     ChangePeriod event,
     Emitter<DashboardState> emit,

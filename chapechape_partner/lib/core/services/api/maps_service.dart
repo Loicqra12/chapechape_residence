@@ -46,7 +46,7 @@ class MapsService {
   Future<Map<String, dynamic>> geocodeAddress(String address) async {
     try {
       final response = await _dio.post(
-        '$baseUrl/api/maps/geocode',
+        '$baseUrl/maps/geocode',
         data: {'address': address},
       );
       
@@ -90,7 +90,7 @@ class MapsService {
       }
       
       final response = await _dio.post(
-        '$baseUrl/api/maps/reverse-geocode',
+        '$baseUrl/maps/reverse-geocode',
         data: {
           'latitude': latitude,
           'longitude': longitude,
@@ -127,7 +127,7 @@ class MapsService {
   Future<List<Map<String, dynamic>>> autocompleteAddress(String query) async {
     try {
       final response = await _dio.get(
-        '$baseUrl/api/maps/autocomplete',
+        '$baseUrl/maps/autocomplete',
         queryParameters: {'query': query},
       );
       
@@ -157,7 +157,7 @@ class MapsService {
   Future<List<dynamic>> findNearbyResidences(double latitude, double longitude, {double radius = 10.0}) async {
     try {
       final response = await _dio.get(
-        '$baseUrl/api/maps/nearby',
+        '$baseUrl/maps/nearby',
         queryParameters: {
           'lat': latitude,
           'lng': longitude,

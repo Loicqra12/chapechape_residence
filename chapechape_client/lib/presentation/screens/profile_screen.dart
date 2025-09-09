@@ -8,6 +8,7 @@ import 'package:chapechape_client/core/blocs/user/user_event.dart';
 import 'package:chapechape_client/core/blocs/user/user_state.dart';
 import 'package:chapechape_client/core/constants/app_assets.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -150,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _logout() {
     context.read<AuthBloc>().add(const LogoutRequested());
-    context.go('/onboarding');
+    context.go('/home');
   }
 
   @override
@@ -163,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, authState) {
           if (authState is Unauthenticated) {
-            context.go('/onboarding');
+            context.go('/home');
           }
         },
         child: BlocConsumer<UserBloc, UserState>(
@@ -228,7 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     CircleAvatar(
                       radius: 60,
                       backgroundImage: user.profilePicture != null
-                          ? NetworkImage(user.profilePicture!)
+                          ? NetworkImage(AppConfigManager.getProfileImageUrl(user.profilePicture!))
                           : NetworkImage(AppAssets.getDefaultAvatar(
                               name: '${user.firstName} ${user.lastName}',
                               size: 200,
@@ -473,7 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Historique des réservations',
                     onTap: () {
                       context.read<UserBloc>().add(const LoadBookingHistory());
-                      context.go('/bookings');
+                      context.push('/bookings');
                     },
                   ),
                   

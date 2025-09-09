@@ -88,6 +88,7 @@ class _ModificationHistoryWidgetState extends State<ModificationHistoryWidget> {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Filtres et tri
         Padding(
@@ -152,60 +153,57 @@ class _ModificationHistoryWidgetState extends State<ModificationHistoryWidget> {
           ),
         ),
 
-        // Liste des modifications
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _paginatedModifications.length,
-          itemBuilder: (context, index) {
-            final modification = _paginatedModifications[index];
-            final date = DateTime.parse(modification['modifiedAt']);
-            final changes = modification['changes'] as Map<String, dynamic>;
-            final fee = modification['fee'] as double;
-            final status = modification['status'] as String;
+        // Liste des modifications - Utilisation de Column au lieu de ListView pour éviter les conflits
+        ..._paginatedModifications.map((modification) {
+          final date = DateTime.parse(modification['modifiedAt']);
+          final changes = modification['changes'] as Map<String, dynamic>;
+          final fee = modification['fee'] as double;
+          final status = modification['status'] as String;
 
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
                           DateFormat('dd/MM/yyyy HH:mm').format(date),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey,
                           ),
                         ),
-                        _buildStatusChip(status),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...changes.entries.map((entry) => _buildChangeItem(
-                      context,
-                      entry.key,
-                      entry.value['from'],
-                      entry.value['to'],
-                    )),
-                    if (fee > 0) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Frais de modification: ${fee.toStringAsFixed(2)} FCFA',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
                       ),
+                      _buildStatusChip(status),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...changes.entries.map((entry) => _buildChangeItem(
+                    context,
+                    entry.key,
+                    entry.value['from'],
+                    entry.value['to'],
+                  )),
+                  if (fee > 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Frais de modification: ${fee.toStringAsFixed(2)} FCFA',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
-                ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }),
 
         // Pagination
         if (_filteredModifications.length > _itemsPerPage)
@@ -224,9 +222,11 @@ class _ModificationHistoryWidgetState extends State<ModificationHistoryWidget> {
                         }
                       : null,
                 ),
-                Text(
-                  'Page $_currentPage sur ${(_filteredModifications.length / _itemsPerPage).ceil()}',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                Flexible(
+                  child: Text(
+                    'Page $_currentPage sur ${(_filteredModifications.length / _itemsPerPage).ceil()}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
@@ -318,40 +318,48 @@ class _ModificationHistoryWidgetState extends State<ModificationHistoryWidget> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              fieldLabel,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                fieldLabel,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Avant: ${formatValue(oldValue)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 3,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Avant: ${formatValue(oldValue)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
-                ),
-                Text(
-                  'Après: ${formatValue(newValue)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
+                  Text(
+                    'Après: ${formatValue(newValue)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -134,3 +134,33 @@ class BookingError extends BookingState {
   @override
   List<Object?> get props => [message];
 }
+
+// État lorsqu'une réservation expire (timer SLA ou paiement)
+class BookingExpired extends BookingState {
+  final String bookingId;
+
+  const BookingExpired(this.bookingId);
+
+  @override
+  List<Object?> get props => [bookingId];
+}
+
+// État lorsqu'une réservation est approuvée par l'hôte
+class BookingApproved extends BookingState {
+  final String bookingId;
+
+  const BookingApproved(this.bookingId);
+
+  @override
+  List<Object?> get props => [bookingId];
+}
+
+// État lorsqu'une réservation est rejetée par l'hôte
+class BookingRejected extends BookingState {
+  final String bookingId;
+
+  const BookingRejected(this.bookingId);
+
+  @override
+  List<Object?> get props => [bookingId];
+}

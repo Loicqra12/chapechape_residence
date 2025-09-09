@@ -91,6 +91,9 @@ class ReservationError extends ReservationState {
 class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
   final ReservationService _reservationService;
 
+  // ✅ AJOUT : Getter public pour accès au service depuis les écrans
+  ReservationService get reservationService => _reservationService;
+
   ReservationBloc(this._reservationService) : super(ReservationInitial()) {
     on<LoadReservations>(_onLoadReservations);
     on<LoadMyReservations>(_onLoadMyReservations);
@@ -187,7 +190,24 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
         add(LoadMyReservations());
       }
     } catch (e) {
-      emit(ReservationError(e.toString()));
+      // ✅ Gestion d'erreurs améliorée avec messages spécifiques
+      String errorMessage = e.toString();
+      
+      // Nettoyer le message d'erreur pour l'affichage
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+      
+      // Messages d'erreur spécifiques selon le type
+      if (errorMessage.contains('paiement requis')) {
+        errorMessage = 'Paiement requis avant de confirmer cette réservation';
+      } else if (errorMessage.contains('Transition d\'état invalide')) {
+        errorMessage = 'Action impossible : l\'état de la réservation a changé';
+      } else if (errorMessage.contains('pas autorisé')) {
+        errorMessage = 'Vous n\'avez pas les droits pour modifier cette réservation';
+      }
+      
+      emit(ReservationError(errorMessage));
     }
   }
 

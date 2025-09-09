@@ -3,6 +3,7 @@ const User = require('../../models/user.model');
 const Residence = require('../../models/residence.model');
 const Reservation = require('../../models/reservation.model');
 const Payment = require('../../models/payment.model');
+const Review = require('../../models/review.model');
 const statsService = require('../../services/stats.service');
 const dashboardService = require('../../services/dashboard.service');
 const ApiError = require('../../utils/apiError');
@@ -320,5 +321,44 @@ exports.getDashboardRealtime = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         data: realtimeStats
+    });
+});
+
+// Obtenir les avis des résidences du partenaire
+exports.getPartnerReviews = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, residenceId } = req.query;
+    
+    // Récupérer les résidences du partenaire
+    const partnerResidences = await Residence.find({ partner: req.user.id }).select('_id');
+    const residenceIds = partnerResidences.map(r => r._id);
+    
+    // Construire la requête de filtrage
+    let query = { residence: { $in: residenceIds } };
+    if (residenceId) {
+        query.residence = residenceId;
+    }
+    
+    // Récupérer les avis avec pagination
+    const reviews = await Review.find(query)
+        .populate('user', 'firstName lastName profilePicture')
+        .populate('residence', 'title images')
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit);
+    
+    // Compter le total pour la pagination
+    const total = await Review.countDocuments(query);
+    
+    res.status(200).json({
+        success: true,
+        data: {
+            reviews,
+            pagination: {
+                total,
+                pages: Math.ceil(total / limit),
+                currentPage: parseInt(page),
+                perPage: parseInt(limit)
+            }
+        }
     });
 });

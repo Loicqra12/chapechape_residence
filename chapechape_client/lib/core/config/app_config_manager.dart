@@ -15,7 +15,7 @@ class AppConfigManager {
   static Map<String, dynamic> _config = {};
   
   // Environnement actuel
-  static Environment _environment = Environment.dev;
+  static Environment _environment = Environment.prod;
   static Environment get environment => _environment;
   
   // Service de détection d'IP
@@ -36,31 +36,50 @@ class AppConfigManager {
   
   /// Initialise le gestionnaire de configuration
   static Future<void> initialize({
-    Environment environment = Environment.dev,
+    Environment environment = Environment.prod, // 🚀 FORCER PRODUCTION PAR DÉFAUT
     bool autoDetectIp = true,
   }) async {
     _environment = environment;
+    
+    debugPrint('🔧 [DEBUG] Initialisation avec environnement: ${_environment.toString().split('.').last}');
     
     // Initialiser le service de détection d'IP
     _ipDetectionService = await IpDetectionService.initialize();
     
     // Charger la configuration depuis les préférences
     final prefs = await SharedPreferences.getInstance();
-    _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
-    _useSecureConnection = prefs.getBool(_useSecureConnectionKey) ?? false;
+    
+    // En production, toujours forcer l'URL officielle (pas d'URL personnalisée)
+    if (_environment == Environment.prod) {
+      _useCustomServerUrl = false;
+      _useSecureConnection = true; // HTTPS obligatoire en production
+      debugPrint('🔧 [DEBUG] Mode PRODUCTION détecté - URL personnalisée désactivée, HTTPS activé');
+    } else {
+      _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
+      _useSecureConnection = prefs.getBool(_useSecureConnectionKey) ?? false;
+      debugPrint('🔧 [DEBUG] Mode DEV/STAGING - useCustomServerUrl: $_useCustomServerUrl, useSecureConnection: $_useSecureConnection');
+    }
+    
+    debugPrint('🔧 [DEBUG] Avant _loadConfig() - useCustomServerUrl: $_useCustomServerUrl, useSecureConnection: $_useSecureConnection');
     
     // Charger la configuration selon l'environnement
     _loadConfig();
     
-    // Tenter de détecter automatiquement l'IP du serveur si demandé
-    if (autoDetectIp && !_useCustomServerUrl) {
+    debugPrint('🔧 [DEBUG] Après _loadConfig() - URL API: ${_config['apiUrl']}');
+    
+    // ⛔ DÉSACTIVER COMPLÈTEMENT L'AUTODETECTION EN PRODUCTION
+    if (_environment != Environment.prod && autoDetectIp && !_useCustomServerUrl) {
+      debugPrint('🔧 [DEBUG] Autodetection d\'IP autorisée (non-production)');
       await _ipDetectionService?.autoDetectServerIp();
       // Recharger la configuration avec la nouvelle IP
       _loadConfig();
+      debugPrint('🔧 [DEBUG] Après autodetection - URL API: ${_config['apiUrl']}');
+    } else {
+      debugPrint('🔧 [DEBUG] Autodetection d\'IP DÉSACTIVÉE (production ou autres conditions)');
     }
     
     debugPrint('🔧 Configuration initialisée pour l\'environnement: ${_environment.toString().split('.').last}');
-    debugPrint('🔧 URL API: ${_config['apiUrl']}');
+    debugPrint('🔧 URL API FINALE: ${_config['apiUrl']}');
   }
   
   /// Active ou désactive l'utilisation d'une URL personnalisée
@@ -121,10 +140,10 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Client (Dev)',
-              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000/api',
-              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000',
-              'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000/media',
-              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.70:4000/ws',
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.65:4000/api',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.65:4000',
+              'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.65:4000/media',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.65:4000/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -206,10 +225,10 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Client (Fallback)',
-        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000/api',
-        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000',
-        'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.70:4000/media',
-        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.70:4000/ws',
+        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.65:4000/api',
+        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.65:4000',
+        'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.65:4000/media',
+        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.65:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -222,10 +241,10 @@ class AppConfigManager {
 
   /// Accesseurs de la configuration
   static String get appName => _config['appName'] as String;
-  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.70:4000/api';
-  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.70:4000';
-  static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'http://192.168.1.70:4000/media';
-  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.70:4000/ws';
+  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.65:4000/api';
+  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.65:4000';
+  static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'http://192.168.1.65:4000/media';
+  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.65:4000/ws';
   static String get apiVersion => _config['apiVersion'] as String;
   static int get apiTimeout => _config['apiTimeout'] as int;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int;
@@ -314,7 +333,7 @@ class AppConfigManager {
   }
 
   /// Obtient l'adresse IP actuelle du serveur
-  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.70';
+  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.65';
 
   /// Obtient le port actuel du serveur
   static int get serverPort => _ipDetectionService?.serverPort ?? 4000;

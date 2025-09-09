@@ -47,6 +47,7 @@ class Residence {
   final double fullDayRate;
   final double weekendRate;
   final bool isVip;
+  final String reservationMode; // 'instant' ou 'approval'
   
   bool get hasDiscount => discountPrice != null && discountPrice! < price;
   double? get discountPrice => priceDetails != null && priceDetails!.containsKey('discountPrice') ? priceDetails!['discountPrice'] as double : null;
@@ -215,6 +216,7 @@ class Residence {
     this.fullDayRate = 0.0,
     this.weekendRate = 0.0,
     this.isVip = false,
+    this.reservationMode = 'instant', // Valeur par défaut
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -354,6 +356,7 @@ class Residence {
         halfDayRate: halfDayRate,
         fullDayRate: fullDayRate,
         weekendRate: weekendRate,
+        reservationMode: json['reservationMode'] as String? ?? 'instant',
     );
   }
 
@@ -405,6 +408,7 @@ class Residence {
         'fullDay': fullDayRate,
         'weekend': weekendRate,
       },
+      'reservationMode': reservationMode,
     };
   }
 
@@ -452,6 +456,7 @@ class Residence {
     double? halfDayRate,
     double? fullDayRate,
     double? weekendRate,
+    String? reservationMode,
   }) {
     return Residence(
       id: id ?? this.id,
@@ -496,6 +501,7 @@ class Residence {
       halfDayRate: halfDayRate ?? this.halfDayRate,
       fullDayRate: fullDayRate ?? this.fullDayRate,
       weekendRate: weekendRate ?? this.weekendRate,
+      reservationMode: reservationMode ?? this.reservationMode,
     );
   }
 

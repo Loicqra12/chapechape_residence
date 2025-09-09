@@ -1,0 +1,116 @@
+version: '3.8'
+
+# Configuration pour le développement local
+services:
+  # Backend API avec hot reload
+  backend-dev:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"
+      - "9229:9229"  # Debug port
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/chapechape_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/logs:/app/logs
+    networks:
+      - chapechape-dev-network
+
+  # Dashboard avec hot reload
+  dashboard-dev:
+    build:
+      context: ./chapechape_dashboard
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./chapechape_dashboard:/app
+      - /app/node_modules
+    networks:
+      - chapechape-dev-network
+
+  # Site de présentation avec hot reload
+  sitepresentation-dev:
+    build:
+      context: ./chapechape_sitepresentation
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3002:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./chapechape_sitepresentation:/app
+      - /app/node_modules
+    networks:
+      - chapechape-dev-network
+
+  # MongoDB pour développement
+  mongo:
+    image: mongo:4.4
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=dev123
+      - MONGO_INITDB_DATABASE=chapechape_dev
+    volumes:
+      - mongo_dev_data:/data/db
+    networks:
+      - chapechape-dev-network
+
+  # Redis pour développement
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass dev123
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - chapechape-dev-network
+
+  # MongoDB Express pour interface admin
+  mongo-express:
+    image: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=dev123
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:dev123@mongo:27017/
+    depends_on:
+      - mongo
+    networks:
+      - chapechape-dev-network
+
+  # Redis Commander pour interface Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    ports:
+      - "8082:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:dev123
+    depends_on:
+      - redis
+    networks:
+      - chapechape-dev-network
+
+volumes:
+  mongo_dev_data:
+  redis_dev_data:
+
+networks:
+  chapechape-dev-network:
+    driver: bridge

@@ -40,6 +40,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
   late final LocationService _locationService;
   
   LatLng? _currentUserLocation;
+  
+  // Variable pour forcer le rechargement des avis
+  int _reviewsRefreshKey = 0;
 
   @override
   void initState() {
@@ -818,17 +821,107 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               ),
                               
                               const SizedBox(height: 16),
-                              _buildExampleComment(
-                                name: 'Marie S.',
-                                date: 'Il y a 2 semaines',
-                                rating: 4.5,
-                                comment: 'Très belle résidence, propre et bien située. Le personnel est accueillant et serviable.',
-                              ),
-                              _buildExampleComment(
-                                name: 'Jean D.',
-                                date: 'Il y a 1 mois',
-                                rating: 5.0,
-                                comment: 'Excellent rapport qualité-prix. J\'ai particulièrement apprécié la qualité de la connexion internet et la propreté des lieux.',
+                              FutureBuilder<Map<String, dynamic>>(
+                                key: ValueKey(_reviewsRefreshKey),
+                                future: _loadRealReviews(residence.id),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+                                  
+                                  if (snapshot.hasError || !snapshot.hasData) {
+                                    // Fallback vers les commentaires d'exemple en cas d'erreur
+                                    return Column(
+                                      children: [
+                                        _buildExampleComment(
+                                          name: 'Marie S.',
+                                          date: 'Il y a 2 semaines',
+                                          rating: 4.5,
+                                          comment: 'Très belle résidence, propre et bien située. Le personnel est accueillant et serviable.',
+                                        ),
+                                        _buildExampleComment(
+                                          name: 'Jean D.',
+                                          date: 'Il y a 1 mois',
+                                          rating: 5.0,
+                                          comment: 'Excellent rapport qualité-prix. J\'ai particulièrement apprécié la qualité de la connexion internet et la propreté des lieux.',
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                  
+                                  final reviewsData = snapshot.data!;
+                                  final dataSection = reviewsData['data'] as Map<String, dynamic>? ?? {};
+                                  final reviews = dataSection['reviews'] as List<dynamic>? ?? [];
+                                  
+                                  print('DEBUG: reviewsData keys: ${reviewsData.keys}');
+                                  print('DEBUG: reviews length: ${reviews.length}');
+                                  
+                                  if (reviews.isEmpty) {
+                                    return Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.grey[300]!),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              Icon(Icons.rate_review_outlined, 
+                                                   size: 48, color: Colors.grey[400]),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'Aucun avis pour cette résidence',
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'Soyez le premier à laisser un avis !',
+                                                style: TextStyle(
+                                                  color: Colors.grey[500],
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                  
+                                  // Afficher les vrais avis (limiter à 3 pour l'aperçu)
+                                  final displayReviews = reviews.take(3).toList();
+                                  return Column(
+                                    children: [
+                                      ...displayReviews.map((review) => _buildRealReviewComment(review)).toList(),
+                                      if (reviews.length > 3)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 16),
+                                          child: TextButton(
+                                            onPressed: () {
+                                              // Navigation vers l'écran des avis complet
+                                              Navigator.pushNamed(
+                                                context, 
+                                                '/reviews/${residence.id}'
+                                              );
+                                            },
+                                            child: Text(
+                                              'Voir tous les ${reviews.length} avis',
+                                              style: TextStyle(
+                                                color: Theme.of(context).primaryColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -1031,6 +1124,8 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                     // Réinitialiser la note
                     setState(() {
                       selectedRating = 0;
+                      // Forcer le rechargement des avis
+                      _reviewsRefreshKey++;
                     });
                   } else {
                     // Montrer un message d'erreur
@@ -1068,8 +1163,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
   String _getLocationLabel(dynamic residence) {
     try {
       if (residence.type != null) {
+        // Convertir le type en ResidenceType si c'est une chaîne
+        ResidenceType residenceType;
+        if (residence.type is String) {
+          residenceType = ResidenceTypeExtension.fromString(residence.type);
+        } else if (residence.type is ResidenceType) {
+          residenceType = residence.type;
+        } else {
+          residenceType = ResidenceType.other;
+        }
+        
         // Utiliser le nom d'affichage du type comme base
-        String typeDisplay = residence.type.displayName;
+        String typeDisplay = residenceType.displayName;
         
         // Déterminer le bon libellé selon le type
         if (typeDisplay.toLowerCase().contains('hôtel')) {
@@ -2165,6 +2270,144 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       ),
     );
   }
+
+  // Méthode pour charger les vrais avis depuis l'API
+  Future<Map<String, dynamic>> _loadRealReviews(String residenceId) async {
+    try {
+      final residenceService = await ResidenceService.initialize();
+      return await residenceService.getResidenceReviews(residenceId, limit: 5);
+    } catch (e) {
+      debugPrint('Erreur lors du chargement des avis: $e');
+      return {};
+    }
+  }
+
+  // Widget pour afficher un vrai commentaire depuis l'API
+  Widget _buildRealReviewComment(Map<String, dynamic> review) {
+    final user = review['user'] as Map<String, dynamic>? ?? {};
+    final rating = review['rating'] as Map<String, dynamic>? ?? {};
+    final overallRating = (rating['overall'] as num?)?.toDouble() ?? 0.0;
+    final comment = review['comment'] as String? ?? '';
+    final createdAt = review['updatedAt'] as String? ?? review['createdAt'] as String?;
+    
+    final userName = '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim();
+    final userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+
+    String formattedDate = 'Récemment';
+    if (createdAt != null) {
+      try {
+        final reviewDate = DateTime.parse(createdAt).toLocal();
+        final now = DateTime.now();
+        final difference = now.difference(reviewDate);
+        
+        if (difference.inDays > 30) {
+          formattedDate = 'Il y a ${(difference.inDays / 30).floor()} mois';
+        } else if (difference.inDays > 7) {
+          formattedDate = 'Il y a ${(difference.inDays / 7).floor()} semaines';
+        } else if (difference.inDays > 0) {
+          formattedDate = 'Il y a ${difference.inDays} jours';
+        } else if (difference.inHours > 0) {
+          formattedDate = 'Il y a ${difference.inHours} heure${difference.inHours > 1 ? 's' : ''}';
+        } else if (difference.inMinutes > 0) {
+          formattedDate = 'Il y a ${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
+        } else {
+          formattedDate = 'À l\'instant';
+        }
+      } catch (e) {
+        formattedDate = 'Récemment';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Informations sur l'auteur
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.amber[100],
+                      child: Text(
+                        userInitial,
+                        style: TextStyle(
+                          color: Colors.amber[800],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName.isNotEmpty ? userName : 'Utilisateur anonyme',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            formattedDate,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Note avec étoiles
+              Row(
+                children: [
+                  ...List.generate(5, (index) {
+                    return Icon(
+                      index < overallRating.floor() ? Icons.star : 
+                      index < overallRating ? Icons.star_half : Icons.star_border,
+                      color: Colors.amber,
+                      size: 16,
+                    );
+                  }),
+                  const SizedBox(width: 4),
+                  Text(
+                    overallRating.toStringAsFixed(1),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              comment,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 // Méthode pour ouvrir la galerie en plein écran
@@ -2360,6 +2603,144 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // Méthode pour charger les vrais avis depuis l'API
+  Future<Map<String, dynamic>> _loadRealReviews(String residenceId) async {
+    try {
+      final residenceService = await ResidenceService.initialize();
+      return await residenceService.getResidenceReviews(residenceId, limit: 5);
+    } catch (e) {
+      debugPrint('Erreur lors du chargement des avis: $e');
+      return {};
+    }
+  }
+
+  // Widget pour afficher un vrai commentaire depuis l'API
+  Widget _buildRealReviewComment(Map<String, dynamic> review) {
+    final user = review['user'] as Map<String, dynamic>? ?? {};
+    final rating = review['rating'] as Map<String, dynamic>? ?? {};
+    final overallRating = (rating['overall'] as num?)?.toDouble() ?? 0.0;
+    final comment = review['comment'] as String? ?? '';
+    final createdAt = review['updatedAt'] as String? ?? review['createdAt'] as String?;
+    
+    final userName = '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim();
+    final userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+
+    String formattedDate = 'Récemment';
+    if (createdAt != null) {
+      try {
+        final reviewDate = DateTime.parse(createdAt).toLocal();
+        final now = DateTime.now();
+        final difference = now.difference(reviewDate);
+        
+        if (difference.inDays > 30) {
+          formattedDate = 'Il y a ${(difference.inDays / 30).floor()} mois';
+        } else if (difference.inDays > 7) {
+          formattedDate = 'Il y a ${(difference.inDays / 7).floor()} semaines';
+        } else if (difference.inDays > 0) {
+          formattedDate = 'Il y a ${difference.inDays} jours';
+        } else if (difference.inHours > 0) {
+          formattedDate = 'Il y a ${difference.inHours} heure${difference.inHours > 1 ? 's' : ''}';
+        } else if (difference.inMinutes > 0) {
+          formattedDate = 'Il y a ${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
+        } else {
+          formattedDate = 'À l\'instant';
+        }
+      } catch (e) {
+        formattedDate = 'Récemment';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Informations sur l'auteur
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.amber[100],
+                      child: Text(
+                        userInitial,
+                        style: TextStyle(
+                          color: Colors.amber[800],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName.isNotEmpty ? userName : 'Utilisateur anonyme',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            formattedDate,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Note avec étoiles
+              Row(
+                children: [
+                  ...List.generate(5, (index) {
+                    return Icon(
+                      index < overallRating.floor() ? Icons.star : 
+                      index < overallRating ? Icons.star_half : Icons.star_border,
+                      color: Colors.amber,
+                      size: 16,
+                    );
+                  }),
+                  const SizedBox(width: 4),
+                  Text(
+                    overallRating.toStringAsFixed(1),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              comment,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );

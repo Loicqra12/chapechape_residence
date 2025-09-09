@@ -1,0 +1,245 @@
+name: ChapeChape CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: chapechape
+
+jobs:
+  # Tests Backend
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:6
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run tests
+      run: npm test
+      env:
+        MONGODB_URI_TEST: mongodb://localhost:27017/chapechape_test
+        REDIS_HOST: localhost
+        JWT_SECRET: test_secret
+    
+    - name: Run security audit
+      run: npm audit --audit-level high
+
+  # Tests Frontend Apps
+  frontend-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [chapechape_dashboard, chapechape_sitepresentation]
+    
+    defaults:
+      run:
+        working-directory: ./${{ matrix.app }}
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: ${{ matrix.app }}/package-lock.json
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test -- --coverage --watchAll=false
+    
+    - name: Build
+      run: npm run build
+
+  # Tests Flutter Apps
+  flutter-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [chapechape_client, chapechape_partner]
+    
+    defaults:
+      run:
+        working-directory: ./${{ matrix.app }}
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.5'
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Run analyzer
+      run: flutter analyze
+    
+    - name: Run tests
+      run: flutter test
+
+  # Build et Push Docker Images
+  build-and-push:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        service: [backend, chapechape_dashboard, chapechape_sitepresentation]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Login to Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/Loicqra12/chapechape_residence/${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push
+      uses: docker/build-push-action@v4
+      with:
+        context: ./${{ matrix.service }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Build Flutter APKs/AABs
+  build-flutter:
+    needs: [flutter-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        app: [chapechape_client, chapechape_partner]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.5'
+        channel: 'stable'
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Install dependencies
+      working-directory: ./${{ matrix.app }}
+      run: flutter pub get
+    
+    - name: Build APK
+      working-directory: ./${{ matrix.app }}
+      run: flutter build apk --release
+    
+    - name: Build AAB
+      working-directory: ./${{ matrix.app }}
+      run: flutter build appbundle --release
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.app }}-builds
+        path: |
+          ${{ matrix.app }}/build/app/outputs/flutter-apk/*.apk
+          ${{ matrix.app }}/build/app/outputs/bundle/release/*.aab
+
+  # Déploiement
+  deploy:
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: |
+        echo "Déploiement vers la production"
+        # Ici vous pouvez ajouter vos scripts de déploiement
+        # Par exemple: kubectl apply, docker-compose up, etc.
+
+  # Tests de charge
+  load-tests:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install Artillery
+      run: npm install -g artillery@latest
+    
+    - name: Run load tests
+      working-directory: ./backend
+      run: artillery run tests/load/load-test.yml
+      env:
+        TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+        TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
+        TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}

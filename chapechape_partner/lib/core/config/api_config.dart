@@ -16,8 +16,8 @@ class ApiConfig {
 
   factory ApiConfig.production() {
     return const ApiConfig(
-      baseUrl: 'http://api.chapechaperesidence.com/api',
-      wsUrl: 'ws://api.chapechaperesidence.com/ws',
+      baseUrl: 'https://api.chapechaperesidence.com',
+      wsUrl: 'wss://api.chapechaperesidence.com/ws',
     );
   }
 }

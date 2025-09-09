@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:chapechape_client/presentation/screens/screens.dart' 
+import 'package:chapechape_client/presentation/screens/screens.dart'
     hide PaymentScreen, BookingHistoryScreen, BookingScreen;
 import 'package:chapechape_client/presentation/screens/booking_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/login_screen.dart';
@@ -17,10 +17,18 @@ import '../core/blocs/chat/chat_bloc.dart' as chat;
 import '../core/blocs/auth/auth_bloc.dart';
 import '../core/blocs/auth/auth_state.dart';
 import '../presentation/screens/nearby_residences/nearby_residences_screen.dart';
-import 'package:chapechape_client/presentation/screens/booking/booking_history_screen.dart' as booking;
-import 'package:chapechape_client/presentation/screens/booking/booking_confirmation_screen.dart' as booking;
-import 'package:chapechape_client/presentation/screens/booking/booking_modify_screen.dart' as booking;
-import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart' as payment;
+import 'package:chapechape_client/presentation/screens/booking/booking_history_screen.dart'
+    as booking;
+import 'package:chapechape_client/presentation/screens/booking/booking_confirmation_screen.dart'
+    as booking;
+import 'package:chapechape_client/presentation/screens/booking/booking_details_screen.dart'
+    as booking;
+import 'package:chapechape_client/presentation/screens/booking/booking_status_screen.dart'
+    as booking;
+import 'package:chapechape_client/presentation/screens/booking/booking_modify_screen.dart'
+    as booking;
+import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart'
+    as payment;
 import 'package:chapechape_client/presentation/screens/payment/payment_redirect_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_success_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/temperature_screen.dart';
@@ -29,6 +37,8 @@ import 'package:chapechape_client/presentation/screens/settings/about_screen.dar
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings_screen.dart';
 import 'package:chapechape_client/presentation/screens/full_map_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_waiting_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_failed_screen.dart';
 
 class AppRouter {
   static late final ApiService _apiService;
@@ -56,11 +66,12 @@ class AppRouter {
       if (context.mounted) {
         // Navigation après la fin de la phase de construction
         context.go('/login');
-        
+
         // Afficher un message explicatif
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Vous devez vous connecter pour accéder à cette fonctionnalité'),
+            content: Text(
+                'Vous devez vous connecter pour accéder à cette fonctionnalité'),
             duration: Duration(seconds: 3),
           ),
         );
@@ -70,7 +81,7 @@ class AppRouter {
 
   static final router = GoRouter(
     initialLocation: '/splash',
-    debugLogDiagnostics: true,  // Activer les logs de diagnostic
+    debugLogDiagnostics: true, // Activer les logs de diagnostic
     routes: [
       GoRoute(
         path: '/splash',
@@ -91,13 +102,14 @@ class AppRouter {
         path: '/full-map',
         name: 'full-map',
         builder: (context, state) {
-          final Map<String, dynamic> extra = state.extra as Map<String, dynamic>? ?? {};
+          final Map<String, dynamic> extra =
+              state.extra as Map<String, dynamic>? ?? {};
           final centerLat = extra['centerLat'] ?? 0.0;
           final centerLng = extra['centerLng'] ?? 0.0;
           final title = extra['title'] as String?;
           final residenceId = extra['residenceId'] as String?;
           final radius = extra['radius'] as double? ?? 5.0;
-          
+
           return FullMapScreen(
             centerLat: centerLat,
             centerLng: centerLng,
@@ -163,8 +175,8 @@ class AppRouter {
               // Vérifier l'authentification pour le chat
               if (_isAuthenticated(context)) {
                 return ChatScreen(
-              chatService: chatService,
-              apiService: _apiService,
+                  chatService: chatService,
+                  apiService: _apiService,
                 );
               } else {
                 _redirectToLogin(context);
@@ -181,9 +193,9 @@ class AppRouter {
                     _redirectToLogin(context);
                     return const SizedBox();
                   }
-                  
+
                   final id = state.pathParameters['id']!;
-                  
+
                   // Charger la conversation à partir de son ID
                   return FutureBuilder<ChatConversation>(
                     future: chatService.getConversation(id),
@@ -191,13 +203,15 @@ class AppRouter {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-                      
+
                       if (snapshot.hasError || !snapshot.hasData) {
-                        return const Center(child: Text('Erreur lors du chargement de la conversation'));
+                        return const Center(
+                            child: Text(
+                                'Erreur lors du chargement de la conversation'));
                       }
-                      
+
                       final conversation = snapshot.data!;
-                      
+
                       // Fournir le ChatBloc pour cet écran
                       return BlocProvider(
                         create: (context) {
@@ -207,9 +221,9 @@ class AppRouter {
                           return bloc;
                         },
                         child: ChatConversationScreen(
-                    conversation: conversation,
-                    chatService: chatService,
-                    apiService: _apiService,
+                          conversation: conversation,
+                          chatService: chatService,
+                          apiService: _apiService,
                         ),
                       );
                     },
@@ -323,7 +337,8 @@ class AppRouter {
               GoRoute(
                 path: 'help',
                 name: 'help',
-                builder: (context, state) => const HelpSupportScreen(), // Accessible à tous
+                builder: (context, state) =>
+                    const HelpSupportScreen(), // Accessible à tous
               ),
             ],
           ),
@@ -338,7 +353,7 @@ class AppRouter {
             builder: (context, state) {
               // Les avis peuvent être vus sans connexion
               return ReviewsScreen(
-              residenceId: state.pathParameters['residenceId']!,
+                residenceId: state.pathParameters['residenceId']!,
               );
             },
           ),
@@ -365,7 +380,7 @@ class AppRouter {
           if (extra == null) {
             return const SizedBox(); // Redirection si pas de paramètres
           }
-          
+
           return FullMapScreen(
             centerLat: extra['lat'] as double,
             centerLng: extra['lng'] as double,
@@ -395,7 +410,7 @@ class AppRouter {
           if (_isAuthenticated(context)) {
             // Récupérer directement le paramètre
             final residenceId = state.pathParameters['id'];
-            
+
             // Utiliser simplement BookingScreen sans qualifier avec un namespace particulier
             return BookingScreen(
               residenceId: residenceId ?? '',
@@ -443,7 +458,7 @@ class AppRouter {
       GoRoute(
         path: '/booking-details/:bookingId',
         name: 'booking_details',
-        builder: (context, state) => booking.BookingConfirmationScreen(
+        builder: (context, state) => booking.BookingDetailsScreen(
           bookingId: state.pathParameters['bookingId']!,
         ),
       ),
@@ -512,8 +527,41 @@ class AppRouter {
           final paymentId = state.pathParameters['paymentId'] ?? '';
           // Vérifier l'authentification
           if (_isAuthenticated(context)) {
-            // Vous pouvez créer un écran spécifique pour les échecs de paiement
-            return PaymentRedirectScreen(paymentId: paymentId); // À remplacer par votre écran d'échec
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return PaymentFailedScreen(
+              paymentId: paymentId,
+              transactionId: extra['transactionId'],
+              method: extra['method'],
+              phoneNumber: extra['phoneNumber'],
+              amount: extra['amount'],
+              reservationId: extra['reservationId'],
+              failureReason: extra['failureReason'],
+              isExpired: extra['isExpired'] ?? false,
+            );
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/payment-waiting',
+        name: 'payment_waiting',
+        builder: (context, state) {
+          // Vérifier l'authentification
+          if (_isAuthenticated(context)) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return PaymentWaitingScreen(
+              method: extra['method'] ?? '',
+              transactionId: extra['transactionId'] ?? '',
+              paymentUrl: extra['paymentUrl'],
+              expiresAt: extra['expiresAt'] is String
+                  ? DateTime.tryParse(extra['expiresAt']) ??
+                      DateTime.now().add(const Duration(minutes: 15))
+                  : extra['expiresAt'] ??
+                      DateTime.now().add(const Duration(minutes: 15)),
+              phoneNumber: extra['phoneNumber'],
+            );
           } else {
             _redirectToLogin(context);
             return const SizedBox();
@@ -544,6 +592,57 @@ class AppRouter {
           // Vérifier l'authentification
           if (_isAuthenticated(context)) {
             return booking.BookingModifyScreen(bookingId: bookingId);
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/booking-rejected/:bookingId',
+        name: 'booking_rejected',
+        builder: (context, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return booking.BookingStatusScreen.rejected(
+              bookingId: bookingId,
+              onNewBooking: () => context.go('/search'),
+              onBackToHome: () => context.go('/home'),
+            );
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/booking-expired/:bookingId',
+        name: 'booking_expired',
+        builder: (context, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return booking.BookingStatusScreen.expired(
+              bookingId: bookingId,
+              onNewBooking: () => context.go('/search'),
+              onBackToHome: () => context.go('/home'),
+            );
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/booking-approved/:bookingId',
+        name: 'booking_approved',
+        builder: (context, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return booking.BookingStatusScreen.approved(
+              bookingId: bookingId,
+              onGoToPayment: () => context.go('/payment/$bookingId'),
+              onViewDetails: () => context.go('/booking-details/$bookingId'),
+            );
           } else {
             _redirectToLogin(context);
             return const SizedBox();

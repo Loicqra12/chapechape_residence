@@ -6,7 +6,7 @@ import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
-import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
+
 import 'package:chapechape_client/config/theme.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
@@ -41,9 +41,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
   Widget build(BuildContext context) {
     return BlocBuilder<BookingBloc, BookingState>(
       builder: (context, state) {
-        return LoadingOverlay(
-          isLoading: state is BookingLoading,
-          child: Scaffold(
+        return Scaffold(
       appBar: AppBar(
         title: const Text('Historique des réservations'),
               backgroundColor: AppTheme.primaryColor,
@@ -65,7 +63,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                 _buildBookingList(state, 'cancelled'), // Annulées
               ],
             ),
-          ),
         );
       },
     );

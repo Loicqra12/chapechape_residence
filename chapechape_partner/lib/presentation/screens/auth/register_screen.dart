@@ -18,6 +18,8 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -29,6 +31,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _companyNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -52,10 +56,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _onRegisterPressed() {
     if (_formKey.currentState?.validate() ?? false) {
+      // Normaliser et assurer des valeurs pour firstName/lastName
+      String firstName = _firstNameController.text.trim();
+      String lastName = _lastNameController.text.trim();
+      final company = _companyNameController.text.trim();
+      // Fallback sécurisé: si l'utilisateur n'a pas saisi les noms, on dérive depuis le nom d'entreprise
+      if (firstName.isEmpty && company.isNotEmpty) firstName = company;
+      if (lastName.isEmpty) lastName = 'Partner';
+
       context.read<AuthBloc>().add(
         AuthRegisterRequested(
-          firstName: _companyNameController.text.trim(),
-          lastName: "",
+          firstName: firstName,
+          lastName: lastName,
           email: _emailController.text.trim(),
           phoneNumber: _phoneController.text.trim(),
           password: _passwordController.text,
@@ -116,6 +128,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 40),
                   // Champs du formulaire
+                  TextInput(
+                    label: 'Prénom',
+                    hint: 'Entrez votre prénom',
+                    controller: _firstNameController,
+                    enabled: !_isLoading,
+                    validator: (value) => FormValidators.validateRequired(
+                      value,
+                      fieldName: 'Le prénom',
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextInput(
+                    label: 'Nom',
+                    hint: 'Entrez votre nom',
+                    controller: _lastNameController,
+                    enabled: !_isLoading,
+                    validator: (value) => FormValidators.validateRequired(
+                      value,
+                      fieldName: 'Le nom',
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   TextInput(
                     label: 'Nom de l\'entreprise',
                     hint: 'Entrez le nom de votre entreprise',

@@ -13,15 +13,17 @@ class CreatePaymentIntent extends PaymentEvent {
   final String reservationId;
   final double amount;
   final PaymentMethod method;
+  final String? phoneNumber;
 
   const CreatePaymentIntent({
     required this.reservationId,
     required this.amount,
     required this.method,
+    this.phoneNumber,
   });
 
   @override
-  List<Object?> get props => [reservationId, amount, method];
+  List<Object?> get props => [reservationId, amount, method, phoneNumber];
 }
 
 // Événement pour confirmer un paiement
@@ -86,6 +88,23 @@ class CancelPayment extends PaymentEvent {
 
   @override
   List<Object?> get props => [paymentId, reason];
+}
+
+class InitiateExternalPayment extends PaymentEvent {
+  final String method;
+  final String reservationId;
+  final String phoneNumber;
+  final double amount;
+
+  const InitiateExternalPayment({
+    required this.method,
+    required this.reservationId,
+    required this.phoneNumber,
+    required this.amount,
+  });
+
+  @override
+  List<Object?> get props => [method, reservationId, phoneNumber, amount];
 }
 
 // Vérifier si l'événement PreparePayment existe et le créer si nécessaire

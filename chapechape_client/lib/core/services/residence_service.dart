@@ -1147,6 +1147,26 @@ class ResidenceService {
     }
   }
 
+  // Récupérer les avis d'une résidence
+  Future<Map<String, dynamic>> getResidenceReviews(String residenceId, {int page = 1, int limit = 10}) async {
+    try {
+      _logger.info('📖 Récupération des avis pour la résidence $residenceId');
+      
+      final response = await _apiService.get(
+        '/reviews/residence/$residenceId',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+        },
+      );
+      
+      return response.data;
+    } catch (e) {
+      _logger.error('📖 Exception lors de la récupération des avis');
+      rethrow;
+    }
+  }
+
   // Soumettre un commentaire pour une résidence
   Future<bool> submitReview({
     required String residenceId,
@@ -1161,7 +1181,14 @@ class ResidenceService {
         '/reviews',
         data: {
           'residenceId': residenceId,
-          'rating': rating,
+          'rating': {
+            'overall': rating,
+            'cleanliness': rating,
+            'comfort': rating,
+            'facilities': rating,
+            'value': rating,
+            'location': rating,
+          },
           'comment': comment,
         },
       );

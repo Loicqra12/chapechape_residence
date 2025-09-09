@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/chapechape
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - chapechape-network
+
+  # Dashboard React
+  dashboard:
+    build:
+      context: ./chapechape_dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    environment:
+      - REACT_APP_API_URL=http://backend:5000/api
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - chapechape-network
+
+  # Site de présentation
+  sitepresentation:
+    build:
+      context: ./chapechape_sitepresentation
+      dockerfile: Dockerfile
+    ports:
+      - "3002:80"
+    restart: unless-stopped
+    networks:
+      - chapechape-network
+
+  # MongoDB
+  mongo:
+    image: mongo:4.4
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=chapechape2024
+      - MONGO_INITDB_DATABASE=chapechape
+    volumes:
+      - mongo_data:/data/db
+      - ./backup_all:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - chapechape-network
+
+  # Redis
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass chapechape2024
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - chapechape-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - dashboard
+      - sitepresentation
+    restart: unless-stopped
+    networks:
+      - chapechape-network
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  chapechape-network:
+    driver: bridge

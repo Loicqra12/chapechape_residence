@@ -247,7 +247,7 @@ class BookingService {
       
       debugPrint('🔍 Récupération des réservations depuis l\'API');
       final queryParams = status != null ? {'status': status} : null;
-      final response = await _apiService.get('reservations/user-bookings', queryParameters: queryParams);
+      final response = await _apiService.get('reservations/my-reservations', queryParameters: queryParams);
       final List<dynamic> data = response.data['data'];
       
       final bookings = data.map((item) => Booking.fromJson(item)).toList();
@@ -735,6 +735,13 @@ class BookingService {
         case 404:
           return Exception('Cette réservation n\'existe pas ou a été supprimée.');
         case 409:
+          // ✅ Gestion spécifique des conflits d'état de réservation
+          if (responseData is Map && responseData['message'] != null) {
+            final message = responseData['message'].toString();
+            if (message.contains('Transition') || message.contains('état')) {
+              return Exception('Action impossible : l\'état de la réservation a changé. Veuillez actualiser.');
+            }
+          }
           return Exception('Cette période est déjà réservée. Veuillez choisir d\'autres dates.');
         case 422:
           return Exception('Données incorrectes. Veuillez vérifier les champs obligatoires.');

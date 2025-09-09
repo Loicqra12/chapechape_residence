@@ -36,31 +36,50 @@ class AppConfigManager {
   
   /// Initialise le gestionnaire de configuration
   static Future<void> initialize({
-    Environment environment = Environment.development,
+    Environment environment = Environment.production, // 🚀 FORCER PRODUCTION PAR DÉFAUT
     bool autoDetectIp = true,
   }) async {
     _environment = environment;
+    
+    debugPrint('🔧 [DEBUG] Initialisation Partner avec environnement: ${_environment.toString().split('.').last}');
     
     // Initialiser le service de détection d'IP
     _ipDetectionService = await IpDetectionService.initialize();
     
     // Charger la configuration depuis les préférences
     final prefs = await SharedPreferences.getInstance();
-    _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
-    _useSecureConnection = prefs.getBool(_useSecureConnectionKey) ?? false;
+    
+    // En production, toujours forcer l'URL officielle (pas d'URL personnalisée)
+    if (_environment == Environment.production) {
+      _useCustomServerUrl = false;
+      _useSecureConnection = true; // HTTPS obligatoire en production
+      debugPrint('🔧 [DEBUG] Mode PRODUCTION détecté Partner - URL personnalisée désactivée, HTTPS activé');
+    } else {
+      _useCustomServerUrl = prefs.getBool(_customServerUrlKey) ?? false;
+      _useSecureConnection = prefs.getBool(_useSecureConnectionKey) ?? false;
+      debugPrint('🔧 [DEBUG] Mode DEV/STAGING Partner - useCustomServerUrl: $_useCustomServerUrl, useSecureConnection: $_useSecureConnection');
+    }
+    
+    debugPrint('🔧 [DEBUG] Avant _loadConfig() Partner - useCustomServerUrl: $_useCustomServerUrl, useSecureConnection: $_useSecureConnection');
     
     // Charger la configuration selon l'environnement
     _loadConfig();
     
-    // Tenter de détecter automatiquement l'IP du serveur si demandé
-    if (autoDetectIp && !_useCustomServerUrl) {
+    debugPrint('🔧 [DEBUG] Après _loadConfig() Partner - URL API: ${_config['apiUrl']}');
+    
+    // ⛔ DÉSACTIVER COMPLÈTEMENT L'AUTODETECTION EN PRODUCTION
+    if (_environment != Environment.production && autoDetectIp && !_useCustomServerUrl) {
+      debugPrint('🔧 [DEBUG] Autodetection d\'IP autorisée Partner (non-production)');
       await _ipDetectionService?.autoDetectServerIp();
       // Recharger la configuration avec la nouvelle IP
       _loadConfig();
+      debugPrint('🔧 [DEBUG] Après autodetection Partner - URL API: ${_config['apiUrl']}');
+    } else {
+      debugPrint('🔧 [DEBUG] Autodetection d\'IP DÉSACTIVÉE Partner (production ou autres conditions)');
     }
     
     debugPrint('🔧 Configuration initialisée pour l\'environnement: ${_environment.toString().split('.').last}');
-    debugPrint('🔧 URL API: ${_config['apiUrl']}');
+    debugPrint('🔧 URL API FINALE Partner: ${_config['apiUrl']}');
   }
   
   /// Active ou désactive l'utilisation d'une URL personnalisée
@@ -179,7 +198,7 @@ class AppConfigManager {
             _config = {
               'appName': 'ChapeChape Partner',
               'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/api',
-              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/api',
               'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://api.chapechaperesidence.com/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,

@@ -45,12 +45,23 @@ exports.createPaymentIntent = async (req, res) => {
             });
         }
 
+        // Normalisation des aliases vers formats canoniques
+        let normalizedPaymentMethod = paymentMethod;
+        if (paymentMethod === 'om') {
+            normalizedPaymentMethod = 'orange_money';
+            console.log('⚠️ DEPRECATED: "om" alias utilisé, normalisé vers "orange_money"');
+        } else if (paymentMethod === 'momo') {
+            normalizedPaymentMethod = 'mtn_money';
+            console.log('⚠️ DEPRECATED: "momo" alias utilisé, normalisé vers "mtn_money"');
+        }
+
         let paymentProvider;
-        if (paymentMethod === 'card') {
+        if (normalizedPaymentMethod === 'card') {
             paymentProvider = 'stripe';
-        } else if (paymentMethod === 'wave') {
+        } else if (normalizedPaymentMethod === 'wave') {
             paymentProvider = 'wave';
-        } else if (paymentMethod === 'cinetpay' || paymentMethod === 'mobile_money' || paymentMethod === 'om' || paymentMethod === 'momo') {
+        } else if (normalizedPaymentMethod === 'cinetpay' || normalizedPaymentMethod === 'mobile_money' || 
+                   normalizedPaymentMethod === 'orange_money' || normalizedPaymentMethod === 'mtn_money' || normalizedPaymentMethod === 'moov_money') {
             paymentProvider = 'cinetpay';
         } else {
             return res.status(400).json({
@@ -59,9 +70,41 @@ exports.createPaymentIntent = async (req, res) => {
             });
         }
 
+        // ✅ VÉRIFICATION ANTI-DOUBLON : Chercher un paiement actif existant
+        const existingPayment = await Payment.findOne({
+            reservation: reservationId,
+            status: { $in: ['pending', 'processing'] },
+            paymentMethod: normalizedPaymentMethod
+        }).sort({ createdAt: -1 });
+
+        if (existingPayment) {
+            console.log(`🔄 Paiement actif existant trouvé: ${existingPayment.transactionId}`);
+            
+            // Vérifier si le paiement n'est pas expiré (30 minutes)
+            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+            if (existingPayment.createdAt > thirtyMinutesAgo) {
+                // Retourner le paiement existant (idempotence)
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        paymentId: existingPayment._id,
+                        transactionId: existingPayment.transactionId,
+                        status: existingPayment.status,
+                        paymentUrl: existingPayment.paymentDetails?.providerResponse?.paymentUrl,
+                        expiresAt: new Date(existingPayment.createdAt.getTime() + 30 * 60 * 1000).toISOString()
+                    }
+                });
+            } else {
+                // Marquer l'ancien comme expiré
+                existingPayment.status = 'expired';
+                await existingPayment.save();
+                console.log(`⏰ Paiement expiré marqué: ${existingPayment.transactionId}`);
+            }
+        }
+
         // Vérifier le numéro de téléphone pour les méthodes mobiles avec regex plus souple
         // Accepte les formats internationaux comme +225... et des longueurs variables (8-15 chiffres)
-        if (paymentMethod !== 'card' && (!phoneNumber || !/^\+?\d{8,15}$/.test(phoneNumber))) {
+        if (normalizedPaymentMethod !== 'card' && (!phoneNumber || !/^\+?\d{8,15}$/.test(phoneNumber))) {
             return res.status(400).json({
                 success: false,
                 message: 'Numéro de téléphone invalide. Format attendu: chiffres avec ou sans préfixe +'
@@ -71,7 +114,7 @@ exports.createPaymentIntent = async (req, res) => {
         // Initialiser le paiement via le service approprié en passant les objets complets
         const paymentResponse = await PaymentService.initiatePayment({
             amount: reservation.totalPrice,
-            paymentMethod,
+            paymentMethod: normalizedPaymentMethod,
             paymentProvider,
             phoneNumber,
             reservation: reservation, // Passer l'objet complet
@@ -82,7 +125,7 @@ exports.createPaymentIntent = async (req, res) => {
         const payment = await Payment.create({
             reservation: reservationId,
             amount: reservation.totalPrice,
-            paymentMethod,
+            paymentMethod: normalizedPaymentMethod,
             paymentProvider,
             phoneNumber,
             transactionId: paymentResponse.transactionId,
@@ -463,6 +506,119 @@ exports.handleWaveWebhook = async (req, res) => {
         res.status(400).json({
             success: false,
             message: error.message
+        });
+    }
+};
+
+// Vérifier le statut d'un paiement CinetPay en temps réel
+exports.verifyCinetPayPayment = async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+        const cinetPayService = require('../../services/cinetpay.service');
+        
+        console.log(`🔍 Vérification CinetPay pour transaction: ${transactionId}`);
+        
+        // Vérifier directement avec l'API CinetPay
+        const cinetPayStatus = await cinetPayService.checkPaymentStatus(transactionId);
+        
+        if (cinetPayStatus.success) {
+            // Rechercher le paiement local
+            const Payment = require('../../models/payment.model');
+            let payment = await Payment.findOne({ transactionId }).populate('reservation');
+            
+            if (payment) {
+                // Mettre à jour le statut local si différent
+                if (payment.status !== cinetPayStatus.status) {
+                    console.log(`📝 Mise à jour statut: ${payment.status} → ${cinetPayStatus.status}`);
+                    payment.status = cinetPayStatus.status;
+                    payment.providerResponse = cinetPayStatus.data;
+                    await payment.save();
+                    
+                    // Mettre à jour la réservation si paiement confirmé
+                    if (cinetPayStatus.status === 'paid' && payment.reservation) {
+                        payment.reservation.paymentStatus = 'paid';
+                        payment.reservation.status = 'confirmed';
+                        await payment.reservation.save();
+                    }
+                }
+                
+                // Ajouter des informations contextuelles selon le statut
+                const responsePayment = {
+                    _id: payment._id,
+                    transactionId: payment.transactionId,
+                    status: payment.status,
+                    amount: payment.amount,
+                    paymentMethod: payment.paymentMethod,
+                    paymentProvider: payment.paymentProvider,
+                    createdAt: payment.createdAt,
+                    updatedAt: payment.updatedAt,
+                    reservation: payment.reservation
+                };
+                
+                // Ajouter des informations contextuelles
+                const response = {
+                    success: true,
+                    payment: responsePayment,
+                    cinetpayData: cinetPayStatus.data
+                };
+                
+                // Informations spécifiques selon le statut
+                if (payment.status === 'pending') {
+                    response.statusInfo = {
+                        message: 'Paiement en cours de traitement',
+                        nextCheck: 'Recommandé dans 5-10 secondes',
+                        maxWaitTime: '5 minutes',
+                        canRetry: true
+                    };
+                } else if (payment.status === 'paid') {
+                    response.statusInfo = {
+                        message: 'Paiement confirmé avec succès',
+                        finalStatus: true
+                    };
+                } else if (payment.status === 'failed') {
+                    response.statusInfo = {
+                        message: 'Paiement échoué',
+                        finalStatus: true,
+                        canRetry: true
+                    };
+                }
+                
+                res.json(response);
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Paiement introuvable',
+                    code: 'PAYMENT_NOT_FOUND',
+                    message: 'Aucun paiement trouvé avec cet ID de transaction',
+                    transactionId: transactionId,
+                    cinetpayStatus: cinetPayStatus.status,
+                    cinetpayData: cinetPayStatus.data,
+                    suggestions: [
+                        'Vérifiez que le paiement a été correctement initié',
+                        'Attendez quelques secondes et réessayez',
+                        'Contactez le support si le problème persiste'
+                    ]
+                });
+            }
+        } else {
+            res.status(400).json({
+                success: false,
+                error: 'Erreur de vérification CinetPay',
+                code: 'CINETPAY_VERIFICATION_ERROR',
+                message: 'Impossible de vérifier le statut du paiement auprès de CinetPay',
+                details: cinetPayStatus.error,
+                transactionId: transactionId,
+                canRetry: true,
+                retryAfter: '10 secondes'
+            });
+        }
+        
+    } catch (error) {
+        console.error('Erreur vérification CinetPay:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur serveur lors de la vérification',
+            error: error.message
         });
     }
 };

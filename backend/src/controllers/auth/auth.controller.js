@@ -124,7 +124,7 @@ exports.getMe = asyncHandler(async (req, res) => {
                 lastName: user.lastName,
                 role: user.role,
                 phoneNumber: user.phoneNumber,
-                profileImage: user.profileImage,
+                profilePicture: user.profilePicture || user.profileImage,
                 createdAt: user.createdAt
             }
         });
@@ -279,6 +279,68 @@ exports.logout = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         throw new apiError('Erreur lors de la déconnexion', 500);
+    }
+});
+
+// @desc    Upload profile picture
+// @route   POST /api/auth/profile/picture
+// @access  Private
+exports.uploadProfilePicture = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // Vérifier si un fichier a été uploadé (format Multer)
+        if (!req.file) {
+            throw new apiError('Aucun fichier fourni', 400);
+        }
+
+        const file = req.file;
+        
+        // Valider le type de fichier
+        if (!file.mimetype.startsWith('image/')) {
+            throw new apiError('Le fichier doit être une image', 400);
+        }
+
+        // Valider la taille du fichier (5MB max)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            throw new apiError('Le fichier ne doit pas dépasser 5MB', 400);
+        }
+
+        // Le fichier est déjà sauvegardé par Multer
+        const uploadPath = `uploads/profiles/${file.filename}`;
+        const fullPath = file.path;
+
+        // Mettre à jour l'utilisateur avec la nouvelle URL de profil
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { profileImage: `/${uploadPath}` },
+            { new: true, select: '-password' }
+        );
+
+        if (!user) {
+            throw new apiError('Utilisateur non trouvé', 404);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Photo de profil mise à jour avec succès',
+            data: {
+                profileImage: `/${uploadPath}`,
+                profilePictureUrl: `/${uploadPath}`,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    profileImage: user.profileImage,
+                    role: user.role
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur upload profile picture:', error);
+        throw new apiError(error.message || 'Erreur lors de l\'upload de la photo de profil', error.statusCode || 500);
     }
 });
 

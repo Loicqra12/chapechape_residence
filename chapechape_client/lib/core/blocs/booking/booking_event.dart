@@ -127,3 +127,35 @@ class UpdateBookingWithFees extends BookingEvent {
   @override
   List<Object?> get props => [bookingId, checkIn, checkOut, numberOfGuests, modificationFee];
 }
+
+// Événements WebSocket pour transitions temps réel
+
+// Événement lorsqu'une réservation expire (via WebSocket)
+class BookingExpiredEvent extends BookingEvent {
+  final String bookingId;
+
+  const BookingExpiredEvent(this.bookingId);
+
+  @override
+  List<Object?> get props => [bookingId];
+}
+
+// Événement lorsqu'une réservation est approuvée (via WebSocket)
+class BookingApprovedEvent extends BookingEvent {
+  final String bookingId;
+
+  const BookingApprovedEvent(this.bookingId);
+
+  @override
+  List<Object?> get props => [bookingId];
+}
+
+// Événement lorsqu'une réservation est rejetée (via WebSocket)
+class BookingRejectedEvent extends BookingEvent {
+  final String bookingId;
+
+  const BookingRejectedEvent(this.bookingId);
+
+  @override
+  List<Object?> get props => [bookingId];
+}

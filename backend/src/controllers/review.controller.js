@@ -1,6 +1,8 @@
 const Review = require('../models/review.model');
 const Residence = require('../models/residence.model');
 const Reservation = require('../models/reservation.model');
+const { cacheService } = require('../services/cache.service');
+const redisClient = require('../config/redis');
 
 // Créer un avis
 const createReview = async (req, res) => {
@@ -8,7 +10,7 @@ const createReview = async (req, res) => {
         const { residenceId, reservationId, rating, comment, photos } = req.body;
 
         // Validation des champs requis
-        if (!residenceId || !rating) {
+        if (!residenceId || rating === undefined || rating === null) {
             return res.status(400).json({
                 success: false,
                 message: "Veuillez fournir l'identifiant de la résidence et une note"
@@ -22,9 +24,63 @@ const createReview = async (req, res) => {
         });
 
         if (existingReview) {
-            return res.status(400).json({
-                success: false,
-                message: "Vous avez déjà laissé un avis pour cette résidence"
+            // Mettre à jour l'avis existant au lieu de créer un nouveau
+            let ratingObject;
+            if (typeof rating === 'number') {
+                ratingObject = {
+                    overall: rating,
+                    cleanliness: existingReview.rating.cleanliness || 0,
+                    comfort: existingReview.rating.comfort || 0,
+                    facilities: existingReview.rating.facilities || 0,
+                    value: existingReview.rating.value || 0,
+                    location: existingReview.rating.location || 0
+                };
+            } else if (typeof rating === 'object') {
+                ratingObject = {
+                    overall: rating.overall || existingReview.rating.overall,
+                    cleanliness: rating.cleanliness || existingReview.rating.cleanliness,
+                    comfort: rating.comfort || existingReview.rating.comfort,
+                    facilities: rating.facilities || existingReview.rating.facilities,
+                    value: rating.value || existingReview.rating.value,
+                    location: rating.location || existingReview.rating.location
+                };
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: "Format de notation invalide"
+                });
+            }
+
+            // Mettre à jour l'avis existant
+            existingReview.rating = ratingObject;
+            existingReview.comment = comment || existingReview.comment;
+            if (photos && Array.isArray(photos)) {
+                existingReview.photos = photos;
+            }
+            if (reservationId) {
+                existingReview.reservation = reservationId;
+            }
+
+            await existingReview.save();
+            await existingReview.populate('user', 'firstName lastName avatar');
+
+            // Invalider le cache Redis ET Node-cache
+            const cachePattern = `api:/api/reviews/residence/${residenceId}*`;
+            
+            // Invalider Redis cache (utilisé par le middleware)
+            const keys = await redisClient.keys(cachePattern);
+            if (keys.length > 0) {
+                await redisClient.del(keys);
+                console.log(`Redis cache invalidated for keys: ${keys.join(', ')}`);
+            }
+            
+            // Invalider Node cache (pour compatibilité)
+            await cacheService.invalidatePattern(`*api/reviews/residence/${residenceId}*`);
+
+            return res.status(200).json({
+                success: true,
+                data: existingReview,
+                message: "Votre avis a été mis à jour avec succès"
             });
         }
 
@@ -68,6 +124,19 @@ const createReview = async (req, res) => {
 
         // Populate les informations de l'utilisateur pour la réponse
         await review.populate('user', 'firstName lastName avatar');
+
+        // Invalider le cache Redis ET Node-cache
+        const cachePattern = `api:/api/reviews/residence/${residenceId}*`;
+        
+        // Invalider Redis cache (utilisé par le middleware)
+        const keys = await redisClient.keys(cachePattern);
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+            console.log(`Redis cache invalidated for keys: ${keys.join(', ')}`);
+        }
+        
+        // Invalider Node cache (pour compatibilité)
+        await cacheService.invalidatePattern(`*api/reviews/residence/${residenceId}*`);
 
         res.status(201).json({
             success: true,

@@ -1,17 +1,52 @@
+// ✅ Le bloc buildscript doit être tout en haut
+buildscript {
+    ext {
+        kotlin_version = '1.9.22'
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// ✅ Ensuite les plugins
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
+}
+
+// ✅ Chargement des propriétés locales
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new Exception("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
 
 // Appliquer le fichier de correction des plugins
 apply from: 'fix_plugin.gradle'
 
+// ✅ Configuration de signature de production
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('android/key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.chapechape.chapechape_partner"
-    compileSdkVersion = 34 // Format explicite pour éviter les problèmes 
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 34
+    ndkVersion = "25.1.8937393"
+    
+    // Force all Android libraries to use SDK 23 as minimum
+    buildToolsVersion = "33.0.2"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -22,11 +57,15 @@ android {
         jvmTarget = '11'
     }
 
-    // Ajouter les options lint directement ici
     lintOptions {
         disable 'InvalidPackage'
         checkReleaseBuilds false
-        abortOnError false  // Ne pas arrêter le build sur les erreurs de lint
+        abortOnError false
+    }
+    
+    // Ajout pour résoudre les problèmes de manifest merger
+    aaptOptions {
+        noCompress "tflite"
     }
 
     defaultConfig {
@@ -35,7 +74,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 21 // Version minimale pour être compatible avec les nouvelles APIs
-        targetSdk = 34 // Cibler une version récente mais stable d'Android
+        targetSdk = 35 // Exigence Google Play 2024+
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         
@@ -48,11 +87,22 @@ android {
         ]
     }
 
+    signingConfigs {
+        release {
+            keyAlias 'upload'
+            keyPassword 'chapechape2024'
+            storeFile file('upload-keystore.jks')
+            storePassword 'chapechape2024'
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            // ✅ Réactiver la signature pour Google Play Console
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     

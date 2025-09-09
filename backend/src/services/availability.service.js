@@ -4,6 +4,7 @@ const Residence = require('../models/residence.model');
 const ApiError = require('../utils/apiError');
 const Reservation = require('../models/reservation.model');
 const moment = require('moment');
+const logger = require('../utils/logger');
 
 class AvailabilityService {
     // Vérifier la disponibilité d'une résidence pour des dates données

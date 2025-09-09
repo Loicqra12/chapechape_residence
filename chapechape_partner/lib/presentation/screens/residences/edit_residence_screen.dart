@@ -8,6 +8,8 @@ import 'dart:typed_data';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 // Import du nouveau widget d'autocomplétion d'adresses
 import '../../widgets/maps/address_autocomplete_field.dart';
+// Import du widget de configuration du mode de réservation
+import '../../widgets/residence/reservation_mode_config.dart';
 import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_image.dart';
@@ -149,6 +151,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   double? _latitude;
   double? _longitude;
   String? _formattedAddress;
+  
+  // Variables pour le mode de réservation
+  String _selectedReservationMode = 'instant'; // Par défaut: instantané
   
   /// Construction d'une carte Google Maps avec le marqueur de la résidence
   Widget _buildGoogleMap() {
@@ -490,6 +495,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       _isAvailable = widget.residence!.isAvailable;
       _isVacationResidence = widget.residence!.isVacationResidence;
       _isSpecialResidence = widget.residence!.isSpecialResidence;
+      
+      // Initialiser le mode de réservation
+      _selectedReservationMode = widget.residence!.reservationMode;
 
       // Initialiser la localisation
       if (widget.residence!.country != null) {
@@ -1041,6 +1049,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
           // Méthodes de paiement acceptées
           'paymentMethods': _buildPaymentMethodsList(),
+          
+          // Mode de réservation
+          'reservationMode': _selectedReservationMode,
         };
 
         // Vérifier pour les tarifs alternatifs
@@ -2408,6 +2419,20 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                   _buildPaymentMethodChip('bank_transfer', 'Virement bancaire',
                       Icons.account_balance),
                 ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Section du mode de réservation
+              ReservationModeConfig(
+                currentMode: _selectedReservationMode,
+                onModeChanged: (String newMode) {
+                  setState(() {
+                    _selectedReservationMode = newMode;
+                  });
+                },
+                enabled: true,
+                title: 'Configuration des réservations',
               ),
 
               const SizedBox(height: 32),

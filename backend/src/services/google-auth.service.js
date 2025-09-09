@@ -6,8 +6,11 @@ const jwt = require('../utils/jwt');
 // ID client Google
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '150162865149-m6q57o1f68t73o8lfiumb0671qcj55da.apps.googleusercontent.com';
 
-// Créer un client OAuth2 avec l'ID client Google
-const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+// Créer un client OAuth2 avec configuration complète
+const client = new OAuth2Client({
+  clientId: GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET
+});
 
 /**
  * Vérifie un token ID Google et renvoie les informations de l'utilisateur
@@ -16,22 +19,74 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
  */
 const verifyGoogleToken = async (idToken) => {
   try {
+    // 🔍 DEBUG: Inspecter le token reçu
+    console.log("🟢 ID Token reçu :", idToken?.substring(0, 50) + "...");
+    
+    const headerBase64 = idToken.split('.')[0];
+    const header = JSON.parse(Buffer.from(headerBase64, 'base64').toString());
+    console.log("📋 Header JWT :", header);
+    console.log("🔑 Key ID (kid) :", header.kid);
+    
+    // 🔍 DEBUG: Décoder le payload pour voir l'audience
+    const payloadBase64 = idToken.split('.')[1];
+    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+    console.log("🎯 Audience dans le token :", payload.aud);
+    console.log("🎯 Client ID attendu :", GOOGLE_CLIENT_ID);
+    
+    // Configuration avec gestion des certificats
     const ticket = await client.verifyIdToken({
-      idToken,
+      idToken: idToken,
       audience: GOOGLE_CLIENT_ID,
+      // Forcer le rechargement des certificats si nécessaire
+      maxExpiry: 86400, // 24 heures
     });
     
-    const payload = ticket.getPayload();
+    const verifiedPayload = ticket.getPayload();
+    
+    // Validation supplémentaire
+    if (!verifiedPayload || !verifiedPayload.email || !verifiedPayload.sub) {
+      throw new Error('Payload du token invalide');
+    }
     
     return {
-      email: payload.email,
-      firstName: payload.given_name,
-      lastName: payload.family_name,
-      googleId: payload.sub,
-      picture: payload.picture
+      email: verifiedPayload.email,
+      firstName: verifiedPayload.given_name || '',
+      lastName: verifiedPayload.family_name || '',
+      googleId: verifiedPayload.sub,
+      picture: verifiedPayload.picture || ''
     };
   } catch (error) {
     console.error('Erreur de vérification du token Google:', error);
+    
+    // Gestion spécifique de l'erreur PEM
+    if (error.message && error.message.includes('No pem found')) {
+      console.log('Tentative de rechargement des certificats Google...');
+      // Forcer un nouveau client pour recharger les certificats
+      const freshClient = new OAuth2Client({
+        clientId: GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET
+      });
+      
+      try {
+        const retryTicket = await freshClient.verifyIdToken({
+          idToken: idToken,
+          audience: GOOGLE_CLIENT_ID,
+        });
+        
+        const retryPayload = retryTicket.getPayload();
+        return {
+          email: retryPayload.email,
+          firstName: retryPayload.given_name || '',
+          lastName: retryPayload.family_name || '',
+          googleId: retryPayload.sub,
+          picture: retryPayload.picture || ''
+        };
+      } catch (retryError) {
+        console.error('Échec de la tentative de retry:', retryError);
+        throw new apiError('Erreur de certificats Google - Veuillez réessayer', 401);
+      }
+    }
+    
     throw new apiError('Token Google invalide ou expiré', 401);
   }
 };

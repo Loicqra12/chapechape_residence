@@ -6,7 +6,7 @@ import 'package:chapechape_client/core/blocs/payment/payment_event.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_state.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
 import 'package:chapechape_client/core/services/payment_service.dart';
-import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
+
 import 'package:chapechape_client/config/theme.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -18,27 +18,32 @@ class PaymentScreen extends StatefulWidget {
     Key? key,
     this.reservationId,
     this.paymentId,
-  }) : assert(reservationId != null || paymentId != null, 'Soit reservationId soit paymentId doit être fourni'),
-       super(key: key);
+  })  : assert(reservationId != null || paymentId != null,
+            'Soit reservationId soit paymentId doit être fourni'),
+        super(key: key);
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _PaymentScreenState extends State<PaymentScreen>
+    with AutomaticKeepAliveClientMixin {
   PaymentMethod _selectedMethod = PaymentMethod.mobileMoney;
   bool _isLoading = false;
   String? _phoneNumber;
   final _formKey = GlobalKey<FormState>();
   PaymentIntent? _paymentIntent;
   Payment? _payment;
-  
+
+  @override
+  bool get wantKeepAlive => true;
+
   // Données pour la commission (par défaut 10%)
   double _commissionRate = 0.10;
-  
+
   // Liste des méthodes de paiement acceptées
   List<PaymentMethod> _acceptedMethods = [];
-  
+
   @override
   void initState() {
     super.initState();
@@ -49,31 +54,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (widget.paymentId != null) {
       // Charger un paiement existant
       context.read<PaymentBloc>().add(
-        CheckPaymentStatus(paymentId: widget.paymentId!),
-      );
+            CheckPaymentStatus(paymentId: widget.paymentId!),
+          );
     } else if (widget.reservationId != null) {
       // Préparer un nouveau paiement pour une réservation
       context.read<PaymentBloc>().add(
-        PreparePayment(
-          reservationId: widget.reservationId!,
-          method: _selectedMethod,
-        ),
-      );
-      
+            PreparePayment(
+              reservationId: widget.reservationId!,
+              method: _selectedMethod,
+            ),
+          );
+
       // Charger les méthodes de paiement acceptées
       _loadAcceptedPaymentMethods();
     }
   }
-  
+
   // Nouvelle méthode pour charger les méthodes de paiement acceptées
   void _loadAcceptedPaymentMethods() async {
     final paymentService = await PaymentService.initialize();
-    
+
     try {
       final methods = await paymentService.getAcceptedPaymentMethods(
         residenceId: widget.reservationId ?? '',
       );
-      
+
       if (mounted) {
         setState(() {
           _acceptedMethods = methods;
@@ -87,9 +92,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // En cas d'erreur, définir quelques méthodes par défaut
       setState(() {
         _acceptedMethods = [
-          PaymentMethod.mobileMoney,
           PaymentMethod.wave,
           PaymentMethod.orangeMoney,
+          PaymentMethod.moovMoney,
+          PaymentMethod.mtnMoney,
           PaymentMethod.cash,
         ];
       });
@@ -97,39 +103,120 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _confirmPayment() {
-    if (_formKey.currentState!.validate() && _paymentIntent != null) {
-      final Map<String, dynamic> paymentData = {
-        'type': _getPaymentMethodString(),
-      };
+    // ✅ ANTI-TAP RÉPÉTÉ : Vérifier si déjà en cours de traitement
+    if (_isLoading) {
+      return;
+    }
 
-      if (_selectedMethod == PaymentMethod.mobileMoney || 
+    if (_paymentIntent != null) {
+      // Flux pour tous les paiements mobile money (incluant Wave)
+      if (_selectedMethod == PaymentMethod.wave ||
+          _selectedMethod == PaymentMethod.mobileMoney ||
           _selectedMethod == PaymentMethod.orangeMoney ||
           _selectedMethod == PaymentMethod.moovMoney ||
-          _selectedMethod == PaymentMethod.mtnMoney ||
-          _selectedMethod == PaymentMethod.wave) {
-        // Ajouter les informations spécifiques au mobile money
-        if (_phoneNumber != null) {
-          paymentData['phoneNumber'] = _phoneNumber;
-          paymentData['provider'] = _getProviderNameForMethod(_selectedMethod);
+          _selectedMethod == PaymentMethod.mtnMoney) {
+        // Validation renforcée du numéro de téléphone
+        if (_phoneNumber != null && _phoneNumber!.trim().isNotEmpty) {
+          // Formater le numéro pour le backend
+          final formattedPhone = _formatPhoneNumberForBackend(_phoneNumber!.trim());
+          
+          // Validation supplémentaire du format du numéro formaté
+          final phoneRegex = RegExp(r'^0[0-9]{8,9}$');
+          if (phoneRegex.hasMatch(formattedPhone)) {
+            // ✅ MARQUER COMME EN COURS
+            setState(() {
+              _isLoading = true;
+            });
+            
+            context.read<PaymentBloc>().add(
+              InitiateExternalPayment(
+                method: _getPaymentMethodString(),
+                reservationId: widget.reservationId ?? '',
+                phoneNumber: formattedPhone,
+                amount: _paymentIntent!.amount,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Format de numéro invalide: $formattedPhone. Utilisez le format 0XXXXXXXX'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Veuillez entrer votre numéro de téléphone'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
+      } else {
+        // Flux pour les cartes bancaires (ancien flux avec PaymentIntent)
+        // D'abord créer l'intention de paiement avec les données complètes
+        context.read<PaymentBloc>().add(
+              CreatePaymentIntent(
+                reservationId: widget.reservationId ?? '',
+                amount: _paymentIntent!.amount,
+                method: _selectedMethod,
+                phoneNumber: null, // Pas de téléphone pour les cartes
+              ),
+            );
       }
-
-      // Ajouter les informations de commission
-      paymentData['commissionRate'] = _commissionRate;
-
-      context.read<PaymentBloc>().add(
-        ConfirmPayment(
-          paymentIntentId: _paymentIntent!.id,
-          paymentData: paymentData,
-        ),
-      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez compléter correctement le formulaire')),
+        const SnackBar(
+            content: Text('Erreur: Données de paiement non disponibles')),
       );
     }
   }
-  
+
+  // Formater le numéro de téléphone pour le backend
+  String _formatPhoneNumberForBackend(String phoneNumber) {
+    // Nettoyer le numéro (supprimer espaces, tirets, parenthèses)
+    String clean = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Si le numéro commence par +225, le convertir au format attendu
+    if (clean.startsWith('+225')) {
+      String digits = clean.substring(4); // Enlever +225
+      // Si on a 10 chiffres après +225, garder seulement les 8 derniers
+      if (digits.length == 10 && digits.startsWith('0')) {
+        return digits.substring(1); // Enlever le 0 initial -> 8 chiffres
+      } else if (digits.length == 10) {
+        return '0${digits.substring(1)}'; // Ajouter 0 au début -> 0 + 9 chiffres
+      } else if (digits.length == 8) {
+        return '0$digits'; // Ajouter 0 au début -> 0 + 8 chiffres
+      }
+      return digits;
+    }
+    
+    // Si le numéro commence par 225, le convertir
+    if (clean.startsWith('225')) {
+      String digits = clean.substring(3); // Enlever 225
+      if (digits.length == 10 && digits.startsWith('0')) {
+        return digits.substring(1); // Enlever le 0 initial
+      } else if (digits.length == 10) {
+        return '0${digits.substring(1)}';
+      } else if (digits.length == 8) {
+        return '0$digits';
+      }
+      return digits;
+    }
+    
+    // Si le numéro commence déjà par 0 et fait 8-10 chiffres, le garder tel quel
+    if (clean.startsWith('0') && clean.length >= 8 && clean.length <= 10) {
+      return clean;
+    }
+    
+    // Si le numéro fait 8 chiffres, ajouter 0 au début
+    if (clean.length == 8) {
+      return '0$clean';
+    }
+    
+    return clean;
+  }
+
   // Obtenir le nom du fournisseur en fonction de la méthode
   String _getProviderNameForMethod(PaymentMethod method) {
     switch (method) {
@@ -153,9 +240,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       case PaymentMethod.mobileMoney:
         return 'mobile_money';
       case PaymentMethod.orangeMoney:
-        return 'orange_money';
+        return 'orange_money'; // Format canonique
       case PaymentMethod.moovMoney:
-        return 'moov_money';
+        return 'moov_money'; // Format canonique
       case PaymentMethod.mtnMoney:
         return 'mtn_money';
       case PaymentMethod.wave:
@@ -174,25 +261,58 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return 'stripe';
       case PaymentMethod.cash:
         return 'cash';
-      default:
-        return 'mobile_money';
+      case PaymentMethod.other:
+        return 'other';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paiement'),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Vérifier si on peut faire pop, sinon aller à l'accueil
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
       ),
       body: BlocConsumer<PaymentBloc, PaymentState>(
         listener: (context, state) {
-          setState(() {
-            _isLoading = state is PaymentLoading;
-          });
+          // ✅ GESTION ÉTAT LOADING PLUS PRÉCISE
+          if (state is PaymentLoading) {
+            setState(() {
+              _isLoading = true;
+            });
+          } else if (state is PaymentError || state is PaymentExternalLaunched || state is PaymentPending || state is PaymentPrepared) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
 
-          if (state is PaymentStatusChecked) {
+          if (state is PaymentPrepared) {
+            // Paiement préparé - attendre que l'utilisateur confirme avec son numéro
+            setState(() {
+              _paymentIntent = PaymentIntent(
+                id: 'temp_${state.reservationId}',
+                bookingId: state.reservationId,
+                userId: 'current_user', // TODO: Récupérer l'ID utilisateur réel
+                amount: state.amount,
+                method: state.method,
+                clientSecret: '',
+                expiresAt: DateTime.now().add(const Duration(minutes: 30)),
+                createdAt: DateTime.now(),
+              );
+            });
+          } else if (state is PaymentStatusChecked) {
             setState(() {
               _payment = state.payment;
               // Le paymentIntent devrait venir de l'état, pas du payment
@@ -201,20 +321,54 @@ class _PaymentScreenState extends State<PaymentScreen> {
             setState(() {
               _paymentIntent = state.paymentIntent;
             });
+
+            // Pour les cartes bancaires, procéder à la confirmation automatiquement
+            if (_selectedMethod == PaymentMethod.visa ||
+                _selectedMethod == PaymentMethod.creditCard ||
+                _selectedMethod == PaymentMethod.cash) {
+              final Map<String, dynamic> paymentData = {
+                'type': _getPaymentMethodString(),
+                'commissionRate': _commissionRate,
+              };
+
+              context.read<PaymentBloc>().add(
+                    ConfirmPayment(
+                      paymentIntentId: state.paymentIntent.id,
+                      paymentData: paymentData,
+                    ),
+                  );
+            }
+          } else if (state is PaymentExternalLaunched) {
+            // Vérifier que nous avons un transactionId valide avant navigation
+            if (state.transactionId.isNotEmpty) {
+              // Nouveau flux: rediriger vers l'écran d'attente unifié
+              context.go('/payment-waiting', extra: {
+                'method': state.method,
+                'transactionId': state.transactionId,
+                'paymentUrl': state.paymentUrl,
+                'expiresAt': state.expiresAt.toIso8601String(),
+                'phoneNumber': state.phoneNumber,
+              });
+            } else {
+              // Garde-fou: création de paiement échouée
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Création de paiement échouée. Veuillez réessayer.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           } else if (state is PaymentConfirmed) {
-            // Redirection en fonction du résultat
+            // Ancien flux pour les cartes bancaires
             if (state.payment.status == PaymentStatus.processing) {
-              // Si une action supplémentaire est requise (comme redirection vers un site tiers)
-              final redirectUrl = state.payment.metadata?['redirectUrl'] as String?;
+              final redirectUrl =
+                  state.payment.metadata?['redirectUrl'] as String?;
               if (redirectUrl != null) {
-                // Rediriger vers une page web externe ou un composant WebView
                 context.go('/payment-redirect/${state.payment.id}');
               }
             } else if (state.payment.status == PaymentStatus.succeeded) {
-              // Paiement réussi, rediriger vers la page de succès
               context.go('/payment-success/${state.payment.id}');
             } else {
-              // Paiement en attente ou autre statut
               context.go('/payment-pending/${state.payment.id}');
             }
           } else if (state is PaymentError) {
@@ -227,12 +381,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
           }
         },
         builder: (context, state) {
-          return LoadingOverlay(
-            isLoading: _isLoading,
-            child: _paymentIntent != null || _payment != null
-                ? _buildPaymentForm()
-                : const Center(child: Text('Chargement des informations de paiement...')),
-          );
+          // Toujours afficher le contenu pour préserver l'AppBar
+          if (_isLoading) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Chargement des informations de paiement...'),
+                ],
+              ),
+            );
+          }
+
+          return _paymentIntent != null || _payment != null
+              ? _buildPaymentForm()
+              : const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Chargement des informations de paiement...'),
+                    ],
+                  ),
+                );
         },
       ),
     );
@@ -244,6 +418,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       child: Form(
         key: _formKey,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildPaymentSummary(),
@@ -273,10 +448,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     // Récupérer le montant du paiement ou de l'intention
     final amount = _payment?.amount ?? _paymentIntent?.amount ?? 0.0;
-    
+
     // Calculer la commission (10% par défaut)
     final commissionAmount = amount * _commissionRate;
-    final partnerAmount = amount - commissionAmount;
 
     return Card(
       child: Padding(
@@ -304,16 +478,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const SizedBox(height: 8),
             const Divider(
-              indent: 16, 
+              indent: 16,
               endIndent: 16,
               color: Colors.grey,
             ),
             const SizedBox(height: 8),
-            _buildDetailRow(
-              'Montant versé au partenaire',
-              '${partnerAmount.toStringAsFixed(0)} FCFA',
-              isSubtotal: true,
-            ),
+            // Montant partenaire masqué pour l'utilisateur final
             if (_payment?.status != null)
               Column(
                 children: [
@@ -332,7 +502,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildDetailRow(
-    String label, 
+    String label,
     String value, {
     bool isTotal = false,
     bool isSubtotal = false,
@@ -344,20 +514,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isTotal || isSubtotal ? 16 : 14,
-              fontWeight: isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
-              color: isNegative ? Colors.red : null,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isTotal || isSubtotal ? 16 : 14,
+                fontWeight:
+                    isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
+                color: isNegative ? Colors.red : null,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isTotal || isSubtotal ? 16 : 14,
-              fontWeight: isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
-              color: statusColor ?? (isNegative ? Colors.red : null),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 1,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: isTotal || isSubtotal ? 16 : 14,
+                fontWeight:
+                    isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
+                color: statusColor ?? (isNegative ? Colors.red : null),
+              ),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -398,57 +580,51 @@ class _PaymentScreenState extends State<PaymentScreen> {
               _buildPaymentMethodOption(
                 PaymentMethod.orangeMoney,
                 'Orange Money',
-                'assets/images/orange_money.png',
+                'assets/images/payment/orange_money.png',
               ),
             if (_acceptedMethods.contains(PaymentMethod.moovMoney))
               _buildPaymentMethodOption(
                 PaymentMethod.moovMoney,
                 'Moov Money',
-                'assets/images/moov_money.png',
+                'assets/images/payment/moov_money.png',
               ),
             if (_acceptedMethods.contains(PaymentMethod.mtnMoney))
               _buildPaymentMethodOption(
                 PaymentMethod.mtnMoney,
                 'MTN Money',
-                'assets/images/mtn_money.png',
-              ),
-            if (_acceptedMethods.contains(PaymentMethod.mobileMoney))
-              _buildPaymentMethodOption(
-                PaymentMethod.mobileMoney,
-                'Mobile Money',
-                'assets/images/mobile_money.png',
+                'assets/images/payment/mtn_money.png',
               ),
             if (_acceptedMethods.contains(PaymentMethod.wave))
               _buildPaymentMethodOption(
                 PaymentMethod.wave,
                 'Wave',
-                'assets/images/wave.png',
+                'assets/images/payment/wave_money.png',
               ),
-            
+
             // Options de paiement par carte
-            if (_acceptedMethods.contains(PaymentMethod.visa) || 
+            if (_acceptedMethods.contains(PaymentMethod.visa) ||
                 _acceptedMethods.contains(PaymentMethod.mastercard) ||
                 _acceptedMethods.contains(PaymentMethod.creditCard))
               _buildPaymentMethodOption(
                 PaymentMethod.creditCard,
                 'Carte bancaire',
-                'assets/images/credit_card.png',
+                'assets/images/payment/visa.png',
               ),
-              
+
             // Virement bancaire
             if (_acceptedMethods.contains(PaymentMethod.bankTransfer))
               _buildPaymentMethodOption(
                 PaymentMethod.bankTransfer,
                 'Virement bancaire',
-                'assets/images/bank_transfer.png',
+                'assets/images/payment/mastercard.png',
               ),
-              
+
             // Espèces
             if (_acceptedMethods.contains(PaymentMethod.cash))
               _buildPaymentMethodOption(
                 PaymentMethod.cash,
                 'Paiement en espèces',
-                'assets/images/cash.png',
+                'assets/images/payment/paypal.png',
               ),
           ],
         ),
@@ -464,8 +640,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return RadioListTile<PaymentMethod>(
       title: Row(
         children: [
-          Text(title),
-          const Spacer(),
+          Expanded(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Image.asset(
             iconPath,
             width: 40,
@@ -489,18 +670,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildPaymentDetailsForm() {
-    // Pour les méthodes Mobile Money, on demande le numéro de téléphone
-    if (_selectedMethod == PaymentMethod.mobileMoney || 
+    // Pour Wave, on demande le numéro de téléphone
+    if (_selectedMethod == PaymentMethod.wave ||
+        _selectedMethod == PaymentMethod.mobileMoney ||
         _selectedMethod == PaymentMethod.orangeMoney ||
         _selectedMethod == PaymentMethod.moovMoney ||
-        _selectedMethod == PaymentMethod.mtnMoney ||
-        _selectedMethod == PaymentMethod.wave) {
+        _selectedMethod == PaymentMethod.mtnMoney) {
       final providerName = _getProviderNameForMethod(_selectedMethod);
-      
+
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -510,24 +692,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const Divider(),
               const SizedBox(height: 16),
               TextFormField(
+                key: ValueKey('phone_field_$providerName'),
                 decoration: InputDecoration(
                   labelText: 'Numéro de téléphone',
                   hintText: 'Ex: +225 0101020304',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.phone),
                   suffixText: providerName,
+                  errorMaxLines: 2,
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Veuillez entrer votre numéro de téléphone';
+                  }
+                  // Validation du format du numéro de téléphone
+                  final phoneRegex = RegExp(r'^\+?[0-9]{8,15}$');
+                  if (!phoneRegex.hasMatch(value.trim())) {
+                    return 'Format de numéro invalide (8-15 chiffres)';
                   }
                   return null;
                 },
                 onChanged: (value) {
                   setState(() {
-                    _phoneNumber = value;
+                    _phoneNumber = value.trim();
                   });
+                },
+                onSaved: (value) {
+                  _phoneNumber = value?.trim();
                 },
               ),
               const SizedBox(height: 16),
@@ -548,6 +740,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -556,9 +749,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const Divider(),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Vous serez redirigé vers une page sécurisée pour saisir les informations de votre carte bancaire.',
-                style: TextStyle(
+                style: const TextStyle(
                   fontStyle: FontStyle.italic,
                   color: Colors.grey,
                 ),
@@ -568,7 +761,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       );
     }
-    
+
     return const SizedBox.shrink();
   }
 
@@ -588,4 +781,4 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ),
     );
   }
-} 
+}

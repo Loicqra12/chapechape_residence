@@ -125,13 +125,22 @@ class CinetPayService {
                 customer: payload.customer_email
             });
 
-            // Appel API CinetPay
+            // Appel API CinetPay avec headers anti-Cloudflare
             const response = await axios({
                 method: 'post',
                 url: `${this.baseUrl}/payment`,
                 headers: {
                     'Content-Type': 'application/json',
-                    'User-Agent': 'ChapeChape-Backend/1.0'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Origin': 'https://chapechaperesidence.com',
+                    'Referer': 'https://chapechaperesidence.com/',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'cross-site'
                 },
                 data: payload,
                 timeout: 30000 // 30 secondes timeout
@@ -269,7 +278,16 @@ class CinetPayService {
                 url: `${this.baseUrl}/payment/check`,
                 headers: {
                     'Content-Type': 'application/json',
-                    'User-Agent': 'ChapeChape-Backend/1.0'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Origin': 'https://chapechaperesidence.com',
+                    'Referer': 'https://chapechaperesidence.com/',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'cross-site'
                 },
                 data: payload,
                 timeout: 15000
@@ -280,9 +298,13 @@ class CinetPayService {
                 status: response.data.data?.status
             });
 
+            // Mapper les statuts CinetPay vers les valeurs enum du modèle
+            const cinetpayStatus = response.data.data?.status;
+            const mappedStatus = this.mapCinetPayStatusToModel(cinetpayStatus);
+
             return {
                 success: true,
-                status: response.data.data?.status,
+                status: mappedStatus,
                 data: response.data.data
             };
 
@@ -297,6 +319,23 @@ class CinetPayService {
                 error: error.message
             };
         }
+    }
+
+    /**
+     * Mapper les statuts CinetPay vers les valeurs enum du modèle Payment
+     * @param {string} cinetpayStatus - Statut retourné par CinetPay
+     * @returns {string} Statut mappé pour le modèle
+     */
+    mapCinetPayStatusToModel(cinetpayStatus) {
+        const statusMapping = {
+            'PENDING': 'pending',
+            'ACCEPTED': 'paid',
+            'REFUSED': 'failed',
+            'CANCELLED': 'cancelled',
+            'EXPIRED': 'failed'
+        };
+        
+        return statusMapping[cinetpayStatus] || 'pending';
     }
 
     /**

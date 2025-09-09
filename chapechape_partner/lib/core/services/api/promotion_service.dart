@@ -54,7 +54,7 @@ class PromotionService {
       // Suppression du préfixe /api pour éviter la duplication
       // Utiliser directement Dio comme dans MessageService qui fonctionne
       final response = await _dio.get(
-        '/api/promotions',
+        '/promotions',
         queryParameters: queryParams,
       );
       
@@ -68,7 +68,7 @@ class PromotionService {
   /// Récupère les promotions actives uniquement
   Future<List<PromotionModel>> getActivePromotions() async {
     try {
-      final response = await _dio.get('/api/promotions/active');
+      final response = await _dio.get('/promotions/active');
       
       final List<dynamic> data = response.data['data'] ?? [];
       return data.map((json) => PromotionModel.fromJson(json)).toList();
@@ -80,7 +80,7 @@ class PromotionService {
   /// Récupère les promotions exclusives uniquement
   Future<List<PromotionModel>> getExclusivePromotions() async {
     try {
-      final response = await _dio.get('/api/promotions/exclusive');
+      final response = await _dio.get('/promotions/exclusive');
       
       final List<dynamic> data = response.data['data'] ?? [];
       return data.map((json) => PromotionModel.fromJson(json)).toList();
@@ -94,7 +94,7 @@ class PromotionService {
   /// [residenceId] : ID de la résidence
   Future<List<PromotionModel>> getResidencePromotions(String residenceId) async {
     try {
-      final response = await _dio.get('/api/promotions/residence/$residenceId');
+      final response = await _dio.get('/promotions/residence/$residenceId');
       
       final List<dynamic> data = response.data['data'] ?? [];
       return data.map((json) => PromotionModel.fromJson(json)).toList();
@@ -108,7 +108,7 @@ class PromotionService {
   /// [promotionId] : ID de la promotion
   Future<PromotionModel> getPromotion(String promotionId) async {
     try {
-      final response = await _dio.get('/api/promotions/$promotionId');
+      final response = await _dio.get('/promotions/$promotionId');
       
       return PromotionModel.fromJson(response.data['data']);
     } catch (e) {
@@ -122,7 +122,7 @@ class PromotionService {
   Future<PromotionModel> createPromotion(PromotionModel promotion) async {
     try {
       final response = await _dio.post(
-        '/api/promotions',
+        '/promotions',
         data: promotion.toJson(),
       );
       
@@ -142,7 +142,7 @@ class PromotionService {
   ) async {
     try {
       final response = await _dio.put(
-        '/api/promotions/$promotionId',
+        '/promotions/$promotionId',
         data: promotion.toJson(),
       );
       
@@ -157,7 +157,7 @@ class PromotionService {
   /// [promotionId] : ID de la promotion à supprimer
   Future<void> deletePromotion(String promotionId) async {
     try {
-      await _dio.delete('/api/promotions/$promotionId');
+      await _dio.delete('/promotions/$promotionId');
     } catch (e) {
       throw Exception('Impossible de supprimer la promotion: $e');
     }
@@ -169,7 +169,7 @@ class PromotionService {
   Future<PromotionModel?> validatePromotionCode(String code) async {
     try {
       final response = await _dio.post(
-        '/api/promotions/validate',
+        '/promotions/validate',
         data: {'code': code},
       );
       

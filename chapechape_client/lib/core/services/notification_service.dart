@@ -277,6 +277,92 @@ class NotificationService {
       return false;
     }
   }
+
+  /// Envoyer des instructions de paiement par SMS selon la méthode choisie
+  ///
+  /// [bookingId] L'identifiant de la réservation
+  /// [paymentMethod] La méthode de paiement (wave, orange_money, mtn_money, moov_money, cash, credit_card)
+  /// [phoneNumber] Le numéro de téléphone du destinataire (optionnel, utilise celui de l'utilisateur connecté si non fourni)
+  Future<bool> sendPaymentInstructionsSms({
+    required String bookingId,
+    required String paymentMethod,
+    String? phoneNumber,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        '/api/sms/payment-instructions',
+        data: {
+          'bookingId': bookingId,
+          'paymentMethod': paymentMethod,
+          if (phoneNumber != null) 'phoneNumber': formatPhoneNumber(phoneNumber),
+        },
+      );
+      
+      if (response.data['success'] == true) {
+        _logger.info('Instructions de paiement $paymentMethod envoyées pour la réservation $bookingId');
+        return true;
+      } else {
+        _logger.error('Erreur lors de l\'envoi des instructions: ${response.data['message']}');
+        return false;
+      }
+    } catch (e) {
+      _logger.error('Erreur lors de l\'envoi des instructions de paiement', e);
+      return false;
+    }
+  }
+
+  /// Générer un message d'instructions de paiement local (fallback)
+  ///
+  /// [paymentMethod] La méthode de paiement
+  /// [amount] Le montant à payer
+  /// [reference] La référence de paiement
+  /// [residenceName] Le nom de la résidence
+  String generatePaymentInstructionsMessage({
+    required String paymentMethod,
+    required double amount,
+    required String reference,
+    required String residenceName,
+  }) {
+    final formattedAmount = amount.toStringAsFixed(0);
+    
+    switch (paymentMethod.toLowerCase()) {
+      case 'wave':
+        return 'ChapeChape: Pour finaliser votre réservation "$residenceName", '
+            'payez $formattedAmount FCFA via Wave en scannant le QR code '
+            'ou en envoyant au +225 07 88 88 88 88 avec la référence: $reference';
+            
+      case 'orange_money':
+        return 'ChapeChape: Pour finaliser votre réservation "$residenceName", '
+            'payez $formattedAmount FCFA via Orange Money. '
+            'Composez #144*1*1# et utilisez le code marchand: $reference';
+            
+      case 'mtn_money':
+        return 'ChapeChape: Pour finaliser votre réservation "$residenceName", '
+            'payez $formattedAmount FCFA via MTN Money. '
+            'Composez *133# > Paiements > Marchands et utilisez la référence: $reference';
+            
+      case 'moov_money':
+        return 'ChapeChape: Pour finaliser votre réservation "$residenceName", '
+            'payez $formattedAmount FCFA via Moov Money. '
+            'Composez *155# > Paiement facture > Marchands avec la référence: $reference';
+            
+      case 'cash':
+        return 'ChapeChape: Votre réservation "$residenceName" est confirmée. '
+            'Montant à régler: $formattedAmount FCFA en espèces lors de votre arrivée. '
+            'Référence: $reference';
+            
+      case 'credit_card':
+      case 'card':
+        return 'ChapeChape: Finalisez le paiement de votre réservation "$residenceName" '
+            'par carte bancaire via notre plateforme sécurisée. '
+            'Montant: $formattedAmount FCFA - Référence: $reference';
+            
+      default:
+        return 'ChapeChape: Finalisez le paiement de $formattedAmount FCFA '
+            'pour votre réservation "$residenceName". '
+            'Référence: $reference - Contactez-nous au +225 07 07 07 07 07 pour assistance.';
+    }
+  }
   
   // Obtenir un titre basé sur le type de notification
   String _getTitleFromType(String? type) {

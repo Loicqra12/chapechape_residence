@@ -13,12 +13,23 @@ class Booking {
   final String status;
   final String? paymentId;
   final String? paymentStatus;
+  final String? paymentMethod; // wave, orange_money, mtn_money, moov_money, cash, credit_card
   final String? cancellationReason;
   final String? specialRequests;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final List<Map<String, dynamic>>? modifications;
   final String cancellationPolicyId;
+  
+  // ✅ NOUVEAUX CHAMPS - Système de Paiement Avancé
+  final String reservationMode; // 'instant' ou 'approval_required'
+  final DateTime? paymentDeadline; // Échéance de paiement avec timer
+  final int paymentTimerDuration; // Durée en minutes
+  final DateTime? hostApprovalDeadline; // Échéance d'approbation hôte (awaiting_approval)
+  final int hostApprovalTimerDuration; // Durée timer SLA hôte en minutes
+  final Map<String, dynamic>? qrCode; // Codes QR pour check-in/check-out
+  final List<Map<String, dynamic>>? notificationsSent; // Historique des notifications
+  final List<Map<String, dynamic>>? statusHistory; // Historique des changements de statut
 
   Booking({
     required this.id,
@@ -32,12 +43,22 @@ class Booking {
     this.status = 'pending',
     this.paymentId,
     this.paymentStatus,
+    this.paymentMethod,
     this.cancellationReason,
     this.specialRequests,
     this.createdAt,
     this.updatedAt,
     this.modifications,
     required this.cancellationPolicyId,
+    // ✅ NOUVEAUX PARAMÈTRES - Système de Paiement Avancé
+    this.reservationMode = 'instant',
+    this.paymentDeadline,
+    this.paymentTimerDuration = 30,
+    this.hostApprovalDeadline,
+    this.hostApprovalTimerDuration = 60, // 60 minutes par défaut pour SLA hôte
+    this.qrCode,
+    this.notificationsSent,
+    this.statusHistory,
   });
 
   int get nights {
@@ -60,12 +81,22 @@ class Booking {
     String? status,
     String? paymentId,
     String? paymentStatus,
+    String? paymentMethod,
     String? cancellationReason,
     String? specialRequests,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<Map<String, dynamic>>? modifications,
     String? cancellationPolicyId,
+    // ✅ NOUVEAUX PARAMÈTRES - Système de Paiement Avancé
+    String? reservationMode,
+    DateTime? paymentDeadline,
+    int? paymentTimerDuration,
+    DateTime? hostApprovalDeadline,
+    int? hostApprovalTimerDuration,
+    Map<String, dynamic>? qrCode,
+    List<Map<String, dynamic>>? notificationsSent,
+    List<Map<String, dynamic>>? statusHistory,
   }) {
     return Booking(
       id: id ?? this.id,
@@ -79,12 +110,22 @@ class Booking {
       status: status ?? this.status,
       paymentId: paymentId ?? this.paymentId,
       paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       specialRequests: specialRequests ?? this.specialRequests,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       modifications: modifications ?? this.modifications,
       cancellationPolicyId: cancellationPolicyId ?? this.cancellationPolicyId,
+      // ✅ NOUVEAUX CHAMPS - Système de Paiement Avancé
+      reservationMode: reservationMode ?? this.reservationMode,
+      paymentDeadline: paymentDeadline ?? this.paymentDeadline,
+      paymentTimerDuration: paymentTimerDuration ?? this.paymentTimerDuration,
+      hostApprovalDeadline: hostApprovalDeadline ?? this.hostApprovalDeadline,
+      hostApprovalTimerDuration: hostApprovalTimerDuration ?? this.hostApprovalTimerDuration,
+      qrCode: qrCode ?? this.qrCode,
+      notificationsSent: notificationsSent ?? this.notificationsSent,
+      statusHistory: statusHistory ?? this.statusHistory,
     );
   }
 
@@ -101,12 +142,21 @@ class Booking {
       'totalPrice': totalPrice,
       'paymentId': paymentId,
       'paymentStatus': paymentStatus,
+      'paymentMethod': paymentMethod,
       'cancellationReason': cancellationReason,
       'specialRequests': specialRequests,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'modifications': modifications,
       'cancellationPolicyId': cancellationPolicyId,
+      // ✅ NOUVEAUX CHAMPS - Système de Paiement Avancé (reservationMode n'est plus envoyé par le client)
+      'paymentDeadline': paymentDeadline?.toIso8601String(),
+      'paymentTimerDuration': paymentTimerDuration,
+      'hostApprovalDeadline': hostApprovalDeadline?.toIso8601String(),
+      'hostApprovalTimerDuration': hostApprovalTimerDuration,
+      'qrCode': qrCode,
+      'notificationsSent': notificationsSent,
+      'statusHistory': statusHistory,
     };
   }
 
@@ -125,6 +175,7 @@ class Booking {
     final String statusValue = data['status']?.toString() ?? 'pending';
     final String? paymentIdValue = data['paymentId']?.toString();
     final String? paymentStatusValue = data['paymentStatus']?.toString() ?? 'pending';
+    final String? paymentMethodValue = data['paymentMethod']?.toString();
     final String? cancellationReasonValue = 
       data['cancellationReason'] == null ? null : data['cancellationReason'].toString();
     final String? specialRequestsValue = 
@@ -152,6 +203,7 @@ class Booking {
       status: statusValue,
       paymentId: paymentIdValue,
       paymentStatus: paymentStatusValue,
+      paymentMethod: paymentMethodValue,
       cancellationReason: cancellationReasonValue,
       specialRequests: specialRequestsValue,
       createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt'] as String) : null,
@@ -164,6 +216,38 @@ class Booking {
             )
           : <Map<String, dynamic>>[],
       cancellationPolicyId: cancellationPolicyIdValue,
+      
+      // ✅ NOUVEAUX CHAMPS - Système de Paiement Avancé (avec valeurs par défaut sécurisées)
+      reservationMode: data['reservationMode']?.toString() ?? 'instant',
+      paymentDeadline: data['paymentDeadline'] != null 
+          ? DateTime.parse(data['paymentDeadline'] as String) 
+          : null,
+      paymentTimerDuration: data['paymentTimerDuration'] != null 
+          ? (data['paymentTimerDuration'] as num).toInt() 
+          : 30,
+      hostApprovalDeadline: data['hostApprovalDeadline'] != null 
+          ? DateTime.parse(data['hostApprovalDeadline'] as String) 
+          : null,
+      hostApprovalTimerDuration: data['hostApprovalTimerDuration'] != null 
+          ? (data['hostApprovalTimerDuration'] as num).toInt() 
+          : 60,
+      qrCode: data['qrCode'] != null 
+          ? Map<String, dynamic>.from(data['qrCode'] as Map<dynamic, dynamic>) 
+          : null,
+      notificationsSent: data['notificationsSent'] != null
+          ? List<Map<String, dynamic>>.from(
+              (data['notificationsSent'] as List<dynamic>).map(
+                (item) => (item as Map<dynamic, dynamic>).cast<String, dynamic>(),
+              ),
+            )
+          : <Map<String, dynamic>>[],
+      statusHistory: data['statusHistory'] != null
+          ? List<Map<String, dynamic>>.from(
+              (data['statusHistory'] as List<dynamic>).map(
+                (item) => (item as Map<dynamic, dynamic>).cast<String, dynamic>(),
+              ),
+            )
+          : <Map<String, dynamic>>[],
     );
   }
 }

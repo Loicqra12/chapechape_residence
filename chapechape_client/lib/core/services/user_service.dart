@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart' as http_parser;
 import '../models/user_model.dart';
 import './api_service.dart';
 import '../config/feature_flags.dart';
@@ -119,13 +120,41 @@ class UserService {
       
       // Méthode traditionnelle (multipart/form-data)
       print('📦 Utilisation de la méthode traditionnelle d\'upload');
-      final formData = FormData.fromMap({
-        'profilePicture': await MultipartFile.fromFile(filePath),
-      });
+      
+      // Créer une fonction pour générer FormData fraîche à chaque tentative
+      FormData createFormData() {
+        // Déterminer le type MIME basé sur l'extension du fichier
+        String? mimeType;
+        final extension = filePath.toLowerCase().split('.').last;
+        switch (extension) {
+          case 'jpg':
+          case 'jpeg':
+            mimeType = 'image/jpeg';
+            break;
+          case 'png':
+            mimeType = 'image/png';
+            break;
+          case 'gif':
+            mimeType = 'image/gif';
+            break;
+          case 'webp':
+            mimeType = 'image/webp';
+            break;
+          default:
+            mimeType = 'image/jpeg'; // Fallback
+        }
+        
+        return FormData.fromMap({
+          'profilePicture': MultipartFile.fromFileSync(
+            filePath,
+            contentType: http_parser.MediaType.parse(mimeType),
+          ),
+        });
+      };
 
       final response = await _apiService.post(
         '/auth/profile/picture',
-        data: formData,
+        data: createFormData(), // Utiliser une fonction pour créer FormData fraîche
         options: Options(
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -133,8 +162,14 @@ class UserService {
         ),
       );
 
-      final profileUrl = response.data['profilePicture'];
+      // Extraire l'URL de la réponse selon la structure de l'API
+      final responseData = response.data['data'];
+      final profileUrl = responseData['profilePictureUrl'] ?? responseData['profileImage'];
       print('🖼️ URL finale de l\'image de profil (méthode traditionnelle): $profileUrl');
+      
+      if (profileUrl == null) {
+        throw Exception('URL de l\'image de profil non trouvée dans la réponse');
+      }
       
       return profileUrl;
     } on DioException catch (e) {
@@ -149,8 +184,8 @@ class UserService {
   // Récupérer l'historique des réservations
   Future<List<dynamic>> getBookingHistory() async {
     try {
-      final response = await _apiService.get('/bookings/user');
-      return response.data;
+      final response = await _apiService.get('reservations/my-reservations');
+      return response.data['data'];
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

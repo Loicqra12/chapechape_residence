@@ -10,6 +10,8 @@ import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/extensions/model_extensions.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/presentation/widgets/booking/flexible_date_selector.dart';
+import 'package:chapechape_client/presentation/widgets/booking/reservation_mode_banner.dart';
 
 class BookingScreen extends StatefulWidget {
   final String residenceId;
@@ -39,6 +41,10 @@ class _BookingScreenState extends State<BookingScreen> {
   // Disponibilité vérifiée
   bool _isAvailabilityChecked = false;
   bool _isAvailable = false;
+  
+  // Type de réservation (hourly, daily, weekly, monthly) - utilisé par FlexibleBookingDateSelector
+  String _selectedBookingType = 'day';
+  Map<String, dynamic> _pricingDetails = {};
   
   @override
   void initState() {
@@ -88,6 +94,10 @@ class _BookingScreenState extends State<BookingScreen> {
           'checkOut': _checkOutDate,
           'numberOfGuests': int.parse(_guestsController.text),
           'specialRequests': '',
+          // ✅ Utiliser les nouvelles données de réservation flexible
+          'bookingType': _selectedBookingType,
+          'pricingDetails': _pricingDetails,
+          'estimatedPrice': _estimatedPrice,
         },
       ),
     );
@@ -119,6 +129,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildDateSelectionSection(),
+                    const SizedBox(height: 24),
+                    _buildReservationModeSection(),
                     const SizedBox(height: 16),
                     _buildGuestsField(),
                     const SizedBox(height: 24),
@@ -206,40 +218,69 @@ class _BookingScreenState extends State<BookingScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDateField(
-                label: 'Arrivée',
-                date: _checkInDate,
-                onSelect: (date) {
-                  setState(() {
-                    _checkInDate = date;
-                    _isAvailabilityChecked = false;
-                    // Mettre à jour le checkout si nécessaire
-                    if (_checkOutDate != null && _checkOutDate!.isBefore(_checkInDate!)) {
-                      _checkOutDate = _checkInDate!.add(const Duration(days: 1));
-                    }
-                  });
-                },
+        
+        // Utiliser FlexibleBookingDateSelector si la résidence est chargée
+        if (_residence != null) ...[
+          FlexibleBookingDateSelector(
+            residence: _residence!,
+            initialCheckIn: _checkInDate,
+            initialCheckOut: _checkOutDate,
+            onDatesSelected: (checkIn, checkOut, bookingType, pricing) {
+              setState(() {
+                _checkInDate = checkIn;
+                _checkOutDate = checkOut;
+                _selectedBookingType = bookingType;
+                _pricingDetails = pricing;
+                _estimatedPrice = pricing['price']?.toDouble() ?? 0;
+                _isAvailabilityChecked = false;
+              });
+            },
+          ),
+        ] else ...[
+          // Fallback vers l'ancien système si résidence pas encore chargée
+          Row(
+            children: [
+              Expanded(
+                child: _buildDateField(
+                  label: 'Arrivée',
+                  date: _checkInDate,
+                  onSelect: (date) {
+                    setState(() {
+                      _checkInDate = date;
+                      _isAvailabilityChecked = false;
+                      if (_checkOutDate != null && _checkOutDate!.isBefore(_checkInDate!)) {
+                        _checkOutDate = _checkInDate!.add(const Duration(days: 1));
+                      }
+                    });
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildDateField(
-                label: 'Départ',
-                date: _checkOutDate,
-                onSelect: (date) {
-                  setState(() {
-                    _checkOutDate = date;
-                    _isAvailabilityChecked = false;
-                  });
-                },
-                minDate: _checkInDate?.add(const Duration(days: 1)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildDateField(
+                  label: 'Départ',
+                  date: _checkOutDate,
+                  onSelect: (date) {
+                    setState(() {
+                      _checkOutDate = date;
+                      _isAvailabilityChecked = false;
+                    });
+                  },
+                  minDate: _checkInDate?.add(const Duration(days: 1)),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
+        
+        // Bouton de vérification de disponibilité
+        if (_checkInDate != null && _checkOutDate != null) ...[
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _checkAvailability,
+            child: const Text('Vérifier la disponibilité'),
+          ),
+        ],
                 // Afficher le résultat de la vérification de disponibilité
         BlocListener<BookingBloc, booking_states.BookingState>(
           listener: (context, state) {
@@ -247,7 +288,9 @@ class _BookingScreenState extends State<BookingScreen> {
               setState(() {
                 _isAvailabilityChecked = true;
                 _isAvailable = state.isAvailable;
-                if (state.price != null) {
+                // ✅ CORRECTION : Ne pas écraser le prix flexible calculé par FlexibleBookingDateSelector
+                // Seulement utiliser le prix backend si aucun pricing flexible n'est défini
+                if (state.price != null && _pricingDetails.isEmpty) {
                   _estimatedPrice = state.price!;
                 }
               });
@@ -366,6 +409,43 @@ class _BookingScreenState extends State<BookingScreen> {
       ),
     );
   }
+  
+  // Construire la section de sélection du mode de réservation
+  Widget _buildReservationModeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mode de Réservation',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Mode de réservation défini par le partenaire',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // ✅ CORRECTION CRITIQUE : Bannière informative au lieu du sélecteur
+        if (_residence != null)
+          ReservationModeBanner(
+            reservationMode: _residence!.reservationMode,
+            onInfoTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => const ReservationModeInfoDialog(),
+              );
+            },
+          ),
+        
+        // L'information du mode est déjà affichée dans ReservationModeBanner
+      ],
+    );
+  }
+
   
   // Construire le champ pour le nombre d'invités
   Widget _buildGuestsField() {

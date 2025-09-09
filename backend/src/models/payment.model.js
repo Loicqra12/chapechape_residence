@@ -21,7 +21,8 @@ const paymentSchema = new mongoose.Schema({
             'paid',           // ✅ HARMONISÉ - Paiement réussi (était 'completed')
             'failed',         // Échec du paiement
             'cancelled',      // Paiement annulé par l'utilisateur
-            'refunded'        // Remboursement effectué
+            'refunded',       // Remboursement effectué
+            'expired'         // Paiement expiré (timeout)
         ],
         default: 'pending'    // ✅ ALIGNÉ - Statut initial métier
     },

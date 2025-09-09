@@ -27,6 +27,13 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
   late WebViewController _webViewController;
   bool _checkingStatus = false;
   
+  // Protection anti-polling infini
+  int _checkAttempts = 0;
+  static const int _maxAttempts = 10;
+  static const Duration _maxPollingDuration = Duration(minutes: 5);
+  DateTime? _pollingStartTime;
+  DateTime? _lastCheckTime;
+  
   @override
   void initState() {
     super.initState();
@@ -47,7 +54,8 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
               _isLoading = false;
             });
             // Vérifier si l'URL correspond à une URL de retour après paiement réussi ou échoué
-            if (url.contains('payment_success') || 
+            if (_isCinetPaySuccessUrl(url) || _isCinetPayCancelUrl(url) || _isCinetPayErrorUrl(url) ||
+                url.contains('payment_success') || 
                 url.contains('success') || 
                 url.contains('return')) {
               _checkPaymentStatus();
@@ -73,12 +81,48 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
   void _startPeriodicStatusCheck() {
     if (!mounted) return;
     
+    // Initialiser le temps de début du polling si pas encore fait
+    _pollingStartTime ??= DateTime.now();
+    
+    // Vérifier les limites de polling
+    final now = DateTime.now();
+    final pollingDuration = now.difference(_pollingStartTime!);
+    
+    if (_checkAttempts >= _maxAttempts) {
+      print('🚫 Polling arrêté: Limite de tentatives atteinte ($_maxAttempts)');
+      _showPollingLimitReached('Limite de vérifications atteinte');
+      return;
+    }
+    
+    if (pollingDuration > _maxPollingDuration) {
+      print('🚫 Polling arrêté: Durée maximale dépassée (${_maxPollingDuration.inMinutes} min)');
+      _showPollingLimitReached('Temps de vérification dépassé');
+      return;
+    }
+    
+    // Vérifier le cooldown (minimum 3 secondes entre les vérifications)
+    if (_lastCheckTime != null) {
+      final timeSinceLastCheck = now.difference(_lastCheckTime!);
+      if (timeSinceLastCheck < const Duration(seconds: 3)) {
+        print('⏳ Cooldown actif, attente avant prochaine vérification');
+        Future.delayed(const Duration(seconds: 3) - timeSinceLastCheck, _startPeriodicStatusCheck);
+        return;
+      }
+    }
+    
     setState(() {
       _checkingStatus = true;
     });
     
-    // Vérifier le statut toutes les 10 secondes
+    _checkAttempts++;
+    _lastCheckTime = now;
+    
+    print('🔄 Polling tentative $_checkAttempts/$_maxAttempts (durée: ${pollingDuration.inSeconds}s)');
+    
+    // Vérifier le statut avec délai de 10 secondes
     Future.delayed(const Duration(seconds: 10), () {
+      if (!mounted) return;
+      
       _checkPaymentStatus();
       
       if (mounted && _checkingStatus) {
@@ -92,7 +136,81 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
       CheckPaymentStatus(paymentId: widget.paymentId),
     );
   }
+
+  // Méthodes pour détecter les URLs de callback CinetPay
+  bool _isCinetPaySuccessUrl(String url) {
+    final successPatterns = [
+      'status=success',
+      'status=paid', 
+      'status=completed',
+      'cinetpay.com/success',
+      'return_url',
+    ];
+    
+    return successPatterns.any((pattern) => 
+        url.toLowerCase().contains(pattern.toLowerCase()));
+  }
+
+  bool _isCinetPayCancelUrl(String url) {
+    final cancelPatterns = [
+      'status=cancel',
+      'status=cancelled',
+      'status=abort',
+      'cinetpay.com/cancel',
+      'cancel_url',
+    ];
+    
+    return cancelPatterns.any((pattern) => 
+        url.toLowerCase().contains(pattern.toLowerCase()));
+  }
+
+  bool _isCinetPayErrorUrl(String url) {
+    final errorPatterns = [
+      'status=error',
+      'status=failed',
+      'status=failure',
+      'cinetpay.com/error',
+      'error_url',
+    ];
+    
+    return errorPatterns.any((pattern) => 
+        url.toLowerCase().contains(pattern.toLowerCase()));
+  }
   
+  void _showPollingLimitReached(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vérification interrompue'),
+        content: Text(
+          '$message\n\n'
+          'Vous pouvez actualiser manuellement le statut du paiement '
+          'en appuyant sur le bouton de rafraîchissement.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _resetPollingLimits();
+              _checkPaymentStatus();
+            },
+            child: const Text('RÉESSAYER'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resetPollingLimits() {
+    _checkAttempts = 0;
+    _pollingStartTime = DateTime.now();
+    _lastCheckTime = null;
+  }
+
   Future<bool?> _showExitConfirmDialog() {
     return showDialog<bool>(
       context: context,
@@ -138,7 +256,10 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: _checkPaymentStatus,
+              onPressed: () {
+                _resetPollingLimits();
+                _checkPaymentStatus();
+              },
               tooltip: 'Actualiser le statut',
             ),
           ],

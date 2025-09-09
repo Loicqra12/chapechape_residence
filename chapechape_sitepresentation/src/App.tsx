@@ -13,6 +13,10 @@ import Blog from './pages/Blog'
 import FAQ from './pages/FAQ'
 import Partners from './pages/Partners'
 import Contact from './pages/Contact'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import AccountDeletion from './pages/AccountDeletion'
+import CookiePolicy from './pages/CookiePolicy'
 
 function App() {
   return (
@@ -33,6 +37,10 @@ function App() {
           <Route path="faq" element={<FAQ />} />
           <Route path="partners" element={<Partners />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="politique-de-confidentialite" element={<PrivacyPolicy />} />
+          <Route path="conditions" element={<TermsOfService />} />
+          <Route path="suppression-compte" element={<AccountDeletion />} />
+          <Route path="cookies" element={<CookiePolicy />} />
         </Route>
       </Routes>
     </ThemeProvider>
