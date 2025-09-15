@@ -22,6 +22,7 @@ import 'package:chapechape_client/core/services/user_service.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:chapechape_client/core/services/notification_service.dart';
 import 'package:chapechape_client/core/services/onesignal_service.dart';
+import 'package:provider/provider.dart';
 import 'package:chapechape_client/core/services/favorite_service.dart';
 import 'package:chapechape_client/core/services/currency_service.dart';
 import 'package:chapechape_client/core/services/exchange_rate_service.dart';
@@ -103,6 +104,10 @@ void main() async {
   oneSignalService.init(authService);
   debugPrint('✅ Service OneSignal initialisé avec succès');
 
+  // Initialiser le service de notifications
+  final notificationService = await NotificationService.initialize();
+  debugPrint('✅ Service de notifications initialisé avec succès');
+
   // Initialiser le router avec les services nécessaires
   await AppRouter.initialize(
     chatServiceInstance: chatService,
@@ -110,13 +115,19 @@ void main() async {
   );
 
   runApp(
-    MultiBlocProvider(
+    MultiProvider(
       providers: [
-        BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc(
-            authService: authService,
-          )..add(AuthCheckRequested()),
+        Provider<NotificationService>(
+          create: (context) => notificationService,
         ),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (context) => AuthBloc(
+              authService: authService,
+            )..add(AuthCheckRequested()),
+          ),
         BlocProvider<LocaleCubit>(
           create: (context) => LocaleCubit(
             defaultLocale: const Locale('fr'), // Utiliser une valeur par défaut directe
@@ -159,34 +170,35 @@ void main() async {
             paymentService: paymentService,
           ),
         ),
-      ],
-      child: BlocBuilder<LocaleCubit, LocaleState>(
-        builder: (context, localeState) {
-          return Directionality(
-            textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
-            child: FlutterEasyLoading(
-              child: MaterialApp.router(
-                title: AppConfig.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: ThemeMode.system,
-                locale: localeState?.locale ?? const Locale('fr'),
-                routerConfig: AppRouter.router,
-                localizationsDelegates: const [
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('fr', ''),
-                  Locale('en', ''),
-                ],
-                builder: EasyLoading.init(), // Initialiser EasyLoading
+        ],
+        child: BlocBuilder<LocaleCubit, LocaleState>(
+          builder: (context, localeState) {
+            return Directionality(
+              textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
+              child: FlutterEasyLoading(
+                child: MaterialApp.router(
+                  title: AppConfig.appName,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: ThemeMode.system,
+                  locale: localeState?.locale ?? const Locale('fr'),
+                  routerConfig: AppRouter.router,
+                  localizationsDelegates: const [
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [
+                    Locale('fr', ''),
+                    Locale('en', ''),
+                  ],
+                  builder: EasyLoading.init(), // Initialiser EasyLoading
+                ),
               ),
-            ),
-          );
-        }
+            );
+          }
+        ),
       ),
     ),
   );

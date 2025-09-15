@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false
     },
+    isPhoneVerified: {
+        type: Boolean,
+        default: false
+    },
     role: {
         type: String,
         enum: ['client', 'partner', 'admin', 'superadmin', 'owner'],

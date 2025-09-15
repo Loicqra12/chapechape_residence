@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,8 @@ import '../../../core/constants/app_images.dart';
 import '../../../core/utils/validators/form_validators.dart';
 import '../../widgets/common/buttons/primary_button.dart';
 import '../../widgets/common/inputs/text_input.dart';
+import '../../widgets/common/inputs/advanced_phone_input_widget.dart';
+import '../../../core/models/phone_number.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -22,7 +25,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _lastNameController = TextEditingController();
   final _companyNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
+  // Variables pour le widget de téléphone avancé
+  PhoneNumber? _selectedPhoneNumber;
+  bool _isPhoneValid = false;
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
@@ -35,7 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _lastNameController.dispose();
     _companyNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
+    // _phoneController supprimé car remplacé par AdvancedPhoneInputWidget
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _scrollController.dispose();
@@ -69,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           firstName: firstName,
           lastName: lastName,
           email: _emailController.text.trim(),
-          phoneNumber: _phoneController.text.trim(),
+          phoneNumber: _selectedPhoneNumber?.completeNumber ?? '',
           password: _passwordController.text,
         ),
       );
@@ -170,13 +175,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: FormValidators.validateEmail,
                   ),
                   const SizedBox(height: 20),
-                  TextInput(
+                  AdvancedPhoneInputWidget(
                     label: 'Téléphone',
                     hint: 'Entrez votre numéro de téléphone',
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
                     enabled: !_isLoading,
-                    validator: FormValidators.validatePhoneNumber,
+                    isRequired: true,
+                    themeColor: Theme.of(context).primaryColor,
+                    onPhoneChanged: (PhoneNumber phoneNumber) {
+                      setState(() {
+                        _selectedPhoneNumber = phoneNumber;
+                      });
+                    },
+                    onValidationChanged: (bool isValid) {
+                      setState(() {
+                        _isPhoneValid = isValid;
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   TextInput(

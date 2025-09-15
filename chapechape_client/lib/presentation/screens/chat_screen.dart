@@ -5,6 +5,7 @@ import '../../core/blocs/chat/chat_bloc.dart' as chat;
 import '../../core/models/chat_model.dart';
 import '../../core/services/chat_service.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/onesignal_service.dart';
 import '../widgets/loading_widget.dart';
 import 'package:go_router/go_router.dart';
 

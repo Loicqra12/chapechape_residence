@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'dart:typed_data';
 import '../extensions/residence_marker_extension.dart';
 
@@ -58,10 +59,10 @@ class CustomMarkerGenerator {
     
     // Dessiner le texte
     final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
+  text: textSpan,
+  textDirection: ui.TextDirection.ltr,
+  textAlign: TextAlign.center,
+);
     
     textPainter.layout();
     
@@ -211,26 +212,27 @@ class CustomMarkerGenerator {
   }
   
   /// Crée un marqueur personnalisé avec le prix de la résidence directement intégré
-  /// Format similaire à Booking.com - fond bleu foncé avec prix en blanc
+  /// Format exact de la capture d'écran - bulle rose avec icône de lit et prix F CFA
   static Future<BitmapDescriptor> createPriceMarker({
     required double price,
     required Color backgroundColor,
-    double width = 120, // Largeur augmentée
-    double height = 50, // Hauteur augmentée
+    String? iconEmoji, // Icône de lit/maison
+    double width = 100, // Largeur adaptée au format "XX XXX F CFA"
+    double height = 36, // Hauteur pour contenir l'icône et le texte
   }) async {
     // Créer un PictureRecorder pour dessiner le marqueur personnalisé
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     
-    // Arrondir les coins du rectangle avec un rayon plus important
+    // Arrondir les coins du rectangle comme dans la capture d'écran
     final RRect rRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(0, 0, width, height),
-      const Radius.circular(14),  // Coins plus arrondis pour s'adapter à la taille augmentée
+      const Radius.circular(8),  // Coins modérément arrondis comme dans la capture
     );
     
-    // Dessiner le fond
+    // Dessiner le fond - ROSE COMME DANS LA CAPTURE D'ÉCRAN
     final Paint backgroundPaint = Paint()
-      ..color = const Color(0xFF003580) // Bleu Booking.com exact
+      ..color = const Color(0xFFE91E63) // Rose comme dans la capture d'écran
       ..style = PaintingStyle.fill;
     
     // Dessiner d'abord l'ombre pour qu'elle apparaisse sous l'étiquette
@@ -253,29 +255,50 @@ class CustomMarkerGenerator {
     
     canvas.drawPath(trianglePath, backgroundPaint);
     
-    // Configurer le texte du prix - taille augmentée pour une meilleure lisibilité
+    // Dessiner l'icône de lit/maison à gauche (comme dans la capture)
+    if (iconEmoji != null && iconEmoji.isNotEmpty) {
+      final iconStyle = ui.TextStyle(
+        color: Colors.white,
+        fontSize: 14, // Taille pour l'icône de lit visible
+        fontWeight: FontWeight.bold,
+      );
+      
+      final iconBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
+        textAlign: TextAlign.center,
+        maxLines: 1,
+      ))
+        ..pushStyle(iconStyle)
+        ..addText(iconEmoji);
+      
+      final iconParagraph = iconBuilder.build();
+      iconParagraph.layout(ui.ParagraphConstraints(width: 20)); // Espace fixe pour l'icône
+      
+      // Positionner l'icône à gauche avec padding
+      canvas.drawParagraph(
+        iconParagraph,
+        Offset(8, (height - iconParagraph.height) / 2),
+      );
+    }
+    
+    // Configurer le texte du prix - taille adaptée à la capture d'écran
     final textStyle = ui.TextStyle(
       color: Colors.white,
-      fontSize: 24,  // Taille augmentée pour plus de lisibilité
-      fontWeight: FontWeight.bold, // Plus gras pour une meilleure visibilité
-      letterSpacing: -0.2, // Espacement des lettres optimisé
+      fontSize: 14,  // Taille réduite pour correspondre à la capture
+      fontWeight: FontWeight.bold,
+      letterSpacing: -0.2,
     );
     
-    // Formater le prix en gérant correctement les grands nombres
+    // Formater le prix exactement comme dans la capture d'écran : "XX XXX F CFA"
     String formattedPrice;
     final priceInt = price.toInt();
     
-    // Format compact pour tous les prix
-    if (priceInt >= 1000000) {
-      // Pour les prix élevés en millions
-      formattedPrice = 'XOF ${(priceInt / 1000000).toStringAsFixed(1)}M';
-    } else if (priceInt >= 1000) {
-      // Pour les prix en milliers, format plus compact
-      formattedPrice = 'XOF ${(priceInt / 1000).toStringAsFixed(0)}K';
-    } else {
-      // Pour les petits prix
-      formattedPrice = 'XOF $priceInt';
-    }
+    // Format exact de la capture : "27 146 F CFA", "31 872 F CFA", "52 873 F CFA"
+    final formatter = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: 'F CFA',
+      decimalDigits: 0,
+    );
+    formattedPrice = formatter.format(priceInt);
     
     final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textAlign: TextAlign.center,
@@ -285,13 +308,14 @@ class CustomMarkerGenerator {
       ..addText(formattedPrice);
     
     final paragraph = paragraphBuilder.build();
-    paragraph.layout(ui.ParagraphConstraints(width: width));
+    paragraph.layout(ui.ParagraphConstraints(width: width - (iconEmoji != null ? 30 : 0)));
     
-    // Positionner et dessiner le texte
-    canvas.drawParagraph(
-      paragraph,
-      Offset((width - paragraph.maxIntrinsicWidth) / 2, (height - paragraph.height) / 2),
-    );
+    // Positionner le prix à droite de l'icône (comme dans la capture)
+    final priceOffset = iconEmoji != null 
+        ? Offset(32, (height - paragraph.height) / 2) // 32px pour laisser place à l'icône
+        : Offset((width - paragraph.maxIntrinsicWidth) / 2, (height - paragraph.height) / 2);
+    
+    canvas.drawParagraph(paragraph, priceOffset);
     
     // Convertir le dessin en image
     final ui.Image image = await pictureRecorder.endRecording().toImage(

@@ -32,19 +32,38 @@ class UserService {
     }
   }
 
+  /// Normalise un numéro de téléphone au format E.164
+  String _normalizePhoneToE164(String phoneNumber) {
+    // Si déjà en format E.164, retourner tel quel
+    if (phoneNumber.startsWith('+')) {
+      return phoneNumber;
+    }
+    
+    // Par défaut, ajouter le code pays de la Côte d'Ivoire
+    return '+225$phoneNumber';
+  }
+
   // Mettre à jour le profil utilisateur
   Future<User> updateProfile({
     String? firstName,
     String? lastName,
     String? phoneNumber,
     String? profilePicture,
+    bool? isPhoneVerified,
   }) async {
     try {
+      // Normaliser le numéro de téléphone en E.164 avant l'envoi
+      String? normalizedPhone;
+      if (phoneNumber != null && phoneNumber.isNotEmpty) {
+        normalizedPhone = _normalizePhoneToE164(phoneNumber);
+      }
+
       final response = await _apiService.put('/auth/profile', data: {
         if (firstName != null) 'firstName': firstName,
         if (lastName != null) 'lastName': lastName,
-        if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        if (normalizedPhone != null) 'phoneNumber': normalizedPhone,
         if (profilePicture != null) 'profilePicture': profilePicture,
+        if (isPhoneVerified != null) 'isPhoneVerified': isPhoneVerified,
       });
 
       return User.fromJson(response.data);

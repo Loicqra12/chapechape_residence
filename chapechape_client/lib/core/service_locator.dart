@@ -7,7 +7,7 @@ import 'package:dio/dio.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
 import 'services/cache_service.dart';
-import 'services/connectivity_service.dart';
+import 'services/optimized_connectivity_service.dart';
 import 'services/user_service.dart';
 import 'services/residence_service.dart';
 import 'services/app_settings_service.dart';
@@ -28,7 +28,7 @@ import 'blocs/residence/residence_bloc.dart';
 
 // Définir les blocs en attendant de créer les fichiers
 class ConnectivityBloc {
-  final ConnectivityService connectivityService;
+  final OptimizedConnectivityService connectivityService;
   ConnectivityBloc({required this.connectivityService});
 }
 
@@ -58,7 +58,7 @@ Future<void> setupServiceLocator() async {
   sl.registerSingleton<SharedPreferences>(sharedPreferences);
   
   final dio = Dio(BaseOptions(
-    baseUrl: 'https://api.chapechape.com', 
+    baseUrl: 'http://192.168.1.65:4000/api', 
     connectTimeout: const Duration(milliseconds: 15000),
     receiveTimeout: const Duration(milliseconds: 15000),
   ));
@@ -75,7 +75,7 @@ Future<void> setupServiceLocator() async {
   sl.registerSingleton<CacheService>(CacheService.getInstance());
   
   // Connectivité
-  sl.registerSingleton<ConnectivityService>(ConnectivityService());
+  sl.registerSingleton<OptimizedConnectivityService>(OptimizedConnectivityService());
   
   // Initialisation des services qui dépendent de l'API service
   final authService = await AuthService.initialize();
@@ -146,7 +146,7 @@ Future<void> setupServiceLocator() async {
   
   sl.registerFactory(
     () => ConnectivityBloc(
-      connectivityService: sl<ConnectivityService>(),
+      connectivityService: sl<OptimizedConnectivityService>(),
     ),
   );
   

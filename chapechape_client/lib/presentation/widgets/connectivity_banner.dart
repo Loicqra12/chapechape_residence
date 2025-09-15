@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:chapechape_client/core/services/api_service.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
@@ -23,6 +24,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   late final ApiService _apiService;
   final CacheService _cacheService = CacheService();
   bool _isConnected = true;
+  bool _wasOffline = false; // Nouveau : tracker si on était hors ligne
+  bool _showSyncBanner = false; // Nouveau : contrôler l'affichage de la bannière sync
   final _connectivityChangeController = StreamController<bool>.broadcast();
   
   @override
@@ -32,6 +35,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
     // Initialiser l'ApiService correctement
     ApiService.initialize().then((service) {
       _apiService = service;
+      // Vérifier la connectivité immédiatement après l'initialisation
+      _checkConnectivity();
     });
     
     // Vérification périodique de la connectivité
@@ -46,7 +51,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   
   // Lancer une vérification périodique simple de connectivité
   void _startPeriodicConnectivityCheck() {
-    Timer.periodic(const Duration(seconds: 5), (timer) {
+    Timer.periodic(const Duration(minutes: 5), (timer) {
       _checkConnectivity();
     });
     
@@ -54,16 +59,48 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
     _checkConnectivity();
   }
   
-  // Vérifier la connectivité de manière simplifiée
+  // Vérifier la connectivité de manière robuste
   Future<void> _checkConnectivity() async {
     try {
-      // Utiliser une requête ping simple vers Google
-      final result = await _apiService.getData('/ping');
-      final isNowConnected = result != null && !result.isNetworkError;
+      bool isNowConnected = false;
+      
+      // Vérifier d'abord la connectivité Internet générale
+      try {
+        final internetResponse = await http.get(
+          Uri.parse('https://www.google.com'),
+        ).timeout(const Duration(seconds: 3));
+        
+        if (internetResponse.statusCode == 200) {
+          // Si Internet fonctionne, vérifier le serveur backend
+          try {
+            final result = await _apiService.getData('/ping');
+            isNowConnected = result != null && !result.isNetworkError;
+          } catch (serverError) {
+            // Si le serveur ne répond pas mais qu'Internet fonctionne,
+            // considérer comme connecté (problème serveur temporaire)
+            isNowConnected = true;
+          }
+        }
+      } catch (internetError) {
+        // Pas de connexion Internet
+        isNowConnected = false;
+      }
       
       // Mettre à jour l'état si changement
       if (isNowConnected != _isConnected) {
         setState(() {
+          // Si on passe de hors ligne à en ligne, marquer qu'on était hors ligne
+          if (!_isConnected && isNowConnected) {
+            _wasOffline = true;
+            _showSyncBanner = true; // Afficher la bannière de sync
+            _autoHideSyncBanner(); // Auto-masquer après 10 secondes
+          }
+          // Si on passe de en ligne à hors ligne, marquer qu'on est hors ligne
+          else if (_isConnected && !isNowConnected) {
+            _wasOffline = true;
+            _showSyncBanner = false; // Masquer la bannière de sync
+          }
+          
           _isConnected = isNowConnected;
         });
         _connectivityChangeController.add(isNowConnected);
@@ -73,6 +110,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
       if (_isConnected) {
         setState(() {
           _isConnected = false;
+          _wasOffline = true;
+          _showSyncBanner = false; // Masquer la bannière de sync
         });
         _connectivityChangeController.add(false);
       }
@@ -100,7 +139,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
           secondChild: _buildSyncButton(context),
-          crossFadeState: _isConnected && !_wasPreviouslyConnected()
+          crossFadeState: _showSyncBanner
               ? CrossFadeState.showSecond
               : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 300),
@@ -145,6 +184,18 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
               ],
             ),
           ),
+          // Bouton pour forcer une vérification
+          IconButton(
+            icon: const Icon(
+              Icons.refresh,
+              color: Colors.white,
+              size: 18,
+            ),
+            onPressed: () {
+              _checkConnectivity();
+            },
+            tooltip: 'Vérifier la connexion',
+          ),
         ],
       ),
     );
@@ -163,7 +214,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
             size: 20,
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Connexion rétablie',
               style: TextStyle(
@@ -173,11 +224,31 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
               ),
             ),
           ),
+          // Bouton fermer
+          IconButton(
+            icon: const Icon(
+              Icons.close,
+              color: Colors.white,
+              size: 18,
+            ),
+            onPressed: () {
+              setState(() {
+                _showSyncBanner = false;
+                _wasOffline = false;
+              });
+            },
+            tooltip: 'Fermer',
+          ),
           SizedBox(
             width: 120, // Définir une largeur fixe pour éviter l'erreur
             child: TextButton.icon(
               onPressed: () async {
                 try {
+                  // Masquer immédiatement la bannière de sync
+                  setState(() {
+                    _showSyncBanner = false;
+                  });
+                  
                   // Afficher un message de synchronisation en cours
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -197,14 +268,21 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                         ? 'Synchronisation terminée avec succès' 
                         : 'Échec de la synchronisation'),
                       backgroundColor: success ? Colors.green : Colors.orange,
+                      duration: const Duration(seconds: 3),
                     ),
                   );
+                  
+                  // Réinitialiser l'état après synchronisation
+                  setState(() {
+                    _wasOffline = false;
+                  });
                 } catch (e) {
                   // Afficher un message d'erreur en cas d'exception
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Erreur lors de la synchronisation: $e'),
                       backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
                     ),
                   );
                 }
@@ -232,6 +310,20 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
     );
   }
 
+  // Auto-masquer la bannière après un délai
+  void _autoHideSyncBanner() {
+    if (_showSyncBanner) {
+      Future.delayed(const Duration(seconds: 10), () {
+        if (mounted && _showSyncBanner) {
+          setState(() {
+            _showSyncBanner = false;
+            _wasOffline = false;
+          });
+        }
+      });
+    }
+  }
+  
   // Vérifier si l'appareil était précédemment hors ligne
   bool _wasPreviouslyConnected() {
     // Cette implémentation simple ne garde pas d'historique

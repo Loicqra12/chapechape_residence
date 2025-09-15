@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/payment/african_payment_method.dart';
 import '../../../core/services/payment/african_payment_service.dart';
+import '../../../core/models/phone_number.dart';
+import '../common/inputs/advanced_phone_input_widget.dart';
 
 /// Widget permettant aux partenaires de gérer les méthodes de paiement qu'ils acceptent
 class PaymentMethodsManagerWidget extends StatefulWidget {
@@ -116,18 +118,48 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
   
   void _showDetailsDialog(AfricanPaymentMethod method) {
     // Contrôleurs pour les champs de texte
-    final phoneController = TextEditingController();
     final emailController = TextEditingController();
     final accountNameController = TextEditingController();
     final accountNumberController = TextEditingController();
     final bankNameController = TextEditingController();
+    
+    // PhoneNumber pour le champ de téléphone
+    PhoneNumber? initialPhoneNumber;
+    PhoneNumber? currentPhoneNumber;
     
     // Pré-remplir avec les valeurs existantes si disponibles
     if (_methodDetails.containsKey(method)) {
       final details = _methodDetails[method]!;
       
       if (method.requiresPhoneNumber && details.containsKey('phoneNumber')) {
-        phoneController.text = details['phoneNumber'];
+        final phoneText = details['phoneNumber'];
+        debugPrint('🔍 [DEBUG] Phone text from details: $phoneText');
+        
+        // Essayer de parser le numéro E.164 d'abord
+        if (phoneText.startsWith('+')) {
+          initialPhoneNumber = PhoneNumber.parseE164(phoneText);
+          debugPrint('🔍 [DEBUG] Parsed E164: $initialPhoneNumber');
+        }
+        
+        // Si le parsing E.164 échoue, essayer de créer un PhoneNumber simple
+        if (initialPhoneNumber == null) {
+          try {
+            // Nettoyer le texte (enlever espaces, tirets, etc.)
+            final cleanText = phoneText.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+            initialPhoneNumber = PhoneNumber(
+              isoCode: 'CI', // Par défaut Côte d'Ivoire
+              phoneNumber: cleanText,
+            );
+            debugPrint('🔍 [DEBUG] Created simple PhoneNumber: $initialPhoneNumber');
+          } catch (e) {
+            debugPrint('🔍 [DEBUG] Error creating PhoneNumber: $e');
+            // Si échec, créer un PhoneNumber vide
+            initialPhoneNumber = PhoneNumber(
+              isoCode: 'CI',
+              phoneNumber: '',
+            );
+          }
+        }
       }
       
       if (details.containsKey('email')) {
@@ -147,6 +179,9 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
       }
     }
     
+    // Initialiser currentPhoneNumber avec initialPhoneNumber si disponible
+    currentPhoneNumber = initialPhoneNumber;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -157,14 +192,13 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
             children: [
               // Afficher le champ de numéro de téléphone pour les méthodes qui en ont besoin
               if (method.requiresPhoneNumber) ...[
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Numéro de téléphone',
-                    hintText: 'Ex: +228 90 12 34 56',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
+                AdvancedPhoneInputWidget(
+                  label: 'Numéro de téléphone',
+                  hint: 'Ex: +225 07 48 00 10 42',
+                  initialPhoneNumber: initialPhoneNumber,
+                  onPhoneChanged: (phone) {
+                    currentPhoneNumber = phone;
+                  },
                 ),
                 const SizedBox(height: 16),
               ],
@@ -225,7 +259,24 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
               final details = <String, dynamic>{};
               
               if (method.requiresPhoneNumber) {
-                details['phoneNumber'] = phoneController.text;
+                debugPrint('🔍 [DEBUG] currentPhoneNumber: $currentPhoneNumber');
+                debugPrint('🔍 [DEBUG] currentPhoneNumber?.isValid: ${currentPhoneNumber?.isValid}');
+                debugPrint('🔍 [DEBUG] currentPhoneNumber?.completeNumber: ${currentPhoneNumber?.completeNumber}');
+                
+                if (currentPhoneNumber != null && currentPhoneNumber!.isValid) {
+                  details['phoneNumber'] = currentPhoneNumber!.completeNumber;
+                  debugPrint('🔍 [DEBUG] Numéro de téléphone sauvegardé: ${currentPhoneNumber!.completeNumber}');
+                } else {
+                  // Afficher une erreur si le numéro n'est pas valide
+                  debugPrint('🔍 [DEBUG] Erreur: Numéro de téléphone invalide ou null');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Veuillez saisir un numéro de téléphone valide'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
               }
               
               if (emailController.text.isNotEmpty) {

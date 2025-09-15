@@ -12,7 +12,8 @@ const {
     getMe,
     forgotPassword,
     resetPassword,
-    refreshToken
+    refreshToken,
+    updateProfile
 } = require('../controllers/auth/auth.controller');
 const { protect, authorize, validateRefreshToken } = require('../middlewares/auth.middleware');
 
@@ -194,6 +195,7 @@ router.post('/refresh-token', validateRefreshToken, refreshToken);
 
 // Routes protégées
 router.get('/me', protect, getMe);
+router.put('/profile', protect, updateProfile);
 
 // Upload profile picture
 const uploadMiddleware = require('../middlewares/upload.middleware');

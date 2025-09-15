@@ -41,6 +41,17 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
   }
   
   try {
+    // Vérifier si Twilio est configuré
+    if (!twilioService.isConfigured) {
+      logger.error('Service Twilio non configuré');
+      throw new apiError('Service SMS non disponible', 500);
+    }
+    
+    // Log des variables d'environnement Twilio (masquées pour la sécurité)
+    logger.info(`Twilio Account SID: ${process.env.TWILIO_ACCOUNT_SID ? 'CONFIGURÉ' : 'MANQUANT'}`);
+    logger.info(`Twilio Auth Token: ${process.env.TWILIO_AUTH_TOKEN ? 'CONFIGURÉ' : 'MANQUANT'}`);
+    logger.info(`Twilio Phone Number: ${process.env.TWILIO_PHONE_NUMBER || 'MANQUANT'}`);
+    
     // Envoyer le SMS avec le code
     const message = await twilioService.sendSMS(phoneNumber, messageBody);
     
@@ -58,6 +69,22 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
     await VerificationCode.deleteOne({ codeId });
     
     logger.error(`Erreur lors de l'envoi du code de vérification à ${phoneNumber}: ${error.message}`);
+    
+    // En mode développement, simuler l'envoi réussi si c'est une erreur d'authentification Twilio
+    if (process.env.NODE_ENV === 'development' && error.message.includes('Authentication Error')) {
+      logger.warn('Mode développement: Simulation de l\'envoi de SMS réussi');
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          codeId,
+          expiresAt
+        },
+        message: 'Code de vérification simulé en mode développement'
+      });
+      return;
+    }
+    
     throw new apiError('Erreur lors de l\'envoi du SMS. Veuillez réessayer.', 500);
   }
 });

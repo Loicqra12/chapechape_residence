@@ -5,6 +5,7 @@ import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../../../core/models/dashboard/dashboard_data.dart';
 import '../../../core/models/payment/payout_model.dart';
 import '../../../core/services/api/payment_service.dart';
+import '../../../core/config/app_config_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../widgets/layout/screen_app_bars.dart';
@@ -519,8 +520,8 @@ class DashboardScreen extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               image: DecorationImage(
-                image: NetworkImage(residence.imageUrl ?? 
-                  'assets/images/placeholders/profile_placeholder.png'),
+                image: NetworkImage(AppConfigManager.getProfileImageUrl(residence.imageUrl ?? 
+                  'assets/images/placeholders/profile_placeholder.png')),
                 fit: BoxFit.cover,
               ),
             ),

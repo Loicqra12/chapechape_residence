@@ -13,7 +13,7 @@ import 'package:chapechape_client/core/services/api/interceptors/csrf_intercepto
 import 'package:chapechape_client/core/services/api/interceptors/logging_interceptor.dart';
 import 'package:chapechape_client/core/services/api/interceptors/retry_interceptor.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
-import 'package:chapechape_client/core/services/connectivity_service.dart';
+import 'package:chapechape_client/core/services/optimized_connectivity_service.dart';
 import 'package:chapechape_client/core/services/logger_service.dart';
 
 /// Service d'accès à l'API
@@ -22,7 +22,7 @@ class ApiService {
   late final Dio _dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final CacheService _cacheService = CacheService();
-  final ConnectivityService _connectivityService = ConnectivityService();
+  final OptimizedConnectivityService _connectivityService = OptimizedConnectivityService();
   final LoggerService _logger = LoggerService();
   
   bool _isConnected = true;

@@ -182,7 +182,7 @@ class NotificationService {
       final formattedNumber = formatPhoneNumber(phoneNumber);
       
       final response = await _apiService.post(
-        '/api/auth/request-verification-code',
+        '/auth/request-verification-code',
         data: {
           'phoneNumber': formattedNumber
         },
@@ -222,7 +222,7 @@ class NotificationService {
       }
       
       final response = await _apiService.post(
-        '/api/auth/verify-code',
+        '/auth/verify-code',
         data: data,
       );
       
@@ -241,7 +241,7 @@ class NotificationService {
       final formattedNumber = formatPhoneNumber(phoneNumber);
       
       final response = await _apiService.post(
-        '/api/auth/resend-verification-code',
+        '/auth/resend-verification-code',
         data: {
           'phoneNumber': formattedNumber
         },
@@ -263,7 +263,7 @@ class NotificationService {
       final formattedNumber = formatPhoneNumber(phoneNumber);
       
       final response = await _apiService.post(
-        '/api/sms/send',
+        '/sms/send',
         data: {
           'phoneNumber': formattedNumber,
           'message': message,
@@ -290,7 +290,7 @@ class NotificationService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/api/sms/payment-instructions',
+        '/sms/payment-instructions',
         data: {
           'bookingId': bookingId,
           'paymentMethod': paymentMethod,

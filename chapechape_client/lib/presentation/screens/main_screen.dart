@@ -10,9 +10,11 @@ import '../widgets/language_selector.dart';
 import '../widgets/location_selector_widget.dart';
 import '../widgets/auth_button_widget.dart';
 import '../widgets/connectivity_banner.dart';
+import 'offline_screen.dart';
 import '../../core/models/city.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/services/optimized_connectivity_service.dart';
 
 class MainScreen extends StatefulWidget {
   final Widget child;
@@ -31,6 +33,9 @@ class _MainScreenState extends State<MainScreen> {
   
   // Logger pour le monitoring
   final LoggerService _logger = LoggerService();
+  
+  // Service de connectivité optimisé
+  final OptimizedConnectivityService _connectivityService = OptimizedConnectivityService();
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -78,6 +83,34 @@ class _MainScreenState extends State<MainScreen> {
           onPressed: () => _showLocationMenu(context),
           tooltip: 'Menu',
         ),
+        actions: [
+          // Bouton mode offline
+          StreamBuilder<bool>(
+            stream: _connectivityService.connectivityStream,
+            builder: (context, snapshot) {
+              final isConnected = snapshot.data ?? true;
+              if (!isConnected) {
+                return IconButton(
+                  icon: const Icon(Icons.cloud_off),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OfflineScreen(),
+                      ),
+                    );
+                  },
+                  tooltip: 'Mode Hors Ligne',
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+          // Icône notifications avec badge
+          const NotificationButton(),
+          // Avatar utilisateur en haut à droite
+          const AuthButtonWidget(),
+        ],
         title: _selectedCity != null 
           ? InkWell(
               onTap: () => _showLocationMenu(context),
@@ -104,18 +137,10 @@ class _MainScreenState extends State<MainScreen> {
             )
           : null,
         centerTitle: false,
-        actions: [
-          // Icône notifications
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.go('/notifications'),
-            tooltip: 'Notifications',
-          ),
-          // Avatar utilisateur en haut à droite
-          const AuthButtonWidget(),
-        ],
       ),
-      body: widget.child,
+      body: ConnectivityBanner(
+        child: widget.child,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _calculateSelectedIndex(context),
         onDestinationSelected: (index) => _onItemTapped(index, context),

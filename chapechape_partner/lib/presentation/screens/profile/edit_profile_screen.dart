@@ -12,6 +12,8 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:path/path.dart' as path;
 import '../../../core/utils/validators/form_validators.dart';
+import '../../widgets/common/inputs/advanced_phone_input_widget.dart';
+import '../../../core/models/phone_number.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -25,7 +27,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _emailController;
-  late TextEditingController _phoneController;
+  // Variables pour le widget de téléphone avancé
+  PhoneNumber? _selectedPhoneNumber;
+  bool _isPhoneValid = false;
+  String _phoneE164 = ''; // Conserver le numéro en format E.164 complet
   bool _isLoading = false;
   File? _profileImage;
   bool _isCompressing = false;
@@ -45,7 +50,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController = TextEditingController(text: partner?.firstName);
     _lastNameController = TextEditingController(text: partner?.lastName);
     _emailController = TextEditingController(text: partner?.email);
-    _phoneController = TextEditingController(text: partner?.phoneNumber);
+    // Initialiser le numéro de téléphone pour le widget avancé
+    if (partner?.phoneNumber != null && partner!.phoneNumber.isNotEmpty) {
+      // Conserver la version E.164 originale
+      _phoneE164 = partner.phoneNumber.startsWith('+')
+          ? partner.phoneNumber
+          : '+225${partner.phoneNumber}';
+      
+      // Parser pour l'affichage dans le widget
+      _selectedPhoneNumber = PhoneNumber.parseE164(_phoneE164);
+    }
   }
 
   @override
@@ -53,7 +67,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
+    // _phoneController supprimé car remplacé par AdvancedPhoneInputWidget
     super.dispose();
   }
 
@@ -288,7 +302,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'firstName': _firstNameController.text,
         'lastName': _lastNameController.text,
         'email': _emailController.text,
-        'phoneNumber': _phoneController.text,
+        'phone': _phoneE164.isNotEmpty ? _phoneE164 : _selectedPhoneNumber?.completeNumber ?? '',
       };
       
       // Envoyer l'événement de mise à jour
@@ -651,16 +665,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
 
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Téléphone',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.phone),
-                    hintText: '+XXX XXXXXXXXX',
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: FormValidators.validatePhoneNumber,
+                AdvancedPhoneInputWidget(
+                  label: 'Téléphone',
+                  hint: 'Entrez votre numéro de téléphone',
+                  initialPhoneNumber: _selectedPhoneNumber,
+                  enabled: !_isLoading,
+                  isRequired: true,
+                  themeColor: theme.primaryColor,
+                  onPhoneChanged: (PhoneNumber phoneNumber) {
+                    setState(() {
+                      _selectedPhoneNumber = phoneNumber;
+                      _phoneE164 = phoneNumber.completeNumber;
+                    });
+                  },
+                  onValidationChanged: (bool isValid) {
+                    setState(() {
+                      _isPhoneValid = isValid;
+                    });
+                  },
                 ),
 
                 const SizedBox(height: 32),

@@ -190,6 +190,7 @@ app.get("/health", (req, res) => {
 
 // Import des routes de health checks avancés
 const healthRoutes = require("./routes/health.routes");
+const pingRoutes = require("./routes/ping.routes");
 
 // Importer les contrôleurs de promotion directement pour les routes publiques
 const {
@@ -239,10 +240,21 @@ app.use(
   })
 );
 
-// Rate limiting
+// Rate limiting global (plus permissif pour éviter les 429)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limite chaque IP à 100 requêtes par fenêtre
+  max: 200, // Augmenté à 200 requêtes par IP par fenêtre (au lieu de 100)
+  message: {
+    success: false,
+    message: 'Trop de requêtes, veuillez réessayer plus tard',
+    retryAfter: 900 // 15 minutes en secondes
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting pour les health checks et pings
+    return req.path.startsWith('/api/health') || req.path.startsWith('/api/ping');
+  }
 });
 app.use(limiter);
 
@@ -337,6 +349,7 @@ app.use("/api/website", websiteRoutes); // Routes pour le site vitrine (contact,
 app.use("/api/pricing", pricingRoutes); // Routes pour la tarification dynamique CinetPay - ✅ Réactivé après correction bug d'import auth
 app.use("/api/payouts", payoutRoutes); // ✅ RÉACTIVÉ - Routes pour les reversements aux partners via CinetPay
 app.use("/api/health", healthRoutes); // Routes pour les health checks avancés
+app.use("/api/ping", pingRoutes); // Routes pour les pings de connectivité
 // app.use("/api/blog", cache(1800), blogRoutes); // Routes pour le blog dynamique (temporairement désactivé pour diagnostic)
 
 // 🔒 SÉCURITÉ CRITIQUE : Routes de test (TEMPORAIREMENT DÉSACTIVÉES POUR DIAGNOSTIC)

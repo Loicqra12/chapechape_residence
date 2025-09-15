@@ -27,8 +27,8 @@ class ConnectivityService {
   
   /// Démarre une vérification périodique de la connectivité
   void _startPeriodicCheck() {
-    // Vérifier toutes les 30 secondes
-    _checkTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Vérifier toutes les 10 minutes (beaucoup moins fréquent)
+    _checkTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
       checkConnectivity();
     });
     

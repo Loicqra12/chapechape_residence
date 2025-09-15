@@ -7,13 +7,17 @@ const cors = require('cors');
 const path = require('path');
 const logger = require('../utils/logger');
 
-// Configuration du rate limiting
+// Configuration du rate limiting (plus permissif)
 const rateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limite chaque IP à 100 requêtes par fenêtre
+    max: 500, // Augmenté à 500 requêtes par IP par fenêtre (au lieu de 100)
     message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard',
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting pour les health checks et pings
+        return req.path.startsWith('/api/health') || req.path.startsWith('/api/ping');
+    },
     handler: (req, res) => {
         logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
         res.status(429).json({

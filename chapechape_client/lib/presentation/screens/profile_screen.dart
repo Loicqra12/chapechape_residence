@@ -10,9 +10,10 @@ import 'package:chapechape_client/core/constants/app_assets.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
+import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
+import 'package:chapechape_client/core/models/phone_number.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -27,13 +28,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _emailController;
-  late TextEditingController _phoneController;
   
   bool _isEditing = false;
   bool _isVerifyingPhone = false;
   bool _phoneVerified = false;
   
+  // Variables pour le widget de téléphone avancé
+  PhoneNumber? _selectedPhoneNumber;
+  String _phoneE164 = ''; // Conserver le numéro en format E.164 complet
+  bool _isPhoneValid = false;
+  
   final ImagePicker _picker = ImagePicker();
+
+  /// Normalise un numéro de téléphone au format E.164
+  String _normalizeToE164(String phoneNumber, String countryCode) {
+    if (phoneNumber.startsWith('+')) {
+      return phoneNumber; // Déjà en format E.164
+    }
+    
+    // Mapping des codes pays
+    final countryCodeMap = {
+      'CI': '+225',
+      'SN': '+221', 
+      'ML': '+223',
+      'BF': '+226',
+      'GN': '+224',
+    };
+    
+    final prefix = countryCodeMap[countryCode] ?? '+225';
+    return '$prefix$phoneNumber';
+  }
+
+  /// Parse un numéro E.164 pour extraire le code pays et le numéro national
+  Map<String, String> _parseE164(String phoneE164) {
+    if (phoneE164.startsWith('+225')) {
+      return {'isoCode': 'CI', 'nationalNumber': phoneE164.substring(4)};
+    } else if (phoneE164.startsWith('+221')) {
+      return {'isoCode': 'SN', 'nationalNumber': phoneE164.substring(4)};
+    } else if (phoneE164.startsWith('+223')) {
+      return {'isoCode': 'ML', 'nationalNumber': phoneE164.substring(4)};
+    } else if (phoneE164.startsWith('+226')) {
+      return {'isoCode': 'BF', 'nationalNumber': phoneE164.substring(4)};
+    } else if (phoneE164.startsWith('+224')) {
+      return {'isoCode': 'GN', 'nationalNumber': phoneE164.substring(4)};
+    }
+    
+    // Par défaut, Côte d'Ivoire
+    return {'isoCode': 'CI', 'nationalNumber': phoneE164.replaceFirst('+', '')};
+  }
 
   @override
   void initState() {
@@ -41,7 +83,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _firstNameController = TextEditingController();
     _lastNameController = TextEditingController();
     _emailController = TextEditingController();
-    _phoneController = TextEditingController();
     
     // Charger le profil utilisateur au démarrage
     context.read<UserBloc>().add(const LoadUserProfile());
@@ -52,7 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -60,7 +100,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _firstNameController.text = state.user.firstName;
     _lastNameController.text = state.user.lastName;
     _emailController.text = state.user.email;
-    _phoneController.text = state.user.phoneNumber;
+    
+    // Initialiser le numéro de téléphone pour le widget avancé
+    if (state.user.phoneNumber.isNotEmpty) {
+      // Conserver la version E.164 originale
+      _phoneE164 = state.user.phoneNumber.startsWith('+') 
+          ? state.user.phoneNumber 
+          : _normalizeToE164(state.user.phoneNumber, 'CI');
+      
+      // Parser pour l'affichage dans le widget
+      final parsed = _parseE164(_phoneE164);
+      _selectedPhoneNumber = PhoneNumber(
+        isoCode: parsed['isoCode']!, 
+        phoneNumber: parsed['nationalNumber']!,
+        dialCode: _phoneE164.substring(0, 4)
+      );
+    }
     
     // Déterminer si le téléphone est déjà vérifié
     setState(() {
@@ -76,16 +131,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _saveProfile() {
     if (_formKey.currentState!.validate()) {
-      // Vérifier si le numéro de téléphone a changé
+      // Mettre à jour le numéro E.164 basé sur la sélection actuelle
+      if (_selectedPhoneNumber != null) {
+        _phoneE164 = _normalizeToE164(
+          _selectedPhoneNumber!.phoneNumber, 
+          _selectedPhoneNumber!.isoCode
+        );
+      }
+      
+      // Vérifier si le numéro de téléphone a changé (comparaison E.164)
       final currentState = context.read<UserBloc>().state;
-      String? oldPhoneNumber;
+      String oldPhoneE164 = '';
       
       if (currentState is UserProfileLoaded) {
-        oldPhoneNumber = currentState.user.phoneNumber;
+        oldPhoneE164 = currentState.user.phoneNumber.startsWith('+') 
+            ? currentState.user.phoneNumber 
+            : _normalizeToE164(currentState.user.phoneNumber, 'CI');
       }
       
       // Si le numéro a changé, demander une vérification
-      if (oldPhoneNumber != _phoneController.text) {
+      if (oldPhoneE164 != _phoneE164) {
         setState(() {
           _isVerifyingPhone = true;
           _phoneVerified = false;
@@ -103,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       UpdateUserProfile(
         firstName: _firstNameController.text,
         lastName: _lastNameController.text,
-        phoneNumber: _phoneController.text,
+        phoneNumber: _phoneE164, // Envoyer le numéro en format E.164
         isPhoneVerified: _phoneVerified,
       ),
     );
@@ -124,10 +189,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _phoneVerified = true;
       _isVerifyingPhone = false;
-      _phoneController.text = phoneNumber; // Mettre à jour avec le numéro vérifié
+      
+      // Mettre à jour le numéro E.164 avec le numéro vérifié
+      _phoneE164 = phoneNumber.startsWith('+') ? phoneNumber : _normalizeToE164(phoneNumber, 'CI');
+      
+      // Parser pour l'affichage dans le widget
+      final parsed = _parseE164(_phoneE164);
+      _selectedPhoneNumber = PhoneNumber(
+        isoCode: parsed['isoCode']!, 
+        phoneNumber: parsed['nationalNumber']!,
+        dialCode: _phoneE164.substring(0, 4)
+      );
     });
     
-    // Mettre à jour le profil avec le numéro vérifié
+    // Mettre à jour le profil avec le numéro vérifié en E.164
     _updateUserProfile();
     
     // Afficher un message de succès
@@ -289,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     PhoneVerificationWidget(
-                      initialPhoneNumber: _phoneController.text,
+                      initialPhoneNumber: _selectedPhoneNumber?.phoneNumber ?? '',
                       onVerificationSuccess: _onPhoneVerified,
                     ),
                   ] else ...[  
@@ -357,40 +432,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 15),
                   
-                  // Téléphone
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _phoneController,
-                          enabled: _isEditing,
-                          decoration: InputDecoration(
-                            labelText: 'Téléphone',
-                            prefixIcon: const Icon(Icons.phone),
-                            suffixIcon: _phoneVerified
-                                ? const Icon(Icons.verified, color: Colors.green)
-                                : null,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Veuillez entrer votre numéro de téléphone';
-                            }
-                            return null;
-                          },
+                  // Téléphone avec widget avancé
+                  if (_isEditing) ...[
+                    AdvancedPhoneInputWidget(
+                      label: 'Téléphone',
+                      hint: 'Entrez votre numéro de téléphone',
+                      isRequired: true,
+                      initialPhoneNumber: _selectedPhoneNumber,
+                      readOnly: !_isEditing,
+                      onPhoneChanged: (PhoneNumber phoneNumber) {
+                        setState(() {
+                          _selectedPhoneNumber = phoneNumber;
+                        });
+                      },
+                      onValidationChanged: (bool isValid) {
+                        setState(() {
+                          _isPhoneValid = isValid;
+                        });
+                      },
+                      themeColor: Theme.of(context).primaryColor,
+                    ),
+                    if (!_phoneVerified) ...[
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: _isPhoneValid ? _startPhoneVerification : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
+                        child: const Text('Vérifier le numéro'),
                       ),
-                      if (_isEditing && !_phoneVerified) ...[  
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: _startPhoneVerification,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                          ),
-                          child: const Text('Vérifier'),
-                        ),
-                      ],
                     ],
-                  ),
+                  ] else ...[
+                    // Affichage en lecture seule
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.phone, color: Colors.grey),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _selectedPhoneNumber?.phoneNumber ?? 'Non renseigné',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          if (_phoneVerified)
+                            const Icon(Icons.verified, color: Colors.green),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 30),
                   
                   // Boutons d'action

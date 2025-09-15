@@ -10,6 +10,7 @@ import '../../core/models/residence_model.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/nearby_residences_service.dart';
 import '../../core/extensions/residence_extensions.dart';
+import '../../core/extensions/residence_marker_extension.dart';
 import '../../core/theme/app_theme.dart';
 import 'advanced_search_widget.dart';
 
@@ -425,8 +426,8 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
     }  
   }
   
-  /// Crée les marqueurs pour la carte Google Maps
-  void _createMarkers() {
+  /// Crée les marqueurs pour la carte Google Maps - MARQUEURS BLEU FONCÉ UNIFORMES
+  Future<void> _createMarkers() async {
     if (_userLocation == null) return;
     
     final Set<Marker> markers = {};
@@ -441,34 +442,15 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
       ),
     );
     
-    // Ajouter un marqueur pour chaque résidence
+    // Ajouter un marqueur pour chaque résidence avec le nouveau système unifié
     for (final residence in _nearbyResidences) {
       // Utiliser l'extension pour récupérer les coordonnées
       final double? lat = residence.latitude;
       final double? lng = residence.longitude;
       
       if (lat != null && lng != null) {
-        
-        // Déterminer la couleur du marqueur selon la catégorie de la résidence
-        BitmapDescriptor markerIcon;
-        
-        // Pour l'exemple, nous utilisons des couleurs différentes selon le type de résidence
-        // Vous pourriez adapter cela selon les catégories réelles
-        String typeStr = residence.type.toString().toLowerCase();
-        if (typeStr.contains('meublee')) {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-        } else if (typeStr.contains('hotel')) {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-        } else if (typeStr.contains('insolite')) {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
-        } else if (typeStr.contains('colocation')) {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
-        } else {
-          markerIcon = BitmapDescriptor.defaultMarker;
-        }
-        
-        // Formatter le prix pour l'affichage
-        String priceDisplay = residence.formattedPrice;
+        // Utiliser le nouveau système de marqueurs unifié avec icônes et prix
+        final BitmapDescriptor markerIcon = await ResidenceMarkerExtension.generateMarkerForResidence(residence);
         
         markers.add(
           Marker(
@@ -476,7 +458,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
             position: LatLng(lat, lng),
             icon: markerIcon,
             infoWindow: InfoWindow(
-              title: '${residence.title} - $priceDisplay',
+              title: residence.title,
               snippet: '${residence.bedrooms} ch, ${residence.bathrooms} sdb - ${residence.location['displayAddress'] ?? ''}',
             ),
             onTap: () {

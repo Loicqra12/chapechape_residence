@@ -345,7 +345,13 @@ class AfricanPaymentService {
   
   /// Valide les détails d'un paiement Mobile Money
   String? _validateMobileMoneyDetails(AfricanPaymentMethod method, Map<String, dynamic> details) {
+    debugPrint('🔍 [DEBUG] _validateMobileMoneyDetails - method: $method');
+    debugPrint('🔍 [DEBUG] _validateMobileMoneyDetails - details: $details');
+    debugPrint('🔍 [DEBUG] _validateMobileMoneyDetails - containsKey phoneNumber: ${details.containsKey('phoneNumber')}');
+    debugPrint('🔍 [DEBUG] _validateMobileMoneyDetails - phoneNumber value: ${details['phoneNumber']}');
+    
     if (!details.containsKey('phoneNumber') || details['phoneNumber'].toString().isEmpty) {
+      debugPrint('🔍 [DEBUG] _validateMobileMoneyDetails - ERREUR: Numéro de téléphone manquant ou vide');
       return 'Le numéro de téléphone est requis';
     }
     

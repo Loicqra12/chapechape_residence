@@ -14,7 +14,7 @@ class OneSignalService {
   late AuthService _authService;
   String? _userId;
   bool _isInitialized = false;
-  String _baseUrl = 'https://api.chapechape.com'; // À remplacer par l'URL réelle de votre API
+  String _baseUrl = 'http://192.168.1.65:4000/api'; // URL du serveur local
 
   // Singleton pattern
   factory OneSignalService() {

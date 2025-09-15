@@ -14,6 +14,7 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
 import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/notification_service.dart';
+import 'package:chapechape_client/core/services/onesignal_service.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:chapechape_client/presentation/widgets/payment_method_selector.dart';
@@ -133,6 +134,15 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         _isSendingSms = false;
         _smsSuccess = true;
       });
+      
+      // Envoyer une notification push OneSignal
+      try {
+        final oneSignalService = OneSignalService();
+        // Ici vous pourriez envoyer une notification push via votre backend
+        // await oneSignalService.sendBookingConfirmationNotification(_booking!);
+      } catch (e) {
+        debugPrint('Erreur notification push: $e');
+      }
       
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/review/review_model.dart';
+import '../../../core/config/app_config_manager.dart';
 import 'review_response_dialog.dart';
 
 /// Widget pour afficher un avis individuel avec possibilité de réponse
@@ -26,7 +27,7 @@ class ReviewItemWidget extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundImage: review.userProfileImage != null
-                      ? NetworkImage(review.userProfileImage!)
+                      ? NetworkImage(AppConfigManager.getProfileImageUrl(review.userProfileImage!))
                       : null,
                   child: review.userProfileImage == null
                       ? const Icon(Icons.person)

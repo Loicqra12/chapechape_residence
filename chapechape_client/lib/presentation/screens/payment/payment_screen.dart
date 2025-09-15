@@ -6,6 +6,8 @@ import 'package:chapechape_client/core/blocs/payment/payment_event.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_state.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
 import 'package:chapechape_client/core/services/payment_service.dart';
+import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
+import 'package:chapechape_client/core/models/phone_number.dart';
 
 import 'package:chapechape_client/config/theme.dart';
 
@@ -30,10 +32,13 @@ class _PaymentScreenState extends State<PaymentScreen>
     with AutomaticKeepAliveClientMixin {
   PaymentMethod _selectedMethod = PaymentMethod.mobileMoney;
   bool _isLoading = false;
-  String? _phoneNumber;
   final _formKey = GlobalKey<FormState>();
   PaymentIntent? _paymentIntent;
   Payment? _payment;
+  
+  // Variables pour le widget de téléphone avancé
+  PhoneNumber? _selectedPhoneNumber;
+  bool _isPhoneValid = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -116,38 +121,27 @@ class _PaymentScreenState extends State<PaymentScreen>
           _selectedMethod == PaymentMethod.moovMoney ||
           _selectedMethod == PaymentMethod.mtnMoney) {
         // Validation renforcée du numéro de téléphone
-        if (_phoneNumber != null && _phoneNumber!.trim().isNotEmpty) {
-          // Formater le numéro pour le backend
-          final formattedPhone = _formatPhoneNumberForBackend(_phoneNumber!.trim());
+        if (_selectedPhoneNumber?.phoneNumber != null && _selectedPhoneNumber!.phoneNumber!.isNotEmpty) {
+          // Le numéro est déjà formaté par le widget avancé
+          final formattedPhone = _selectedPhoneNumber!.phoneNumber!;
           
-          // Validation supplémentaire du format du numéro formaté
-          final phoneRegex = RegExp(r'^0[0-9]{8,9}$');
-          if (phoneRegex.hasMatch(formattedPhone)) {
-            // ✅ MARQUER COMME EN COURS
-            setState(() {
-              _isLoading = true;
-            });
-            
-            context.read<PaymentBloc>().add(
-              InitiateExternalPayment(
-                method: _getPaymentMethodString(),
-                reservationId: widget.reservationId ?? '',
-                phoneNumber: formattedPhone,
-                amount: _paymentIntent!.amount,
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Format de numéro invalide: $formattedPhone. Utilisez le format 0XXXXXXXX'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          // ✅ MARQUER COMME EN COURS
+          setState(() {
+            _isLoading = true;
+          });
+          
+          context.read<PaymentBloc>().add(
+            InitiateExternalPayment(
+              method: _getPaymentMethodString(),
+              reservationId: widget.reservationId ?? '',
+              phoneNumber: formattedPhone,
+              amount: _paymentIntent!.amount,
+            ),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Veuillez entrer votre numéro de téléphone'),
+              content: Text('Veuillez entrer un numéro de téléphone valide'),
               backgroundColor: Colors.red,
             ),
           );
@@ -691,36 +685,21 @@ class _PaymentScreenState extends State<PaymentScreen>
               ),
               const Divider(),
               const SizedBox(height: 16),
-              TextFormField(
-                key: ValueKey('phone_field_$providerName'),
-                decoration: InputDecoration(
-                  labelText: 'Numéro de téléphone',
-                  hintText: 'Ex: +225 0101020304',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.phone),
-                  suffixText: providerName,
-                  errorMaxLines: 2,
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Veuillez entrer votre numéro de téléphone';
-                  }
-                  // Validation du format du numéro de téléphone
-                  final phoneRegex = RegExp(r'^\+?[0-9]{8,15}$');
-                  if (!phoneRegex.hasMatch(value.trim())) {
-                    return 'Format de numéro invalide (8-15 chiffres)';
-                  }
-                  return null;
-                },
-                onChanged: (value) {
+              AdvancedPhoneInputWidget(
+                label: 'Numéro de téléphone',
+                hint: 'Ex: +225 07 12 34 56 78',
+                isRequired: true,
+                onPhoneChanged: (PhoneNumber phoneNumber) {
                   setState(() {
-                    _phoneNumber = value.trim();
+                    _selectedPhoneNumber = phoneNumber;
                   });
                 },
-                onSaved: (value) {
-                  _phoneNumber = value?.trim();
+                onValidationChanged: (bool isValid) {
+                  setState(() {
+                    _isPhoneValid = isValid;
+                  });
                 },
+                themeColor: Theme.of(context).primaryColor,
               ),
               const SizedBox(height: 16),
               Text(
@@ -766,17 +745,28 @@ class _PaymentScreenState extends State<PaymentScreen>
   }
 
   Widget _buildConfirmButton() {
+    // Désactiver le bouton si le téléphone n'est pas valide pour les paiements mobile money
+    bool isDisabled = false;
+    if (_selectedMethod == PaymentMethod.wave ||
+        _selectedMethod == PaymentMethod.mobileMoney ||
+        _selectedMethod == PaymentMethod.orangeMoney ||
+        _selectedMethod == PaymentMethod.moovMoney ||
+        _selectedMethod == PaymentMethod.mtnMoney) {
+      isDisabled = !_isPhoneValid;
+    }
+    
     return ElevatedButton(
-      onPressed: _confirmPayment,
+      onPressed: isDisabled ? null : _confirmPayment,
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: isDisabled ? Colors.grey : AppTheme.primaryColor,
       ),
-      child: const Text(
-        'Confirmer le paiement',
+      child: Text(
+        isDisabled ? 'Numéro de téléphone requis' : 'Confirmer le paiement',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
+          color: isDisabled ? Colors.grey[600] : Colors.white,
         ),
       ),
     );

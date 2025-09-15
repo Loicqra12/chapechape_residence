@@ -8,6 +8,8 @@ import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
 import 'package:chapechape_client/presentation/widgets/custom_text_field.dart';
+import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
+import 'package:chapechape_client/core/models/phone_number.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -21,19 +23,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _acceptTerms = false;
+  
+  // Variables pour le widget de téléphone avancé
+  PhoneNumber? _selectedPhoneNumber;
+  bool _isPhoneValid = false;
 
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -58,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               firstName: _firstNameController.text.trim(),
               lastName: _lastNameController.text.trim(),
               email: _emailController.text.trim(),
-              phone: _phoneController.text.trim(),
+              phone: _selectedPhoneNumber?.completeNumber ?? '',
               password: _passwordController.text,
             ),
           );
@@ -251,13 +255,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         validator: FormValidators.validateEmail,
                       ),
                       const SizedBox(height: 20),
-                      CustomTextField(
-                        controller: _phoneController,
-                        labelText: 'Téléphone',
-                        hintText: 'Entrez votre numéro de téléphone',
-                        prefixIcon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                        validator: FormValidators.validatePhone,
+                      AdvancedPhoneInputWidget(
+                        label: 'Téléphone',
+                        hint: 'Entrez votre numéro de téléphone',
+                        isRequired: true,
+                        onPhoneChanged: (PhoneNumber phoneNumber) {
+                          setState(() {
+                            _selectedPhoneNumber = phoneNumber;
+                          });
+                        },
+                        onValidationChanged: (bool isValid) {
+                          setState(() {
+                            _isPhoneValid = isValid;
+                          });
+                        },
+                        themeColor: Theme.of(context).primaryColor,
                       ),
                       const SizedBox(height: 20),
                       CustomTextField(

@@ -9,6 +9,7 @@ import '../../../core/services/api/message_service.dart';
 import '../../../core/services/socket_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/config/app_config_manager.dart';
 import '../../widgets/layout/custom_sliver_app_bar.dart';
 import '../../widgets/message/message_bubble.dart';
 import '../../widgets/message/message_input.dart';
@@ -457,7 +458,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             radius: 24,
                             backgroundColor: AppColors.secondary,
                             backgroundImage: client.avatar != null
-                                ? NetworkImage(client.avatar!)
+                                ? NetworkImage(AppConfigManager.getProfileImageUrl(client.avatar!))
                                 : null,
                             child: client.avatar == null
                                 ? Text(

@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:chapechape_client/core/services/connectivity_service.dart';
+import 'package:chapechape_client/core/services/optimized_connectivity_service.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 
 /// Intercepteur Dio pour gérer les problèmes de connectivité
 class ConnectivityInterceptor extends Interceptor {
-  final ConnectivityService connectivityService;
+  final OptimizedConnectivityService connectivityService;
   final CacheService cacheService;
   final Function(String, String, Map<String, dynamic>?, Map<String, dynamic>?)? onOfflineRequest;
 

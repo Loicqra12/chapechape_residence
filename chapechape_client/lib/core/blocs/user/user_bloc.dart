@@ -42,6 +42,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         lastName: event.lastName,
         phoneNumber: event.phoneNumber,
         profilePicture: event.profilePicture,
+        isPhoneVerified: event.isPhoneVerified,
       );
       emit(UserProfileUpdated(user));
     } catch (e) {

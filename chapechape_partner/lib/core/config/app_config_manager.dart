@@ -198,7 +198,7 @@ class AppConfigManager {
             _config = {
               'appName': 'ChapeChape Partner',
               'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/api',
-              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com/api',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://api.chapechaperesidence.com',
               'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://api.chapechaperesidence.com/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
@@ -242,11 +242,11 @@ class AppConfigManager {
   
   /// Construit un point de terminaison d'API complet
   static String getApiEndpoint(String path) {
-    final baseUrl = apiUrl;
+    final baseUrl = apiBaseUrl; // Utiliser apiBaseUrl au lieu de apiUrl
     if (path.startsWith('/')) {
-      return '$baseUrl$path';
+      return '$baseUrl/api$path';
     } else {
-      return '$baseUrl/$path';
+      return '$baseUrl/api/$path';
     }
   }
   
@@ -330,9 +330,11 @@ class AppConfigManager {
     'images-1745120501449-279771060.jpg',
     'images-1745118259981-271943468.jpg',
     'images-1745119349926-381849983.jpg',
-    'images-1745119349926-381849983.jpg',
-    'images-1745118259981-271943468.jpg',
-    'images-1745120501449-279771060.jpg'
+    'images-1744134364693-973598783.jpg',
+    'images-1743013773412-758687489.jpg',
+    'images-1744744845850-187001226.jpg',
+    // Pattern générique pour les images sans host
+    'images-',
   ];
   
   /// Construit une URL d'image de profil complète
@@ -352,6 +354,12 @@ class AppConfigManager {
         debugPrint('Image problématique connue détectée: $path - Elle sera ignorée');
         return '';
       }
+    }
+    
+    // Vérifier si c'est une URL relative sans host (commence par /uploads/)
+    if (path.startsWith('/uploads/') && !path.startsWith('http')) {
+      debugPrint('URL relative sans host détectée: $path - Elle sera ignorée');
+      return '';
     }
     
     // Vérifier si c'est une URL Cloudinary

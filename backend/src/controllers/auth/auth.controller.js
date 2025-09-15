@@ -124,6 +124,7 @@ exports.getMe = asyncHandler(async (req, res) => {
                 lastName: user.lastName,
                 role: user.role,
                 phoneNumber: user.phoneNumber,
+                isPhoneVerified: user.isPhoneVerified || false,
                 profilePicture: user.profilePicture || user.profileImage,
                 createdAt: user.createdAt
             }
@@ -351,4 +352,57 @@ const generateToken = (userId) => {
         process.env.JWT_SECRET,
         { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
     );
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { firstName, lastName, phoneNumber, isPhoneVerified } = req.body;
+
+        // Construire l'objet de mise à jour
+        const updateData = {};
+        if (firstName !== undefined) updateData.firstName = firstName;
+        if (lastName !== undefined) updateData.lastName = lastName;
+        if (phoneNumber !== undefined) {
+            // Normaliser le numéro de téléphone au format E.164
+            updateData.phoneNumber = normalizePhoneToE164(phoneNumber);
+        }
+        if (isPhoneVerified !== undefined) updateData.isPhoneVerified = isPhoneVerified;
+
+        // Mettre à jour l'utilisateur
+        const user = await User.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!user) {
+            throw new apiError('Utilisateur non trouvé', 404);
+        }
+
+        res.status(200).json({
+            success: true,
+            user: user
+        });
+
+    } catch (error) {
+        console.error('Erreur updateProfile:', error);
+        throw new apiError('Erreur lors de la mise à jour du profil', 500);
+    }
+});
+
+// Fonction utilitaire pour normaliser les numéros de téléphone
+const normalizePhoneToE164 = (phoneNumber) => {
+    if (!phoneNumber) return phoneNumber;
+    
+    // Si déjà en format E.164, retourner tel quel
+    if (phoneNumber.startsWith('+')) {
+        return phoneNumber;
+    }
+    
+    // Par défaut, ajouter le code pays de la Côte d'Ivoire (+225)
+    return `+225${phoneNumber}`;
 };

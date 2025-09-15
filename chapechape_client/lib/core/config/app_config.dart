@@ -16,7 +16,7 @@ class AppConfig {
     // 🚀 UTILISER L'ENVIRONNEMENT DE DÉVELOPPEMENT pour le backend local
     await AppConfigManager.initialize(environment: Environment.dev);
     
-    debugPrint('🔧 [AppConfig] Initialisation forcée en PRODUCTION');
+    debugPrint('🔧 [AppConfig] Initialisation en DÉVELOPPEMENT pour backend local');
     _initialized = true;
   }
 

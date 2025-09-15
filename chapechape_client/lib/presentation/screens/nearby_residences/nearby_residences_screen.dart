@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/services/nearby_residences_service.dart';
 import '../../../core/models/residence_model.dart';
 import '../../../core/services/map_provider/google_maps_service.dart';
+import '../../../core/extensions/residence_marker_extension.dart';
 
 class NearbyResidencesScreen extends StatefulWidget {
   const NearbyResidencesScreen({Key? key}) : super(key: key);
@@ -124,40 +125,46 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
     }
   }
   
-  // Mettre à jour les marqueurs sur la carte
-  void _updateMapMarkers() {
+  // Mettre à jour les marqueurs sur la carte - MARQUEURS BLEU FONCÉ UNIFORMES
+  Future<void> _updateMapMarkers() async {
     setState(() {
       _markers.clear();
-      
-      // Ajouter un marqueur pour la position actuelle
-      if (_currentLat != null && _currentLng != null) {
+    });
+    
+    // Ajouter un marqueur pour la position actuelle
+    if (_currentLat != null && _currentLng != null) {
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('current_location'),
+          position: LatLng(_currentLat!, _currentLng!),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          infoWindow: const InfoWindow(title: 'Ma position'),
+        ),
+      );
+    }
+    
+    // Ajouter des marqueurs pour chaque résidence avec le nouveau système unifié
+    for (final residence in _residences) {
+      if (residence.location.containsKey('coordinates')) {
+        // Utiliser le nouveau système de marqueurs unifié avec icônes et prix
+        final BitmapDescriptor markerIcon = await ResidenceMarkerExtension.generateMarkerForResidence(residence);
+        
         _markers.add(
           Marker(
-            markerId: const MarkerId('current_location'),
-            position: LatLng(_currentLat!, _currentLng!),
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-            infoWindow: const InfoWindow(title: 'Ma position'),
+            markerId: MarkerId(residence.id ?? 'residence_${_residences.indexOf(residence)}'),
+            position: LatLng(_getLatitude(residence.location), _getLongitude(residence.location)),
+            icon: markerIcon,
+            infoWindow: InfoWindow(
+              title: residence.name,
+              snippet: residence.formattedAddress,
+              onTap: () => _onMarkerTap(residence),
+            ),
           ),
         );
       }
-      
-      // Ajouter des marqueurs pour chaque résidence
-      for (final residence in _residences) {
-        if (residence.location.containsKey('coordinates')) {
-          _markers.add(
-            Marker(
-              markerId: MarkerId(residence.id ?? 'residence_${_residences.indexOf(residence)}'),
-              position: LatLng(_getLatitude(residence.location), _getLongitude(residence.location)),
-              infoWindow: InfoWindow(
-                title: residence.name,
-                snippet: residence.formattedAddress,
-                onTap: () => _onMarkerTap(residence),
-              ),
-            ),
-          );
-        }
-      }
-    });
+    }
+    
+    setState(() {});
   }
   
   // Afficher une erreur d'autorisation

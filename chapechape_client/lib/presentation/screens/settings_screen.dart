@@ -4,6 +4,7 @@ import 'package:chapechape_client/presentation/screens/settings/temperature_scre
 import 'package:chapechape_client/presentation/screens/settings/display_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/about_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings/notification_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -72,7 +73,12 @@ class SettingsScreen extends StatelessWidget {
             'Gérer les notifications push',
             Icons.notifications_outlined,
             () {
-              // Navigation vers les paramètres de notifications
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsScreen(),
+                ),
+              );
             },
           ),
           _buildSettingItem(

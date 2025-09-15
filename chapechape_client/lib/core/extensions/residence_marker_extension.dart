@@ -115,7 +115,7 @@ extension ResidenceMarkerExtension on Residence {
   }
   
   /// Génère une icône de marqueur pour une résidence spécifique
-  /// avec son prix exact au format Booking.com
+  /// avec son prix exact au format Booking.com - BLEU FONCÉ UNIFORME
   static Future<BitmapDescriptor> generateMarkerForResidence(Residence residence) async {
     // Toujours forcer la regénération pour prendre en compte les modifications de design
     // Ne plus utiliser le cache pour l'instant pour voir les changements immédiatement
@@ -123,20 +123,17 @@ extension ResidenceMarkerExtension on Residence {
     //  return _residenceMarkers[residence.id]!;
     // }
     
-    // Obtenir la couleur correspondant à la catégorie de la résidence
-    final backgroundColor = residence.getOverlayColor();
+    // Utiliser ROSE comme dans la capture d'écran
+    const Color uniformPinkColor = Color(0xFFE91E63);
     
-    // Assombrir légèrement la couleur pour un meilleur contraste avec le texte blanc
-    final Color markerColor = backgroundColor is MaterialColor
-        ? backgroundColor.shade800  // Pour les MaterialColor comme Colors.blue
-        : HSLColor.fromColor(backgroundColor).withLightness(
-            HSLColor.fromColor(backgroundColor).lightness * 0.8
-          ).toColor();
+    // Obtenir l'icône emoji selon le type de résidence
+    final String iconEmoji = residence.getResidenceTypeEmoji();
     
-    // Créer un nouveau marqueur avec le prix exact de la résidence et sa couleur catégorielle
+    // Créer un nouveau marqueur avec le prix exact et l'icône
     final BitmapDescriptor marker = await CustomMarkerGenerator.createPriceMarker(
       price: residence.price,
-      backgroundColor: markerColor,
+      backgroundColor: uniformPinkColor,
+      iconEmoji: iconEmoji,
     );
     
     // Stocker dans le cache

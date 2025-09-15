@@ -5,10 +5,14 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const cors = require('cors');
 
-// Configuration du rate limiting
+// Configuration du rate limiting (plus permissif)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limite chaque IP à 100 requêtes par windowMs
+    max: 500, // Augmenté à 500 requêtes par IP par fenêtre (au lieu de 100)
+    skip: (req) => {
+        // Skip rate limiting pour les health checks et pings
+        return req.path.startsWith('/api/health') || req.path.startsWith('/api/ping');
+    }
 });
 
 // Middleware de sécurité général
