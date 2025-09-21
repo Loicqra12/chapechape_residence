@@ -131,9 +131,9 @@ class PaymentService {
   /// Récupère les méthodes de paiement disponibles (via AfricanPaymentService)
   Future<List<Map<String, dynamic>>> getPaymentMethods() async {
     try {
-      // Note: Le backend n'a pas d'endpoint /api/payments/methods
-      // Les méthodes de paiement sont gérées via AfricanPaymentService
-      throw UnimplementedError('Utiliser AfricanPaymentService.getAvailableAfricanPaymentMethods()');
+      // Utiliser l'API existante pour récupérer les méthodes de paiement
+      final response = await _apiService.get('/api/pricing/payment-methods');
+      return List<Map<String, dynamic>>.from(response.data['data'] ?? []);
     } catch (e) {
       throw Exception('Impossible de récupérer les méthodes de paiement: $e');
     }
@@ -142,10 +142,9 @@ class PaymentService {
   /// Récupère les statistiques de paiement (via payout stats)
   Future<Map<String, dynamic>> getPaymentStats() async {
     try {
-      // Note: Le backend n'a pas d'endpoint /api/payments/stats
-      // Les statistiques se trouvent dans /api/payouts/stats/:partnerId
-      // Il faut obtenir l'ID du partner connecté depuis le service d'authentification
-      throw UnimplementedError('Utiliser getPayoutStats() avec partnerId du user connecté');
+      final partnerId = await _getCurrentPartnerId();
+      final response = await _apiService.get('/api/payouts/stats/$partnerId');
+      return response.data;
     } catch (e) {
       throw Exception('Impossible de récupérer les statistiques de paiement: $e');
     }

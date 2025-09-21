@@ -51,6 +51,8 @@ const deviceRoutes = require("./routes/device.routes");
 const smsRoutes = require("./routes/sms.routes");
 // Import des routes website
 const websiteRoutes = require("./routes/website.routes");
+// Import des routes d'audit et sécurité
+const auditRoutes = require("./routes/audit.routes");
 // Import des routes pricing (tarification dynamique) - DÉJÀ DÉCLARÉ PLUS HAUT
 // const pricingRoutes = require("./routes/pricing.routes"); // DUPLIQUÉ - SUPPRIMÉ
 // Import des routes payout (reversements partners)
@@ -345,6 +347,7 @@ app.use("/api/sms", smsRoutes); // Ajout des routes pour l'envoi de SMS via Twil
 app.use("/api/promotions", promotionRoutes); // Ajout des routes pour la gestion des promotions
 app.use("/api/maps", mapsRoutes); // Ajout des routes pour la géolocalisation et les cartes
 app.use("/api/cancellation-policies", cancellationPolicyRoutes); // Routes pour les politiques d'annulation
+app.use("/api/audit", auditRoutes); // Routes pour l'audit et la sécurité
 app.use("/api/website", websiteRoutes); // Routes pour le site vitrine (contact, newsletter)
 app.use("/api/pricing", pricingRoutes); // Routes pour la tarification dynamique CinetPay - ✅ Réactivé après correction bug d'import auth
 app.use("/api/payouts", payoutRoutes); // ✅ RÉACTIVÉ - Routes pour les reversements aux partners via CinetPay

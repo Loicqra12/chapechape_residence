@@ -9,6 +9,9 @@ class ReservationService {
 
   ReservationService(this._dio);
 
+  // Constructeur nommé pour l'instanciation simple
+  ReservationService.withDefaultDio() : _dio = Dio();
+
   Future<List<Reservation>> getReservations({
     String? status,
     DateTime? startDate,
@@ -460,6 +463,48 @@ class ReservationService {
       return null;
     } catch (e) {
       throw Exception('Erreur lors du check-out: ${e.toString()}');
+    }
+  }
+
+  /// Effectue un check-in ou check-out pour une réservation
+  Future<Map<String, dynamic>> performCheckInOut({
+    required String reservationId,
+    required String action, // 'checkin' ou 'checkout'
+    required DateTime timestamp,
+    String? location,
+  }) async {
+    try {
+      final response = await _dio.post(
+        _ep('reservations/$reservationId/$action'),
+        data: {
+          'timestamp': timestamp.toIso8601String(),
+          'location': location,
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': response.data['data'],
+          'message': response.data['message'] ?? 'Action effectuée avec succès',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': response.data['message'] ?? 'Échec de l\'action',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Erreur lors de l\'action: ${e.toString()}',
+      };
     }
   }
 }

@@ -7,6 +7,7 @@ const validate = require('../middlewares/validate.middleware');
 const authValidation = require('../validations/auth.validation');
 const {
     register,
+    registerPartner,
     login,
     logout,
     getMe,
@@ -66,6 +67,7 @@ const {
  *         description: Invalid input or email already exists
  */
 router.post('/register', validate(authValidation.register), register);
+router.post('/register-partner', validate(authValidation.registerPartner), registerPartner);
 
 /**
  * @swagger
@@ -85,7 +87,7 @@ router.post('/register', validate(authValidation.register), register);
  *             properties:
  *               email:
  *                 type: string
- *                 format: email
+ *                 description: "Email ou numéro de téléphone (E.164 ou format local, ex: +225..., 07...)"
  *               password:
  *                 type: string
  *                 format: password

@@ -20,6 +20,22 @@ const PARTNER = {
   DEPOSIT_RECEIVED: 'partner_deposit_received', // 💵 Dépôt de garantie reçu
   MONTHLY_STATS: 'partner_monthly_stats',       // 📈 Statistiques mensuelles
   NEW_REVIEW: 'partner_new_review',             // 📈 Nouvelle évaluation
+  
+  // Notifications de payout et transfert
+  PAYOUT_INITIATED: 'partner_payout_initiated', // 💸 Payout initié
+  PAYOUT_SUCCESS: 'partner_payout_success',     // ✅ Payout réussi
+  PAYOUT_FAILED: 'partner_payout_failed',       // ❌ Payout échoué
+  TRANSFER_INITIATED: 'partner_transfer_initiated', // 💸 Transfert initié
+  TRANSFER_SUCCESS: 'partner_transfer_success', // ✅ Transfert réussi
+  TRANSFER_FAILED: 'partner_transfer_failed',   // ❌ Transfert échoué
+  
+  // Notifications de sécurité et vérification
+  PHONE_CHANGED: 'partner_phone_changed',       // 📞 Numéro changé
+  VERIFICATION_SENT: 'partner_verification_sent', // 🔐 Code envoyé
+  VERIFICATION_SUCCESS: 'partner_verification_success', // ✅ Vérification réussie
+  VERIFICATION_FAILED: 'partner_verification_failed', // ❌ Vérification échouée
+  SECURITY_ALERT: 'partner_security_alert',     // 🛡️ Alerte sécurité
+  LOGIN_ALERT: 'partner_login_alert',           // 🔐 Nouvelle connexion
 };
 
 // Types pour les clients
@@ -41,6 +57,14 @@ const CLIENT = {
   PAYMENT_EXPIRED: 'client_payment_expired',       // ⏰ Délai de paiement expiré
   CHECKIN_READY: 'client_checkin_ready',           // 🏠 Prêt pour le check-in
   CHECKOUT_REMINDER: 'client_checkout_reminder',   // 🚪 Rappel de check-out
+  
+  // Notifications de sécurité et vérification
+  PHONE_CHANGED: 'client_phone_changed',           // 📞 Numéro changé
+  VERIFICATION_SENT: 'client_verification_sent',   // 🔐 Code envoyé
+  VERIFICATION_SUCCESS: 'client_verification_success', // ✅ Vérification réussie
+  VERIFICATION_FAILED: 'client_verification_failed', // ❌ Vérification échouée
+  SECURITY_ALERT: 'client_security_alert',         // 🛡️ Alerte sécurité
+  LOGIN_ALERT: 'client_login_alert',               // 🔐 Nouvelle connexion
 };
 
 module.exports = {
@@ -60,6 +84,20 @@ module.exports = {
       [PARTNER.MONTHLY_STATS]: '📈 Vos statistiques du mois',
       [PARTNER.NEW_REVIEW]: '📈 Nouvelle évaluation reçue',
       
+      // Titres pour les nouveaux types partenaires
+      [PARTNER.PAYOUT_INITIATED]: '💸 Payout initié',
+      [PARTNER.PAYOUT_SUCCESS]: '✅ Payout réussi',
+      [PARTNER.PAYOUT_FAILED]: '❌ Payout échoué',
+      [PARTNER.TRANSFER_INITIATED]: '💸 Transfert initié',
+      [PARTNER.TRANSFER_SUCCESS]: '✅ Transfert réussi',
+      [PARTNER.TRANSFER_FAILED]: '❌ Transfert échoué',
+      [PARTNER.PHONE_CHANGED]: '📞 Numéro de téléphone changé',
+      [PARTNER.VERIFICATION_SENT]: '🔐 Code de vérification envoyé',
+      [PARTNER.VERIFICATION_SUCCESS]: '✅ Vérification réussie',
+      [PARTNER.VERIFICATION_FAILED]: '❌ Vérification échouée',
+      [PARTNER.SECURITY_ALERT]: '🛡️ Alerte de sécurité',
+      [PARTNER.LOGIN_ALERT]: '🔐 Nouvelle connexion détectée',
+      
       // Titres pour les clients
       [CLIENT.BOOKING_CONFIRMED]: '✅ Réservation confirmée',
       [CLIENT.ARRIVAL_REMINDER]: '🕓 Rappel d\'arrivée',
@@ -69,6 +107,21 @@ module.exports = {
       [CLIENT.POPULAR_RESIDENCE]: '🔥 Résidence populaire',
       [CLIENT.LIMITED_AVAILABILITY]: '🔥 Places limitées',
       [CLIENT.NEARBY_RESIDENCE]: '📍 Résidences à proximité',
+      [CLIENT.PAYMENT_PENDING]: '💳 Paiement en attente',
+      [CLIENT.AWAITING_APPROVAL]: '⏳ En attente d\'approbation',
+      [CLIENT.BOOKING_APPROVED]: '✅ Réservation approuvée',
+      [CLIENT.BOOKING_REJECTED]: '❌ Réservation refusée',
+      [CLIENT.PAYMENT_EXPIRED]: '⏰ Délai de paiement expiré',
+      [CLIENT.CHECKIN_READY]: '🏠 Prêt pour le check-in',
+      [CLIENT.CHECKOUT_REMINDER]: '🚪 Rappel de check-out',
+      
+      // Titres pour les nouveaux types clients
+      [CLIENT.PHONE_CHANGED]: '📞 Numéro de téléphone changé',
+      [CLIENT.VERIFICATION_SENT]: '🔐 Code de vérification envoyé',
+      [CLIENT.VERIFICATION_SUCCESS]: '✅ Vérification réussie',
+      [CLIENT.VERIFICATION_FAILED]: '❌ Vérification échouée',
+      [CLIENT.SECURITY_ALERT]: '🛡️ Alerte de sécurité',
+      [CLIENT.LOGIN_ALERT]: '🔐 Nouvelle connexion détectée',
       
       // Titres communs
       [COMMON.NEW_MESSAGE]: '💬 Nouveau message',

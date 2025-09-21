@@ -28,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Variables pour le widget de téléphone avancé
   PhoneNumber? _selectedPhoneNumber;
   bool _isPhoneValid = false;
+  String _selectedCountryCode = 'CI'; // Code pays par défaut
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
@@ -61,13 +62,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _onRegisterPressed() {
     if (_formKey.currentState?.validate() ?? false) {
-      // Normaliser et assurer des valeurs pour firstName/lastName
+      // Valider que les champs obligatoires sont remplis
       String firstName = _firstNameController.text.trim();
       String lastName = _lastNameController.text.trim();
-      final company = _companyNameController.text.trim();
-      // Fallback sécurisé: si l'utilisateur n'a pas saisi les noms, on dérive depuis le nom d'entreprise
-      if (firstName.isEmpty && company.isNotEmpty) firstName = company;
-      if (lastName.isEmpty) lastName = 'Partner';
+      
+      // Les noms sont obligatoires, pas de fallback automatique
+      if (firstName.isEmpty || lastName.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Prénom et nom sont obligatoires'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
       context.read<AuthBloc>().add(
         AuthRegisterRequested(
@@ -76,6 +84,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           email: _emailController.text.trim(),
           phoneNumber: _selectedPhoneNumber?.completeNumber ?? '',
           password: _passwordController.text,
+          countryCode: _selectedCountryCode, // Passer le code pays
         ),
       );
     }
@@ -156,14 +165,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 20),
                   TextInput(
-                    label: 'Nom de l\'entreprise',
+                    label: 'Nom de l\'entreprise (optionnel)',
                     hint: 'Entrez le nom de votre entreprise',
                     controller: _companyNameController,
                     enabled: !_isLoading,
-                    validator: (value) => FormValidators.validateRequired(
-                      value, 
-                      fieldName: 'Le nom de l\'entreprise'
-                    ),
+                    validator: null, // Optionnel, pas de validation requise
                   ),
                   const SizedBox(height: 20),
                   TextInput(
@@ -184,6 +190,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPhoneChanged: (PhoneNumber phoneNumber) {
                       setState(() {
                         _selectedPhoneNumber = phoneNumber;
+                        _selectedCountryCode = phoneNumber.isoCode; // Extraire le code pays
                       });
                     },
                     onValidationChanged: (bool isValid) {

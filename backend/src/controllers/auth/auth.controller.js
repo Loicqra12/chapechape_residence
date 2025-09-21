@@ -5,6 +5,9 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const asyncHandler = require('../../middlewares/async.middleware');
 const apiError = require('../../utils/apiError');
+const notificationService = require('../../services/notification.service');
+const auditService = require('../../services/audit.service');
+const LoginAttempt = require('../../models/loginAttempt.model');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -52,6 +55,66 @@ exports.register = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Register partner
+// @route   POST /api/auth/register-partner
+// @access  Public
+exports.registerPartner = asyncHandler(async (req, res) => {
+    try {
+        const { email, password, firstName, lastName, phoneNumber, countryCode = 'CI' } = req.body;
+
+        // Importer l'utilitaire de normalisation téléphone
+        const { normalizePhoneToE164, isValidE164 } = require('../../utils/phone.util');
+
+        // Normaliser le numéro de téléphone en E.164 avec le code pays
+        const normalizedPhone = normalizePhoneToE164(phoneNumber, countryCode);
+        
+        // Vérifier que la normalisation a réussi
+        if (!isValidE164(normalizedPhone)) {
+            throw new apiError(`Numéro de téléphone invalide pour le pays ${countryCode}. Formats acceptés: +225..., 07..., 77...`, 400);
+        }
+
+        // Vérifier si l'utilisateur existe déjà
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            throw new apiError('Un utilisateur avec cet email existe déjà', 400);
+        }
+
+        // Créer l'utilisateur avec le rôle partner
+        const user = await User.create({
+            email,
+            password,
+            firstName,
+            lastName,
+            phoneNumber: normalizedPhone,
+            role: 'partner_pending' // Étape d'onboarding avant activation complète
+        });
+
+        // Générer le token d'accès avec la nouvelle fonction
+        const accessToken = jwt.generateAccessToken(user._id, user.role);
+        
+        // Générer le token de rafraîchissement
+        const refreshToken = jwt.generateRefreshToken(user._id);
+
+        res.status(201).json({
+            success: true,
+            token: accessToken,
+            refreshToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                isPhoneVerified: user.isPhoneVerified || false,
+                phoneNumber: user.phoneNumber
+            },
+            message: 'Compte partenaire créé. Veuillez vérifier votre numéro de téléphone pour activer votre compte.'
+        });
+    } catch (error) {
+        throw new apiError('Erreur lors de l\'inscription du partenaire', 500);
+    }
+});
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -64,21 +127,96 @@ exports.login = asyncHandler(async (req, res) => {
             throw new apiError('Veuillez fournir un email et un mot de passe', 400);
         }
 
-        // Trouver l'utilisateur et inclure le mot de passe
-        const user = await User.findOne({ email }).select('+password');
+        // Importer l'utilitaire de normalisation téléphone
+        const { normalizePhoneToE164, isValidE164 } = require('../../utils/phone.util');
+        
+        let user = null;
+        
+        // Détecter si c'est un email ou un numéro de téléphone
+        if (email.includes('@')) {
+            // C'est un email
+            user = await User.findOne({ email }).select('+password');
+        } else {
+            // C'est probablement un numéro de téléphone, essayer de le normaliser
+            const normalizedPhone = normalizePhoneToE164(email, 'CI'); // Défaut CI
+            if (isValidE164(normalizedPhone)) {
+                user = await User.findOne({ phoneNumber: normalizedPhone }).select('+password');
+            }
+            
+            // Si pas trouvé avec la normalisation, essayer tel quel (fallback)
+            if (!user) {
+                user = await User.findOne({ phoneNumber: email }).select('+password');
+            }
+        }
+        
         if (!user) {
-            throw new apiError('Email ou mot de passe incorrect', 401);
+            throw new apiError('Email ou téléphone ou mot de passe incorrect', 401);
         }
 
         // Vérifier le mot de passe
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
+            // Enregistrer la tentative de connexion échouée
+            await LoginAttempt.create({
+                ip: req.ip,
+                email: email,
+                success: false,
+                attempts: 1,
+                lastAttempt: new Date()
+            });
+
+            // Enregistrer l'échec dans l'audit trail
+            await auditService.logActivity({
+                userId: user._id,
+                action: 'login_failed',
+                module: 'auth',
+                description: `Tentative de connexion échouée depuis ${req.ip}`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
+                metadata: { email, reason: 'invalid_password' },
+                status: 'failure',
+                severity: 'medium'
+            });
+
             throw new apiError('Email ou mot de passe incorrect', 401);
         }
 
         // Mettre à jour la dernière connexion
         user.lastLogin = Date.now();
         await user.save();
+
+        // Enregistrer la tentative de connexion réussie
+        await LoginAttempt.create({
+            ip: req.ip,
+            email: email,
+            success: true,
+            attempts: 1,
+            lastAttempt: new Date()
+        });
+
+        // Enregistrer l'activité dans l'audit trail
+        await auditService.logActivity({
+            userId: user._id,
+            action: 'login',
+            module: 'auth',
+            description: `Connexion réussie depuis ${req.ip}`,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            metadata: { email, role: user.role },
+            status: 'success',
+            severity: 'low'
+        });
+
+        // Envoyer notification de nouvelle connexion
+        try {
+            await notificationService.notifyNewLogin(
+                user._id,
+                req.ip,
+                req.get('User-Agent')
+            );
+        } catch (notificationError) {
+            console.error('Erreur notification nouvelle connexion:', notificationError);
+        }
 
         // Générer le token d'accès avec la nouvelle fonction
         const accessToken = jwt.generateAccessToken(user._id, user.role);

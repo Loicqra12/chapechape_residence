@@ -8,21 +8,21 @@ router.use(protect);
 
 // Routes pour l'envoi de SMS (réservées aux partenaires et administrateurs)
 router.route('/send')
-    .post(authorize('admin', 'partenaire'), smsController.sendSMS);
+    .post(authorize('admin', 'partner'), smsController.sendSMS);
 
 // Route pour envoyer des notifications SMS liées aux réservations
 router.route('/booking')
-    .post(authorize('admin', 'partenaire'), smsController.sendBookingNotification);
+    .post(authorize('admin', 'partner'), smsController.sendBookingNotification);
 
 // Route pour envoyer des instructions de paiement spécifiques à l'Afrique
 router.route('/payment-instructions')
-    .post(authorize('admin', 'partenaire'), smsController.sendPaymentInstructions);
+    .post(authorize('admin', 'partner'), smsController.sendPaymentInstructions);
 
 // Alias explicites côté Réservation (compatibilité et clarté Partner)
 router.route('/reservation')
-    .post(authorize('admin', 'partenaire'), smsController.sendBookingNotification);
+    .post(authorize('admin', 'partner'), smsController.sendBookingNotification);
 
 router.route('/reservation/payment-instructions')
-    .post(authorize('admin', 'partenaire'), smsController.sendPaymentInstructions);
+    .post(authorize('admin', 'partner'), smsController.sendPaymentInstructions);
 
 module.exports = router;

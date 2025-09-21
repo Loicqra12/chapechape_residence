@@ -14,9 +14,11 @@ import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_image.dart';
 import '../../../core/services/api/residence_service.dart';
+import '../../../core/services/api/maps_service.dart';
 import '../../../core/config/app_config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/exceptions/api_exception.dart';
+import 'package:chapechape_maps/chapechape_maps.dart';
 
 class EditResidenceScreen extends StatelessWidget {
   final Residence? residence;
@@ -199,6 +201,50 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         _addressController.text = address;
       }
     });
+  }
+
+  /// Obtient la position actuelle de l'utilisateur automatiquement
+  Future<void> _getCurrentLocation() async {
+    try {
+      // Utiliser le service de géolocalisation existant
+      final locationService = LocationService();
+      
+      // Vérifier si la géolocalisation est disponible
+      final isAvailable = await locationService.isLocationAvailable();
+      if (!isAvailable) {
+        print('⚠️ Géolocalisation non disponible');
+        return;
+      }
+      
+      // Obtenir la position actuelle
+      final position = await locationService.getCurrentPosition();
+      
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+      });
+      
+      // Faire un reverse geocoding pour obtenir l'adresse
+      final mapsService = MapsService(baseUrl: AppConfig.apiUrl);
+      try {
+        final result = await mapsService.reverseGeocode(position.latitude, position.longitude);
+        if (result['formattedAddress'] != null) {
+          setState(() {
+            _formattedAddress = result['formattedAddress'];
+            // Pré-remplir l'adresse si le champ est vide
+            if (_addressController.text.isEmpty) {
+              _addressController.text = result['formattedAddress'];
+            }
+          });
+        }
+      } catch (e) {
+        print('⚠️ Erreur lors du géocodage inverse: $e');
+      }
+      
+      print('✅ Géolocalisation automatique réussie: ${position.latitude}, ${position.longitude}');
+    } catch (e) {
+      print('❌ Erreur lors de la géolocalisation automatique: $e');
+    }
   }
 
   // Variables pour les images
@@ -530,6 +576,11 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         _acceptsBankTransfer =
             widget.residence!.paymentMethods!.contains('bank_transfer');
       }
+    }
+    
+    // Géolocalisation automatique pour les nouvelles résidences
+    if (widget.residence == null) {
+      _getCurrentLocation();
     }
   }
 
@@ -2291,6 +2342,40 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 16),
+                      // Bouton de géolocalisation automatique
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _getCurrentLocation,
+                              icon: const Icon(Icons.my_location),
+                              label: const Text('Ma position actuelle'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                // À remplacer par une véritable implémentation de sélection
+                                setState(() {
+                                  _latitude = 5.3364504;
+                                  _longitude = -4.0266486;
+                                  _formattedAddress = 'Abidjan, Côte d\'Ivoire';
+                                });
+                              },
+                              icon: const Icon(Icons.location_searching),
+                              label: const Text('Sélectionner'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
                       // Utilisation d'un conteneur simple avec gestion d'état pour la sélection de localisation
                       Container(
                         margin: EdgeInsets.only(bottom: 16),
@@ -2978,25 +3063,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     return _getCityName(_selectedCity);
   }
 
-  // Méthode pour construire les données de localisation complètes
-  Map<String, dynamic> _buildLocationData() {
-    return {
-      'country': {
-        'code': _selectedCountry,
-        'name': _getCountryName(_selectedCountry)
-      },
-      'region': {
-        'code': _selectedRegion,
-        'name': _getRegionName(_selectedRegion)
-      },
-      'city': {'code': _selectedCity, 'name': _getSelectedCityName()},
-      'address': _addressController.text,
-      'coordinates': {
-        'latitude': 0.0, // À implémenter pour géolocalisation future
-        'longitude': 0.0
-      }
-    };
-  }
 
   // Méthode pour obtenir la catégorie à partir du type
   String _getCategoryFromType(String type) {

@@ -45,7 +45,30 @@ const options = {
         './src/models/*.js',
         './src/swagger/schemas.js',
         './src/swagger/schemas/*.js',
-        './src/swagger/routes/*.js'
+        './src/swagger/routes/auth.routes.js',
+        './src/swagger/routes/messages.routes.js',
+        './src/swagger/routes/payment.routes.js',
+        './src/swagger/routes/reservation.routes.js',
+        './src/swagger/routes/residence.routes.js',
+        './src/swagger/routes/partner.routes.js',
+        './src/swagger/routes/admin.routes.js',
+        './src/swagger/routes/availability.routes.js',
+        './src/swagger/routes/booking.routes.js',
+        './src/swagger/routes/cancellation-policy.routes.js',
+        './src/swagger/routes/device.routes.js',
+        './src/swagger/routes/favorite.routes.js',
+        './src/swagger/routes/maps.routes.js',
+        './src/swagger/routes/notification.routes.js',
+        './src/swagger/routes/partner-dashboard.routes.js',
+        './src/swagger/routes/role.routes.js',
+        './src/swagger/routes/sms.routes.js',
+        './src/swagger/routes/user.routes.js',
+        './src/swagger/routes/payout.routes.js',
+        './src/swagger/routes/blog.routes.js'
+        // Nouveaux fichiers temporairement désactivés pour diagnostic
+        // './src/swagger/routes/country-management.routes.js',
+        // './src/swagger/routes/partner-verification.routes.js',
+        // './src/swagger/routes/pricing.routes.js'
     ]
 };
 

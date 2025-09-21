@@ -34,6 +34,7 @@ class AuthRegisterRequested extends AuthEvent {
   final String email;
   final String phoneNumber;
   final String password;
+  final String? countryCode;
 
   const AuthRegisterRequested({
     required this.firstName,
@@ -41,10 +42,11 @@ class AuthRegisterRequested extends AuthEvent {
     required this.email,
     required this.phoneNumber,
     required this.password,
+    this.countryCode,
   });
 
   @override
-  List<Object?> get props => [firstName, lastName, email, phoneNumber, password];
+  List<Object?> get props => [firstName, lastName, email, phoneNumber, password, countryCode];
 }
 
 // Événement de déconnexion

@@ -91,6 +91,25 @@ class SmsService {
            regexLocal.hasMatch(cleanPhone);
   }
 
+  /// Valider un numéro de téléphone côté serveur
+  Future<Map<String, dynamic>> validatePhoneNumberServer(String phoneNumber, {String country = 'CI'}) async {
+    try {
+      final response = await _apiService.post('/api/phone/validate', data: {
+        'phoneNumber': phoneNumber,
+        'country': country,
+      });
+      
+      return response.data;
+    } catch (e) {
+      // Fallback vers validation locale
+      return {
+        'valid': isValidPhoneNumber(phoneNumber),
+        'error': 'Validation locale (serveur indisponible)',
+        'suggestions': [],
+      };
+    }
+  }
+
   /// Formater un numéro de téléphone pour l'affichage
   String formatPhoneNumber(String phoneNumber) {
     // Supprime les espaces, tirets et parenthèses

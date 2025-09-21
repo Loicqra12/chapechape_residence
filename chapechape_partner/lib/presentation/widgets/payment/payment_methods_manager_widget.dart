@@ -39,6 +39,7 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
       final availableMethods = await africanPaymentService.getAvailableAfricanPaymentMethods();
       
       // Récupérer les méthodes acceptées par le partenaire
+      // TODO: Passer l'ID de la résidence quand disponible
       final acceptedMethods = await africanPaymentService.getAcceptedPaymentMethods();
       
       // Récupérer les détails des méthodes de paiement
@@ -78,6 +79,7 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
       // Pour chaque méthode sélectionnée, s'assurer qu'elle est ajoutée
       for (final method in _selectedMethods) {
         final details = _methodDetails[method] ?? {};
+        // TODO: Passer l'ID de la résidence quand disponible
         await africanPaymentService.addPaymentMethod(method, details);
       }
       

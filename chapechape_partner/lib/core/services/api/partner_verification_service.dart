@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/config/app_config_manager.dart';
 
 /// Service pour gérer la vérification SMS des partenaires
@@ -28,15 +29,17 @@ class PartnerVerificationService {
     ));
   }
 
-  /// Demander un code de vérification SMS
+  /// Demander un code de vérification SMS ou WhatsApp
   Future<VerificationRequestResult> requestVerification({
     required String phoneNumber,
     required String reason,
+    String channel = 'sms',
   }) async {
     try {
       final response = await _dio.post('/request', data: {
         'phoneNumber': phoneNumber,
         'reason': reason,
+        'channel': channel,
       });
       
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -194,9 +197,14 @@ class AuthInterceptor extends Interceptor {
   }
   
   Future<String?> _getAuthToken() async {
-    // À implémenter selon votre système d'authentification
-    // Par exemple, depuis flutter_secure_storage
-    return null; // Placeholder
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'token');
+      return token;
+    } catch (e) {
+      print('❌ Erreur lors de la récupération du token: $e');
+      return null;
+    }
   }
 }
 

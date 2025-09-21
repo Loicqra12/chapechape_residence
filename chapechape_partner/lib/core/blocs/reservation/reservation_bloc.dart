@@ -45,6 +45,22 @@ class AddReservationNote extends ReservationEvent {
   AddReservationNote(this.reservationId, this.note);
 }
 
+// Événements pour le filtrage et le tri des réservations
+class FilterReservations extends ReservationEvent {
+  final String? status;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  FilterReservations({this.status, this.startDate, this.endDate});
+}
+
+class SortReservations extends ReservationEvent {
+  final String sortBy;
+  final bool ascending;
+
+  SortReservations(this.sortBy, {this.ascending = true});
+}
+
 // States
 abstract class ReservationState {}
 
@@ -104,6 +120,8 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     // Nouveaux gestionnaires d'événements
     on<LoadReservationDetails>(_onLoadReservationDetails);
     on<AddReservationNote>(_onAddReservationNote);
+    on<FilterReservations>(_onFilterReservations);
+    on<SortReservations>(_onSortReservations);
   }
 
   Future<void> _onLoadReservations(
@@ -275,6 +293,92 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       } else {
         emit(ReservationError('Impossible de recharger les détails de la réservation'));
       }
+    } catch (e) {
+      emit(ReservationError(e.toString()));
+    }
+  }
+
+  Future<void> _onFilterReservations(
+    FilterReservations event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      emit(ReservationLoading());
+      
+      // Récupérer toutes les réservations
+      final allReservations = await _reservationService.getPartnerReservations();
+      
+      // Appliquer les filtres
+      List<Reservation> filteredReservations = allReservations;
+      
+      if (event.status != null && event.status != 'all') {
+        final status = ReservationStatus.values.firstWhere(
+          (s) => s.name == event.status,
+          orElse: () => ReservationStatus.pending,
+        );
+        filteredReservations = filteredReservations
+            .where((r) => r.status == status)
+            .toList();
+      }
+      
+      if (event.startDate != null) {
+        filteredReservations = filteredReservations
+            .where((r) => r.checkIn.isAfter(event.startDate!) || 
+                         r.checkIn.isAtSameMomentAs(event.startDate!))
+            .toList();
+      }
+      
+      if (event.endDate != null) {
+        filteredReservations = filteredReservations
+            .where((r) => r.checkOut.isBefore(event.endDate!) || 
+                         r.checkOut.isAtSameMomentAs(event.endDate!))
+            .toList();
+      }
+      
+      emit(ReservationLoaded(filteredReservations));
+    } catch (e) {
+      emit(ReservationError(e.toString()));
+    }
+  }
+
+  Future<void> _onSortReservations(
+    SortReservations event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      final currentState = state;
+      if (currentState is! ReservationLoaded) {
+        return;
+      }
+      
+      List<Reservation> sortedReservations = List.from(currentState.reservations);
+      
+      // Appliquer le tri selon le critère sélectionné
+      switch (event.sortBy) {
+        case 'created':
+          sortedReservations.sort((a, b) {
+            final comparison = a.createdAt.compareTo(b.createdAt);
+            return event.ascending ? comparison : -comparison;
+          });
+          break;
+        case 'date':
+          sortedReservations.sort((a, b) {
+            final comparison = a.checkIn.compareTo(b.checkIn);
+            return event.ascending ? comparison : -comparison;
+          });
+          break;
+        case 'amount':
+          sortedReservations.sort((a, b) {
+            final comparison = a.totalAmount.compareTo(b.totalAmount);
+            return event.ascending ? comparison : -comparison;
+          });
+          break;
+        default:
+          // Tri par défaut par date de création (plus récent)
+          sortedReservations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+      
+      emit(ReservationLoaded(sortedReservations));
     } catch (e) {
       emit(ReservationError(e.toString()));
     }

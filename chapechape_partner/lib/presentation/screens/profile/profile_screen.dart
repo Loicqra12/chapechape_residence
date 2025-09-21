@@ -11,6 +11,7 @@ import '../help/help_screen.dart' hide HelpBloc;
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'documents_screen.dart';
+import 'security_history_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import '../../../core/blocs/payment/payment_bloc.dart';
 import '../../../core/blocs/help/help_bloc.dart';
@@ -636,6 +637,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => const ChangePasswordScreen(),
+                                ),
+                              );
+                            },
+                            theme: theme,
+                          ),
+                          const Divider(height: 1),
+                          _buildMenuTile(
+                            icon: Icons.security_outlined,
+                            title: 'Historique de sécurité',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SecurityHistoryScreen(),
                                 ),
                               );
                             },

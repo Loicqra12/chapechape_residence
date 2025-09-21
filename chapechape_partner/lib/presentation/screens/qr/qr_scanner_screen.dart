@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:camera/camera.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
 import '../../../core/models/reservation/reservation.dart';
+import '../../../core/services/api/reservation_service.dart';
 
 /// Écran de scan QR codes pour check-in/check-out
 /// Permet aux partenaires de scanner les QR codes des clients
@@ -59,6 +62,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   Reservation? _scannedReservation;
   bool _isLoading = false;
   String? _errorMessage;
+  CameraController? _cameraController;
+  final ReservationService _reservationService = ReservationService.withDefaultDio();
 
   @override
   void initState() {
@@ -86,17 +91,41 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     super.dispose();
   }
 
-  void _initializeCamera() {
-    // TODO: Initialiser la caméra pour le scan QR
-    // Pour l'instant, simuler l'initialisation
-    Future.delayed(const Duration(milliseconds: 500), () {
+  void _initializeCamera() async {
+    try {
+      // Vérifier les permissions de caméra
+      final status = await Permission.camera.request();
+      if (status != PermissionStatus.granted) {
+        setState(() {
+          _errorMessage = 'Permission caméra refusée';
+        });
+        return;
+      }
+
+      // Initialiser le contrôleur de caméra
+      _cameraController = CameraController(
+        CameraDescription(
+          name: 'back',
+          lensDirection: CameraLensDirection.back,
+          sensorOrientation: 90,
+        ),
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      await _cameraController!.initialize();
+      
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
         });
         _startScanning();
       }
-    });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur d\'initialisation de la caméra: $e';
+      });
+    }
   }
 
   void _startScanning() {
@@ -127,55 +156,102 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     _processScannedQR(data);
   }
 
-  void _processScannedQR(String qrData) {
-    // TODO: Implémenter le traitement du QR code
-    // Pour l'instant, simuler le traitement
-    
-    // Extraire l'ID de réservation du QR code
-    final bookingId = _extractBookingIdFromQR(qrData);
-    
-    if (bookingId != null) {
+  void _processScannedQR(String qrData) async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // Extraire l'ID de réservation du QR code
+      final bookingId = _extractBookingIdFromQR(qrData);
+      
+      if (bookingId == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'QR Code invalide ou non reconnu';
+        });
+        _showErrorDialog('QR Code invalide', 'Ce QR Code ne correspond à aucune réservation.');
+        return;
+      }
+
       // Charger les détails de la réservation
       context.read<ReservationBloc>().add(LoadReservationDetails(bookingId));
-    } else {
+      
+      // Attendre que les détails soient chargés
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       setState(() {
         _isLoading = false;
-        _errorMessage = 'QR Code invalide ou non reconnu';
       });
-      _showErrorDialog('QR Code invalide', 'Ce QR Code ne correspond à aucune réservation.');
+
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erreur lors du traitement: $e';
+      });
+      _showErrorDialog('Erreur', 'Impossible de traiter ce QR Code.');
     }
   }
 
   String? _extractBookingIdFromQR(String qrData) {
-    // TODO: Implémenter l'extraction de l'ID de réservation depuis le QR code
-    // Format attendu: "chapechape://booking/{id}/{type}/{timestamp}"
-    
     try {
-      final uri = Uri.parse(qrData);
-      if (uri.scheme == 'chapechape' && uri.pathSegments.isNotEmpty) {
-        return uri.pathSegments[1]; // L'ID de réservation
+      // Vérifier si c'est un URI ChapeChape
+      if (qrData.startsWith('chapechape://')) {
+        final uri = Uri.parse(qrData);
+        
+        // Vérifier le schéma et le host
+        if (uri.scheme == 'chapechape' && uri.host == 'booking') {
+          final pathSegments = uri.pathSegments;
+          if (pathSegments.isNotEmpty) {
+            return pathSegments[0]; // Premier segment = ID de réservation
+          }
+        }
       }
+      
+      // Vérifier si c'est un UUID direct
+      if (RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(qrData)) {
+        return qrData;
+      }
+      
+      // Vérifier si c'est un ID numérique
+      if (RegExp(r'^\d+$').hasMatch(qrData)) {
+        return qrData;
+      }
+      
+      // Essayer d'extraire un ID depuis une URL
+      final urlMatch = RegExp(r'/(?:booking|reservation)/([a-zA-Z0-9-]+)').firstMatch(qrData);
+      if (urlMatch != null) {
+        return urlMatch.group(1);
+      }
+      
+      return null;
     } catch (e) {
-      // QR code format invalide
+      debugPrint('Erreur lors de l\'extraction de l\'ID: $e');
+      return null;
     }
-    
-    return null;
   }
 
-  void _performCheckInOut() {
+  void _performCheckInOut() async {
     if (_scannedReservation == null) return;
     
     setState(() {
       _isLoading = true;
     });
     
-    // TODO: Implémenter l'appel API pour check-in/check-out
-    // Pour l'instant, simuler l'action
-    
-    final action = widget.scanType == QRScanType.checkIn ? 'Check-in' : 'Check-out';
-    
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
+    try {
+      final action = widget.scanType == QRScanType.checkIn ? 'Check-in' : 'Check-out';
+      final reservationId = _scannedReservation!.id;
+      
+      // Appel API pour check-in/check-out
+      final response = await _reservationService.performCheckInOut(
+        reservationId: reservationId,
+        action: widget.scanType == QRScanType.checkIn ? 'checkin' : 'checkout',
+        timestamp: DateTime.now(),
+        location: 'QR Scanner', // Optionnel: géolocalisation
+      );
+      
+      if (response['success'] == true) {
         setState(() {
           _isLoading = false;
         });
@@ -184,8 +260,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           '$action réussi !',
           '$action effectué avec succès pour ${_scannedReservation!.clientName}',
         );
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorDialog('Erreur', response['message'] ?? 'Échec de l\'opération');
       }
-    });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      final actionName = widget.scanType == QRScanType.checkIn ? 'check-in' : 'check-out';
+      _showErrorDialog('Erreur', 'Impossible d\'effectuer le $actionName: $e');
+    }
   }
 
   void _showSuccessDialog(String title, String message) {

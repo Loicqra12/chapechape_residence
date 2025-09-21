@@ -4,6 +4,7 @@ import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/auth/auth_event.dart';
 import '../../../core/blocs/sync/sync_bloc.dart';
 import '../../widgets/sync/sync_status_widget.dart';
+import '../../widgets/offline/offline_indicator.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,6 +18,8 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('ChapeChape Partner'),
         actions: [
+          const PendingOperationsCounter(),
+          const SyncButton(),
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: SyncStatusWidget(
@@ -33,26 +36,33 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bienvenue, ${partner?.fullName ?? ''}',
-                style: Theme.of(context).textTheme.headlineMedium,
+        child: Column(
+          children: [
+            const OfflineIndicator(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bienvenue, ${partner?.fullName ?? ''}',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    SyncStatusWidget(
+                      showDetails: true,
+                      showForceButton: true,
+                    ),
+                    const SizedBox(height: 24),
+                    Expanded(
+                      child: _buildDashboardPlaceholder(context),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              SyncStatusWidget(
-                showDetails: true,
-                showForceButton: true,
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: _buildDashboardPlaceholder(context),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

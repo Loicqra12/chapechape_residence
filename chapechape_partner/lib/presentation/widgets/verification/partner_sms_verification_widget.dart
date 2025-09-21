@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/models/phone_number.dart';
 import '../../../core/services/api/partner_verification_service.dart';
+import 'channel_selector_widget.dart';
 
 /// Widget spécialisé pour la vérification SMS des partenaires
 class PartnerSMSVerificationWidget extends StatefulWidget {
@@ -30,6 +31,9 @@ class PartnerSMSVerificationWidget extends StatefulWidget {
   /// Raison de la vérification
   final String reason;
   
+  /// Canal de vérification préféré
+  final String preferredChannel;
+  
   /// Couleur du thème
   final Color? themeColor;
 
@@ -43,6 +47,7 @@ class PartnerSMSVerificationWidget extends StatefulWidget {
     this.requireCarrierValidation = true,
     this.showBusinessContext = true,
     this.reason = 'profile_update',
+    this.preferredChannel = 'sms',
     this.themeColor,
   }) : super(key: key);
 
@@ -62,6 +67,7 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
   int _remainingSeconds = 0;
   int _attemptsRemaining = 3;
   Timer? _timer;
+  String _currentChannel = 'sms';
   
   // Informations détectées sur le numéro
   String? _detectedCarrier;
@@ -78,6 +84,7 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
     super.initState();
     _setupAnimations();
     _analyzePhoneNumber();
+    _currentChannel = widget.preferredChannel;
   }
 
   @override
@@ -155,6 +162,7 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
       final result = await _verificationService.requestVerification(
         phoneNumber: widget.phoneNumber.completeNumber,
         reason: widget.reason,
+        channel: _currentChannel,
       );
 
       if (result.success) {
@@ -166,7 +174,7 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
         _startTimer();
         
         // Afficher une confirmation
-        _showSuccessSnackBar('Code envoyé par SMS');
+        _showSuccessSnackBar('Code envoyé par ${_currentChannel.toUpperCase()}');
         
       } else {
         _setError(result.message ?? 'Erreur lors de l\'envoi du code');
@@ -224,6 +232,21 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
     }
   }
 
+  /// Changer de canal de vérification
+  Future<void> _switchChannel() async {
+    if (_isLoading) return;
+    
+    setState(() {
+      _currentChannel = _currentChannel == 'sms' ? 'whatsapp' : 'sms';
+      _codeSent = false;
+      _error = null;
+      _timer?.cancel();
+    });
+    
+    // Redemander le code avec le nouveau canal
+    await _requestCode();
+  }
+
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -277,6 +300,19 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
               children: [
                 // En-tête
                 _buildHeader(theme, primaryColor),
+                
+                const SizedBox(height: 16),
+                
+                // Sélecteur de canal
+                ChannelSelectorWidget(
+                  selectedChannel: _currentChannel,
+                  onChannelChanged: (channel) {
+                    setState(() {
+                      _currentChannel = channel;
+                    });
+                  },
+                  themeColor: primaryColor,
+                ),
                 
                 const SizedBox(height: 16),
                 
@@ -556,16 +592,38 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
         
         const SizedBox(height: 8),
         
-        // Renvoyer le code
-        Center(
-          child: TextButton(
-            onPressed: _remainingSeconds == 0 ? _requestCode : null,
-            child: Text(
-              _remainingSeconds == 0 
-                  ? 'Renvoyer le code'
-                  : 'Renvoyer dans ${_formatTime(_remainingSeconds)}',
+        // Renvoyer le code ou changer de canal
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            TextButton(
+              onPressed: _remainingSeconds == 0 ? _requestCode : null,
+              child: Text(
+                _remainingSeconds == 0 
+                    ? 'Renvoyer le code'
+                    : 'Renvoyer dans ${_formatTime(_remainingSeconds)}',
+                style: TextStyle(color: primaryColor),
+              ),
             ),
-          ),
+            TextButton(
+              onPressed: _switchChannel,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _currentChannel == 'sms' ? Icons.chat : Icons.sms,
+                    size: 16,
+                    color: primaryColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Changer vers ${_currentChannel == 'sms' ? 'WhatsApp' : 'SMS'}',
+                    style: TextStyle(color: primaryColor),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

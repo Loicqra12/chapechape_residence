@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'api/api_service.dart';
 import 'api/auth_service.dart';
 
@@ -27,9 +28,7 @@ class CinetPayTransferService {
   /// Récupérer le solde CinetPay du partenaire
   Future<CinetPayBalance> getBalance() async {
     try {
-      final partnerId = await _getCurrentPartnerId();
-      
-      final response = await _apiService.get('/api/payouts/cinetpay/balance/$partnerId');
+      final response = await _apiService.get('/api/payouts/cinetpay/balance');
       
       final data = response.data;
       return CinetPayBalance(
@@ -59,23 +58,24 @@ class CinetPayTransferService {
         phoneNumber: phoneNumber,
       );
 
-      final partnerId = await _getCurrentPartnerId();
-      
-      final response = await _apiService.post('/api/payouts', data: {
-        'partnerId': partnerId,
+      // Vérifier le solde avant le transfert
+      final balance = await getBalance();
+      if (balance.amount < amount) {
+        throw CinetPayTransferException('Solde insuffisant: ${balance.amount} XOF disponible, ${amount} XOF requis');
+      }
+
+      final response = await _apiService.post('/api/payouts/cinetpay/transfer', data: {
         'amount': amount,
-        'method': 'cinetpay_transfer',
-        'destination': {
-          'phoneNumber': formatPhoneNumber(phoneNumber),
-          'paymentMethod': paymentMethod,
-        },
-        'reason': reason ?? 'Paiement partenaire ChapeChape',
-        'metadata': metadata ?? {},
+        'phone_number': formatPhoneNumber(phoneNumber),
+        'channel': paymentMethod,
+        'first_name': 'Partner',
+        'last_name': 'ChapeChape',
+        'email': 'partner@chapechape.com',
       });
 
       final data = response.data;
       
-      return CinetPayTransferResult(
+      final result = CinetPayTransferResult(
         success: data['success'] ?? false,
         transferId: data['transferId'],
         transactionId: data['transactionId'],
@@ -87,6 +87,15 @@ class CinetPayTransferService {
             : null,
         fees: data['fees']?.toDouble(),
       );
+
+      // Vérifier si une confirmation email est requise
+      if (data['requires_confirmation'] == true) {
+        // Afficher une notification à l'utilisateur
+        debugPrint('⚠️ CONFIRMATION EMAIL REQUISE pour le transfert ${data['transactionId']}');
+        debugPrint('📧 Connectez-vous à https://client.cinetpay.com pour confirmer ce transfert');
+      }
+
+      return result;
       
     } on DioException catch (e) {
       throw CinetPayTransferException('Erreur lors du transfert: ${e.message}');
@@ -96,9 +105,7 @@ class CinetPayTransferService {
   /// Vérifier le statut d'un transfert
   Future<CinetPayTransferStatus> checkTransferStatus(String transferId) async {
     try {
-      final partnerId = await _getCurrentPartnerId();
-      
-      final response = await _apiService.get('/api/payouts/$transferId?partnerId=$partnerId');
+      final response = await _apiService.get('/api/payouts/cinetpay/transfer/$transferId/status');
       
       final data = response.data;
       
@@ -128,13 +135,9 @@ class CinetPayTransferService {
     DateTime? toDate,
   }) async {
     try {
-      final partnerId = await _getCurrentPartnerId();
-      
       Map<String, dynamic> queryParams = {
-        'partnerId': partnerId,
         'page': page,
         'limit': limit,
-        'method': 'cinetpay_transfer',
       };
       
       if (statusFilter != null) {
@@ -150,7 +153,7 @@ class CinetPayTransferService {
       }
       
       final queryString = _buildQueryString(queryParams);
-      final response = await _apiService.get('/api/payouts${queryString.isNotEmpty ? '?$queryString' : ''}');
+      final response = await _apiService.get('/api/payouts/cinetpay/transfer/history${queryString.isNotEmpty ? '?$queryString' : ''}');
       
       final List<dynamic> transfers = response.data['payouts'] ?? [];
       
@@ -177,10 +180,7 @@ class CinetPayTransferService {
   /// Annuler un transfert en attente
   Future<bool> cancelTransfer(String transferId) async {
     try {
-      final partnerId = await _getCurrentPartnerId();
-      
-      final response = await _apiService.post('/api/payouts/$transferId/cancel', data: {
-        'partnerId': partnerId,
+      final response = await _apiService.post('/api/payouts/cinetpay/transfer/$transferId/cancel', data: {
         'reason': 'Annulation demandée par le partenaire',
       });
 
@@ -197,11 +197,7 @@ class CinetPayTransferService {
     DateTime? toDate,
   }) async {
     try {
-      final partnerId = await _getCurrentPartnerId();
-      
-      Map<String, dynamic> queryParams = {
-        'partnerId': partnerId,
-      };
+      Map<String, dynamic> queryParams = {};
       
       if (fromDate != null) {
         queryParams['fromDate'] = fromDate.toIso8601String();
@@ -232,21 +228,6 @@ class CinetPayTransferService {
     }
   }
 
-  /// Récupérer l'ID du partenaire connecté
-  Future<String> _getCurrentPartnerId() async {
-    final token = await _authService.getToken();
-    if (token == null) {
-      throw CinetPayTransferException('Utilisateur non authentifié');
-    }
-    
-    // Parse token to get partner ID (assuming JWT structure)
-    final payload = _parseJwtPayload(token);
-    final partnerId = payload['partnerId'] ?? payload['userId'];
-    if (partnerId == null) {
-      throw CinetPayTransferException('ID partenaire non trouvé dans le token');
-    }
-    return partnerId as String;
-  }
 
   /// Mapper le statut backend vers enum TransferStatus
   TransferStatus _mapTransferStatus(String? status) {

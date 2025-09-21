@@ -32,6 +32,8 @@ import 'router/app_router.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/cache_service.dart';
 import 'core/services/sync_service.dart';
+import 'core/services/offline_queue_service.dart';
+import 'core/services/offline_payment_service.dart';
 import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
 import 'core/services/notification/twilio_service.dart';
 import 'core/services/notification/sms_service.dart';
@@ -139,6 +141,10 @@ Future<void> main() async {
   final dashboardService = DashboardService(dio);
   final messageService = MessageService(dio);
   final reservationService = ReservationService(dio);
+  
+  // Initialiser les services offline
+  await OfflineQueueService().initialize();
+  await OfflinePaymentService().initialize();
   
   // Note: AvailabilityService est initialisé dans le provider au besoin
 

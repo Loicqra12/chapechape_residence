@@ -166,6 +166,48 @@ class NotificationService {
             case notificationTypes.CLIENT.NEARBY_RESIDENCE:
                 message = `${data.residenceCount || 'Plusieurs'} résidences sont disponibles près de ${data.locationName || 'votre position actuelle'}.`;
                 break;
+            case notificationTypes.CLIENT.PAYMENT_PENDING:
+                message = `Paiement en attente pour votre réservation${data.residenceName ? ` à "${data.residenceName}"` : ''}. ${data.amount ? `Montant: ${data.amount} ${data.currency || 'FCFA'}` : ''}`;
+                break;
+            case notificationTypes.CLIENT.AWAITING_APPROVAL:
+                message = `Votre réservation${data.residenceName ? ` pour "${data.residenceName}"` : ''} est en attente d'approbation par l'hôte.`;
+                break;
+            case notificationTypes.CLIENT.BOOKING_APPROVED:
+                message = `Votre réservation${data.residenceName ? ` pour "${data.residenceName}"` : ''} a été approuvée par l'hôte.`;
+                break;
+            case notificationTypes.CLIENT.BOOKING_REJECTED:
+                message = `Votre réservation${data.residenceName ? ` pour "${data.residenceName}"` : ''} a été refusée par l'hôte. ${data.reason || ''}`;
+                break;
+            case notificationTypes.CLIENT.PAYMENT_EXPIRED:
+                message = `Le délai de paiement pour votre réservation${data.residenceName ? ` à "${data.residenceName}"` : ''} a expiré.`;
+                break;
+            case notificationTypes.CLIENT.CHECKIN_READY:
+                message = `Vous pouvez maintenant effectuer votre check-in${data.residenceName ? ` à "${data.residenceName}"` : ''}.`;
+                break;
+            case notificationTypes.CLIENT.CHECKOUT_REMINDER:
+                message = `Rappel: Votre check-out${data.residenceName ? ` de "${data.residenceName}"` : ''} est prévu ${data.checkoutTime ? `à ${data.checkoutTime}` : 'aujourd\'hui'}.`;
+                break;
+            
+            // Notifications de sécurité et vérification
+            case notificationTypes.CLIENT.PHONE_CHANGED:
+                message = `Votre numéro de téléphone a été changé vers ${data.newPhone || 'nouveau numéro'}.`;
+                break;
+            case notificationTypes.CLIENT.VERIFICATION_SENT:
+                message = `Code de vérification envoyé${data.channel ? ` par ${data.channel.toUpperCase()}` : ''} vers ${data.phoneNumber || 'votre numéro'}.`;
+                break;
+            case notificationTypes.CLIENT.VERIFICATION_SUCCESS:
+                message = `Vérification de numéro de téléphone réussie.`;
+                break;
+            case notificationTypes.CLIENT.VERIFICATION_FAILED:
+                message = `Échec de la vérification de numéro de téléphone. ${data.reason || 'Veuillez réessayer.'}`;
+                break;
+            case notificationTypes.CLIENT.SECURITY_ALERT:
+                message = `Alerte de sécurité: ${data.alert || 'Activité suspecte détectée'}.`;
+                break;
+            case notificationTypes.CLIENT.LOGIN_ALERT:
+                message = `Nouvelle connexion détectée${data.location ? ` depuis ${data.location}` : ''}${data.device ? ` sur ${data.device}` : ''}.`;
+                break;
+            
             case notificationTypes.COMMON.NEW_MESSAGE:
                 message = `Vous avez reçu un nouveau message${data.senderName ? ` de ${data.senderName}` : ''}.`;
                 break;
@@ -221,6 +263,47 @@ class NotificationService {
             case notificationTypes.PARTNER.NEW_REVIEW:
                 message = `Vous avez reçu une nouvelle évaluation${data.rating ? ` de ${data.rating}/5` : ''}${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
                 break;
+            
+            // Notifications de payout et transfert
+            case notificationTypes.PARTNER.PAYOUT_INITIATED:
+                message = `Votre payout de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} a été initié.`;
+                break;
+            case notificationTypes.PARTNER.PAYOUT_SUCCESS:
+                message = `Votre payout de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} a été traité avec succès.`;
+                break;
+            case notificationTypes.PARTNER.PAYOUT_FAILED:
+                message = `Votre payout de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} a échoué. ${data.reason || 'Veuillez réessayer.'}`;
+                break;
+            case notificationTypes.PARTNER.TRANSFER_INITIATED:
+                message = `Transfert de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} vers ${data.recipient || 'destinataire'} initié.`;
+                break;
+            case notificationTypes.PARTNER.TRANSFER_SUCCESS:
+                message = `Transfert de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} vers ${data.recipient || 'destinataire'} réussi.`;
+                break;
+            case notificationTypes.PARTNER.TRANSFER_FAILED:
+                message = `Transfert de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} vers ${data.recipient || 'destinataire'} échoué. ${data.reason || 'Veuillez réessayer.'}`;
+                break;
+            
+            // Notifications de sécurité et vérification
+            case notificationTypes.PARTNER.PHONE_CHANGED:
+                message = `Votre numéro de téléphone a été changé vers ${data.newPhone || 'nouveau numéro'}.`;
+                break;
+            case notificationTypes.PARTNER.VERIFICATION_SENT:
+                message = `Code de vérification envoyé${data.channel ? ` par ${data.channel.toUpperCase()}` : ''} vers ${data.phoneNumber || 'votre numéro'}.`;
+                break;
+            case notificationTypes.PARTNER.VERIFICATION_SUCCESS:
+                message = `Vérification de numéro de téléphone réussie.`;
+                break;
+            case notificationTypes.PARTNER.VERIFICATION_FAILED:
+                message = `Échec de la vérification de numéro de téléphone. ${data.reason || 'Veuillez réessayer.'}`;
+                break;
+            case notificationTypes.PARTNER.SECURITY_ALERT:
+                message = `Alerte de sécurité: ${data.alert || 'Activité suspecte détectée'}.`;
+                break;
+            case notificationTypes.PARTNER.LOGIN_ALERT:
+                message = `Nouvelle connexion détectée${data.location ? ` depuis ${data.location}` : ''}${data.device ? ` sur ${data.device}` : ''}.`;
+                break;
+            
             default:
                 message = 'Nouvelle notification';
         }
@@ -871,6 +954,319 @@ class NotificationService {
 
         } catch (error) {
             logger.error('Erreur notification solde insuffisant:', error);
+            throw error;
+        }
+    }
+
+    // ----- NOUVELLES MÉTHODES UTILITAIRES POUR LES NOTIFICATIONS MANQUANTES -----
+
+    /**
+     * Notifier un changement de numéro de téléphone
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} userRole - Rôle de l'utilisateur ('client' ou 'partner')
+     * @param {string} oldPhone - Ancien numéro
+     * @param {string} newPhone - Nouveau numéro
+     */
+    async notifyPhoneChange(userId, userRole, oldPhone, newPhone) {
+        try {
+            const type = userRole === 'partner' 
+                ? notificationTypes.PARTNER.PHONE_CHANGED 
+                : notificationTypes.CLIENT.PHONE_CHANGED;
+
+            await this.createNotification(userId, type, '', {
+                oldPhone,
+                newPhone,
+                changedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification changement numéro envoyée à ${userRole} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification changement numéro:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'envoi d'un code de vérification
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} userRole - Rôle de l'utilisateur
+     * @param {string} phoneNumber - Numéro de téléphone
+     * @param {string} channel - Canal utilisé (sms, whatsapp)
+     */
+    async notifyVerificationSent(userId, userRole, phoneNumber, channel) {
+        try {
+            const type = userRole === 'partner' 
+                ? notificationTypes.PARTNER.VERIFICATION_SENT 
+                : notificationTypes.CLIENT.VERIFICATION_SENT;
+
+            await this.createNotification(userId, type, '', {
+                phoneNumber,
+                channel,
+                sentAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification code envoyé envoyée à ${userRole} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification code envoyé:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier le succès d'une vérification
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} userRole - Rôle de l'utilisateur
+     * @param {string} phoneNumber - Numéro vérifié
+     */
+    async notifyVerificationSuccess(userId, userRole, phoneNumber) {
+        try {
+            const type = userRole === 'partner' 
+                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS 
+                : notificationTypes.CLIENT.VERIFICATION_SUCCESS;
+
+            await this.createNotification(userId, type, '', {
+                phoneNumber,
+                verifiedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification vérification réussie envoyée à ${userRole} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification vérification réussie:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'échec d'une vérification
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} userRole - Rôle de l'utilisateur
+     * @param {string} phoneNumber - Numéro concerné
+     * @param {string} reason - Raison de l'échec
+     */
+    async notifyVerificationFailed(userId, userRole, phoneNumber, reason) {
+        try {
+            const type = userRole === 'partner' 
+                ? notificationTypes.PARTNER.VERIFICATION_FAILED 
+                : notificationTypes.CLIENT.VERIFICATION_FAILED;
+
+            await this.createNotification(userId, type, '', {
+                phoneNumber,
+                reason,
+                failedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification vérification échouée envoyée à ${userRole} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification vérification échouée:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier une nouvelle connexion
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} userRole - Rôle de l'utilisateur
+     * @param {Object} loginData - Données de connexion
+     */
+    async notifyNewLogin(userId, userRole, loginData) {
+        try {
+            const type = userRole === 'partner' 
+                ? notificationTypes.PARTNER.LOGIN_ALERT 
+                : notificationTypes.CLIENT.LOGIN_ALERT;
+
+            await this.createNotification(userId, type, '', {
+                location: loginData.location,
+                device: loginData.device,
+                ipAddress: loginData.ipAddress,
+                userAgent: loginData.userAgent,
+                loginAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification nouvelle connexion envoyée à ${userRole} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification nouvelle connexion:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier une alerte de sécurité
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} userRole - Rôle de l'utilisateur
+     * @param {string} alert - Type d'alerte
+     * @param {Object} alertData - Données de l'alerte
+     */
+    async notifySecurityAlert(userId, userRole, alert, alertData) {
+        try {
+            const type = userRole === 'partner' 
+                ? notificationTypes.PARTNER.SECURITY_ALERT 
+                : notificationTypes.CLIENT.SECURITY_ALERT;
+
+            await this.createNotification(userId, type, '', {
+                alert,
+                ...alertData,
+                alertAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification alerte sécurité envoyée à ${userRole} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification alerte sécurité:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'initiation d'un transfert
+     * @param {string} partnerId - ID du partenaire
+     * @param {Object} transferData - Données du transfert
+     */
+    async notifyTransferInitiated(partnerId, transferData) {
+        try {
+            await this.createNotification(partnerId, notificationTypes.PARTNER.TRANSFER_INITIATED, '', {
+                amount: transferData.amount,
+                currency: transferData.currency,
+                recipient: transferData.recipient,
+                method: transferData.method,
+                initiatedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification transfert initié envoyée au partner ${partnerId}`);
+        } catch (error) {
+            logger.error('Erreur notification transfert initié:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier le succès d'un transfert
+     * @param {string} partnerId - ID du partenaire
+     * @param {Object} transferData - Données du transfert
+     */
+    async notifyTransferSuccess(partnerId, transferData) {
+        try {
+            await this.createNotification(partnerId, notificationTypes.PARTNER.TRANSFER_SUCCESS, '', {
+                amount: transferData.amount,
+                currency: transferData.currency,
+                recipient: transferData.recipient,
+                method: transferData.method,
+                transactionId: transferData.transactionId,
+                completedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification transfert réussi envoyée au partner ${partnerId}`);
+        } catch (error) {
+            logger.error('Erreur notification transfert réussi:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'échec d'un transfert
+     * @param {string} partnerId - ID du partenaire
+     * @param {Object} transferData - Données du transfert
+     */
+    async notifyTransferFailed(partnerId, transferData) {
+        try {
+            await this.createNotification(partnerId, notificationTypes.PARTNER.TRANSFER_FAILED, '', {
+                amount: transferData.amount,
+                currency: transferData.currency,
+                recipient: transferData.recipient,
+                method: transferData.method,
+                reason: transferData.reason,
+                failedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification transfert échoué envoyée au partner ${partnerId}`);
+        } catch (error) {
+            logger.error('Erreur notification transfert échoué:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier l'envoi d'un code de vérification
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} phoneNumber - Numéro de téléphone
+     * @param {string} channel - Canal utilisé (sms/whatsapp)
+     */
+    async notifyVerificationSent(userId, phoneNumber, channel) {
+        try {
+            const user = await User.findById(userId);
+            if (!user) return;
+
+            const type = user.role === 'partner' 
+                ? notificationTypes.PARTNER.VERIFICATION_SENT 
+                : notificationTypes.CLIENT.VERIFICATION_SENT;
+
+            const message = `Code de vérification envoyé par ${channel.toUpperCase()} au ${phoneNumber}`;
+
+            await this.createNotification(userId, type, message, {
+                phoneNumber,
+                channel,
+                sentAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification vérification envoyée à ${user.role} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification vérification envoyée:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier le succès de la vérification
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} phoneNumber - Numéro de téléphone vérifié
+     */
+    async notifyVerificationSuccess(userId, phoneNumber) {
+        try {
+            const user = await User.findById(userId);
+            if (!user) return;
+
+            const type = user.role === 'partner' 
+                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS 
+                : notificationTypes.CLIENT.VERIFICATION_SUCCESS;
+
+            const message = `Numéro ${phoneNumber} vérifié avec succès`;
+
+            await this.createNotification(userId, type, message, {
+                phoneNumber,
+                verifiedAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification vérification réussie envoyée à ${user.role} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification vérification réussie:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Notifier une nouvelle connexion
+     * @param {string} userId - ID de l'utilisateur
+     * @param {string} ip - Adresse IP
+     * @param {string} userAgent - User Agent
+     */
+    async notifyNewLogin(userId, ip, userAgent) {
+        try {
+            const user = await User.findById(userId);
+            if (!user) return;
+
+            const type = user.role === 'partner' 
+                ? notificationTypes.PARTNER.LOGIN_ALERT 
+                : notificationTypes.CLIENT.LOGIN_ALERT;
+
+            const message = `Nouvelle connexion détectée depuis ${ip}`;
+
+            await this.createNotification(userId, type, message, {
+                ip,
+                userAgent,
+                loginAt: new Date().toISOString()
+            });
+
+            logger.info(`Notification nouvelle connexion envoyée à ${user.role} ${userId}`);
+        } catch (error) {
+            logger.error('Erreur notification nouvelle connexion:', error);
             throw error;
         }
     }

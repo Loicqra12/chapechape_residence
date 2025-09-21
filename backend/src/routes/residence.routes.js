@@ -28,20 +28,11 @@ router.get('/all', getAllResidences);
 router.use(protect);
 
 // Récupérer les résidences du partenaire connecté
-router.get('/my-residences', async (req, res) => {
+router.get('/my-residences', authorize('partner'), async (req, res) => {
   try {
     console.log('DEBUG - /my-residences - Utilisateur:', req.user);
     console.log('DEBUG - /my-residences - ID Utilisateur:', req.user.id);
     console.log('DEBUG - /my-residences - Rôle Utilisateur:', req.user.role);
-    
-    // Vérifier si l'utilisateur est un partenaire
-    if (req.user.role !== 'partner') {
-      console.log('DEBUG - /my-residences - Utilisateur non partenaire');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Seuls les partenaires peuvent accéder à leurs résidences' 
-      });
-    }
     
     // Récupérer les résidences du partenaire avec un try/catch interne
     try {

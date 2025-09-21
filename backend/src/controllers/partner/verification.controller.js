@@ -3,15 +3,16 @@ const twilioService = require('../../services/twilio.service');
 const User = require('../../models/user.model');
 const apiError = require('../../utils/apiError');
 const phoneLogger = require('../../utils/phoneLogger');
+const notificationService = require('../../services/notification.service');
 
 // Stockage temporaire des codes de vérification partners (Redis recommandé en production)
 const partnerVerificationCodes = new Map();
 
-// @desc    Demander un code de vérification SMS pour partner
+// @desc    Demander un code de vérification SMS ou WhatsApp pour partner
 // @route   POST /api/partners/verify-phone/request
 // @access  Private (Partner uniquement)
 exports.requestPartnerPhoneVerification = asyncHandler(async (req, res) => {
-    const { phoneNumber, reason = 'profile_update' } = req.body;
+    const { phoneNumber, reason = 'profile_update', channel = 'sms' } = req.body;
     const partnerId = req.user.id;
     
     // Validation du rôle
@@ -55,12 +56,24 @@ exports.requestPartnerPhoneVerification = asyncHandler(async (req, res) => {
     // Générer un code à 6 chiffres (plus sécurisé pour partners)
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Message SMS spécialisé partner
-    const smsMessage = `ChapeChape Partner - Code de vérification: ${verificationCode}\n\nCe code est requis pour sécuriser votre compte business et vos commissions.\n\nValide 5 minutes.`;
+    // Message personnalisé selon le canal
+    let messageBody;
+    if (channel === 'whatsapp') {
+        messageBody = `🏠 *ChapeChape Partner*\n\n🔐 *Code de vérification*\n\nVotre code de vérification est : *${verificationCode}*\n\n💼 Ce code est requis pour sécuriser votre compte business et vos commissions.\n\n⏰ Valide 5 minutes.\n\n🔒 Ne partagez jamais ce code avec personne.`;
+    } else {
+        messageBody = `ChapeChape Partner - Code de vérification: ${verificationCode}\n\nCe code est requis pour sécuriser votre compte business et vos commissions.\n\nValide 5 minutes.`;
+    }
 
     try {
-        // Envoyer le SMS
-        await twilioService.sendSMS(normalizedPhone, smsMessage);
+        // Envoyer le message selon le canal choisi
+        if (channel === 'whatsapp') {
+            if (!twilioService.isWhatsAppConfigured) {
+                throw new apiError('WhatsApp Business non configuré', 500);
+            }
+            await twilioService.sendWhatsAppMessage(normalizedPhone, messageBody);
+        } else {
+            await twilioService.sendSMS(normalizedPhone, messageBody);
+        }
         
         // Stocker le code avec expiration réduite (5 min)
         const codeData = {
@@ -92,11 +105,23 @@ exports.requestPartnerPhoneVerification = asyncHandler(async (req, res) => {
             timestamp: new Date()
         });
 
+        // Envoyer notification de vérification envoyée
+        try {
+            await notificationService.notifyVerificationSent(
+                partnerId,
+                normalizedPhone,
+                channel
+            );
+        } catch (notificationError) {
+            console.error('Erreur notification vérification envoyée:', notificationError);
+        }
+
         res.status(200).json({
             success: true,
-            message: 'Code de vérification envoyé',
+            message: `Code de vérification envoyé par ${channel.toUpperCase()}`,
             expiresIn: 300, // 5 minutes en secondes
-            attemptsRemaining: 3 - attempts.count
+            attemptsRemaining: 3 - attempts.count,
+            channel: channel
         });
 
     } catch (error) {
@@ -177,6 +202,16 @@ exports.confirmPartnerPhoneVerification = asyncHandler(async (req, res) => {
             payoutChannelsSetup: payoutChannels,
             timestamp: new Date()
         });
+
+        // Envoyer notification de vérification réussie
+        try {
+            await notificationService.notifyVerificationSuccess(
+                partnerId,
+                verificationData.phoneNumber
+            );
+        } catch (notificationError) {
+            console.error('Erreur notification vérification réussie:', notificationError);
+        }
 
         res.status(200).json({
             success: true,

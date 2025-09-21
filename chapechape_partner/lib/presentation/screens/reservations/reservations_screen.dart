@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
 import '../../../core/models/reservation/reservation.dart';
 import '../../../core/services/api/reservation_service.dart';
 import '../../../core/services/api/api_service.dart';
 import '../../widgets/layout/screen_app_bars.dart';
+import '../../widgets/calendar/reservation_calendar_widget.dart';
 
 class ReservationsScreen extends StatelessWidget {
   const ReservationsScreen({super.key});
@@ -29,13 +29,23 @@ class _ReservationsView extends StatefulWidget {
   State<_ReservationsView> createState() => _ReservationsViewState();
 }
 
-class _ReservationsViewState extends State<_ReservationsView> {
+class _ReservationsViewState extends State<_ReservationsView> with SingleTickerProviderStateMixin {
   ReservationStatus? _selectedStatus;
+  late TabController _tabController;
+  DateTime? _selectedCalendarDay;
+  List<Reservation> _selectedDayReservations = [];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadReservations();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _loadReservations() {
@@ -48,10 +58,46 @@ class _ReservationsViewState extends State<_ReservationsView> {
     final theme = Theme.of(context);
     
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          ScreenAppBars.getReservationsAppBar(context),
-          BlocBuilder<ReservationBloc, ReservationState>(
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          ScreenAppBars.getReservationsAppBar(context, reservationBloc: context.read<ReservationBloc>()),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TabsHeaderDelegate(
+              TabBar(
+                controller: _tabController,
+                labelColor: theme.primaryColor,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: theme.primaryColor,
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.list),
+                    text: 'Liste',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.calendar_month),
+                    text: 'Calendrier',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildListView(context, theme),
+            _buildCalendarView(context, theme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListView(BuildContext context, ThemeData theme) {
+    return CustomScrollView(
+      slivers: [
+        BlocBuilder<ReservationBloc, ReservationState>(
             builder: (context, state) {
               if (state is ReservationLoading) {
                 return const SliverFillRemaining(
@@ -91,7 +137,7 @@ class _ReservationsViewState extends State<_ReservationsView> {
                         .toList()
                     : state.reservations;
 
-                return SliverList(
+                               return SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final reservation = filteredReservations[index];
@@ -123,9 +169,9 @@ class _ReservationsViewState extends State<_ReservationsView> {
                 ),
               );
             },
-          ),
-        ],
-      ),
+                    
+        ),
+      ],
     );
   }
 
@@ -167,6 +213,65 @@ class _ReservationsViewState extends State<_ReservationsView> {
     if (mounted) {
       setState(() => _selectedStatus = status);
     }
+  }
+
+  Widget _buildCalendarView(BuildContext context, ThemeData theme) {
+    return BlocBuilder<ReservationBloc, ReservationState>(
+      builder: (context, state) {
+        if (state is ReservationLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (state is ReservationError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  state.message,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadReservations,
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (state is ReservationLoaded) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: ReservationCalendarWidget(
+              reservations: state.reservations,
+              selectedDay: _selectedCalendarDay,
+              onDaySelected: (day, reservations) {
+                setState(() {
+                  _selectedCalendarDay = day;
+                  _selectedDayReservations = reservations;
+                });
+              },
+            ),
+          );
+        }
+
+        return const Center(
+          child: Text('Aucune donnée disponible'),
+        );
+      },
+    );
   }
 }
 
@@ -428,4 +533,26 @@ class _DetailItem extends StatelessWidget {
       ],
     );
   }
+}
+
+class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _TabsHeaderDelegate(this.tabBar);
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_TabsHeaderDelegate oldDelegate) => false;
 }

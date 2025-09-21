@@ -42,13 +42,15 @@ exports.isPartner = (req, res, next) => {
 };
 
 // Middleware pour vérifier si l'utilisateur est un utilisateur normal
+// Aligne avec le rôle 'client' utilisé dans le modèle utilisateur,
+// tout en préservant 'user' pour compatibilité rétro.
 exports.isUser = (req, res, next) => {
-    if (req.user && req.user.role === ROLES.USER) {
+    if (req.user && (req.user.role === ROLES.USER || req.user.role === 'client')) {
         next();
     } else {
         res.status(403).json({
             success: false,
-            message: "Accès non autorisé. Rôle Utilisateur requis."
+            message: "Accès non autorisé. Rôle Utilisateur (client) requis."
         });
     }
 };

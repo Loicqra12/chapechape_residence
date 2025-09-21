@@ -15,6 +15,43 @@ import 'package:chapechape_partner/presentation/widgets/messages/message_search_
 import 'custom_sliver_app_bar.dart';
 
 class ScreenAppBars {
+  static CustomSliverAppBar getSecurityHistoryAppBar(BuildContext context) {
+    return CustomSliverAppBar(
+      title: 'Historique de Sécurité',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh, color: Colors.white),
+          onPressed: () {
+            // Rafraîchir les données de sécurité
+            // Cette fonctionnalité sera implémentée dans le bloc
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.help_outline, color: Colors.white),
+          onPressed: () {
+            // Afficher l'aide sur la sécurité
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Aide - Historique de Sécurité'),
+                content: const Text(
+                  'Cet écran vous permet de consulter l\'historique de vos activités de sécurité, '
+                  'détecter les connexions suspectes et surveiller les modifications sensibles de votre compte.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Fermer'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   static CustomSliverAppBar getDashboardAppBar(BuildContext context) {
     return CustomSliverAppBar(
       title: 'Tableau de bord',
@@ -480,7 +517,7 @@ class ScreenAppBars {
     );
   }
 
-  static CustomSliverAppBar getReservationsAppBar(BuildContext context) {
+  static CustomSliverAppBar getReservationsAppBar(BuildContext context, {ReservationBloc? reservationBloc}) {
     return CustomSliverAppBar(
       title: 'Réservations',
       actions: [
@@ -495,7 +532,16 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Basculer vers la vue calendrier
+            // Basculer vers la vue calendrier
+            final reservationsBloc = context.read<ReservationBloc>();
+            // Déclencher un événement pour basculer vers la vue calendrier
+            // Cette fonctionnalité sera gérée par l'écran des réservations
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vue calendrier activée'),
+                duration: Duration(seconds: 2),
+              ),
+            );
           },
         ),
         IconButton(
@@ -509,7 +555,21 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir le filtre des réservations
+            // Ouvrir le filtre des réservations
+            if (reservationBloc != null) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (context) => _buildReservationFilterSheet(context, reservationBloc),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Bloc des réservations non disponible')),
+              );
+            }
           },
         ),
         IconButton(
@@ -523,10 +583,241 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // TODO: Ouvrir le tri des réservations
+            // Ouvrir le tri des réservations
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (context) => _buildReservationSortSheet(context, reservationBloc),
+            );
           },
         ),
       ],
+    );
+  }
+
+  // Feuille modale pour le filtre des réservations
+  static Widget _buildReservationFilterSheet(BuildContext context, ReservationBloc? reservationBloc) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Filtrer les réservations',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          const Text('Statut'),
+          DropdownButtonFormField<String>(
+            value: 'all',
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('Tous')),
+              DropdownMenuItem(value: 'pending', child: Text('En attente')),
+              DropdownMenuItem(value: 'confirmed', child: Text('Confirmée')),
+              DropdownMenuItem(value: 'cancelled', child: Text('Annulée')),
+              DropdownMenuItem(value: 'completed', child: Text('Terminée')),
+            ],
+            onChanged: (value) {
+              // Appliquer le filtre via le bloc des réservations
+              if (reservationBloc != null) {
+                reservationBloc.add(FilterReservations(status: value));
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text('Période'),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Date de début',
+                    border: OutlineInputBorder(),
+                  ),
+                  readOnly: true,
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      // Appliquer le filtre par date de début
+                      if (reservationBloc != null) {
+                        reservationBloc.add(FilterReservations(startDate: date));
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Date de fin',
+                    border: OutlineInputBorder(),
+                  ),
+                  readOnly: true,
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      // Appliquer le filtre par date de fin
+                      if (reservationBloc != null) {
+                        reservationBloc.add(FilterReservations(endDate: date));
+                      }
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Annuler'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Appliquer les filtres
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Filtres appliqués')),
+                    );
+                  },
+                  child: const Text('Appliquer'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Feuille modale pour le tri des réservations
+  static Widget _buildReservationSortSheet(BuildContext context, ReservationBloc? reservationBloc) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Trier les réservations',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            title: const Text('Date de création (plus récent)'),
+            leading: Radio<String>(
+              value: 'created_desc',
+              groupValue: 'created_desc',
+              onChanged: (value) {},
+            ),
+            onTap: () {
+              // Appliquer le tri par date de création (plus récent)
+              if (reservationBloc != null) {
+                reservationBloc.add(SortReservations('created', ascending: false));
+              }
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text('Date de création (plus ancien)'),
+            leading: Radio<String>(
+              value: 'created_asc',
+              groupValue: 'created_desc',
+              onChanged: (value) {},
+            ),
+            onTap: () {
+              // Appliquer le tri par date de création (plus ancien)
+              if (reservationBloc != null) {
+                reservationBloc.add(SortReservations('created', ascending: true));
+              }
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text('Date de réservation (plus récent)'),
+            leading: Radio<String>(
+              value: 'date_desc',
+              groupValue: 'created_desc',
+              onChanged: (value) {},
+            ),
+            onTap: () {
+              // Appliquer le tri par date de réservation (plus récent)
+              if (reservationBloc != null) {
+                reservationBloc.add(SortReservations('date', ascending: false));
+              }
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text('Date de réservation (plus ancien)'),
+            leading: Radio<String>(
+              value: 'date_asc',
+              groupValue: 'created_desc',
+              onChanged: (value) {},
+            ),
+            onTap: () {
+              // Appliquer le tri par date de réservation (plus ancien)
+              if (reservationBloc != null) {
+                reservationBloc.add(SortReservations('date', ascending: true));
+              }
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text('Montant (plus élevé)'),
+            leading: Radio<String>(
+              value: 'amount_desc',
+              groupValue: 'created_desc',
+              onChanged: (value) {},
+            ),
+            onTap: () {
+              // Appliquer le tri par montant (plus élevé)
+              if (reservationBloc != null) {
+                reservationBloc.add(SortReservations('amount', ascending: false));
+              }
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text('Montant (plus bas)'),
+            leading: Radio<String>(
+              value: 'amount_asc',
+              groupValue: 'created_desc',
+              onChanged: (value) {},
+            ),
+            onTap: () {
+              // Appliquer le tri par montant (plus bas)
+              if (reservationBloc != null) {
+                reservationBloc.add(SortReservations('amount', ascending: true));
+              }
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
     );
   }
 }

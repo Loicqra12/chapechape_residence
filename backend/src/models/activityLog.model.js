@@ -8,33 +8,69 @@ const activityLogSchema = new mongoose.Schema({
     },
     action: {
         type: String,
-        required: true
+        required: true,
+        enum: [
+            'login', 'logout', 'login_failed', 'password_change', 'email_change',
+            'phone_change', 'profile_update', 'bank_account_change', 'payout_initiated',
+            'payout_completed', 'payout_failed', 'residence_created', 'residence_updated',
+            'residence_deleted', 'reservation_created', 'reservation_updated', 'reservation_cancelled',
+            'payment_initiated', 'payment_completed', 'payment_failed', 'verification_sent',
+            'verification_success', 'verification_failed', 'suspicious_activity', 'security_alert'
+        ]
     },
     module: {
         type: String,
-        required: true
+        required: true,
+        enum: ['auth', 'profile', 'payment', 'residence', 'reservation', 'security', 'verification']
     },
     description: {
         type: String,
         required: true
     },
     ipAddress: {
-        type: String
+        type: String,
+        required: true
     },
     userAgent: {
         type: String
     },
+    location: {
+        country: String,
+        city: String,
+        region: String
+    },
+    device: {
+        type: { type: String, enum: ['mobile', 'desktop', 'tablet', 'unknown'], default: 'desktop' },
+        os: { type: String, default: 'unknown' },
+        browser: { type: String, default: 'unknown' }
+    },
     metadata: {
-        type: mongoose.Schema.Types.Mixed
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
     },
     status: {
         type: String,
-        enum: ['success', 'failure', 'warning'],
+        enum: ['success', 'failure', 'warning', 'suspicious'],
         default: 'success'
+    },
+    severity: {
+        type: String,
+        enum: ['low', 'medium', 'high', 'critical'],
+        default: 'low'
     },
     responseTime: {
         type: Number,
         default: 0
+    },
+    riskScore: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 0
+    },
+    isSuspicious: {
+        type: Boolean,
+        default: false
     },
     createdAt: {
         type: Date,

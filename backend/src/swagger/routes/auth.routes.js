@@ -9,6 +9,118 @@
 
 /**
  * @swagger
+
+
+ *   post:
+ *     summary: Demander un code de vérification par SMS ou WhatsApp
+ *     tags: [Authentification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phoneNumber
+ *             properties:
+ *               phoneNumber:
+ *                 type: string
+ *                 description: "Numéro de téléphone (E.164 ou format local). Sera normalisé côté serveur"
+ *               countryCode:
+ *                 type: string
+ *                 description: "Code pays ISO alpha-2 (ex: CI, SN)"
+ *                 example: CI
+ *               channel:
+ *                 type: string
+ *                 enum: [sms, whatsapp]
+ *                 default: sms
+ *     responses:
+ *       200:
+ *         description: Code envoyé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     codeId:
+ *                       type: string
+ *                     expiresAt:
+ *                       type: string
+ *                       format: date-time
+ *                     channel:
+ *                       type: string
+ *                     devCode:
+ *                       type: string
+ *                       description: "Présent uniquement en mode développement"
+ *       400:
+ *         description: Données invalides
+ */
+
+/**
+ * @swagger
+ * /api/auth/verify-code:
+ *   post:
+ *     summary: Vérifier un code de vérification reçu par SMS/WhatsApp
+ *     tags: [Authentification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phoneNumber
+ *               - code
+ *             properties:
+ *               phoneNumber:
+ *                 type: string
+ *               countryCode:
+ *                 type: string
+ *                 example: CI
+ *               code:
+ *                 type: string
+ *                 description: "Code à 6 chiffres"
+ *               codeId:
+ *                 type: string
+ *                 description: "Optionnel, renvoyé par l'étape de demande"
+ *     responses:
+ *       200:
+ *         description: "Numéro vérifié avec succès (promotion partner_pending -> partner si applicable)"
+ *       400:
+ *         description: Code invalide ou expiré
+ */
+
+/**
+ * @swagger
+ * /api/auth/resend-verification-code:
+ *   post:
+ *     summary: Renvoyer un code de vérification
+ *     tags: [Authentification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phoneNumber
+ *             properties:
+ *               phoneNumber:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Nouveau code envoyé avec succès
+ *       400:
+ *         description: Données invalides
+ */
+
+/**
+ * @swagger
  * /api/auth/register:
  *   post:
  *     summary: Inscription d'un nouvel utilisateur
@@ -107,8 +219,7 @@
  *             properties:
  *               email:
  *                 type: string
- *                 format: email
- *                 description: Email de l'utilisateur
+ *                 description: "Email ou numéro de téléphone (E.164 ou format local, ex: +225..., 07...)"
  *               password:
  *                 type: string
  *                 format: password
@@ -327,17 +438,17 @@
 
 /**
  * @swagger
- * /api/auth/reset-password/{token}:
- *   post:
+ * /api/auth/reset-password/{resetToken}:
+ *   put:
  *     summary: Réinitialiser le mot de passe
  *     tags: [Authentification]
  *     parameters:
  *       - in: path
- *         name: token
+ *         name: resetToken
  *         required: true
  *         schema:
  *           type: string
- *         description: Token de réinitialisation de mot de passe
+ *         description: Jeton de réinitialisation de mot de passe
  *     requestBody:
  *       required: true
  *       content:

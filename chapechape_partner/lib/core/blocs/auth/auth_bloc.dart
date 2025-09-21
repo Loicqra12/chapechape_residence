@@ -116,6 +116,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await storage.write(key: 'userId', value: partner.id);
         print("ID partenaire stocké lors de la vérification: ${partner.id}");
         
+        // Stocker le rôle du partenaire
+        await storage.write(key: 'userRole', value: 'partner');
+        print("Rôle partenaire stocké lors de la vérification: partner");
+        
         emit(AuthAuthenticated(token: token, partner: partner));
       } else {
         // Si pas de token dans le secure storage, vérifier dans SharedPreferences
@@ -133,6 +137,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               // Stocker l'ID du partenaire pour filtrer les résidences
               await storage.write(key: 'userId', value: partner.id);
               print("ID partenaire stocké lors de la restauration: ${partner.id}");
+              
+              // Stocker le rôle du partenaire
+              await storage.write(key: 'userRole', value: 'partner');
+              print("Rôle partenaire stocké lors de la restauration: partner");
               
               emit(AuthAuthenticated(token: savedToken, partner: partner));
               return;
@@ -196,27 +204,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (loginResult.refreshToken != null) {
         await storage.write(key: 'refresh_token', value: loginResult.refreshToken);
         
-        // Calculer et stocker la date d'expiration (par défaut: maintenant + 24h)
-        final expiryDate = DateTime.now().add(Duration(hours: 24));
+        // Calculer et stocker la date d'expiration (90 jours pour rester connecté longtemps)
+        final expiryDate = DateTime.now().add(Duration(days: 90));
         await storage.write(key: 'token_expiry', value: expiryDate.toIso8601String());
         print('📝 Token et refresh token stockés (expire le ${expiryDate.toLocal()})');
       }
       
-      // Force l'ID du partenaire à être celui de Lamine quand c'est Lamine qui se connecte
+      // Utiliser l'ID réel du partenaire depuis la réponse backend
       String partnerId = loginResult.partner.id;
       
-      print("Email utilisé pour la connexion: ${event.email}");
-      if (event.email.toLowerCase().contains("lamine") || event.email == "testuser@example.com") {
-        // ID fixe de Lamine pour garantir que seule sa résidence Aboussouan s'affiche
-        partnerId = "67d735ea77cdc0d8ff3044d2";
-        print("⚠️ Connexion de Lamine détectée: Forçage de l'ID à $partnerId");
-      }
-      
-      print("ID du partenaire à stocker: $partnerId");
+      print("ID du partenaire authentifié: $partnerId");
       
       // Stocker l'ID du partenaire pour filtrer les résidences
       await storage.write(key: 'userId', value: partnerId);
       print("ID partenaire stocké: $partnerId");
+      
+      // Stocker le rôle réel du partenaire (peut être partner_pending)
+      await storage.write(key: 'userRole', value: loginResult.partner.role);
+      print("Rôle partenaire stocké: ${loginResult.partner.role}");
       
       // Vérifier que l'ID a bien été enregistré
       final storedId = await storage.read(key: 'userId');
@@ -243,6 +248,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         phoneNumber: event.phoneNumber,
         password: event.password,
+        countryCode: event.countryCode,
       );
       
       // Stocker les tokens
@@ -252,8 +258,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (registerResult.refreshToken != null) {
         await storage.write(key: 'refresh_token', value: registerResult.refreshToken);
         
-        // Calculer et stocker la date d'expiration (par défaut: maintenant + 24h)
-        final expiryDate = DateTime.now().add(Duration(hours: 24));
+        // Calculer et stocker la date d'expiration (90 jours pour rester connecté longtemps)
+        final expiryDate = DateTime.now().add(Duration(days: 90));
         await storage.write(key: 'token_expiry', value: expiryDate.toIso8601String());
         print('📝 Token et refresh token stockés (expire le ${expiryDate.toLocal()})');
       }
@@ -261,6 +267,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Stocker l'ID du partenaire pour filtrer les résidences
       await storage.write(key: 'userId', value: registerResult.partner.id);
       print("ID partenaire stocké: ${registerResult.partner.id}");
+      
+      // Stocker le rôle réel du partenaire (peut être partner_pending après inscription)
+      await storage.write(key: 'userRole', value: registerResult.partner.role);
+      print("Rôle partenaire stocké: ${registerResult.partner.role}");
       
       emit(AuthAuthenticated(
         token: registerResult.token,
@@ -281,6 +291,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await storage.delete(key: 'refresh_token');
       await storage.delete(key: 'token_expiry');
       await storage.delete(key: 'userId');
+      await storage.delete(key: 'userRole');
       emit(AuthUnauthenticated());
     } catch (e) {
       emit(AuthFailure(e.toString()));

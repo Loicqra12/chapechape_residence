@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['client', 'partner', 'admin', 'superadmin', 'owner'],
+        enum: ['client', 'partner_pending', 'partner', 'admin', 'superadmin', 'owner'],
         default: 'client'
     },
     isVerified: {

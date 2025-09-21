@@ -561,4 +561,87 @@
  *         description: Conversation non trouvée
  *       500:
  *         description: Erreur serveur
- */ 
+ */
+
+/**
+ * @swagger
+ * /api/messages/whatsapp/test:
+ *   post:
+ *     summary: Tester l'envoi WhatsApp Business (développement)
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - to
+ *               - message
+ *             properties:
+ *               to:
+ *                 type: string
+ *                 description: "Numéro de téléphone destinataire (format E.164)"
+ *                 example: "+2250789123456"
+ *               message:
+ *                 type: string
+ *                 description: "Contenu du message à envoyer"
+ *                 example: "Test message WhatsApp Business"
+ *     responses:
+ *       200:
+ *         description: Message WhatsApp envoyé avec succès
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Non autorisé
+ *       500:
+ *         description: Erreur envoi WhatsApp
+ */
+
+/**
+ * @swagger
+ * /api/messages/conversations/{id}/whatsapp:
+ *   post:
+ *     summary: Envoyer un message WhatsApp Business dans une conversation
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la conversation
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: "Contenu du message WhatsApp"
+ *                 example: "Votre réservation est confirmée"
+ *     responses:
+ *       201:
+ *         description: Message WhatsApp envoyé et ajouté à la conversation
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Accès interdit
+ *       404:
+ *         description: Conversation non trouvée
+ *       500:
+ *         description: Erreur serveur ou WhatsApp
+ */
+
+// Ce fichier sert uniquement à documenter les endpoints pour Swagger
+// Il n'exporte rien car il est uniquement lu par swagger-jsdoc

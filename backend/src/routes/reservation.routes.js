@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/auth.middleware');
+const { protect, authorize } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const reservationController = require('../controllers/reservation/reservation.controller');
 const {
@@ -23,12 +23,7 @@ router.route('/my-reservations')
     .get(reservationController.getUserReservations);
 
 router.route('/partner-reservations')
-    .get(async (req, res, next) => {
-        if (req.user.role !== 'partner') {
-            return next(new ApiError('Accès réservé aux partenaires', 403));
-        }
-        next();
-    }, reservationController.getUserReservations);
+    .get(authorize('partner'), reservationController.getUserReservations);
 
 router.route('/residence/:residenceId')
     .get(reservationController.getResidenceReservations);
@@ -52,36 +47,16 @@ router.route('/:id/modification-fees')
 // ✅ NOUVELLES ROUTES - INTEGRATION RESERVATIONMODE
 // Routes d'approbation (Partner seulement)
 router.route('/:id/approve')
-    .patch(async (req, res, next) => {
-        if (req.user.role !== 'partner') {
-            return next(new ApiError('Accès réservé aux partenaires', 403));
-        }
-        next();
-    }, reservationController.approveReservation);
+    .patch(authorize('partner'), reservationController.approveReservation);
 
 router.route('/:id/reject')
-    .patch(async (req, res, next) => {
-        if (req.user.role !== 'partner') {
-            return next(new ApiError('Accès réservé aux partenaires', 403));
-        }
-        next();
-    }, reservationController.rejectReservation);
+    .patch(authorize('partner'), reservationController.rejectReservation);
 
 // Routes de check-in/out (Partner seulement)
 router.route('/:id/checkin')
-    .patch(async (req, res, next) => {
-        if (req.user.role !== 'partner') {
-            return next(new ApiError('Accès réservé aux partenaires', 403));
-        }
-        next();
-    }, reservationController.performCheckin);
+    .patch(authorize('partner'), reservationController.performCheckin);
 
 router.route('/:id/checkout')
-    .patch(async (req, res, next) => {
-        if (req.user.role !== 'partner') {
-            return next(new ApiError('Accès réservé aux partenaires', 403));
-        }
-        next();
-    }, reservationController.performCheckout);
+    .patch(authorize('partner'), reservationController.performCheckout);
 
 module.exports = router;

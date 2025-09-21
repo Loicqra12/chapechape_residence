@@ -1625,16 +1625,45 @@ class ResidenceService {
       final userId = await storage.read(key: 'userId');
       print("👤 ID du partenaire connecté: $userId");
       
+      // Vérifier le token
+      final token = await storage.read(key: 'token');
+      print("🔑 Token présent: ${token != null ? 'Oui' : 'Non'}");
+      if (token != null) {
+        print("🔑 Token (premiers caractères): ${token.substring(0, 20)}...");
+      }
+      
+      // Vérifier le rôle de l'utilisateur
+      final userRole = await storage.read(key: 'userRole');
+      print("👤 Rôle de l'utilisateur: $userRole");
+      
+      if (userRole != 'partner') {
+        print("❌ L'utilisateur n'est pas un partenaire (rôle: $userRole)");
+        throw ApiException(
+          'Accès refusé: Seuls les partenaires peuvent accéder à leurs résidences',
+          403,
+          {'error': 'insufficient_role', 'current_role': userRole}
+        );
+      }
+      
       // Ajouter un paramètre timestamp pour éviter le cache côté serveur
       final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final url = '$baseUrl/api/residences/my-residences?_t=$timestamp';
+      print("🌐 URL appelée: $url");
       
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/my-residences?_t=$timestamp'),
+        Uri.parse(url),
         headers: headers,
       );
 
       print("📊 Status code: ${response.statusCode}");
       print("📝 Réponse brute: ${response.body}");
+      
+      // Si le statut n'est pas 200, afficher plus de détails
+      if (response.statusCode != 200) {
+        print("❌ Erreur HTTP ${response.statusCode}");
+        print("📝 Corps de l'erreur: ${response.body}");
+        print("📋 Headers de la réponse: ${response.headers}");
+      }
 
       return _handleResponse<List<Residence>>(
         response,

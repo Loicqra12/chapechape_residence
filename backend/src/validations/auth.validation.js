@@ -22,11 +22,35 @@ const register = {
     })
 };
 
-const login = {
+// Schéma dédié pour l'inscription partenaire (sans inviteCode pour réduire la friction)
+const registerPartner = {
     body: Joi.object().keys({
         email: Joi.string().required().email().messages({
             'string.email': 'Adresse email invalide',
             'any.required': 'L\'email est obligatoire'
+        }),
+        password: Joi.string().required().custom(password),
+        firstName: Joi.string().required().messages({
+            'any.required': 'Le prénom est obligatoire'
+        }),
+        lastName: Joi.string().required().messages({
+            'any.required': 'Le nom est obligatoire'
+        }),
+        // Accepter formats locaux et internationaux - normalisation côté contrôleur
+        phoneNumber: Joi.string().pattern(/^[\+]?[0-9\s\-\.\(\)]{7,20}$/).required().messages({
+            'string.pattern.base': 'Numéro de téléphone invalide (formats acceptés: +225..., 07..., 77...)',
+            'any.required': 'Le numéro de téléphone est obligatoire'
+        }),
+        countryCode: Joi.string().length(2).optional().default('CI').messages({
+            'string.length': 'Code pays doit faire 2 caractères (ex: CI, SN, FR)'
+        })
+    })
+};
+
+const login = {
+    body: Joi.object().keys({
+        email: Joi.string().required().messages({
+            'any.required': 'L\'email ou téléphone est obligatoire'
         }),
         password: Joi.string().required().messages({
             'any.required': 'Le mot de passe est obligatoire'
@@ -110,9 +134,15 @@ const facebookAuth = {
 // Schémas pour la vérification par SMS
 const requestVerificationCode = {
     body: Joi.object().keys({
-        phoneNumber: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required().messages({
-            'string.pattern.base': 'Numéro de téléphone invalide',
+        phoneNumber: Joi.string().pattern(/^[\+]?[0-9\s\-\.\(\)]{7,20}$/).required().messages({
+            'string.pattern.base': 'Numéro de téléphone invalide (formats acceptés: +225..., 07..., 77...)',
             'any.required': 'Le numéro de téléphone est obligatoire'
+        }),
+        countryCode: Joi.string().length(2).optional().default('CI').messages({
+            'string.length': 'Code pays doit faire 2 caractères (ex: CI, SN, FR)'
+        }),
+        channel: Joi.string().valid('sms', 'whatsapp').optional().default('sms').messages({
+            'any.only': 'Canal invalide (sms ou whatsapp uniquement)'
         }),
         userId: Joi.string().optional(),
         email: Joi.string().email().optional()
@@ -121,13 +151,19 @@ const requestVerificationCode = {
 
 const verifyCode = {
     body: Joi.object().keys({
-        phoneNumber: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required().messages({
-            'string.pattern.base': 'Numéro de téléphone invalide',
+        phoneNumber: Joi.string().pattern(/^[\+]?[0-9\s\-\.\(\)]{7,20}$/).required().messages({
+            'string.pattern.base': 'Numéro de téléphone invalide (formats acceptés: +225..., 07..., 77...)',
             'any.required': 'Le numéro de téléphone est obligatoire'
+        }),
+        countryCode: Joi.string().length(2).optional().default('CI').messages({
+            'string.length': 'Code pays doit faire 2 caractères (ex: CI, SN, FR)'
         }),
         code: Joi.string().length(6).required().messages({
             'string.length': 'Le code doit contenir exactement 6 caractères',
             'any.required': 'Le code de vérification est obligatoire'
+        }),
+        codeId: Joi.string().optional().messages({
+            'string.base': 'L\'ID du code doit être une chaîne de caractères'
         }),
         userId: Joi.string().optional()
     })
@@ -145,6 +181,7 @@ const resendVerificationCode = {
 
 module.exports = {
     register,
+    registerPartner,
     login,
     logout,
     refreshTokens,

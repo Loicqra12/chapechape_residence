@@ -38,13 +38,22 @@ class AfricanPaymentService {
   }
   
   /// Récupère les méthodes de paiement acceptées par le partenaire
-  Future<List<AfricanPaymentMethod>> getAcceptedPaymentMethods() async {
+  Future<List<AfricanPaymentMethod>> getAcceptedPaymentMethods({String? residenceId}) async {
     try {
-      // ⚠️ ENDPOINT NON DISPONIBLE: /partners/payment-methods n'existe pas dans le backend
-      // Utiliser uniquement le stockage local pour les méthodes de paiement
-      debugPrint('ℹ️ Utilisation du stockage local pour les méthodes de paiement (pas d\'API backend)');
+      // ✅ UTILISER L'API EXISTANTE: GET /api/residences/:id pour récupérer les méthodes de paiement
+      if (residenceId != null) {
+        try {
+          final response = await _apiService.get('/residences/$residenceId');
+          if (response.statusCode == 200) {
+            final List<dynamic> paymentMethods = response.data['paymentMethods'] ?? [];
+            return paymentMethods.map((method) => _parsePaymentMethod(method)).toList();
+          }
+        } catch (apiError) {
+          debugPrint('API non disponible, utilisation du stockage local: $apiError');
+        }
+      }
       
-      // Si l'API n'est pas disponible, utiliser le stockage local
+      // Fallback vers le stockage local si l'API n'est pas disponible
       final localMethods = await _preferencesService.getAcceptedMethods();
       
       if (localMethods.isNotEmpty) {
@@ -71,7 +80,7 @@ class AfricanPaymentService {
   }
   
   /// Ajoute une méthode de paiement pour le partenaire
-  Future<bool> addPaymentMethod(AfricanPaymentMethod method, Map<String, dynamic> details) async {
+  Future<bool> addPaymentMethod(AfricanPaymentMethod method, Map<String, dynamic> details, {String? residenceId}) async {
     try {
       // Valider les détails de la méthode de paiement
       final validationError = validatePaymentMethodDetails(method, details);
@@ -79,11 +88,39 @@ class AfricanPaymentService {
         throw Exception(validationError);
       }
       
-      // ⚠️ ENDPOINT NON DISPONIBLE: /partners/payment-methods n'existe pas dans le backend
-      // Sauvegarder uniquement en local jusqu'à ce que l'endpoint soit implémenté
-      debugPrint('ℹ️ Sauvegarde locale uniquement (endpoint API non disponible)');
+      // ✅ UTILISER L'API EXISTANTE: PUT /api/residences/:id/payment-methods
+      if (residenceId != null) {
+        try {
+          // Récupérer les méthodes actuelles
+          final currentMethods = await getAcceptedPaymentMethods(residenceId: residenceId);
+          
+          // Ajouter la nouvelle méthode si elle n'existe pas déjà
+          if (!currentMethods.contains(method)) {
+            currentMethods.add(method);
+            
+            // Convertir en format API
+            final paymentMethodsList = currentMethods.map((m) => m.toString().split('.').last).toList();
+            
+            // Mettre à jour via l'API
+            final response = await _apiService.put('/residences/$residenceId/payment-methods', data: {
+              'paymentMethods': paymentMethodsList,
+            });
+            
+            if (response.statusCode == 200) {
+              debugPrint('✅ Méthode de paiement ajoutée via API: ${method.displayName}');
+              return true;
+            }
+          } else {
+            debugPrint('ℹ️ Méthode de paiement déjà présente: ${method.displayName}');
+            return true;
+          }
+        } catch (apiError) {
+          debugPrint('API non disponible, utilisation du stockage local: $apiError');
+        }
+      }
       
-      // Sauvegarder uniquement en local
+      // Fallback vers le stockage local si l'API n'est pas disponible
+      debugPrint('ℹ️ Sauvegarde locale (fallback)');
       await _preferencesService.saveMethodDetails(method, details);
       
       // Récupérer les méthodes acceptées et ajouter la nouvelle si elle n'existe pas déjà
@@ -101,13 +138,36 @@ class AfricanPaymentService {
   }
   
   /// Supprime une méthode de paiement pour le partenaire
-  Future<bool> removePaymentMethod(AfricanPaymentMethod method) async {
+  Future<bool> removePaymentMethod(AfricanPaymentMethod method, {String? residenceId}) async {
     try {
-      // ⚠️ ENDPOINT NON DISPONIBLE: /partners/payment-methods n'existe pas dans le backend
-      // Supprimer uniquement en local jusqu'à ce que l'endpoint soit implémenté
-      debugPrint('ℹ️ Suppression locale uniquement (endpoint API non disponible)');
+      // ✅ UTILISER L'API EXISTANTE: PUT /api/residences/:id/payment-methods
+      if (residenceId != null) {
+        try {
+          // Récupérer les méthodes actuelles
+          final currentMethods = await getAcceptedPaymentMethods(residenceId: residenceId);
+          
+          // Supprimer la méthode
+          currentMethods.remove(method);
+          
+          // Convertir en format API
+          final paymentMethodsList = currentMethods.map((m) => m.toString().split('.').last).toList();
+          
+          // Mettre à jour via l'API
+          final response = await _apiService.put('/residences/$residenceId/payment-methods', data: {
+            'paymentMethods': paymentMethodsList,
+          });
+          
+          if (response.statusCode == 200) {
+            debugPrint('✅ Méthode de paiement supprimée via API: ${method.displayName}');
+            return true;
+          }
+        } catch (apiError) {
+          debugPrint('API non disponible, utilisation du stockage local: $apiError');
+        }
+      }
       
-      // Supprimer uniquement en local
+      // Fallback vers le stockage local si l'API n'est pas disponible
+      debugPrint('ℹ️ Suppression locale (fallback)');
       return await _preferencesService.removeMethod(method);
     } catch (e) {
       debugPrint('❌ Erreur lors de la suppression de la méthode de paiement: $e');
@@ -357,30 +417,30 @@ class AfricanPaymentService {
     
     final phoneNumber = details['phoneNumber'].toString();
     
-    // Validation du format du numéro de téléphone selon l'opérateur
+    // Validation du format du numéro de téléphone selon l'opérateur (alignée avec le backend)
     switch (method) {
       case AfricanPaymentMethod.wave:
-        // Format Wave: généralement commence par 77, 78 ou 70 au Sénégal
-        if (!RegExp(r'^(\+?221)?(7[0-9])[0-9]{7}$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
-          return 'Format de numéro Wave invalide';
+        // Format Wave: Côte d'Ivoire - Orange Money (07, 47, 67) - 8 à 10 chiffres
+        if (!RegExp(r'^(\+225)?(07|47|67)\d{6,8}$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
+          return 'Format de numéro Wave invalide (Orange Money CI: 07, 47, 67)';
         }
         break;
       case AfricanPaymentMethod.orangeMoney:
-        // Format Orange: généralement commence par 77 ou 78 au Sénégal
-        if (!RegExp(r'^(\+?221)?(7[78])[0-9]{7}$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
-          return 'Format de numéro Orange Money invalide';
+        // Format Orange Money: Côte d'Ivoire (07, 47, 67) - 8 à 10 chiffres
+        if (!RegExp(r'^(\+225)?(07|47|67)\d{6,8}$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
+          return 'Format de numéro Orange Money invalide (07, 47, 67)';
         }
         break;
       case AfricanPaymentMethod.mtnMoney:
-        // Format MTN: varie selon le pays
-        if (!RegExp(r'^(\+?[0-9]{1,3})?(\d{9,12})$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
-          return 'Format de numéro MTN Money invalide';
+        // Format MTN Money: Côte d'Ivoire (05, 45, 65) - 8 à 10 chiffres
+        if (!RegExp(r'^(\+225)?(05|45|65)\d{6,8}$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
+          return 'Format de numéro MTN Money invalide (05, 45, 65)';
         }
         break;
       case AfricanPaymentMethod.moovMoney:
-        // Format Moov: varie selon le pays
-        if (!RegExp(r'^(\+?[0-9]{1,3})?(\d{9,12})$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
-          return 'Format de numéro Moov Money invalide';
+        // Format Moov Money: Côte d'Ivoire (01, 41, 61) - 8 à 10 chiffres
+        if (!RegExp(r'^(\+225)?(01|41|61)\d{6,8}$').hasMatch(phoneNumber.replaceAll(' ', ''))) {
+          return 'Format de numéro Moov Money invalide (01, 41, 61)';
         }
         break;
       default:

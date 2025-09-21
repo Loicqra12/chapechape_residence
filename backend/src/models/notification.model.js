@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 const { NOTIFICATION_TYPES } = require('../utils/constants');
+const { COMMON, PARTNER, CLIENT } = require('../utils/notification-types');
+
+// Build a comprehensive enum list combining legacy constants and new granular types
+const ALLOWED_NOTIFICATION_TYPES = [
+  ...Object.values(NOTIFICATION_TYPES),
+  ...Object.values(COMMON),
+  ...Object.values(PARTNER),
+  ...Object.values(CLIENT),
+];
 
 const notificationSchema = new mongoose.Schema({
     user: {
@@ -9,7 +18,7 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: Object.values(NOTIFICATION_TYPES),
+        enum: ALLOWED_NOTIFICATION_TYPES,
         required: true
     },
     message: {

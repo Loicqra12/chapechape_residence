@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:dio/dio.dart';
 import '../../../core/blocs/message/message_bloc.dart';
 import '../../../core/constants/app_icons.dart';
 import '../../../core/models/message/conversation.dart';
@@ -28,6 +29,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _isMessagingEnabled = true;
   int _currentPage = 1;
   static const int _pageSize = 20;
+
+  // État de recherche
+  bool _isSearchMode = false;
+  String _searchQuery = '';
+  List<Message> _searchResults = [];
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
 
   final SocketService _socketService = SocketService();
 
@@ -79,11 +87,80 @@ class _MessagesScreenState extends State<MessagesScreen> {
     _socketService.disconnect();
     
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _loadConversations() {
     context.read<MessageBloc>().add(LoadConversations());
+  }
+
+  // Méthodes de recherche
+  void _toggleSearchMode() {
+    setState(() {
+      _isSearchMode = !_isSearchMode;
+      if (!_isSearchMode) {
+        _searchQuery = '';
+        _searchResults.clear();
+        _searchController.clear();
+      }
+    });
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.trim().isEmpty || _selectedConversation == null) {
+      setState(() {
+        _searchResults.clear();
+        _searchQuery = '';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchQuery = query;
+    });
+
+    try {
+      final messageService = MessageService(Dio());
+      final results = await messageService.searchMessages(
+        conversationId: _selectedConversation!.id,
+        query: query,
+      );
+      
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+      });
+      debugPrint('Erreur lors de la recherche: $e');
+    }
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchQuery = '';
+      _searchResults.clear();
+      _searchController.clear();
+    });
+  }
+
+  String _formatMessageTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 0) {
+      return '${difference.inDays}j';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}min';
+    } else {
+      return 'Maintenant';
+    }
   }
 
   void _selectConversation(Conversation conversation) {
@@ -359,6 +436,162 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 
+  // Interface de recherche
+  Widget _buildSearchBar() {
+    if (!_isSearchMode) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Rechercher dans les messages...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide(color: AppColors.primary),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: (value) {
+                if (value.trim().isNotEmpty) {
+                  _performSearch(value);
+                } else {
+                  _clearSearch();
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: _toggleSearchMode,
+            icon: const Icon(Icons.close),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Résultats de recherche
+  Widget _buildSearchResults() {
+    if (!_isSearchMode || _searchQuery.isEmpty) return const SizedBox.shrink();
+    
+    if (_isSearching) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    if (_searchResults.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off, size: 48, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Aucun message trouvé',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                ),
+              ),
+              Text(
+                'Essayez avec d\'autres mots-clés',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final message = _searchResults[index];
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.yellow[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.yellow[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.search, size: 16, color: Colors.orange[600]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Résultat ${index + 1}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[600],
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _formatMessageTime(message.timestamp),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message.content,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildConversationsList() {
     return CustomScrollView(
       slivers: [
@@ -376,9 +609,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   BlendMode.srcATop,
                 ),
               ),
-              onPressed: () {
-                // TODO: Implement search
-              },
+              onPressed: _toggleSearchMode,
             ),
             IconButton(
               icon: SvgPicture.asset(
@@ -581,6 +812,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildChatScreen() {
+    return Scaffold(
+      body: Column(
+        children: [
+          // Barre de recherche
+          _buildSearchBar(),
+          // Interface de chat ou résultats de recherche
+          Expanded(
+            child: _isSearchMode && _searchQuery.isNotEmpty
+                ? _buildSearchResults()
+                : _buildChatInterface(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatInterface() {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,

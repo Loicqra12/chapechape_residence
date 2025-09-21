@@ -790,6 +790,49 @@ class CacheService {
     return value;
   }
   
+  /// Récupère les réservations créées offline
+  Future<List<dynamic>> getOfflineReservations() async {
+    final box = _getBox(_reservationsBox);
+    final reservations = <dynamic>[];
+    
+    for (final key in box.keys) {
+      if (key == 'lastUpdated') continue;
+      
+      try {
+        final data = box.get(key);
+        if (data is String) {
+          final reservation = jsonDecode(data);
+          if (reservation['isLocal'] == true || reservation['isOffline'] == true) {
+            reservations.add(reservation);
+          }
+        }
+      } catch (e) {
+        _logger.warning('Erreur lors de la lecture de la réservation $key: $e');
+      }
+    }
+    
+    return reservations;
+  }
+
+  /// Marque une réservation comme créée offline
+  Future<void> markReservationAsOffline(String reservationId) async {
+    final box = _getBox(_reservationsBox);
+    final data = box.get(reservationId);
+    
+    if (data is String) {
+      try {
+        final reservation = jsonDecode(data);
+        reservation['isLocal'] = true;
+        reservation['isOffline'] = true;
+        reservation['needsSync'] = true;
+        await box.put(reservationId, jsonEncode(reservation));
+        _logger.info('Réservation marquée comme offline: $reservationId');
+      } catch (e) {
+        _logger.warning('Erreur lors du marquage offline de la réservation: $e');
+      }
+    }
+  }
+
   /// Efface toutes les données du cache (utile lors de la déconnexion)
   Future<void> clearAllData() async {
     final boxes = [

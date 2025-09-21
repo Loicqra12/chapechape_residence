@@ -44,6 +44,32 @@ class MessageService {
     return _dio;
   }
 
+  /// Recherche des messages dans une conversation
+  Future<List<Message>> searchMessages({
+    required String conversationId,
+    required String query,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/messages/search',
+        queryParameters: {
+          'conversationId': conversationId,
+          'query': query,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> messagesData = response.data['data'] ?? [];
+        return messagesData.map((data) => Message.fromJson(data)).toList();
+      } else {
+        throw Exception('Erreur lors de la recherche: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de la recherche de messages: $e');
+      rethrow;
+    }
+  }
+
   /// Récupère toutes les conversations de l'utilisateur
   Future<List<Conversation>> getConversations() async {
     try {

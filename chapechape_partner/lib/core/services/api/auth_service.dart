@@ -52,11 +52,11 @@ class AuthService {
   }
 
   /// Stocke le token avec sa date d'expiration
-  Future<void> setToken(String token, {int expiryDays = 30}) async {
+  Future<void> setToken(String token, {int expiryDays = 90}) async {
     try {
       await _storage.write(key: _tokenKey, value: token);
       
-      // Définir une date d'expiration (30 jours par défaut)
+      // Définir une date d'expiration (90 jours comme Facebook/Instagram)
       final expiryDate = DateTime.now().add(Duration(days: expiryDays));
       await _storage.write(key: _tokenExpiryKey, value: expiryDate.toIso8601String());
       
@@ -148,8 +148,8 @@ class AuthService {
           await setToken(token);
           if (refreshToken != null) {
             await _storage.write(key: 'refresh_token', value: refreshToken);
-            // Stocker la date d'expiration (24h par défaut)
-            final expiryDate = DateTime.now().add(Duration(hours: 24));
+            // Stocker la date d'expiration (90 jours pour rester connecté longtemps)
+            final expiryDate = DateTime.now().add(Duration(days: 90));
             await _storage.write(key: 'token_expiry', value: expiryDate.toIso8601String());
           }
           
@@ -176,16 +176,18 @@ class AuthService {
     required String email,
     required String phoneNumber,
     required String password,
+    String? countryCode,
   }) async {
     try {
       final response = await _dio.post(
-        '/auth/register',
+        '/auth/register-partner', // Utiliser l'endpoint spécifique pour les partenaires
         data: {
           'firstName': firstName,
           'lastName': lastName,
           'email': email,
           'phoneNumber': phoneNumber,
           'password': password,
+          'countryCode': countryCode ?? 'CI', // Ajout du code pays avec défaut CI
         },
       );
 
@@ -200,8 +202,8 @@ class AuthService {
           await setToken(token);
           if (refreshToken != null) {
             await _storage.write(key: 'refresh_token', value: refreshToken);
-            // Stocker la date d'expiration (24h par défaut)
-            final expiryDate = DateTime.now().add(Duration(hours: 24));
+            // Stocker la date d'expiration (90 jours pour rester connecté longtemps)
+            final expiryDate = DateTime.now().add(Duration(days: 90));
             await _storage.write(key: 'token_expiry', value: expiryDate.toIso8601String());
           }
           

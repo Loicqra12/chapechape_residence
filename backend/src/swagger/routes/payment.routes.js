@@ -9,6 +9,81 @@
 
 /**
  * @swagger
+ * /api/payments/cinetpay/verify/{transactionId}:
+ *   get:
+ *     summary: Vérifier le statut d'un paiement CinetPay
+ *     tags: [Paiements]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: transactionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de transaction CinetPay
+ *     responses:
+ *       200:
+ *         description: Statut du paiement récupéré
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 payment:
+ *                   $ref: '#/components/schemas/Payment'
+ *                 cinetpayData:
+ *                   type: object
+ *       404:
+ *         description: Paiement introuvable
+ *       400:
+ *         description: Erreur de vérification CinetPay
+ *       500:
+ *         description: Erreur serveur
+ */
+
+/**
+ * @swagger
+ * /api/payments/cinetpay/webhook:
+ *   post:
+ *     summary: Webhook CinetPay (appelé par CinetPay)
+ *     tags: [Paiements]
+ *     description: Endpoint appelé par CinetPay pour notifier les statuts de paiement. Ne pas appeler directement depuis un client.
+ *     requestBody:
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook traité avec succès
+ *       400:
+ *         description: Erreur traitement webhook
+ */
+
+/**
+ * @swagger
+ * /api/payments/wave/webhook:
+ *   post:
+ *     summary: Webhook Wave (appelé par Wave)
+ *     tags: [Paiements]
+ *     description: Endpoint appelé par Wave pour notifier les statuts de paiement. Ne pas appeler directement depuis un client.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Webhook reçu
+ *       400:
+ *         description: Signature invalide ou corps invalide
+ */
+
+/**
+ * @swagger
  * /api/payments/create-payment-intent:
  *   post:
  *     summary: Créer une intention de paiement
@@ -30,8 +105,8 @@
  *                 description: ID de la réservation à payer
  *               paymentMethod:
  *                 type: string
- *                 enum: [card, orange_money, mtn_money, moov_money, wave, djamo]
- *                 description: Méthode de paiement
+ *                 enum: [orange_money, mtn_money, moov_money, wave, om, momo]
+ *                 description: Méthode de paiement (om=même que orange_money, momo=même que mtn_money)
  *               phoneNumber:
  *                 type: string
  *                 description: Numéro de téléphone (requis pour les méthodes de paiement mobile)
