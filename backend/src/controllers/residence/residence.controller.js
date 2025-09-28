@@ -42,37 +42,74 @@ exports.createResidence = asyncHandler(async (req, res) => {
         console.log('Contenu complet:', residenceData);
     }
     
-    // Validation manuelle des champs requis
-    const requiredFields = ['title', 'description', 'price', 'type', 'address', 'city', 'bedrooms', 'bathrooms', 'area'];
-    const missingFields = requiredFields.filter(field => residenceData[field] === undefined || residenceData[field] === null);
+    // Validation manuelle des champs requis (NOUVEAU SCHÉMA)
+    const requiredFields = ['title', 'description', 'price', 'type', 'bedrooms', 'bathrooms', 'maxOccupancy', 'location'];
+    const missingFields = requiredFields.filter(field => {
+        if (field === 'location') {
+            // Vérifier la structure complète de location
+            return !residenceData.location || 
+                   !residenceData.location.coordinates || 
+                   typeof residenceData.location.coordinates.latitude !== 'number' ||
+                   typeof residenceData.location.coordinates.longitude !== 'number';
+        }
+        return residenceData[field] === undefined || residenceData[field] === null;
+    });
     
     if (missingFields.length > 0) {
-        console.error('Champs manquants:', missingFields);
+        console.error('Champs manquants (nouveau schéma):', missingFields);
         throw new apiError(`Champs requis manquants: ${missingFields.join(', ')}`, 400);
+    }
+    
+    // MIGRATION AUTOMATIQUE : Extraire address/city/area depuis la nouvelle structure si nécessaire
+    if (residenceData.location && !residenceData.address) {
+        residenceData.address = residenceData.location.address || '';
+        residenceData.city = residenceData.location.city || '';
+        console.log('Migration automatique: address/city extraits de location');
+    }
+    
+    // Gérer area vs surface
+    if (!residenceData.area && residenceData.surface) {
+        residenceData.area = residenceData.surface;
+        console.log('Migration automatique: surface -> area');
+    } else if (!residenceData.area) {
+        residenceData.area = 0; // Valeur par défaut
     }
 
     try {
-        // Préparer la structure de géolocalisation si les données sont présentes
-        if (residenceData.latitude !== undefined && residenceData.longitude !== undefined) {
-            console.log('Données de géolocalisation détectées:', {
-                latitude: residenceData.latitude,
-                longitude: residenceData.longitude,
-                formattedAddress: residenceData.formattedAddress
-            });
+        // Préparer la structure de géolocalisation (NOUVEAU SCHÉMA)
+        if (residenceData.location && residenceData.location.coordinates) {
+            console.log('Nouvelle structure de géolocalisation détectée:', residenceData.location);
             
-            // Construire la structure locationData
+            // Construire la structure locationData pour MongoDB
+            residenceData.locationData = {
+                coordinates: {
+                    latitude: parseFloat(residenceData.location.coordinates.latitude),
+                    longitude: parseFloat(residenceData.location.coordinates.longitude)
+                },
+                formattedAddress: residenceData.location.formattedAddress || residenceData.location.address || '',
+                address: residenceData.location.address || '',
+                city: residenceData.location.city || '',
+                country: residenceData.location.country || 'CI'
+            };
+            
+            // Également définir les champs racine pour compatibilité avec le modèle actuel
+            residenceData.latitude = parseFloat(residenceData.location.coordinates.latitude);
+            residenceData.longitude = parseFloat(residenceData.location.coordinates.longitude);
+            
+            console.log('Structure locationData construite depuis location:', residenceData.locationData);
+        } else if (residenceData.latitude !== undefined && residenceData.longitude !== undefined) {
+            // Fallback pour l'ancien format (rétrocompatibilité)
+            console.log('Ancien format de géolocalisation détecté (rétrocompatibilité)');
             residenceData.locationData = {
                 coordinates: {
                     latitude: parseFloat(residenceData.latitude),
                     longitude: parseFloat(residenceData.longitude)
                 },
                 formattedAddress: residenceData.formattedAddress || '',
-                address: residenceData.address,
-                city: residenceData.city,
+                address: residenceData.address || '',
+                city: residenceData.city || '',
                 country: residenceData.country || 'CI'
             };
-            
-            console.log('Structure locationData construite:', residenceData.locationData);
         }
         
         // Créer la résidence de base

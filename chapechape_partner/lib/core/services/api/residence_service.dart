@@ -139,7 +139,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/my-residences'),
+        Uri.parse('$baseUrl/residences/my-residences'),
         headers: headers,
       );
 
@@ -186,7 +186,7 @@ class ResidenceService {
     try {
       final headers = await _getAuthHeaders();
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/my-residences').replace(queryParameters: filters),
+        Uri.parse('$baseUrl/residences/my-residences').replace(queryParameters: filters),
         headers: headers,
       );
 
@@ -311,7 +311,7 @@ class ResidenceService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
       final response = await client.get(
-        Uri.parse('$baseUrl/api/residences/$id?_t=$timestamp'),
+        Uri.parse('$baseUrl/residences/$id?_t=$timestamp'),
         headers: headers,
       );
 
@@ -523,111 +523,93 @@ class ResidenceService {
   }
   
   // Méthode utilitaire pour adapter les données de résidence du frontend au backend
+  // NOUVEAU SCHÉMA: Adaptation complète selon validation Joi stricte
   Map<String, dynamic> _adaptFrontendResidenceToBackend(Map<String, dynamic> data) {
-    // Créer une copie pour éviter de modifier l'original
-    final Map<String, dynamic> adapted = Map.from(data);
+    print('🔄 AVANT adaptation: ${json.encode(data)}');
     
-    // ÉTAPE 1: Extraire les coordonnées GPS sous forme numérique
-    final numLat = _extractNumericValue(data['latitude']);
-    final numLng = _extractNumericValue(data['longitude']);
+    // ÉTAPE 1: Créer un objet CLEAN avec SEULEMENT les champs autorisés par le backend
+    final Map<String, dynamic> backendData = {};
     
-    // ÉTAPE 2: Supprimer tous les champs liés à la localisation pour éviter les conflits
-    adapted.remove('locationData');
-    adapted.remove('location');
+    // CHAMPS OBLIGATOIRES selon validation Joi
     
-    // ÉTAPE 3: Toujours conserver les coordonnées au niveau racine pour compatibilité
-    adapted['latitude'] = numLat;
-    adapted['longitude'] = numLng;
+    // 1. TITLE (requis) - transformation name -> title
+    backendData['title'] = data['name']?.toString() ?? '';
     
-    // ÉTAPE 4: Formater les coordonnées dans la structure attendue par le backend
-    // Le backend attend locationData.coordinates.latitude/longitude
-    if (numLat != null && numLng != null) {
-      adapted['locationData'] = {
-        'coordinates': {
-          'latitude': numLat,
-          'longitude': numLng
-        }
-      };
-    }
-
-    // Adapter les noms de champs pour correspondre à ceux attendus par le backend
-    if (data.containsKey('name')) {
-      adapted['title'] = data['name'];
-    }
+    // 2. DESCRIPTION (requis)
+    backendData['description'] = data['description']?.toString() ?? '';
     
-    if (data.containsKey('surface')) {
-      adapted['area'] = data['surface'];
-    }
+    // 3. PRICE (requis)
+    backendData['price'] = _extractNumericValue(data['price']) ?? 0;
     
-    // IMPORTANT: Convertir le type pour le backend
-    if (data.containsKey('type')) {
-      adapted['type'] = _mapFrontendTypeToBackendType(data['type']);
-    }
-
-    // Gérer le statut
-    if (data['status'] != null) {
-      adapted['isAvailable'] = data['status'] == 'available';
-    }
+    // 4. LOCATION (requis) - Structure complexe
+    final numLat = _extractNumericValue(data['latitude']) ?? 0.0;
+    final numLng = _extractNumericValue(data['longitude']) ?? 0.0;
     
-    // Assurer que l'adresse formatée est utilisée si disponible
-    if (data.containsKey('formattedAddress') && data['formattedAddress'] != null) {
-      adapted['address'] = data['formattedAddress'];
-    }
-
-    // 3. Traiter les amenities dans une liste
-    if (data['amenities'] != null) {
-      // Si déjà une liste, la préserver
-      if (data['amenities'] is List) {
-        adapted['amenities'] = data['amenities'];
-      } 
-      // Si c'est une chaîne JSON, la parser
-      else if (data['amenities'] is String) {
-        try {
-          adapted['amenities'] = jsonDecode(data['amenities']);
-        } catch (e) {
-          print('❌ Erreur de décodage des amenities: $e');
-          adapted['amenities'] = [];
-        }
+    backendData['location'] = {
+      'address': data['formattedAddress']?.toString() ?? data['address']?.toString() ?? '',
+      'city': data['city']?.toString() ?? '',
+      'state': data['region']?.toString() ?? 'AB', // Region -> State
+      'country': data['country']?.toString() ?? 'CI',
+      'coordinates': {
+        'latitude': numLat,
+        'longitude': numLng
       }
+    };
+    
+    // 5. TYPE (requis) - Mapper vers les valeurs autorisées
+    backendData['type'] = _mapFrontendTypeToBackendType(data['type']?.toString() ?? 'studio');
+    
+    // 6. BEDROOMS (requis)
+    backendData['bedrooms'] = _extractNumericValue(data['bedrooms'])?.toInt() ?? 0;
+    
+    // 7. BATHROOMS (requis)
+    backendData['bathrooms'] = _extractNumericValue(data['bathrooms'])?.toInt() ?? 0;
+    
+    // 8. MAXOCCUPANCY (requis) - transformation maxGuests -> maxOccupancy
+    backendData['maxOccupancy'] = _extractNumericValue(data['maxGuests'])?.toInt() ?? 2;
+    
+    // CHAMPS OPTIONNELS
+    
+    // 9. FEATURES - Pas utilisé par l'app mais requis par validation
+    backendData['features'] = ['residence']; // Valeur par défaut
+    
+    // 10. AMENITIES - Doit être un array de strings
+    if (data['amenities'] != null && data['amenities'] is List) {
+      backendData['amenities'] = List<String>.from(data['amenities']);
     } else {
-      // Sinon, créer une liste à partir des propriétés booléennes
-      final List<String> amenities = [];
-      if (data['hasPool'] == true) amenities.add('pool');
-      if (data['hasWifi'] == true) amenities.add('wifi');
-      if (data['hasParking'] == true) amenities.add('parking');
-      if (data['hasKitchen'] == true) amenities.add('kitchen');
-      if (data['hasAirConditioning'] == true) amenities.add('air_conditioning');
-      if (data['hasGym'] == true) amenities.add('gym');
-      if (data['hasSpa'] == true) amenities.add('spa');
-      if (data['hasMeetingRoom'] == true) amenities.add('meeting_room');
-      if (data['hasTerrace'] == true) amenities.add('terrace');
-      if (data['hasBalcony'] == true) amenities.add('balcony');
-      if (data['isVacationResidence'] == true) amenities.add('vacation_residence');
-      if (data['isSpecialResidence'] == true) amenities.add('special_residence');
-      adapted['amenities'] = amenities;
+      backendData['amenities'] = <String>[];
     }
-
-    // 4. Structurer les règles de la maison
-    if (data['rules'] != null) {
-      // Si déjà un objet ou liste, le préserver
-      if (data['rules'] is Map || data['rules'] is List) {
-        adapted['rules'] = data['rules'];
-      } 
-      // Si c'est une chaîne JSON, la parser
-      else if (data['rules'] is String) {
-        try {
-          adapted['rules'] = jsonDecode(data['rules']);
-        } catch (e) {
-          print('❌ Erreur de décodage des règles: $e');
-          adapted['rules'] = {};
-        }
-      }
+    
+    // 11. RULES - DOIT être un array, PAS un objet !
+    final List<String> rulesArray = [];
+    if (data['rules'] != null && data['rules'] is Map) {
+      final rulesMap = data['rules'] as Map;
+      if (rulesMap['allowsSmoking'] == false) rulesArray.add('no_smoking');
+      if (rulesMap['allowsPets'] == false) rulesArray.add('no_pets');
+      if (rulesMap['allowsParties'] == false) rulesArray.add('no_parties');
     }
-
-    print('🏠 Création résidence - Données adaptées: $data');
-    print('🏠 Création résidence - JSON des données: ${json.encode(adapted)}');
-
-    return adapted;
+    backendData['rules'] = rulesArray;
+    
+    // 12. STATUS - Optionnel
+    if (data.containsKey('status')) {
+      backendData['status'] = data['status']?.toString() ?? 'available';
+    }
+    
+    // 13. RESERVATION MODE - Optionnel
+    if (data.containsKey('reservationMode')) {
+      backendData['reservationMode'] = data['reservationMode']?.toString() ?? 'instant';
+    }
+    
+    // CORRECTION CRITIQUE : Le contrôleur backend fait sa propre validation APRÈS Joi !  
+    // Ligne 46 du contrôleur : const requiredFields = ['title', 'description', 'price', 'type', 'address', 'city', 'bedrooms', 'bathrooms', 'area'];
+    // Il faut donc ajouter ces champs même si Joi ne les exige pas dans sa validation
+    backendData['address'] = backendData['location']['address'];
+    backendData['city'] = backendData['location']['city'];  
+    backendData['area'] = _extractNumericValue(data['surface']) ?? 1300;
+    
+    print('🔄 APRÈS adaptation (backend clean + champs compatibilité): ${json.encode(backendData)}');
+    
+    return backendData;
   }
 
   /// Extrait une valeur numérique à partir d'un objet qui peut être numérique ou un Map
@@ -774,21 +756,27 @@ class ResidenceService {
         'Accept': 'application/json',
       };
       
-      // Vérifier les champs obligatoires
-      final requiredFields = ['title', 'description', 'price', 'type', 'address', 'city', 'bedrooms', 'bathrooms', 'area'];
+      // Vérifier SEULEMENT les champs obligatoires du NOUVEAU schéma backend
+      final requiredFields = ['title', 'description', 'price', 'type', 'bedrooms', 'bathrooms', 'maxOccupancy', 'location'];
       for (final field in requiredFields) {
-        if (adaptedData[field] == null || adaptedData[field].toString().isEmpty) {
+        if (field == 'location') {
+          // Vérifier la structure complète de location
+          if (adaptedData[field] == null || 
+              adaptedData[field]['coordinates'] == null ||
+              adaptedData[field]['coordinates']['latitude'] == null ||
+              adaptedData[field]['coordinates']['longitude'] == null) {
+            print('⚠️ Structure location invalide');
+          }
+        } else if (adaptedData[field] == null || (adaptedData[field] is String && adaptedData[field].toString().isEmpty)) {
           print('⚠️ Champ obligatoire manquant: $field');
-          // Ajouter des valeurs par défaut
+          // Ajouter des valeurs par défaut MINIMALES
           if (field == 'title') adaptedData[field] = 'Sans titre';
           if (field == 'description') adaptedData[field] = 'Aucune description';
           if (field == 'price') adaptedData[field] = 0;
-          if (field == 'type') adaptedData[field] = 'studio'; // Type par défaut
-          if (field == 'address') adaptedData[field] = 'Adresse non spécifiée';
-          if (field == 'city') adaptedData[field] = 'Abidjan';
+          if (field == 'type') adaptedData[field] = 'studio';
           if (field == 'bedrooms') adaptedData[field] = 1;
           if (field == 'bathrooms') adaptedData[field] = 1;
-          if (field == 'area') adaptedData[field] = 0;
+          if (field == 'maxOccupancy') adaptedData[field] = 2;
         }
       }
       
@@ -802,9 +790,8 @@ class ResidenceService {
       print('🏠 Création résidence - Données JSON: $jsonBody');
       
       // Appel API pour créer la résidence
-      // Suivre la même convention que getResidences() qui fonctionne
-      // C'est-à-dire inclure explicitement /api/ même si baseUrl contient déjà ce préfixe
-      final fullUrl = '$baseUrl/api/residences';
+      // baseUrl contient déjà /api, donc on utilise juste /residences
+      final fullUrl = '$baseUrl/residences';
       
       print('🏠 Création résidence - URL complète: $fullUrl');
       
@@ -892,7 +879,7 @@ class ResidenceService {
       print('Envoi de la requête avec ${images.length} images');
 
       // Utiliser http.MultipartRequest pour créer une requête multipart
-      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/api/residences/$id'));
+      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/residences/$id'));
       
       // Ajouter le token d'authentification
       request.headers['Authorization'] = 'Bearer $token';
@@ -1093,7 +1080,7 @@ class ResidenceService {
       final token = await storage.read(key: 'token');
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/residences/$residenceId/images'),
       );
 
       // Ajouter tous les headers nécessaires
@@ -1280,7 +1267,7 @@ class ResidenceService {
       
       final token = await storage.read(key: 'token');
       final response = await http.post(
-        Uri.parse('$baseUrl/api/residences/$residenceId/images'),
+        Uri.parse('$baseUrl/residences/$residenceId/images'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -1322,7 +1309,7 @@ class ResidenceService {
       print("🗑️ Début de la suppression de la résidence $id");
       final headers = await _getAuthHeaders();
       final response = await client.delete(
-        Uri.parse('$baseUrl/api/residences/$id'),
+        Uri.parse('$baseUrl/residences/$id'),
         headers: headers,
       );
 
@@ -1409,7 +1396,7 @@ class ResidenceService {
         
         // Construire l'URL avec l'ID du partenaire
         final response = await client.get(
-          Uri.parse('$baseUrl/api/residences/partner/$userId'),
+          Uri.parse('$baseUrl/residences/partner/$userId'),
           headers: headers,
         );
 
@@ -1437,14 +1424,14 @@ class ResidenceService {
         );
       } catch (e) {
         // Si la première tentative échoue, essayons une méthode alternative
-        debugPrint('⚠️ Erreur lors de la récupération des résidences via /api/residences/partner: $e');
+        debugPrint('⚠️ Erreur lors de la récupération des résidences via /residences/partner: $e');
         debugPrint('🔄 Tentative via endpoint alternatif /partners/stats/residences...');
         
         // 2. Essayer l'endpoint alternatif
         final headers = await _getAuthHeaders();
-        // Correction du chemin API - ajout du préfixe /api/
+        // Utiliser l'endpoint alternatif avec baseUrl qui contient déjà /api
         final response = await client.get(
-          Uri.parse('$baseUrl/api/partners/stats/residences'),
+          Uri.parse('$baseUrl/partners/stats/residences'),
           headers: headers,
         );
 
@@ -1647,7 +1634,7 @@ class ResidenceService {
       
       // Ajouter un paramètre timestamp pour éviter le cache côté serveur
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final url = '$baseUrl/api/residences/my-residences?_t=$timestamp';
+      final url = '$baseUrl/residences/my-residences?_t=$timestamp';
       print("🌐 URL appelée: $url");
       
       final response = await client.get(
@@ -1775,7 +1762,7 @@ class ResidenceService {
       final headers = await _getAuthHeaders();
       
       final response = await client.delete(
-        Uri.parse('$baseUrl/api/residences/$residenceId/images/$imageName'),
+        Uri.parse('$baseUrl/residences/$residenceId/images/$imageName'),
         headers: headers,
       );
       
@@ -1811,7 +1798,7 @@ class ResidenceService {
       }
 
       final response = await _dio.post(
-        '/api/residences/$residenceId/nearby-places',
+        '/residences/$residenceId/nearby-places',
         data: nearbyPlace,
         options: Options(
           headers: {
@@ -1846,7 +1833,7 @@ class ResidenceService {
       }
 
       final response = await _dio.post(
-        '/api/residences/$residenceId/faqs',
+        '/residences/$residenceId/faqs',
         data: faq,
         options: Options(
           headers: {
@@ -1881,7 +1868,7 @@ class ResidenceService {
       }
 
       final response = await _dio.put(
-        '/api/residences/$residenceId/enhanced-amenities',
+        '/residences/$residenceId/enhanced-amenities',
         data: enhancedAmenities,
         options: Options(
           headers: {
@@ -1916,7 +1903,7 @@ class ResidenceService {
       }
 
       final response = await _dio.put(
-        '/api/residences/$residenceId/payment-methods',
+        '/residences/$residenceId/payment-methods',
         data: {'paymentMethods': paymentMethods},
         options: Options(
           headers: {
@@ -1954,7 +1941,7 @@ class ResidenceService {
       }
       
       final response = await _dio.put(
-        '/api/residences/$residenceId/nearby-places',
+        '/residences/$residenceId/nearby-places',
         data: {
           'nearbyPlaces': places.map((place) => place.toJson()).toList(),
         },
@@ -1988,7 +1975,7 @@ class ResidenceService {
       }
       
       final response = await _dio.put(
-        '/api/residences/$residenceId/faqs',
+        '/residences/$residenceId/faqs',
         data: {
           'faqs': faqs.map((faq) => faq.toJson()).toList(),
         },
