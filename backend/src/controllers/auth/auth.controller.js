@@ -265,6 +265,8 @@ exports.getMe = asyncHandler(async (req, res) => {
                 phoneNumber: user.phoneNumber,
                 isPhoneVerified: user.isPhoneVerified || false,
                 profilePicture: user.profilePicture || user.profileImage,
+                profileImage: user.profilePicture || user.profileImage, // Compatibilité partner app
+                profilePictureUrl: user.profilePicture || user.profileImage, // Compatibilité client app
                 createdAt: user.createdAt
             }
         });
