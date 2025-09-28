@@ -25,8 +25,10 @@ class WavePayoutService {
         if (!this.apiKey) {
             console.warn('⚠️  Clé API Wave manquante - Service Wave Payout désactivé');
             console.warn('Variables cherchées: CLÉ_API_WAVE_PAYOUT ou WAVE_PAYOUT_API_KEY');
+            console.warn('Ajoutez WAVE_PAYOUT_API_KEY dans votre fichier .env pour activer ce service');
             // Ne pas faire planter le serveur, juste désactiver le service
             this.isEnabled = false;
+            return; // Sortir du constructeur sans erreur
         } else {
             this.isEnabled = true;
             console.log('✅ Service Wave Payout initialisé avec succès');
