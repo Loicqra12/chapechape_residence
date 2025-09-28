@@ -15,7 +15,12 @@ const {
     searchResidences,
     uploadImages,
     deleteImage,
-    getAllResidences
+    getAllResidences,
+    getPopularResidences,
+    checkResidenceAvailability,
+    getFavoriteResidences,
+    addToFavorites,
+    removeFromFavorites
 } = residenceController;
 const Residence = require('../models/residence.model');
 
@@ -23,6 +28,7 @@ const Residence = require('../models/residence.model');
 router.get('/', getResidences);
 router.get('/search', searchResidences);
 router.get('/all', getAllResidences);
+router.get('/popular', getPopularResidences); // Nouveau: résidences populaires pour app client
 
 // Routes protégées (partenaires uniquement)
 router.use(protect);
@@ -78,6 +84,20 @@ router.get('/my-residences', authorize('partner'), async (req, res) => {
     });
   }
 });
+
+// Routes pour les favoris (compatibilité app client) - nécessitent une authentification
+router.get('/favorites', protect, getFavoriteResidences);
+router.post('/favorites/:id', protect, addToFavorites);
+router.delete('/favorites/:id', protect, removeFromFavorites);
+
+// Route de redirection pour les avis (compatibilité app client)
+router.get('/:id/reviews', (req, res) => {
+    // Redirection vers l'endpoint existant des avis
+    res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
+});
+
+// Routes spécifiques avec paramètre id - doivent être après les routes générales mais avant la route générique /:id
+router.get('/:id/availability', checkResidenceAvailability); // Nouveau: vérification disponibilité pour app client
 
 // Route publique avec paramètre id - doit être après les routes spécifiques
 router.get('/:id', getResidence);

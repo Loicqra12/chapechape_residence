@@ -29,7 +29,23 @@ const createResidence = {
         }),
         status: Joi.string().valid('available', 'unavailable', 'maintenance'),
         // Nouveau: validation du mode de réservation
-        reservationMode: Joi.string().valid('instant', 'approval_required')
+        reservationMode: Joi.string().valid('instant', 'approval_required'),
+        // Nouveau: validation de la période de prix
+        pricePeriod: Joi.string().valid('hour', 'day', 'week', 'month'),
+        // Nouveau: validation des méthodes de paiement
+        paymentMethods: Joi.array().items(
+            Joi.string().valid('cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer')
+        ),
+        // Nouveau: validation des tarifs horaires
+        hourlyRates: Joi.object().keys({
+            oneHour: Joi.number().min(0)
+        }),
+        // Nouveau: validation des tarifs journaliers
+        dailyRates: Joi.object().keys({
+            halfDay: Joi.number().min(0),
+            fullDay: Joi.number().min(0),
+            weekend: Joi.number().min(0)
+        })
     })
 };
 
@@ -64,7 +80,23 @@ const updateResidence = {
         }),
         status: Joi.string().valid('available', 'unavailable', 'maintenance'),
         // Nouveau: validation du mode de réservation
-        reservationMode: Joi.string().valid('instant', 'approval_required')
+        reservationMode: Joi.string().valid('instant', 'approval_required'),
+        // Nouveau: validation de la période de prix
+        pricePeriod: Joi.string().valid('hour', 'day', 'week', 'month'),
+        // Nouveau: validation des méthodes de paiement
+        paymentMethods: Joi.array().items(
+            Joi.string().valid('cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer')
+        ),
+        // Nouveau: validation des tarifs horaires
+        hourlyRates: Joi.object().keys({
+            oneHour: Joi.number().min(0)
+        }),
+        // Nouveau: validation des tarifs journaliers
+        dailyRates: Joi.object().keys({
+            halfDay: Joi.number().min(0),
+            fullDay: Joi.number().min(0),
+            weekend: Joi.number().min(0)
+        })
     }).min(1)
 };
 

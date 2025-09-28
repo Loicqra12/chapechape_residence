@@ -4,6 +4,8 @@ const asyncHandler = require('../../middlewares/async');
 const fs = require('fs');
 const path = require('path');
 const { CloudinaryService } = require('../../config/cloudinary');
+const Favorite = require('../../models/favorite.model');
+const Review = require('../../models/review.model');
 
 // @desc    Créer une nouvelle résidence
 // @route   POST /api/residences
@@ -67,12 +69,18 @@ exports.createResidence = asyncHandler(async (req, res) => {
         console.log('Migration automatique: address/city extraits de location');
     }
     
-    // Gérer area vs surface
-    if (!residenceData.area && residenceData.surface) {
-        residenceData.area = residenceData.surface;
-        console.log('Migration automatique: surface -> area');
-    } else if (!residenceData.area) {
-        residenceData.area = 0; // Valeur par défaut
+    // Gérer area vs surface : mapping automatique depuis les nouvelles données
+    if (!residenceData.area) {
+        // Chercher dans les anciennes données ou utiliser une valeur par défaut
+        if (residenceData.surface) {
+            residenceData.area = residenceData.surface;
+            console.log('Migration automatique: surface -> area');
+        } else {
+            // Valeur par défaut basée sur le nombre de chambres (estimation)
+            const estimatedArea = (residenceData.bedrooms || 1) * 25; // 25m² par chambre
+            residenceData.area = estimatedArea;
+            console.log(`Migration automatique: area estimée à ${estimatedArea}m² (${residenceData.bedrooms || 1} chambres)`);
+        }
     }
 
     try {
@@ -250,8 +258,34 @@ exports.updateResidence = asyncHandler(async (req, res) => {
         city: updateData.city
     });
 
-    // Si nous avons reçu des coordonnées GPS, mettre à jour la structure locationData
-    if (updateData.latitude !== undefined && updateData.longitude !== undefined) {
+    // NOUVEAU : Support de la structure location moderne (comme dans createResidence)
+    if (updateData.location && updateData.location.coordinates) {
+        console.log('Nouvelle structure location détectée pour mise à jour:', updateData.location);
+        
+        // Construire la structure locationData pour MongoDB
+        updateData.locationData = {
+            coordinates: {
+                latitude: parseFloat(updateData.location.coordinates.latitude),
+                longitude: parseFloat(updateData.location.coordinates.longitude)
+            },
+            formattedAddress: updateData.location.formattedAddress || updateData.location.address || '',
+            address: updateData.location.address || '',
+            city: updateData.location.city || '',
+            country: updateData.location.country || 'CI'
+        };
+        
+        // Également définir les champs racine pour compatibilité avec le modèle actuel
+        updateData.latitude = parseFloat(updateData.location.coordinates.latitude);
+        updateData.longitude = parseFloat(updateData.location.coordinates.longitude);
+        updateData.address = updateData.location.address || '';
+        updateData.city = updateData.location.city || '';
+        
+        console.log('Structure locationData construite depuis location pour mise à jour:', updateData.locationData);
+    } 
+    // LEGACY : Si nous avons reçu des coordonnées GPS au format ancien, mettre à jour la structure locationData
+    else if (updateData.latitude !== undefined && updateData.longitude !== undefined) {
+        console.log('Format legacy de géolocalisation détecté pour mise à jour (rétrocompatibilité)');
+        
         // Créer/mettre à jour la structure locationData complète
         updateData.locationData = {
             coordinates: {
@@ -264,7 +298,7 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             country: updateData.country || residence.locationData?.country || 'CI'
         };
         
-        console.log('Structure locationData mise à jour:', updateData.locationData);
+        console.log('Structure locationData mise à jour (legacy):', updateData.locationData);
     }
 
     residence = await Residence.findByIdAndUpdate(
@@ -909,4 +943,216 @@ exports.updateFaqs = asyncHandler(async (req, res) => {
         success: true,
         data: residence.faqs
     });
+});
+
+// @desc    Obtenir les résidences populaires (pour compatibilité app client)
+// @route   GET /api/residences/popular
+// @access  Public
+exports.getPopularResidences = asyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    try {
+        console.log('Récupération des résidences populaires...');
+        
+        // Critères pour les résidences populaires : 
+        // - Bien notées (rating > 3)
+        // - Récentes (créées dans les 3 derniers mois)
+        // - Avec des images
+        // - Disponibles
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        const residences = await Residence.find({
+            deleted: { $ne: true },
+            status: 'available',
+            images: { $exists: true, $not: { $size: 0 } },
+            $or: [
+                { 'rating.overall': { $gte: 3 } },
+                { createdAt: { $gte: threeMonthsAgo } },
+                { isFeatured: true }
+            ]
+        })
+        .populate('partner', 'firstName lastName email phoneNumber')
+        .sort({ 
+            'rating.overall': -1, 
+            'rating.reviewCount': -1,
+            createdAt: -1 
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+        const total = await Residence.countDocuments({
+            deleted: { $ne: true },
+            status: 'available',
+            images: { $exists: true, $not: { $size: 0 } },
+            $or: [
+                { 'rating.overall': { $gte: 3 } },
+                { createdAt: { $gte: threeMonthsAgo } },
+                { isFeatured: true }
+            ]
+        });
+
+        console.log(`${residences.length} résidences populaires trouvées`);
+
+        res.json({
+            success: true,
+            count: residences.length,
+            total,
+            data: residences,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                limit
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des résidences populaires:', error);
+        throw new apiError(`Erreur serveur: ${error.message}`, 500);
+    }
+});
+
+// @desc    Vérifier la disponibilité d'une résidence (pour compatibilité app client)
+// @route   GET /api/residences/:id/availability
+// @access  Public
+exports.checkResidenceAvailability = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { checkIn, checkOut } = req.query;
+
+    if (!checkIn || !checkOut) {
+        throw new apiError('Les dates de check-in et check-out sont requises', 400);
+    }
+
+    try {
+        const startDate = new Date(checkIn);
+        const endDate = new Date(checkOut);
+
+        if (startDate >= endDate) {
+            throw new apiError('La date de check-in doit être antérieure à la date de check-out', 400);
+        }
+
+        const residence = await Residence.findById(id);
+        if (!residence) {
+            throw new apiError('Résidence non trouvée', 404);
+        }
+
+        // Pour l'instant, considérer comme disponible si la résidence est active
+        // TODO: Implémenter la logique de vérification des réservations existantes
+        const isAvailable = residence.status === 'available' && !residence.deleted;
+
+        res.json({
+            success: true,
+            available: isAvailable,
+            residence: {
+                id: residence._id,
+                title: residence.title,
+                status: residence.status
+            },
+            checkIn: startDate.toISOString(),
+            checkOut: endDate.toISOString()
+        });
+    } catch (error) {
+        console.error('Erreur lors de la vérification de disponibilité:', error);
+        throw new apiError(`Erreur serveur: ${error.message}`, 500);
+    }
+});
+
+// @desc    Obtenir les résidences favorites (pour compatibilité app client)
+// @route   GET /api/residences/favorites
+// @access  Private (Client only)
+exports.getFavoriteResidences = asyncHandler(async (req, res) => {
+    try {
+        console.log('Récupération des favoris pour l\'utilisateur:', req.user.id);
+        
+        const favorites = await Favorite.find({ user: req.user.id })
+            .populate({
+                path: 'residence',
+                populate: {
+                    path: 'partner',
+                    select: 'firstName lastName email phoneNumber'
+                }
+            });
+
+        const residences = favorites.map(fav => fav.residence).filter(res => res !== null);
+
+        res.json({
+            success: true,
+            count: residences.length,
+            data: residences
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des favoris:', error);
+        throw new apiError(`Erreur serveur: ${error.message}`, 500);
+    }
+});
+
+// @desc    Ajouter une résidence aux favoris (pour compatibilité app client)
+// @route   POST /api/residences/favorites/:id
+// @access  Private (Client only)
+exports.addToFavorites = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Vérifier si la résidence existe
+        const residence = await Residence.findById(id);
+        if (!residence) {
+            throw new apiError('Résidence non trouvée', 404);
+        }
+
+        // Vérifier si déjà dans les favoris
+        const existingFavorite = await Favorite.findOne({
+            user: req.user.id,
+            residence: id
+        });
+
+        if (existingFavorite) {
+            return res.json({
+                success: true,
+                message: 'Résidence déjà dans les favoris',
+                data: existingFavorite
+            });
+        }
+
+        // Ajouter aux favoris
+        const favorite = await Favorite.create({
+            user: req.user.id,
+            residence: id
+        });
+
+        res.status(201).json({
+            success: true,
+            data: favorite
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout aux favoris:', error);
+        throw new apiError(`Erreur serveur: ${error.message}`, 500);
+    }
+});
+
+// @desc    Retirer une résidence des favoris (pour compatibilité app client)  
+// @route   DELETE /api/residences/favorites/:id
+// @access  Private (Client only)
+exports.removeFromFavorites = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const favorite = await Favorite.findOneAndDelete({
+            user: req.user.id,
+            residence: id
+        });
+
+        if (!favorite) {
+            throw new apiError('Favori non trouvé', 404);
+        }
+
+        res.json({
+            success: true,
+            message: 'Résidence retirée des favoris'
+        });
+    } catch (error) {
+        console.error('Erreur lors de la suppression du favori:', error);
+        throw new apiError(`Erreur serveur: ${error.message}`, 500);
+    }
 });
