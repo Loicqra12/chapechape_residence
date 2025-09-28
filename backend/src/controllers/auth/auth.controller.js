@@ -86,7 +86,8 @@ exports.registerPartner = asyncHandler(async (req, res) => {
             firstName,
             lastName,
             phoneNumber: normalizedPhone,
-            role: 'partner_pending' // Étape d'onboarding avant activation complète
+            role: 'partner', // Activation immédiate - pas besoin de vérification séparée
+            isPhoneVerified: true // Auto-approuver le téléphone
         });
 
         // Générer le token d'accès avec la nouvelle fonction

@@ -21,6 +21,13 @@ class TwilioService {
     // Vérifier si WhatsApp est configuré
     this.isWhatsAppConfigured = !!this.twilioWhatsAppNumber;
     
+    // Debug - Afficher les valeurs réellement chargées
+    logger.info('DEBUG - Variables Twilio chargées:');
+    logger.info('Account SID:', process.env.TWILIO_ACCOUNT_SID);
+    logger.info('Phone Number:', process.env.TWILIO_PHONE_NUMBER);
+    logger.info('WhatsApp Number:', process.env.TWILIO_WHATSAPP_NUMBER);
+    logger.info('Auth Token présent:', !!process.env.TWILIO_AUTH_TOKEN);
+    
     logger.info('Service Twilio initialisé avec succès');
     if (this.isWhatsAppConfigured) {
       logger.info('WhatsApp Business configuré avec le numéro:', this.twilioWhatsAppNumber);
@@ -39,9 +46,18 @@ class TwilioService {
       // Formatage international du numéro si nécessaire
       let formattedNumber = to;
       if (!to.startsWith('+')) {
-        // Ajout du préfixe international pour les pays d'Afrique de l'Ouest si absent
-        // Par défaut, nous utilisons +225 (Côte d'Ivoire) mais cela devrait être configuré selon le pays principal
-        formattedNumber = `+225${to}`; 
+        // Nettoyer le numéro (supprimer espaces et autres caractères)
+        let cleanNumber = to.replace(/\s+/g, '').replace(/[^\d]/g, '');
+        
+        // Si le numéro commence par 0, le remplacer par le préfixe international
+        if (cleanNumber.startsWith('0')) {
+          cleanNumber = cleanNumber.substring(1); // Supprimer le 0
+        }
+        
+        // Ajouter le préfixe international pour la Côte d'Ivoire
+        formattedNumber = `+225${cleanNumber}`;
+        
+        logger.info(`Numéro formaté: "${to}" → "${formattedNumber}"`);
       }
 
       const message = await this.client.messages.create({

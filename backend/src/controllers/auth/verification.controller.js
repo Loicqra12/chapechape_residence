@@ -16,6 +16,9 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
   const { normalizePhoneToE164, isValidE164 } = require('../../utils/phone.util');
   const normalizedPhone = normalizePhoneToE164(phoneNumber, countryCode);
   
+  // DEBUG - Voir le formatage
+  logger.info(`DEBUG PHONE: "${phoneNumber}" → "${normalizedPhone}" (country: ${countryCode})`);
+  
   if (!isValidE164(normalizedPhone)) {
     throw new apiError(`Numéro de téléphone invalide pour le pays ${countryCode}. Formats acceptés: +225..., 07..., 77...`, 400);
   }
@@ -67,17 +70,32 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
     logger.info(`Twilio Account SID: ${process.env.TWILIO_ACCOUNT_SID ? 'CONFIGURÉ' : 'MANQUANT'}`);
     logger.info(`Twilio Auth Token: ${process.env.TWILIO_AUTH_TOKEN ? 'CONFIGURÉ' : 'MANQUANT'}`);
     logger.info(`Twilio Phone Number: ${process.env.TWILIO_PHONE_NUMBER || 'MANQUANT'}`);
+    logger.info(`Twilio WhatsApp Number: ${process.env.TWILIO_WHATSAPP_NUMBER || 'MANQUANT'}`);
     
     // Envoyer le message selon le canal choisi
     let message;
+    let actualChannel = channel;
+    
     if (channel === 'whatsapp') {
       if (!twilioService.isWhatsAppConfigured) {
-        throw new apiError('WhatsApp Business non configuré', 500);
+        logger.warn('WhatsApp Business non configuré, basculement vers SMS');
+        actualChannel = 'sms';
+        message = await twilioService.sendSMS(normalizedPhone, messageBody);
+      } else {
+        try {
+          message = await twilioService.sendWhatsAppMessage(normalizedPhone, messageBody);
+          logger.info(`Code de vérification WhatsApp envoyé à ${normalizedPhone}. SID: ${message.sid}`);
+        } catch (whatsappError) {
+          logger.warn(`Erreur WhatsApp: ${whatsappError.message}. Basculement vers SMS`);
+          actualChannel = 'sms';
+          message = await twilioService.sendSMS(normalizedPhone, messageBody);
+        }
       }
-      message = await twilioService.sendWhatsAppMessage(normalizedPhone, messageBody);
-      logger.info(`Code de vérification WhatsApp envoyé à ${normalizedPhone}. SID: ${message.sid}`);
     } else {
       message = await twilioService.sendSMS(normalizedPhone, messageBody);
+    }
+    
+    if (actualChannel === 'sms') {
       logger.info(`Code de vérification SMS envoyé à ${normalizedPhone}. SID: ${message.sid}`);
     }
     
@@ -86,7 +104,8 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
       data: {
         codeId,
         expiresAt,
-        channel: channel,
+        channel: actualChannel,
+        requestedChannel: channel,
         ...(process.env.NODE_ENV === 'development' ? { devCode: code } : {})
       }
     });
