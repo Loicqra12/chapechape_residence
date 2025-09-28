@@ -179,6 +179,12 @@ class AuthService {
     String? countryCode,
   }) async {
     try {
+      // Ajout de logs pour le débogage de l'inscription
+      print('🔍 REGISTER - URL API de base: ${_dio.options.baseUrl}');
+      print('🔍 REGISTER - URL complète: ${_dio.options.baseUrl}/auth/register-partner');
+      print('🔍 REGISTER - Headers: ${_dio.options.headers}');
+      print('🔍 REGISTER - Données envoyées: firstName=$firstName, lastName=$lastName, email=$email, phoneNumber=$phoneNumber, countryCode=${countryCode ?? 'CI'}');
+      
       final response = await _dio.post(
         '/auth/register-partner', // Utiliser l'endpoint spécifique pour les partenaires
         data: {
@@ -191,12 +197,17 @@ class AuthService {
         },
       );
 
+      print('🔍 REGISTER - Status Code: ${response.statusCode}');
+      print('🔍 REGISTER - Response Data: ${response.data}');
+      
       if (response.statusCode == 201) {
         final data = response.data;
         if (data['success'] == true) {
           final token = data['token'];
           final refreshToken = data['refreshToken'];
           final user = data['user'];
+          
+          print('✅ REGISTER - Inscription réussie pour: $email');
           
           // Enregistrer les tokens
           await setToken(token);
@@ -213,12 +224,16 @@ class AuthService {
             partner: Partner.fromJson(user),
           );
         } else {
+          print('❌ REGISTER - Échec: ${data['message']}');
           throw Exception(data['message'] ?? 'Erreur lors de l\'inscription');
         }
       } else {
+        print('❌ REGISTER - Status Code inattendu: ${response.statusCode}');
+        print('❌ REGISTER - Response: ${response.data}');
         throw Exception(response.data['message'] ?? 'Erreur lors de l\'inscription');
       }
     } catch (e) {
+      print('❌ REGISTER - Exception attrapée: $e');
       throw ErrorHandler.handleError(e);
     }
   }

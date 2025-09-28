@@ -8,7 +8,7 @@ import '../../../core/services/api/residence_service.dart';
 import '../../../core/services/api/reservation_service.dart';
 import '../../../core/services/api/api_service.dart';
 import '../../../core/services/event_bus/residence_event_bus.dart' as event_bus;
-import '../../../core/config/app_config.dart';
+import '../../config/app_config_manager.dart';
 
 // Events
 abstract class DashboardEvent extends Equatable {
@@ -130,7 +130,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   StreamSubscription? _residenceEventSubscription;
   
   DashboardBloc(this._dashboardService) : 
-    _residenceService = ResidenceService(baseUrl: AppConfig.apiUrl),
+    _residenceService = ResidenceService(baseUrl: AppConfigManager.apiUrl),
     super(DashboardInitial()) {
     on<LoadDashboardData>(_onLoadDashboardData);
     on<RefreshDashboardData>(_onRefreshDashboardData);

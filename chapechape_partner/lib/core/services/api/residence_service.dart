@@ -547,7 +547,7 @@ class ResidenceService {
     
     backendData['location'] = {
       'address': data['formattedAddress']?.toString() ?? data['address']?.toString() ?? '',
-      'city': data['city']?.toString() ?? '',
+      'city': data['city']?.toString().isNotEmpty == true ? data['city'].toString() : 'Abidjan', // Valeur par défaut si vide
       'state': data['region']?.toString() ?? 'AB', // Region -> State
       'country': data['country']?.toString() ?? 'CI',
       'coordinates': {
@@ -555,6 +555,11 @@ class ResidenceService {
         'longitude': numLng
       }
     };
+    
+    // Ajouter formattedAddress dans location si disponible (optionnel pour Joi mais utilisé par le backend)
+    if (data['formattedAddress'] != null) {
+      backendData['location']['formattedAddress'] = data['formattedAddress'].toString();
+    }
     
     // 5. TYPE (requis) - Mapper vers les valeurs autorisées
     backendData['type'] = _mapFrontendTypeToBackendType(data['type']?.toString() ?? 'studio');
@@ -600,12 +605,39 @@ class ResidenceService {
       backendData['reservationMode'] = data['reservationMode']?.toString() ?? 'instant';
     }
     
-    // CORRECTION CRITIQUE : Le contrôleur backend fait sa propre validation APRÈS Joi !  
-    // Ligne 46 du contrôleur : const requiredFields = ['title', 'description', 'price', 'type', 'address', 'city', 'bedrooms', 'bathrooms', 'area'];
-    // Il faut donc ajouter ces champs même si Joi ne les exige pas dans sa validation
-    backendData['address'] = backendData['location']['address'];
-    backendData['city'] = backendData['location']['city'];  
-    backendData['area'] = _extractNumericValue(data['surface']) ?? 1300;
+    // 14. PRICE PERIOD - Optionnel
+    if (data.containsKey('pricePeriod')) {
+      backendData['pricePeriod'] = data['pricePeriod']?.toString() ?? 'month';
+    }
+    
+    // 15. MÉTHODES DE PAIEMENT - Optionnel
+    if (data['paymentMethods'] != null && data['paymentMethods'] is List) {
+      backendData['paymentMethods'] = List<String>.from(data['paymentMethods']);
+    }
+    
+    // 16. TARIFS ALTERNATIFS - Optionnels
+    if (data.containsKey('hourlyRate')) {
+      backendData['hourlyRates'] = {
+        'oneHour': _extractNumericValue(data['hourlyRate'])?.toDouble() ?? 0,
+      };
+    }
+    
+    if (data.containsKey('halfDayRate') || data.containsKey('fullDayRate') || data.containsKey('weekendRate')) {
+      backendData['dailyRates'] = {
+        'halfDay': _extractNumericValue(data['halfDayRate'])?.toDouble() ?? 0,
+        'fullDay': _extractNumericValue(data['fullDayRate'])?.toDouble() ?? 0,
+        'weekend': _extractNumericValue(data['weekendRate'])?.toDouble() ?? 0,
+      };
+    }
+    
+    // SUPPRESSION DES CHAMPS LEGACY : Le contrôleur backend a été mis à jour
+    // pour supporter le nouveau schéma avec validation sur 'location' et migration automatique
+    // Les champs racine 'address', 'city', 'area' ne sont plus nécessaires et causent des erreurs Joi
+    
+    // Le contrôleur extrait automatiquement depuis location:
+    // - address: location.address  
+    // - city: location.city
+    // - area: mapping depuis 'surface' si nécessaire
     
     print('🔄 APRÈS adaptation (backend clean + champs compatibilité): ${json.encode(backendData)}');
     

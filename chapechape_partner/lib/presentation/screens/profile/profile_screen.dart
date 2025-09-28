@@ -85,8 +85,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Méthode pour valider l'URL d'une image
   bool _isValidImageUrl(String imageUrl) {
-    // Si l'URL est vide, invalide
-    if (imageUrl.isEmpty) {
+    // Si l'URL est vide ou contient seulement des espaces, invalide
+    if (imageUrl.isEmpty || imageUrl.trim().isEmpty) {
+      debugPrint('URL vide ou contient seulement des espaces: "$imageUrl"');
+      return false;
+    }
+    
+    // Vérifier si l'URL est exactement une chaîne vide entre guillemets
+    if (imageUrl == '""' || imageUrl == "''" || imageUrl == 'null' || imageUrl == 'undefined') {
+      debugPrint('URL invalide détectée: $imageUrl');
       return false;
     }
     
@@ -96,7 +103,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Rechercher des termes problématiques
     bool hasProblematicTerms = imageUrl.contains('placeholder') || 
                                imageUrl.contains('undefined') ||
-                               imageUrl.contains('null');
+                               imageUrl.contains('null') ||
+                               imageUrl.contains('file:///') || // Éviter les URLs de fichiers locaux
+                               imageUrl.startsWith('data:') && !imageUrl.contains('base64'); // Data URLs invalides
 
     // Vérifier si c'est une URL Cloudinary
     bool isCloudinaryUrl = imageUrl.contains('cloudinary.com') || 
@@ -126,6 +135,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
   
   Widget _buildCachedProfileImage(String originalImageUrl, ThemeData theme, String fullName) {
+    // Vérifier si l'URL originale est vide ou invalide
+    if (originalImageUrl.isEmpty || originalImageUrl.trim().isEmpty) {
+      return CircleAvatar(
+        radius: 60,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Text(
+          fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
+          style: TextStyle(
+            fontSize: 48,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+      );
+    }
+    
     // Corriger l'URL de l'image en utilisant AppConfigManager
     String imageUrl = originalImageUrl;
     
@@ -148,6 +172,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Si l'URL n'est pas valide, utiliser l'avatar par défaut
     if (!isValidImage) {
       debugPrint('URL d\'image non valide ou non autorisée: $imageUrl. Utilisation de l\'avatar par défaut.');
+      return CircleAvatar(
+        radius: 60,
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Text(
+          fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'U',
+          style: TextStyle(
+            fontSize: 48,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+      );
+    }
+
+    // Vérification finale de l'URL avant CachedNetworkImage
+    if (imageUrl.isEmpty || imageUrl.trim().isEmpty) {
       return CircleAvatar(
         radius: 60,
         backgroundColor: theme.colorScheme.primaryContainer,
@@ -232,9 +271,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context.read<DashboardBloc>().add(LoadDashboardData());
     }
     
-    // Récupérer les données du partenaire
-    final partner = context.select((AuthBloc bloc) =>
-        bloc.state is AuthAuthenticated ? (bloc.state as AuthAuthenticated).partner : null);
+    // Récupérer les données du partenaire avec validation
+    final partner = context.select((AuthBloc bloc) {
+      if (bloc.state is AuthAuthenticated) {
+        final currentPartner = (bloc.state as AuthAuthenticated).partner;
+        debugPrint('Données partenaire récupérées: ${currentPartner.fullName}');
+        debugPrint('URL photo de profil: "${currentPartner.profilePictureUrl}"');
+        return currentPartner;
+      }
+      return null;
+    });
     
     // Récupérer les statistiques
     final dashboardState = context.select((DashboardBloc bloc) => bloc.state);
@@ -300,23 +346,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: Hero(
                             tag: 'profile_photo',
-                            child: partner?.profilePictureUrl != null && partner?.profilePictureUrl?.isNotEmpty == true
-                              ? _buildCachedProfileImage(partner!.profilePictureUrl!, theme, partner.fullName)
-                              : CircleAvatar(
-                                  radius: 60,
-                                  backgroundColor: theme.colorScheme.primaryContainer,
-                                  child: Text(
-                                    partner?.fullName.substring(0, 1).toUpperCase() ?? 'P',
-                                    style: TextStyle(
-                                      fontSize: 48,
-                                      color: theme.colorScheme.onPrimaryContainer,
+                            child: Builder(
+                              builder: (context) {
+                                final profileUrl = partner?.profilePictureUrl;
+                                debugPrint('🖼️ Rendu image profil - URL: "$profileUrl"');
+                                debugPrint('🖼️ URL non null: ${profileUrl != null}');
+                                debugPrint('🖼️ URL non vide: ${profileUrl?.trim().isNotEmpty == true}');
+                                
+                                return partner?.profilePictureUrl != null && 
+                                       partner!.profilePictureUrl!.trim().isNotEmpty
+                                  ? _buildCachedProfileImage(partner.profilePictureUrl!, theme, partner.fullName)
+                                  : CircleAvatar(
+                                    radius: 60,
+                                    backgroundColor: theme.colorScheme.primaryContainer,
+                                    child: Text(
+                                      partner?.fullName.substring(0, 1).toUpperCase() ?? 'P',
+                                      style: TextStyle(
+                                        fontSize: 48,
+                                        color: theme.colorScheme.onPrimaryContainer,
+                                      ),
                                     ),
-                                  ),
-                                ),
+                                  );
+                              },
+                            ),
                           ),
                         ),
                       ),
-                        Positioned(
+                      Positioned(
                           right: 0,
                           bottom: 0,
                           child: Material(
@@ -344,8 +400,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
-                      ],
-                    ).animate().fadeIn().scale(),
+                    ],
+                  ),
 
                     const SizedBox(height: 16),
 

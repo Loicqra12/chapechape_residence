@@ -9,6 +9,7 @@ import '../../widgets/common/dialogs/confirmation_dialog.dart';
 import '../../widgets/common/watermark_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -63,6 +64,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedLanguage = 'Français';
   String _selectedCurrency = 'XOF (CFA)';
   String _selectedPaymentMethod = 'Wave';
+  String _appVersion = '1.0.0';
+  String _buildNumber = '1';
   final List<String> _availableLanguages = ['Français', 'English'];
   final List<String> _availableCurrencies = ['XOF (CFA)', 'EUR (€)', 'USD (Dollar)'];
   final List<String> _availablePaymentMethods = ['Wave', 'Orange Money', 'MTN Money', 'Moov Money', 'Carte bancaire', 'Virement bancaire'];
@@ -71,6 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
+    _loadAppInfo();
   }
   
   Future<void> _loadSettings() async {
@@ -85,6 +89,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _selectedCurrency = prefs.getString('currency') ?? 'XOF (CFA)';
       _selectedPaymentMethod = prefs.getString('default_payment_method') ?? 'Wave';
     });
+  }
+  
+  Future<void> _loadAppInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = packageInfo.version;
+        _buildNumber = packageInfo.buildNumber;
+      });
+    } catch (e) {
+      debugPrint('Erreur lors du chargement des informations de l\'app: $e');
+      // Garder les valeurs par défaut
+    }
   }
   
   Future<void> _saveSettings() async {
@@ -645,7 +662,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: const Text('Comment nous protégeons vos données'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    const privacyUrl = 'https://presentation.chapechaperesidence.com/privacy';
+                    const privacyUrl = 'https://presentation.chapechaperesidence.com/politique-de-confidentialite';
                     final Uri uri = Uri.parse(privacyUrl);
                     try {
                       if (await canLaunchUrl(uri)) {
@@ -676,7 +693,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: const Text('Règles d\'utilisation du service'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    const termsUrl = 'https://presentation.chapechaperesidence.com/terms';
+                    const termsUrl = 'https://presentation.chapechaperesidence.com/conditions';
                     final Uri uri = Uri.parse(termsUrl);
                     try {
                       if (await canLaunchUrl(uri)) {
@@ -707,7 +724,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: const Text('Normes spécifiques à ChapeChape Residence'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    const rulesUrl = 'https://presentation.chapechaperesidence.com/rules';
+                    const rulesUrl = 'https://presentation.chapechaperesidence.com/conditions';
                     final Uri uri = Uri.parse(rulesUrl);
                     try {
                       if (await canLaunchUrl(uri)) {
@@ -902,7 +919,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     showAboutDialog(
                       context: context,
                       applicationName: 'ChapeChape Residence Partner',
-                      applicationVersion: '1.0.0',
+                      applicationVersion: '$_appVersion (build $_buildNumber)',
                       applicationIcon: Image.asset(
                         'assets/images/logo.png',
                         width: 50,
@@ -1046,12 +1063,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 1),
                 ListTile(
                   title: const Text('Version de l\'application'),
-                  subtitle: const Text('1.0.0 (build 101)'),
+                  subtitle: Text('$_appVersion (build $_buildNumber)'),
                   trailing: const Icon(Icons.info_outline),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Vous utilisez la dernière version'),
+                      SnackBar(
+                        content: Text('Version $_appVersion - Build $_buildNumber'),
+                        duration: const Duration(seconds: 3),
                       ),
                     );
                   },

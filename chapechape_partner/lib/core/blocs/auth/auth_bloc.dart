@@ -6,6 +6,7 @@ import '../../models/partner/partner_model.dart';
 import '../../services/api/auth_service.dart';
 import '../../services/api/media_service.dart';
 import 'package:dio/dio.dart';
+import 'dart:convert';
 import 'auth_event.dart';
 
 // Note: Les événements sont maintenant définis dans auth_event.dart
@@ -120,6 +121,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await storage.write(key: 'userRole', value: 'partner');
         print("Rôle partenaire stocké lors de la vérification: partner");
         
+        // Sauvegarder les données du partenaire pour persistance après hot reload
+        await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
+        print("Données partenaire sauvegardées: ${partner.profilePictureUrl}");
+        
         emit(AuthAuthenticated(token: token, partner: partner));
       } else {
         // Si pas de token dans le secure storage, vérifier dans SharedPreferences
@@ -142,11 +147,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               await storage.write(key: 'userRole', value: 'partner');
               print("Rôle partenaire stocké lors de la restauration: partner");
               
+              // Sauvegarder les données du partenaire pour persistance après hot reload
+              await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
+              print("Données partenaire sauvegardées lors de la restauration: ${partner.profilePictureUrl}");
+              
               emit(AuthAuthenticated(token: savedToken, partner: partner));
               return;
             } catch (profileError) {
               print("Impossible de récupérer le profil: $profileError");
-              // Continuer à la déconnexion ci-dessous
+              
+              // Tenter de récupérer les données partenaire sauvegardées
+              try {
+                final partnerDataStr = await storage.read(key: 'partner_data');
+                if (partnerDataStr != null && partnerDataStr.isNotEmpty) {
+                  print("Restauration des données partenaire depuis le cache local");
+                  // Parse les données JSON sauvegardées correctement
+                  final partnerData = jsonDecode(partnerDataStr) as Map<String, dynamic>;
+                  
+                  final partner = Partner.fromJson(partnerData);
+                  print("Partenaire restauré depuis le cache: ${partner.profilePictureUrl}");
+                  
+                  emit(AuthAuthenticated(token: savedToken, partner: partner));
+                  return;
+                }
+              } catch (cacheError) {
+                print("Impossible de récupérer les données depuis le cache: $cacheError");
+              }
+              
+              // Si tout échoue, continuer à la déconnexion ci-dessous
             }
           }
         } catch (e) {
@@ -336,6 +364,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final updatedPartner = await _authService.getProfile();
         
         print('Profil récupéré après upload: ${updatedPartner.profilePictureUrl}');
+        
+        // Sauvegarder les nouvelles données du partenaire avec la photo mise à jour
+        await storage.write(key: 'partner_data', value: jsonEncode(updatedPartner.toJson()));
+        print('Nouvelles données partenaire sauvegardées après upload photo: ${updatedPartner.profilePictureUrl}');
         
         emit(AuthAuthenticated(
           token: currentState.token,

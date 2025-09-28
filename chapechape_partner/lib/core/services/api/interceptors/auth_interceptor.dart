@@ -18,14 +18,30 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    // Ajouter le token s'il existe
-    final token = await storage.read(key: 'token');
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
-      
-      // Log sécurisé: ne montre que le début et la fin du token
-      final maskedToken = _maskToken(token);
-      print('🔐 Token ajouté à la requête: $maskedToken');
+    // Exclure les endpoints qui n'ont pas besoin d'authentification
+    final excludedPaths = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/register-partner',
+      '/auth/forgot-password',
+      '/auth/reset-password',
+      '/auth/refresh-token',
+    ];
+    
+    final isExcluded = excludedPaths.any((path) => options.path.contains(path));
+    
+    if (!isExcluded) {
+      // Ajouter le token s'il existe
+      final token = await storage.read(key: 'token');
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+        
+        // Log sécurisé: ne montre que le début et la fin du token
+        final maskedToken = _maskToken(token);
+        print('🔐 Token ajouté à la requête: $maskedToken');
+      }
+    } else {
+      print('🔓 Endpoint exclu de l\'authentification: ${options.path}');
     }
     
     return handler.next(options);

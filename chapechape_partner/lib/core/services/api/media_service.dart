@@ -23,7 +23,7 @@ class MediaService {
   String get _baseUrl {
     if (_dio.options.baseUrl.isEmpty) {
       // URL de base non configurée, utiliser l'URL du serveur local de développement
-      final String url = 'http://192.168.1.66:4000/api';
+      final String url = AppConfigManager.apiUrl;
       print('⚠️ URL de base non configurée, utilisation de l\'URL de développement locale: $url');
       return url;
     }

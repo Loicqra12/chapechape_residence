@@ -47,14 +47,13 @@ class _SecurityHistoryScreenState extends State<SecurityHistoryScreen>
     'low', 'medium', 'high', 'critical'
   ];
 
-  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     
     // Configurer Dio avec la base URL et l'authentification
     final dio = Dio(BaseOptions(
-      baseUrl: AppConfigManager.apiBaseUrl,
+      baseUrl: AppConfigManager.apiUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {
@@ -342,56 +341,52 @@ class _SecurityHistoryScreenState extends State<SecurityHistoryScreen>
       ),
       child: Column(
         children: [
-          Row(
+          Column(
             children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedModule,
-                  decoration: const InputDecoration(
-                    labelText: 'Module',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    isDense: true,
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Tous les modules')),
-                    ..._modules.map((module) => DropdownMenuItem(
-                      value: module,
-                      child: Text(module.toUpperCase()),
-                    )),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedModule = value;
-                    });
-                    _loadActivityLog();
-                  },
+              // Premier dropdown - Module
+              DropdownButtonFormField<String>(
+                value: _selectedModule,
+                decoration: const InputDecoration(
+                  labelText: 'Module',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Tous les modules')),
+                  ..._modules.map((module) => DropdownMenuItem(
+                    value: module,
+                    child: Text(module.toUpperCase()),
+                  )),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedModule = value;
+                  });
+                  _loadActivityLog();
+                },
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedSeverity,
-                  decoration: const InputDecoration(
-                    labelText: 'Gravité',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    isDense: true,
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Toutes les gravités')),
-                    ..._severities.map((severity) => DropdownMenuItem(
-                      value: severity,
-                      child: Text(severity.toUpperCase()),
-                    )),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedSeverity = value;
-                    });
-                    _loadActivityLog();
-                  },
+              const SizedBox(height: 12),
+              // Deuxième dropdown - Gravité
+              DropdownButtonFormField<String>(
+                value: _selectedSeverity,
+                decoration: const InputDecoration(
+                  labelText: 'Gravité',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Toutes les gravités')),
+                  ..._severities.map((severity) => DropdownMenuItem(
+                    value: severity,
+                    child: Text(severity.toUpperCase()),
+                  )),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedSeverity = value;
+                  });
+                  _loadActivityLog();
+                },
               ),
             ],
           ),
@@ -399,7 +394,6 @@ class _SecurityHistoryScreenState extends State<SecurityHistoryScreen>
       ),
     );
   }
-
   Widget _buildStatsCard() {
     return Card(
       child: Padding(

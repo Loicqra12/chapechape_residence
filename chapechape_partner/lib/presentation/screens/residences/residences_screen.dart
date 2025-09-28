@@ -5,7 +5,7 @@ import '../../../core/blocs/residence/residence_bloc.dart';
 import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_extensions.dart';
 import '../../../core/services/api/residence_service.dart';
-import '../../../core/config/app_config.dart';
+import '../../../core/config/app_config_manager.dart';
 import 'edit_residence_screen.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import 'residence_details_screen.dart'; // Importer l'écran de détail
@@ -27,7 +27,7 @@ class ResidencesScreen extends StatelessWidget {
     // Créer un nouveau bloc avec le service de résidence
     // tout en s'assurant qu'il est configuré avec le bus d'événements
     final residenceService = ResidenceService(
-      baseUrl: AppConfig.apiUrl,
+      baseUrl: AppConfigManager.apiUrl,
     );
     
     return BlocProvider(
@@ -549,7 +549,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
     // Ajouter le domaine si nécessaire
     if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
       // Récupérer l'URL de base en enlevant /api si présent
-      String baseUrl = AppConfig.apiUrl;
+      String baseUrl = AppConfigManager.apiUrl;
       if (baseUrl.endsWith("/api")) {
         baseUrl = baseUrl.substring(0, baseUrl.length - 4);
       }
@@ -611,7 +611,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
                 onSuccess: (exists) {
                   if (exists) {
                     // Obtenir une référence au service pour le passer à l'écran de détails
-                    final residenceService = ResidenceService(baseUrl: AppConfig.apiUrl);
+                    final residenceService = ResidenceService(baseUrl: AppConfigManager.apiUrl);
                     
                     // Utiliser MaterialPageRoute avec BlocProvider
                     Navigator.push(
