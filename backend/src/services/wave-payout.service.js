@@ -17,12 +17,19 @@ const { v4: uuidv4 } = require('uuid');
 
 class WavePayoutService {
     constructor() {
-        this.apiKey = process.env.WAVE_PAYOUT_API_KEY;
-        this.baseUrl = process.env.WAVE_PAYOUT_BASE_URL || 'https://api.wave.com';
-        this.webhookSecret = process.env.WAVE_PAYOUT_WEBHOOK_SECRET;
+        // Utiliser les noms de variables du .env existant sur DigitalOcean
+        this.apiKey = process.env.CLÉ_API_WAVE_PAYOUT || process.env.WAVE_PAYOUT_API_KEY;
+        this.baseUrl = process.env.WAVE_BASE_URL || process.env.WAVE_PAYOUT_BASE_URL || 'https://api.wave.com';
+        this.webhookSecret = process.env.WAVE_WEBHOOK_SECRET || process.env.WAVE_PAYOUT_WEBHOOK_SECRET;
         
         if (!this.apiKey) {
-            throw new Error('WAVE_PAYOUT_API_KEY is required');
+            console.warn('⚠️  Clé API Wave manquante - Service Wave Payout désactivé');
+            console.warn('Variables cherchées: CLÉ_API_WAVE_PAYOUT ou WAVE_PAYOUT_API_KEY');
+            // Ne pas faire planter le serveur, juste désactiver le service
+            this.isEnabled = false;
+        } else {
+            this.isEnabled = true;
+            console.log('✅ Service Wave Payout initialisé avec succès');
         }
     }
 
@@ -54,6 +61,10 @@ class WavePayoutService {
      * POST /v1/payout
      */
     async createPayout(payoutData) {
+        if (!this.isEnabled) {
+            throw new Error('Service Wave Payout désactivé - Clé API manquante');
+        }
+        
         try {
             const {
                 amount,
@@ -448,4 +459,30 @@ class WavePayoutService {
     }
 }
 
-module.exports = new WavePayoutService();
+// Export de la classe pour éviter les erreurs lors de l'instanciation
+// L'instance sera créée seulement quand nécessaire
+let wavePayoutService = null;
+
+function getInstance() {
+    if (!wavePayoutService) {
+        try {
+            wavePayoutService = new WavePayoutService();
+        } catch (error) {
+            console.warn('⚠️  Impossible d\'initialiser Wave Payout Service:', error.message);
+            // Retourner un service mock qui ne fait rien
+            wavePayoutService = {
+                isEnabled: false,
+                createPayout: async () => { throw new Error('Service Wave Payout non disponible'); },
+                getPayoutStatus: async () => { throw new Error('Service Wave Payout non disponible'); },
+                cancelPayout: async () => { throw new Error('Service Wave Payout non disponible'); },
+                verifyWebhookSignature: () => false
+            };
+        }
+    }
+    return wavePayoutService;
+}
+
+module.exports = {
+    WavePayoutService,
+    getInstance
+};

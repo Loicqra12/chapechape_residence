@@ -1,7 +1,7 @@
 const Payout = require('../models/payout.model');
 const Residence = require('../models/residence.model');
 const Partner = require('../models/partner.model');
-const wavePayoutService = require('./wave-payout.service');
+const { getInstance: getWavePayoutService } = require('./wave-payout.service');
 const logger = require('../utils/logger');
 
 /**

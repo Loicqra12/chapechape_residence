@@ -3,7 +3,7 @@ const Reservation = require('../models/reservation.model');
 const Partner = require('../models/partner.model');
 const payoutService = require('../services/payout.service');
 const cinetPayTransferService = require('../services/cinetpay-transfer.service');
-const wavePayoutService = require('../services/wave-payout.service');
+const { getInstance: getWavePayoutService } = require('../services/wave-payout.service');
 const logger = require('../utils/logger');
 
 /**
@@ -1291,6 +1291,7 @@ exports.initiateWaveTransfer = async (req, res) => {
 
         logger.info('Tentative initiation transfert Wave', { client_reference, amount, mobile: mobile.substring(0, 8) + '***' });
 
+        const wavePayoutService = getWavePayoutService();
         const result = await wavePayoutService.createPayout(transferData);
         
         if (result.success) {
