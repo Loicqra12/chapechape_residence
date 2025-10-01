@@ -13,10 +13,11 @@ class AppConfig {
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    // 🚀 UTILISER L'ENVIRONNEMENT DE DÉVELOPPEMENT pour le backend local
-    await AppConfigManager.initialize(environment: Environment.dev);
+    // 🚀 FORCER L'ENVIRONNEMENT PRODUCTION (API en ligne)
+    await AppConfigManager.initialize(environment: Environment.prod);
     
-    debugPrint('🔧 [AppConfig] Initialisation en DÉVELOPPEMENT pour backend local');
+    debugPrint('🔧 [Client] Initialisation forcée en PRODUCTION');
+    debugPrint('🌐 [Client] URL API finale: ${AppConfigManager.apiUrl}');
     _initialized = true;
   }
 

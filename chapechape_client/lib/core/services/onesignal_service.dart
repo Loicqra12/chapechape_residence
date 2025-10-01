@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:chapechape_client/core/services/auth_service.dart';
+import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:dio/dio.dart';
 
 class OneSignalService {
@@ -14,7 +15,8 @@ class OneSignalService {
   late AuthService _authService;
   String? _userId;
   bool _isInitialized = false;
-  String _baseUrl = 'http://192.168.1.65:4000/api'; // URL du serveur local
+  // 🚀 Utiliser l'URL de l'API depuis AppConfigManager (production ou dev)
+  String get _baseUrl => AppConfigManager.apiUrl;
 
   // Singleton pattern
   factory OneSignalService() {

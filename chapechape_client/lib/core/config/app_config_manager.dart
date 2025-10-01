@@ -241,10 +241,11 @@ class AppConfigManager {
 
   /// Accesseurs de la configuration
   static String get appName => _config['appName'] as String;
-  static String get apiUrl => _config['apiUrl'] as String? ?? 'http://192.168.1.65:4000/api';
-  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'http://192.168.1.65:4000';
-  static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'http://192.168.1.65:4000/media';
-  static String get wsUrl => _config['wsUrl'] as String? ?? 'ws://192.168.1.65:4000/ws';
+  // 🚀 Fallback vers l'API de production si la config échoue
+  static String get apiUrl => _config['apiUrl'] as String? ?? 'https://api.chapechaperesidence.com/api';
+  static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'https://api.chapechaperesidence.com';
+  static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'https://api.chapechaperesidence.com/media';
+  static String get wsUrl => _config['wsUrl'] as String? ?? 'wss://api.chapechaperesidence.com/ws';
   static String get apiVersion => _config['apiVersion'] as String;
   static int get apiTimeout => _config['apiTimeout'] as int;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int;
