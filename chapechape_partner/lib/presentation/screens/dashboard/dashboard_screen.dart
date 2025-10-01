@@ -1351,12 +1351,13 @@ class DashboardScreen extends StatelessWidget {
                           '${residence.totalBookings}',
                           Icons.calendar_today,
                         ),
-                        _buildResidenceStatItem(
-                          context,
-                          'Revenus',
-                          '${NumberFormat.compact().format(residence.revenue)} FCFA',
-                          Icons.payments,
-                        ),
+                        // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+                        // _buildResidenceStatItem(
+                        //   context,
+                        //   'Revenus',
+                        //   '${NumberFormat.compact().format(residence.revenue)} FCFA',
+                        //   Icons.payments,
+                        // ),
                         _buildResidenceStatItem(
                           context,
                           'Occupation',
