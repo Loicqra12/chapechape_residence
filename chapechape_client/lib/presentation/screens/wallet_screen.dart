@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
-import 'package:chapechape_client/core/utils/responsive_utils.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -10,20 +9,7 @@ class WalletScreen extends StatefulWidget {
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
@@ -35,33 +21,26 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
         ),
         title: const Text('Portefeuille & Récompenses'),
         backgroundColor: const Color(0xFFFFD700),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.black,
-          labelColor: Colors.black,
-          unselectedLabelColor: Colors.black54,
-          tabs: const [
-            Tab(text: 'Portefeuille'),
-            Tab(text: 'Récompenses'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
-          _buildWalletTab(),
-          _buildRewardsTab(),
+          // SECTION PORTEFEUILLE
+          _buildWalletSection(),
+          
+          const SizedBox(height: 40),
+          
+          // SECTION RÉCOMPENSES
+          _buildRewardsSection(),
         ],
       ),
     );
   }
 
-  Widget _buildWalletTab() {
-    return SingleChildScrollView(
-      padding: context.responsivePadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+  Widget _buildWalletSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           // Solde du portefeuille
           Card(
             elevation: 4,
@@ -83,10 +62,10 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(
+                      const Text(
                         '0 FCFA',
                         style: TextStyle(
-                          fontSize: context.responsiveFontSize(28),
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -113,10 +92,10 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           const SizedBox(height: 24),
           
           // Transactions récentes
-          Text(
+          const Text(
             'Transactions récentes',
             style: TextStyle(
-              fontSize: context.responsiveFontSize(18),
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -124,47 +103,46 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           
           // Message si aucune transaction
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 30),
-                Icon(
-                  Icons.account_balance_wallet_outlined,
-                  size: 80,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Aucune transaction',
-                  style: TextStyle(
-                    fontSize: context.responsiveFontSize(16),
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 60.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Vos transactions apparaîtront ici',
-                  style: TextStyle(
-                    fontSize: context.responsiveFontSize(14),
-                    color: Colors.grey[500],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Aucune transaction',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Vos transactions apparaîtront ici',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
-      ),
     );
   }
 
-  Widget _buildRewardsTab() {
-    return SingleChildScrollView(
-      padding: context.responsivePadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Points de fidélité
+  Widget _buildRewardsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Points de fidélité
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
@@ -248,7 +226,6 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
             description: 'Gagnez 10 points supplémentaires par jour pour les séjours de plus de 7 jours',
           ),
         ],
-      ),
     );
   }
 

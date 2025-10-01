@@ -117,10 +117,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
     
-    // Déterminer si le téléphone est déjà vérifié
-    setState(() {
-      _phoneVerified = state.user.isPhoneVerified ?? false;
-    });
+    // Déterminer si le téléphone est déjà vérifié (SANS setState pour éviter les boucles)
+    _phoneVerified = state.user.isPhoneVerified ?? false;
   }
 
   void _toggleEdit() {
@@ -259,8 +257,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Photo de profil mise à jour')),
               );
-              // Recharger le profil pour voir la nouvelle photo
-              context.read<UserBloc>().add(const LoadUserProfile());
+              // Note: Pas de rechargement automatique pour éviter les boucles de layout
+              // Le profil sera rafraîchi au prochain rebuild naturel
             }
           },
           builder: (context, state) {

@@ -80,13 +80,15 @@ class DashboardScreen extends StatelessWidget {
             _buildPerformanceSection(context, state.dashboardData.performance),
             const SizedBox(height: 24),
             
+            // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
             // Section Revenus
-            _buildRevenueSection(context, state.dashboardData.revenue, state.period),
-            const SizedBox(height: 24),
+            // _buildRevenueSection(context, state.dashboardData.revenue, state.period),
+            // const SizedBox(height: 24),
             
+            // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
             // Section Financière Payouts
-            _buildPayoutFinancialSection(context),
-            const SizedBox(height: 24),
+            // _buildPayoutFinancialSection(context),
+            // const SizedBox(height: 24),
             
             // Section Tendances
             _buildTrendsSection(context, state.trendData, state.period),

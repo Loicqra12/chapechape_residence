@@ -52,6 +52,8 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
   late TextEditingController _phoneController;
   String _selectedCountryCode = 'CI'; // Par défaut Côte d'Ivoire
   late ValueNotifier<bool> _isValidNotifier;
+  bool _hasInitialValidation = false; // Empêcher la validation multiple
+  bool _lastValidationState = false; // Garder trace du dernier état
 
   // Liste des pays supportés
   final List<Map<String, String>> _countries = [
@@ -73,14 +75,17 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
       _phoneController = TextEditingController(text: widget.initialPhoneNumber!.phoneNumber);
       // Initialiser l'état de validation avec ValueNotifier
       _isValidNotifier = ValueNotifier<bool>(widget.initialPhoneNumber!.isValid);
+      _lastValidationState = widget.initialPhoneNumber!.isValid; // Initialiser l'état précédent
     } else {
       _phoneController = TextEditingController();
       _isValidNotifier = ValueNotifier<bool>(false);
+      _lastValidationState = false; // Initialiser l'état précédent
     }
     
-    // Programmer la validation pour après le build initial
+    // Programmer la validation pour après le build initial (UNE SEULE FOIS)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && !_hasInitialValidation) {
+        _hasInitialValidation = true; // Marquer comme validé pour éviter les répétitions
         _validatePhoneNumber(_phoneController.text);
       }
     });
@@ -106,8 +111,9 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
     // Mettre à jour le ValueNotifier au lieu de setState
     _isValidNotifier.value = isValid;
     
-    // Notifier le changement de validation
-    if (widget.onValidationChanged != null) {
+    // Notifier le changement de validation SEULEMENT si l'état a changé
+    if (widget.onValidationChanged != null && isValid != _lastValidationState) {
+      _lastValidationState = isValid; // Mettre à jour l'état précédent
       widget.onValidationChanged!(isValid);
     }
     

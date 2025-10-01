@@ -19,9 +19,10 @@ import '../presentation/screens/splash/splash_screen.dart';
 import '../presentation/screens/settings/settings_screen.dart';
 import '../presentation/screens/notifications/notification_settings_screen.dart';
 import '../presentation/screens/notifications/notification_list_screen.dart';
-import '../presentation/screens/payments/payouts/payouts.dart';
-import '../presentation/screens/payments/payouts/payout_details_screen.dart';
-import '../presentation/screens/payments/transactions/transactions.dart';
+// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+// import '../presentation/screens/payments/payouts/payouts.dart';
+// import '../presentation/screens/payments/payouts/payout_details_screen.dart';
+// import '../presentation/screens/payments/transactions/transactions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppRouter {
@@ -115,21 +116,22 @@ class AppRouter {
         path: '/notifications',
         builder: (context, state) => const NotificationListScreen(),
       ),
-      GoRoute(
-        path: '/payouts',
-        builder: (context, state) => PayoutHistoryScreen.withService(context),
-      ),
-      GoRoute(
-        path: '/payouts/:id',
-        builder: (context, state) {
-          final payoutId = state.pathParameters['id'] ?? '';
-          return PayoutDetailsScreen(payoutId: payoutId);
-        },
-      ),
-      GoRoute(
-        path: '/transactions',
-        builder: (context, state) => const TransactionsScreen(),
-      ),
+      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+      // GoRoute(
+      //   path: '/payouts',
+      //   builder: (context, state) => PayoutHistoryScreen.withService(context),
+      // ),
+      // GoRoute(
+      //   path: '/payouts/:id',
+      //   builder: (context, state) {
+      //     final payoutId = state.pathParameters['id'] ?? '';
+      //     return PayoutDetailsScreen(payoutId: payoutId);
+      //   },
+      // ),
+      // GoRoute(
+      //   path: '/transactions',
+      //   builder: (context, state) => const TransactionsScreen(),
+      // ),
     ],
     redirect: (context, state) async {
       final isAuthenticated = authBloc.state is AuthAuthenticated;

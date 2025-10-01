@@ -8,7 +8,7 @@ class IpDetectionService {
   static const String _serverIpKey = 'server_ip_address';
   static const String _serverPortKey = 'server_port';
   static const int _defaultPort = 4000;
-  static const String _defaultIp = '192.168.1.65'; // IP par défaut mise à jour
+  static const String _defaultIp = '127.0.0.1'; // IP par défaut localhost
 
   static IpDetectionService? _instance;
   late final SharedPreferences _prefs;

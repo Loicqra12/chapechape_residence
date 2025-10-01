@@ -1,5 +1,6 @@
 // lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
@@ -83,15 +84,43 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, constraints) {
         return Scaffold(
           body: SafeArea(
-            child: ListView(
-              key: const Key('home_screen_list_view'),
-              physics: const ClampingScrollPhysics(),
-              children: [
+            child: RefreshIndicator(
+              onRefresh: () async {
+                // Forcer le rafraîchissement des résidences
+                final bloc = context.read<ResidenceBloc>();
+                bloc.add(const RefreshResidencesEvent());
+                _logger.info('🔄 Pull-to-refresh déclenché - Actualisation des résidences');
+              },
+              child: ListView(
+                key: const Key('home_screen_list_view'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
                 // Bannière d'accueil avec carousel dynamique
                 HomeBannerCarousel(constraints: constraints),
                 
                 // Section de recherche (commune à tous)
                 const AdvancedSearchWidget(),
+                
+                // 🔧 DEBUG BUTTON - À RETIRER EN PRODUCTION
+                if (kDebugMode)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final bloc = context.read<ResidenceBloc>();
+                        bloc.add(const RefreshResidencesEvent());
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('🔄 Actualisation forcée des résidences')),
+                        );
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('🔄 DEBUG: Actualiser Résidences'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
                 
                 // Section des catégories (commune à tous)
                 _buildSectionHeader(
@@ -258,6 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Footer (commun à tous)
                 FooterWidget(),
               ],
+            ),
             ),
           ),
         );

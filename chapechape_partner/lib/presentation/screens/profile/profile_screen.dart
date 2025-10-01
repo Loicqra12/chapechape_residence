@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../settings/settings_screen.dart';
-import '../payments/payments_screen.dart' hide PaymentBloc;
+// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+// import '../payments/payments_screen.dart' hide PaymentBloc;
 import '../notifications/notifications_screen.dart';
 import '../help/help_screen.dart' hide HelpBloc;
 import 'edit_profile_screen.dart';
@@ -739,21 +740,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                           ),
-                          const Divider(height: 1),
-                          _buildMenuTile(
-                            icon: Icons.payment_outlined,
-                            title: 'Paiements',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PaymentsScreen.withBloc(context),
-                                ),
-                              );
-                            },
-                            theme: theme,
-                          ),
-                          const Divider(height: 1),
+                          // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+                          // const Divider(height: 1),
+                          // _buildMenuTile(
+                          //   icon: Icons.payment_outlined,
+                          //   title: 'Paiements',
+                          //   onTap: () {
+                          //     Navigator.push(
+                          //       context,
+                          //       MaterialPageRoute(
+                          //         builder: (context) => PaymentsScreen.withBloc(context),
+                          //       ),
+                          //     );
+                          //   },
+                          //   theme: theme,
+                          // ),
+                          // const Divider(height: 1),
                           _buildMenuTile(
                             icon: Icons.notifications_outlined,
                             title: 'Notifications',
