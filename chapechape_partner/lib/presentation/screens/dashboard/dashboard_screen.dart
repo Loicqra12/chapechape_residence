@@ -1730,38 +1730,39 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  // Navigation vers l'écran détaillé des payouts
-                  Navigator.pushNamed(context, '/payouts');
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Voir tout',
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+              // GestureDetector(
+              //   onTap: () {
+              //     // Navigation vers l'écran détaillé des payouts
+              //     Navigator.pushNamed(context, '/payouts');
+              //   },
+              //   child: Container(
+              //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              //     decoration: BoxDecoration(
+              //       color: Theme.of(context).primaryColor.withOpacity(0.1),
+              //       borderRadius: BorderRadius.circular(16),
+              //     ),
+              //     child: Row(
+              //       mainAxisSize: MainAxisSize.min,
+              //       children: [
+              //         Text(
+              //           'Voir tout',
+              //           style: TextStyle(
+              //             color: Theme.of(context).primaryColor,
+              //             fontSize: 12,
+              //             fontWeight: FontWeight.w500,
+              //           ),
+              //         ),
+              //         const SizedBox(width: 4),
+              //         Icon(
+              //           Icons.arrow_forward_ios,
+              //           size: 12,
+              //           color: Theme.of(context).primaryColor,
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 24),
