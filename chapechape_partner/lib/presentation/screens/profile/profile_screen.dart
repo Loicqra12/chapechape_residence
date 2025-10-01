@@ -645,17 +645,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             theme: theme,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildStatCard(
-                            icon: Icons.monetization_on_outlined,
-                            value: dashboardState is DashboardLoaded 
-                                ? '${dashboardState.dashboardData.revenue.totalRevenue} FCFA'
-                                : '-',
-                            label: 'Revenus',
-                            theme: theme,
-                          ),
-                        ),
+                        // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+                        // const SizedBox(width: 16),
+                        // Expanded(
+                        //   child: _buildStatCard(
+                        //     icon: Icons.monetization_on_outlined,
+                        //     value: dashboardState is DashboardLoaded 
+                        //         ? '${dashboardState.dashboardData.revenue.totalRevenue} FCFA'
+                        //         : '-',
+                        //     label: 'Revenus',
+                        //     theme: theme,
+                        //   ),
+                        // ),
                       ],
                     ).animate().fadeIn().slideY(),
 

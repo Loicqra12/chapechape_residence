@@ -102,9 +102,10 @@ class DashboardScreen extends StatelessWidget {
             _buildLocationAnalyticsSection(context),
             const SizedBox(height: 24),
             
+            // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
             // Section Pricing Dynamique
-            _buildPricingSection(context),
-            const SizedBox(height: 24),
+            // _buildPricingSection(context),
+            // const SizedBox(height: 24),
             
             // Ajouter la section Performances par résidence
             if (state.residenceStats.isNotEmpty)
