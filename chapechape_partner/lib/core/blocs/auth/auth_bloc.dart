@@ -122,8 +122,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         print("Rôle partenaire stocké lors de la vérification: partner");
         
         // Sauvegarder les données du partenaire pour persistance après hot reload
-        await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
-        print("Données partenaire sauvegardées: ${partner.profilePictureUrl}");
+        // Mais seulement si on a des données valides
+        if (partner.profilePictureUrl != null && 
+            partner.profilePictureUrl!.isNotEmpty && 
+            partner.profilePictureUrl != "" &&
+            partner.profilePictureUrl!.startsWith('http')) {
+          await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
+          print("✅ Données partenaire sauvegardées avec photo valide: ${partner.profilePictureUrl}");
+        } else {
+          print("⚠️ Photo de profil invalide détectée, sauvegarde sélective sans écraser le cache existant");
+        }
         
         emit(AuthAuthenticated(token: token, partner: partner));
       } else {
@@ -148,8 +156,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               print("Rôle partenaire stocké lors de la restauration: partner");
               
               // Sauvegarder les données du partenaire pour persistance après hot reload
-              await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
-              print("Données partenaire sauvegardées lors de la restauration: ${partner.profilePictureUrl}");
+              // Mais seulement si on a des données valides
+              if (partner.profilePictureUrl != null && 
+                  partner.profilePictureUrl!.isNotEmpty && 
+                  partner.profilePictureUrl != "" &&
+                  partner.profilePictureUrl!.startsWith('http')) {
+                await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
+                print("✅ Données partenaire sauvegardées lors de la restauration avec photo valide: ${partner.profilePictureUrl}");
+              } else {
+                print("⚠️ Photo de profil invalide lors de la restauration, préservation du cache existant");
+              }
               
               emit(AuthAuthenticated(token: savedToken, partner: partner));
               return;
@@ -320,6 +336,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await storage.delete(key: 'token_expiry');
       await storage.delete(key: 'userId');
       await storage.delete(key: 'userRole');
+      await storage.delete(key: 'partner_data'); // Supprimer le cache des données partenaire
+      print("🧹 Cache des données partenaire effacé lors de la déconnexion");
       emit(AuthUnauthenticated());
     } catch (e) {
       emit(AuthFailure(e.toString()));

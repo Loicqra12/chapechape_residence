@@ -556,10 +556,7 @@ class ResidenceService {
       }
     };
     
-    // Ajouter formattedAddress dans location si disponible (optionnel pour Joi mais utilisé par le backend)
-    if (data['formattedAddress'] != null) {
-      backendData['location']['formattedAddress'] = data['formattedAddress'].toString();
-    }
+    // Note: formattedAddress supprimé car non autorisé par le schéma Joi backend
     
     // 5. TYPE (requis) - Mapper vers les valeurs autorisées
     backendData['type'] = _mapFrontendTypeToBackendType(data['type']?.toString() ?? 'studio');

@@ -120,16 +120,17 @@ Future<void> main() async {
   
   debugPrint('🔍 [Partner] Client Dio configuré avec baseUrl: ${dio.options.baseUrl}');
 
-  // Create AuthBloc first since it's needed for the router
+  // Create AuthService first
+  final authService = AuthService(dio);
+  
+  // Create AuthBloc with the shared AuthService instance
   final authBloc = AuthBloc(
-    authService: AuthService(dio),
+    authService: authService,
     storage: storage,
   )..add(AuthCheckRequested());
 
   // Initialize API service with authBloc for automatic logout on token expiration
   final apiService = ApiService(authBloc: authBloc);
-  
-  final authService = AuthService(dio);
   final residenceService = ResidenceService(baseUrl: AppConfigManager.apiUrl, storage: storage);
   
   // Initialiser le service OneSignal

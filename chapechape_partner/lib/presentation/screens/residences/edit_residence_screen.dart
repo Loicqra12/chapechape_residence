@@ -2230,7 +2230,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
-                value: _selectedRegion,
+                value: _getRegionsForCountry(_selectedCountry).any((region) => region.code == _selectedRegion) 
+                    ? _selectedRegion 
+                    : null,
                 decoration: InputDecoration(
                   labelText: 'Ville',
                   prefixIcon: Icon(Icons.location_city),
