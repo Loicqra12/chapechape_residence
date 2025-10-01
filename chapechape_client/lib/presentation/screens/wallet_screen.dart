@@ -13,25 +13,47 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Portefeuille & Récompenses'),
-        backgroundColor: const Color(0xFFFFD700),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // SECTION PORTEFEUILLE
-          _buildWalletSection(),
-          
-          const SizedBox(height: 40),
-          
-          // SECTION RÉCOMPENSES
-          _buildRewardsSection(),
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    tooltip: 'Retour',
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Portefeuille & Récompenses',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 48), // pour équilibrer la place de l'icône retour
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(16.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // SECTION PORTEFEUILLE
+                _buildWalletSection(),
+                const SizedBox(height: 24),
+                // SECTION RÉCOMPENSES
+                _buildRewardsSection(),
+                const SizedBox(height: 12),
+              ]),
+            ),
+          ),
         ],
       ),
     );
