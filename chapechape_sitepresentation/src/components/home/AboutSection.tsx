@@ -7,11 +7,11 @@ const AboutSection = () => {
     target: containerRef,
     offset: ["start end", "end start"]
   });
-  
+
   // Effet de parallaxe
   const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.3, 1, 1, 0.3]);
-  
+
   // Variants d'animation pour les cartes de valeurs
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -23,7 +23,7 @@ const AboutSection = () => {
       }
     }
   };
-  
+
   const itemVariants = {
     hidden: { opacity: 0, y: 30 },
     visible: (i: number) => ({
@@ -37,7 +37,7 @@ const AboutSection = () => {
       }
     })
   };
-  
+
   // Données des valeurs
   const values = [
     {
@@ -86,7 +86,7 @@ const AboutSection = () => {
       )
     }
   ];
-  
+
   // Données de l'équipe
   const team = [
     {
@@ -102,7 +102,7 @@ const AboutSection = () => {
       image: "/assets/team/sidney-jordan.jpg"
     }
   ];
-  
+
   // Effet de scintillement pour les particules dorées
   const glitterVariants = {
     animate: (i: number) => ({
@@ -117,26 +117,26 @@ const AboutSection = () => {
       }
     })
   };
-  
+
   return (
     <section
       ref={containerRef}
-      className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-primary-25"
+      className="relative py-20 overflow-hidden bg-gradient-to-b from-primary-50/30 via-white to-primary-50/50"
     >
       {/* Arrière-plan avec dégradé premium */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.08),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(168,85,247,0.04),transparent_50%)] -z-10"
         style={{ y, opacity }}
       />
-      
+
       {/* Motif géométrique moderne */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.03)_1px,transparent_1px),linear-gradient(45deg,rgba(168,85,247,0.02)_1px,transparent_1px)] bg-[size:60px_60px] -z-10"
         initial={{ opacity: 0, scale: 1.1 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 2, ease: "easeOut" }}
       />
-      
+
       {/* Particules dorées subtiles */}
       <div className="absolute inset-0 overflow-hidden -z-5">
         {[...Array(15)].map((_, i) => (
@@ -155,15 +155,15 @@ const AboutSection = () => {
           />
         ))}
       </div>
-      
-      <div className="container-custom">
+
+      <div className="mx-auto max-w-6xl px-6 lg:px-8 relative z-10">
         {/* Titre de la section - Style Stripe */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-24"
+          className="text-center mb-20"
         >
           {/* Badge premium */}
           <motion.div
@@ -171,96 +171,81 @@ const AboutSection = () => {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-primary-100 to-secondary-100 text-primary-700 text-sm font-medium mb-6 border border-primary-200"
+            className="inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm border border-primary-100 text-primary-800 text-xs font-bold tracking-widest uppercase mb-6"
           >
             <span className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
             Excellence & Innovation
           </motion.div>
-          
-          <h2 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-primary-600 to-secondary-600 bg-clip-text text-transparent mb-6 font-display leading-tight">
+
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 font-display tracking-tight">
             À propos de <br className="md:hidden" />
-            <span className="relative">
-              ChapeChape Residence
-              <motion.div
+            <span className="relative inline-block">
+              <span className="relative z-10">ChapeChape Residence</span>
+              <motion.span
                 initial={{ width: 0 }}
                 whileInView={{ width: "100%" }}
                 viewport={{ once: true }}
-                transition={{ duration: 1, delay: 0.8 }}
-                className="absolute -bottom-2 left-0 h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"
+                transition={{ duration: 1, delay: 0.5 }}
+                className="absolute bottom-2 left-0 h-3 bg-primary-200/50 -z-10"
               />
             </span>
           </h2>
-          
-          <motion.p 
+
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+            className="text-xl text-secondary-600 max-w-2xl mx-auto leading-relaxed font-light"
           >
-            Découvrez notre vision, nos valeurs et l'équipe qui fait de ChapeChape Residence 
-            <span className="text-primary-600 font-medium">une référence en Afrique de l'Ouest</span>.
+            Découvrez notre vision, nos valeurs et l'équipe qui fait de ChapeChape Residence
+            <span className="text-primary-600 font-medium"> une référence en Afrique de l'Ouest</span>.
           </motion.p>
-          
-          {/* Éléments décoratifs modernes */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, delay: 0.6 }}
-            className="flex justify-center items-center space-x-4 mt-8"
-          >
-            <div className="w-12 h-px bg-gradient-to-r from-transparent to-primary-300"></div>
-            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
-            <div className="w-16 h-px bg-gradient-to-r from-primary-300 to-secondary-300"></div>
-            <div className="w-2 h-2 bg-secondary-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-            <div className="w-12 h-px bg-gradient-to-r from-secondary-300 to-transparent"></div>
-          </motion.div>
         </motion.div>
-        
+
         {/* Section Notre Vision avec Animation Futuriste */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="bg-white/80 backdrop-blur-sm p-10 rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-500 group"
+            className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-500 group"
           >
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-primary-600 bg-clip-text text-transparent mb-6 inline-flex items-center group-hover:scale-105 transition-transform duration-300"
+              className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-primary-600 bg-clip-text text-transparent mb-4 inline-flex items-center group-hover:scale-105 transition-transform duration-300"
             >
-              <motion.span 
+              <motion.span
                 initial={{ rotate: 0 }}
                 whileInView={{ rotate: 360 }}
                 viewport={{ once: true }}
                 transition={{ duration: 1, delay: 0.3 }}
-                className="text-3xl mr-3"
+                className="text-2xl mr-3"
               >
                 🌟
               </motion.span>
               Notre Vision
             </motion.h3>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-gray-700 mb-8 text-lg leading-relaxed"
+              className="text-gray-700 mb-6 text-base leading-relaxed"
             >
-              ChapeChapeRésidence aspire à devenir 
-              <span className="font-semibold text-primary-600">la référence en Afrique de l'Ouest</span> 
-              pour la réservation, la gestion et la valorisation de résidences meublées et de logements temporaires. 
-              Nous visons à simplifier l'accès à des hébergements de qualité, en connectant efficacement 
-              propriétaires et locataires grâce à une 
+              ChapeChapeRésidence aspire à devenir
+              <span className="font-semibold text-primary-600">la référence en Afrique de l'Ouest</span>
+              pour la réservation, la gestion et la valorisation de résidences meublées et de logements temporaires.
+              Nous visons à simplifier l'accès à des hébergements de qualité, en connectant efficacement
+              propriétaires et locataires grâce à une
               <span className="font-semibold text-secondary-600">plateforme numérique intuitive et sécurisée</span>.
             </motion.p>
           </motion.div>
-          
+
           {/* Animation Ville 3D Futuriste */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -275,7 +260,7 @@ const AboutSection = () => {
                 <svg className="w-full h-full" viewBox="0 0 400 300">
                   <defs>
                     <pattern id="grid-vision" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" />
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid-vision)" className="text-slate-400" />
@@ -312,33 +297,33 @@ const AboutSection = () => {
                       }}
                     >
                       {/* Building Face */}
-                      <div 
+                      <div
                         className={`bg-gradient-to-b ${building.color} rounded-t-sm`}
                         style={{ width: building.w, height: building.h }}
                       />
                       {/* Building Side */}
-                      <div 
+                      <div
                         className={`absolute top-0 bg-gradient-to-b ${building.color.replace('400', '300').replace('500', '400').replace('600', '500').replace('700', '600')}`}
-                        style={{ 
-                          left: building.w, 
-                          width: building.w * 0.25, 
+                        style={{
+                          left: building.w,
+                          width: building.w * 0.25,
                           height: building.h,
                           transform: 'skewY(-30deg) scaleY(0.866)',
                           filter: 'brightness(0.8)'
                         }}
                       />
                       {/* Building Top */}
-                      <div 
+                      <div
                         className={`absolute bg-gradient-to-br ${building.color.replace('400', '200').replace('500', '300').replace('600', '400').replace('700', '500')}`}
-                        style={{ 
+                        style={{
                           top: -building.w * 0.12,
-                          width: building.w, 
+                          width: building.w,
                           height: building.w * 0.25,
                           transform: 'skewX(-30deg) scaleX(1.366)',
                           filter: 'brightness(1.2)'
                         }}
                       />
-                      
+
                       {/* Windows avec éclairage */}
                       {Array.from({ length: Math.floor(building.h / 12) }).map((_, windowRow) => (
                         <div key={windowRow} className="absolute flex gap-0.5" style={{ top: 8 + windowRow * 12, left: 3 }}>
@@ -379,7 +364,7 @@ const AboutSection = () => {
                       }}
                     >
                       {/* Hélices */}
-                      <motion.div 
+                      <motion.div
                         className="absolute -top-0.5 -left-0.5 w-3 h-3 border border-primary-400 rounded-full"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 0.1, repeat: Infinity, ease: "linear" }}
@@ -388,7 +373,7 @@ const AboutSection = () => {
                   ))}
 
                   {/* Hologramme Smartphone Central */}
-                  <motion.div 
+                  <motion.div
                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
                     animate={{
                       y: [0, -8, 0],
@@ -403,7 +388,7 @@ const AboutSection = () => {
                       {/* Écran */}
                       <div className="absolute inset-0.5 bg-gradient-to-b from-blue-900 to-blue-800 rounded-md p-0.5">
                         {/* Données qui changent */}
-                        <motion.div 
+                        <motion.div
                           className="text-xs text-white font-mono leading-tight text-center"
                           animate={{
                             opacity: [1, 0, 1]
@@ -418,9 +403,9 @@ const AboutSection = () => {
                           <div className="text-xs">3ch</div>
                         </motion.div>
                       </div>
-                      
+
                       {/* Glow effect */}
-                      <motion.div 
+                      <motion.div
                         className="absolute inset-0 bg-primary-400 rounded-lg opacity-30 blur-sm"
                         animate={{
                           scale: [1, 1.1, 1],
@@ -457,7 +442,7 @@ const AboutSection = () => {
             </div>
           </motion.div>
         </div>
-        
+
         {/* Section Notre Culture d'Entreprise avec Animation Collaborative */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-20 md:flex-row-reverse">
           <motion.div
@@ -467,7 +452,7 @@ const AboutSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="md:order-2 bg-white p-6 rounded-xl shadow-md border border-primary-100"
           >
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -477,7 +462,7 @@ const AboutSection = () => {
               <span className="text-primary-300 mr-2">🤝</span>
               Notre Culture d'Entreprise
             </motion.h3>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -487,7 +472,7 @@ const AboutSection = () => {
               Nous cultivons une culture d'innovation, de proximité et de responsabilité. Chez ChapeChapeRésidence, chaque membre de l'équipe est encouragé à proposer des idées novatrices, à rester à l'écoute des besoins des utilisateurs et à agir avec intégrité. Nous valorisons la collaboration, l'agilité et l'engagement envers l'excellence du service.
             </motion.p>
           </motion.div>
-          
+
           {/* Animation Équipe Collaborative */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -533,7 +518,7 @@ const AboutSection = () => {
                     const radius = 80;
                     const x = Math.cos((avatar.angle * Math.PI) / 180) * radius;
                     const y = Math.sin((avatar.angle * Math.PI) / 180) * radius;
-                    
+
                     return (
                       <motion.div
                         key={index}
@@ -560,7 +545,7 @@ const AboutSection = () => {
                         <div className={`w-full h-full rounded-full bg-gradient-to-br ${avatar.color} flex items-center justify-center`}>
                           {avatar.name}
                         </div>
-                        
+
                         {/* Badge de valeur qui apparaît/disparaît */}
                         <motion.div
                           className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-primary-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap"
@@ -593,12 +578,12 @@ const AboutSection = () => {
                     const startAngle = iconData.path[0];
                     const endAngle = iconData.path[1];
                     const radius = 80;
-                    
+
                     const startX = Math.cos((startAngle * Math.PI) / 180) * radius;
                     const startY = Math.sin((startAngle * Math.PI) / 180) * radius;
                     const endX = Math.cos((endAngle * Math.PI) / 180) * radius;
                     const endY = Math.sin((endAngle * Math.PI) / 180) * radius;
-                    
+
                     return (
                       <motion.div
                         key={index}
@@ -632,12 +617,12 @@ const AboutSection = () => {
                       const angle1 = index * 72;
                       const angle2 = nextIndex * 72;
                       const radius = 80;
-                      
+
                       const x1 = 96 + Math.cos((angle1 * Math.PI) / 180) * radius;
                       const y1 = 96 + Math.sin((angle1 * Math.PI) / 180) * radius;
                       const x2 = 96 + Math.cos((angle2 * Math.PI) / 180) * radius;
                       const y2 = 96 + Math.sin((angle2 * Math.PI) / 180) * radius;
-                      
+
                       return (
                         <motion.line
                           key={index}
@@ -673,7 +658,7 @@ const AboutSection = () => {
             </div>
           </motion.div>
         </div>
-        
+
         {/* Section Nos Valeurs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -683,7 +668,7 @@ const AboutSection = () => {
           className="mb-20"
         >
           <div className="text-center mb-10">
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -694,7 +679,7 @@ const AboutSection = () => {
               Nos Valeurs
             </motion.h3>
           </div>
-          
+
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -707,19 +692,29 @@ const AboutSection = () => {
                 key={value.title}
                 custom={index}
                 variants={itemVariants}
-                whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                className="bg-white p-6 rounded-xl shadow-md border border-primary-100/20 hover:shadow-lg hover:border-primary-200/40 transition-all duration-300"
+                whileHover={{ y: -10, scale: 1.02, transition: { duration: 0.3 } }}
+                className="relative bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-primary-100/30 hover:shadow-2xl hover:shadow-primary-200/40 hover:border-primary-300/60 transition-all duration-300 group overflow-hidden"
               >
-                <div className="rounded-full bg-primary-100 w-12 h-12 flex items-center justify-center text-primary-500 mb-4">
-                  {value.icon}
+                {/* Glow effect on hover */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-br from-primary-100/20 to-primary-200/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"
+                />
+                <div className="relative z-10">
+                  <motion.div
+                    className="rounded-full bg-gradient-to-br from-primary-100 to-primary-200 w-14 h-14 flex items-center justify-center text-primary-600 mb-4 shadow-md group-hover:shadow-lg group-hover:shadow-primary-300/50 transition-all duration-300"
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    {value.icon}
+                  </motion.div>
+                  <h4 className="text-lg font-bold text-secondary-900 mb-2">{value.title}</h4>
+                  <p className="text-secondary-600 text-sm leading-relaxed">{value.description}</p>
                 </div>
-                <h4 className="text-lg font-semibold text-secondary-900 mb-2">{value.title}</h4>
-                <p className="text-secondary-600 text-sm">{value.description}</p>
               </motion.div>
             ))}
           </motion.div>
         </motion.div>
-        
+
         {/* Section Qui sommes-nous */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -729,7 +724,7 @@ const AboutSection = () => {
           className="mb-10"
         >
           <div className="text-center mb-10">
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -739,7 +734,7 @@ const AboutSection = () => {
               <span className="text-primary-300 mr-2">👥</span>
               Qui sommes-nous ?
             </motion.h3>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -749,7 +744,7 @@ const AboutSection = () => {
               ChapeChapeRésidence est le fruit de la collaboration entre deux entrepreneurs passionnés par la transformation digitale du secteur immobilier en Afrique.
             </motion.p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {team.map((member, index) => (
               <motion.div
@@ -758,29 +753,37 @@ const AboutSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: index * 0.2 }}
-                whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                className="bg-white rounded-xl overflow-hidden shadow-lg group"
+                whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.3 } }}
+                className="bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-primary-200/30 border border-primary-100/30 group transition-all duration-300"
               >
                 <div className="flex flex-col md:flex-row">
                   <div className="md:w-1/3 relative overflow-hidden">
-                    <div className="bg-gradient-to-br from-primary-200 to-primary-300 h-48 md:h-full flex items-center justify-center">
-                      <div className="text-4xl font-bold text-secondary-800">{member.name.charAt(0)}</div>
+                    <div className="bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 h-48 md:h-full flex items-center justify-center shadow-inner">
+                      <motion.div
+                        className="text-6xl font-bold text-white drop-shadow-lg"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {member.name.charAt(0)}
+                      </motion.div>
                     </div>
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-primary-300/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     />
+                    {/* Golden accent line */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary-200 to-transparent group-hover:via-primary-300 transition-all duration-300" />
                   </div>
-                  <div className="p-6 md:w-2/3">
-                    <h4 className="text-xl font-semibold text-secondary-900 mb-1">{member.name}</h4>
-                    <p className="text-primary-500 font-medium mb-3">{member.role}</p>
-                    <p className="text-secondary-600 text-sm">{member.description}</p>
+                  <div className="p-8 md:w-2/3 relative">
+                    <h4 className="text-2xl font-bold text-secondary-900 mb-2 group-hover:text-primary-700 transition-colors duration-300">{member.name}</h4>
+                    <p className="text-primary-600 font-bold mb-4 text-sm tracking-wide uppercase">{member.role}</p>
+                    <p className="text-secondary-600 text-sm leading-relaxed">{member.description}</p>
                   </div>
                 </div>
               </motion.div>
             ))}
           </div>
         </motion.div>
-        
+
         {/* Bouton de navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -789,12 +792,12 @@ const AboutSection = () => {
           transition={{ duration: 0.5, delay: 0.6 }}
           className="flex justify-center mt-8"
         >
-          <a 
-            href="/about" 
+          <a
+            href="/about"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary-50 text-primary-500 rounded-full border border-primary-200 hover:bg-primary-100 transition-colors duration-300"
           >
             <span>En savoir plus sur notre entreprise</span>
-            <motion.span 
+            <motion.span
               initial={{ x: 0 }}
               whileHover={{ x: 5 }}
               transition={{ duration: 0.2 }}

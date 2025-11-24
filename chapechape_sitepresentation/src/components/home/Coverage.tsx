@@ -33,10 +33,10 @@ const Coverage = () => {
     target: containerRef,
     offset: ["start end", "end start"]
   })
-  
+
   const y = useTransform(scrollYProgress, [0, 1], [50, -50])
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.3, 1, 1, 0.3])
-  
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -48,10 +48,10 @@ const Coverage = () => {
       }
     }
   }
-  
+
   const mapVariants = {
     hidden: { opacity: 0, scale: 0.9 },
-    visible: { 
+    visible: {
       opacity: 1,
       scale: 1,
       transition: {
@@ -62,7 +62,7 @@ const Coverage = () => {
       }
     }
   }
-  
+
   const pointVariants = {
     hidden: { scale: 0, opacity: 0 },
     visible: (i: number) => ({
@@ -75,12 +75,12 @@ const Coverage = () => {
         delay: 0.5 + i * 0.1
       }
     }),
-    hover: { 
+    hover: {
       scale: 1.5,
       transition: { duration: 0.3 }
     }
   }
-  
+
   const pulseVariants = {
     initial: { scale: 0.8, opacity: 0.5 },
     animate: {
@@ -93,7 +93,7 @@ const Coverage = () => {
       }
     }
   }
-  
+
   // Effet de particules dorées
   const glitterVariants = {
     animate: (i: number) => ({
@@ -108,7 +108,7 @@ const Coverage = () => {
       }
     })
   }
-  
+
   // Lignes de connexion entre villes
   const connectionLines = [
     { from: 'abidjan', to: 'dakar' },
@@ -120,46 +120,19 @@ const Coverage = () => {
     { from: 'bamako', to: 'ouagadougou' },
     { from: 'ouagadougou', to: 'niamey' },
   ]
-  
+
   return (
-    <section 
+    <section
       ref={containerRef}
-      className="relative py-24 overflow-hidden bg-gradient-to-b from-white to-secondary-50"
+      className="relative py-24 overflow-hidden bg-secondary-50"
     >
       {/* Arrière-plan avec dégradé */}
-      <motion.div 
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.03),transparent_70%)] -z-10"
-        style={{ y, opacity }}
-      />
-      
-      {/* Motif élégant en arrière-plan */}
-      <motion.div 
-        className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.02)_1px,transparent_1px),linear-gradient(45deg,rgba(212,175,55,0.02)_1px,transparent_1px)] bg-[size:40px_40px] -z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.5 }}
-      />
-      
-      {/* Particules dorées subtiles */}
-      <div className="absolute inset-0 overflow-hidden -z-5">
-        {[...Array(12)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-primary-300"
-            style={{
-              width: Math.random() * 4 + 2 + 'px',
-              height: Math.random() * 4 + 2 + 'px',
-              left: Math.random() * 100 + '%',
-              top: Math.random() * 100 + '%',
-            }}
-            variants={glitterVariants}
-            custom={i}
-            animate="animate"
-          />
-        ))}
-      </div>
-      
-      <div className="container-custom">
+      <div className="absolute inset-0 bg-white/50 -z-10" />
+
+      {/* Motif de fond */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#D4AF37_1px,transparent_1px)] [background-size:20px_20px] -z-10" />
+
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -167,329 +140,253 @@ const Coverage = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl font-bold text-secondary-900 mb-4 font-display">Notre couverture géographique</h2>
-          <motion.p 
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="inline-flex items-center px-4 py-2 bg-white border border-primary-100 rounded-full mb-6 shadow-sm"
+          >
+            <span className="text-primary-600 text-xs font-bold tracking-widest uppercase">Expansion</span>
+          </motion.div>
+
+          <h2 className="text-4xl md:text-5xl font-bold text-secondary-900 mb-6 font-display tracking-tight">
+            Notre présence <span className="text-primary-600">en Afrique</span>
+          </h2>
+
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-secondary-600 max-w-2xl mx-auto"
+            className="text-xl text-secondary-600 max-w-2xl mx-auto leading-relaxed font-light"
           >
-            Découvrez les villes où ChapeChape Residence est disponible en Afrique de l'Ouest et nos prochaines expansions.
+            Une couverture grandissante pour vous accompagner partout en Afrique de l'Ouest.
           </motion.p>
-          
-          {/* Ligne décorative dorée */}
-          <motion.div 
-            initial={{ width: 0 }}
-            whileInView={{ width: "80px" }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="h-1 bg-primary-300 mx-auto mt-6"
-          />
         </motion.div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Carte interactive */}
-          <motion.div 
-            className="lg:col-span-3 relative"
+          <motion.div
+            className="lg:col-span-8 relative"
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
           >
-            <motion.div 
-              className="relative"
+            <motion.div
+              className="relative rounded-3xl overflow-hidden shadow-2xl border border-primary-100/50 bg-secondary-900"
               variants={mapVariants}
             >
+              {/* Effet de scan radar */}
+              <div className="absolute inset-0 z-0 overflow-hidden">
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-primary-500/10 to-transparent w-[200%]"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
+              </div>
+
               {/* Carte de l'Afrique de l'Ouest */}
-              <div className="relative w-full h-0 pb-[90%] bg-secondary-900 rounded-xl shadow-xl overflow-hidden">
-                {/* Image de la carte avec un dégradé */}
-                <div className="absolute inset-0 bg-gradient-to-br from-secondary-800 to-secondary-900 p-4">
-                  <div className="absolute inset-0 m-4 bg-[url('/assets/west-africa-map.svg')] bg-contain bg-no-repeat bg-center"></div>
-                  
-                  {/* Points des villes */}
-                  {locations.map((location, index) => (
-                    <motion.div
-                      key={location.id}
-                      variants={pointVariants}
-                      custom={index}
-                      whileHover="hover"
-                      className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 z-20"
-                      style={{
-                        left: `${location.coordinates[0]}%`,
-                        top: `${location.coordinates[1]}%`,
-                      }}
-                    >
-                      {/* Point pulsant pour les emplacements actifs */}
-                      {location.active && (
-                        <motion.div
-                          className="absolute inset-0 rounded-full bg-primary-300 opacity-50"
-                          variants={pulseVariants}
-                          initial="initial"
-                          animate="animate"
-                        />
-                      )}
-                      
-                      {/* Point central */}
-                      <div className={`w-3 h-3 rounded-full ${location.active ? 'bg-primary-300' : 'bg-secondary-300'} shadow-md z-10 relative`}>
-                        {/* Tooltip au survol */}
-                        <div className="opacity-0 hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-2 transition-opacity duration-300 pointer-events-none z-30">
-                          <div className="bg-secondary-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
-                            <div className="font-semibold mb-1">{location.name}, {location.country}</div>
-                            {location.active ? (
-                              <div>{location.properties} propriétés</div>
-                            ) : (
-                              <div className="text-primary-300">Bientôt disponible</div>
-                            )}
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-t-4 border-r-4 border-l-4 border-transparent border-t-secondary-900"></div>
+              <div className="relative w-full h-0 pb-[75%]">
+                {/* Image de la carte */}
+                <div className="absolute inset-0 m-8 bg-[url('/assets/west-africa-map.svg')] bg-contain bg-no-repeat bg-center opacity-80 mix-blend-overlay"></div>
+
+                {/* Grille décorative */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+                {/* Points des villes */}
+                {locations.map((location, index) => (
+                  <motion.div
+                    key={location.id}
+                    variants={pointVariants}
+                    custom={index}
+                    whileHover="hover"
+                    className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 z-20 group"
+                    style={{
+                      left: `${location.coordinates[0]}%`,
+                      top: `${location.coordinates[1]}%`,
+                    }}
+                  >
+                    {/* Point pulsant pour les emplacements actifs */}
+                    {location.active && (
+                      <motion.div
+                        className="absolute inset-0 -m-4 rounded-full bg-primary-500/30"
+                        variants={pulseVariants}
+                        initial="initial"
+                        animate="animate"
+                      />
+                    )}
+
+                    {/* Point central */}
+                    <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full ${location.active ? 'bg-primary-400 shadow-[0_0_15px_rgba(212,175,55,0.6)]' : 'bg-secondary-600'} border-2 border-secondary-900 z-10 relative transition-colors duration-300 group-hover:bg-white`} />
+
+                    {/* Tooltip au survol */}
+                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-4 transition-all duration-300 pointer-events-none z-30 min-w-[150px]">
+                      <div className="bg-white/95 backdrop-blur-md text-secondary-900 text-xs rounded-xl py-3 px-4 shadow-xl border border-primary-100 text-center">
+                        <div className="font-bold text-sm mb-1 font-display">{location.name}</div>
+                        <div className="text-secondary-500 text-[10px] uppercase tracking-wider mb-2">{location.country}</div>
+                        {location.active ? (
+                          <div className="inline-flex items-center gap-1 bg-primary-50 px-2 py-1 rounded-md border border-primary-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></span>
+                            <span className="font-semibold text-primary-700">{location.properties} biens</span>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="text-secondary-400 italic">Bientôt disponible</div>
+                        )}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px border-t-[6px] border-r-[6px] border-l-[6px] border-transparent border-t-white/95"></div>
                       </div>
-                    </motion.div>
-                  ))}
-                  
-                  {/* Lignes de connexion entre les villes */}
-                  <svg className="absolute inset-0 w-full h-full z-0">
-                    <g className="opacity-20">
-                      {locations.filter(l => l.active).map((location, index) => {
-                        // Connecter cette ville aux 2 villes les plus proches
-                        const otherLocations = [...locations.filter(l => l.active && l.id !== location.id)];
-                        otherLocations.sort((a, b) => {
-                          const distA = Math.sqrt(
-                            Math.pow(a.coordinates[0] - location.coordinates[0], 2) +
-                            Math.pow(a.coordinates[1] - location.coordinates[1], 2)
-                          );
-                          const distB = Math.sqrt(
-                            Math.pow(b.coordinates[0] - location.coordinates[0], 2) +
-                            Math.pow(b.coordinates[1] - location.coordinates[1], 2)
-                          );
-                          return distA - distB;
-                        });
-                        
-                        const closest = otherLocations.slice(0, 2);
-                        
-                        return closest.map((target, i) => (
-                          <motion.path
-                            key={`${location.id}-${target.id}`}
-                            d={`M${location.coordinates[0]} ${location.coordinates[1]} L${target.coordinates[0]} ${target.coordinates[1]}`}
-                            stroke="#D4AF37"
-                            strokeWidth="0.5"
-                            fill="none"
-                            strokeDasharray="1 3"
-                            initial={{ pathLength: 0, opacity: 0 }}
-                            animate={{ 
-                              pathLength: 1, 
-                              opacity: 0.5,
-                              transition: { 
-                                delay: 1 + index * 0.1 + i * 0.05,
-                                duration: 1.5, 
-                                ease: "easeInOut" 
-                              } 
-                            }}
-                          />
-                        ));
-                      })}
-                    </g>
-                  </svg>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Lignes de connexion */}
+                <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+                  <g className="opacity-30">
+                    {locations.filter(l => l.active).map((location, index) => {
+                      const otherLocations = [...locations.filter(l => l.active && l.id !== location.id)];
+                      otherLocations.sort((a, b) => {
+                        const distA = Math.sqrt(Math.pow(a.coordinates[0] - location.coordinates[0], 2) + Math.pow(a.coordinates[1] - location.coordinates[1], 2));
+                        const distB = Math.sqrt(Math.pow(b.coordinates[0] - location.coordinates[0], 2) + Math.pow(b.coordinates[1] - location.coordinates[1], 2));
+                        return distA - distB;
+                      });
+                      const closest = otherLocations.slice(0, 2);
+
+                      return closest.map((target, i) => (
+                        <motion.path
+                          key={`${location.id}-${target.id}`}
+                          d={`M${location.coordinates[0]} ${location.coordinates[1]} L${target.coordinates[0]} ${target.coordinates[1]}`}
+                          stroke="url(#lineGradient)"
+                          strokeWidth="1"
+                          fill="none"
+                          strokeDasharray="4 4"
+                          initial={{ pathLength: 0, opacity: 0 }}
+                          animate={{
+                            pathLength: 1,
+                            opacity: 0.4,
+                            transition: { delay: 1 + index * 0.1, duration: 2, ease: "easeInOut" }
+                          }}
+                        />
+                      ));
+                    })}
+                    <defs>
+                      <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0" />
+                        <stop offset="50%" stopColor="#D4AF37" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                  </g>
+                </svg>
+              </div>
+
+              {/* Légende intégrée */}
+              <div className="absolute bottom-6 left-6 flex items-center gap-4 bg-secondary-900/80 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(212,175,55,0.8)]"></span>
+                  <span className="text-xs text-white/90 font-medium">Actif</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-secondary-600"></span>
+                  <span className="text-xs text-white/60 font-medium">Bientôt</span>
                 </div>
               </div>
             </motion.div>
           </motion.div>
-          
-          {/* Statistiques avec compteurs animés */}
-          <div className="lg:col-span-2">
+
+          {/* Statistiques latérales */}
+          <div className="lg:col-span-4 space-y-6">
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
+              initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
+              viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="bg-white/80 backdrop-blur-sm rounded-xl shadow-xl p-8 border border-primary-100/30 relative overflow-hidden"
+              className="bg-white rounded-2xl p-8 shadow-xl border border-primary-100 relative overflow-hidden group hover:border-primary-300 transition-colors duration-300"
             >
-              {/* Background géométrique animé */}
-              <div className="absolute inset-0 opacity-5">
-                <motion.div 
-                  className="absolute top-4 right-4 w-20 h-20 border border-primary-300 rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                />
-                <motion.div 
-                  className="absolute bottom-4 left-4 w-16 h-16 bg-primary-200 rounded-lg"
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    rotate: [0, 90, 0]
-                  }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                />
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                <svg className="w-24 h-24 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
               </div>
-              
-              <h3 className="text-2xl font-bold text-secondary-900 mb-6 font-display relative z-10">Notre présence</h3>
-              
-              <div className="space-y-6 relative z-10">
-                {/* Villes actives avec compteur animé */}
-                <div className="flex items-center justify-between">
-                  <span className="text-secondary-700 font-medium">Villes actives</span>
-                  <motion.span 
-                    className="text-2xl font-bold text-secondary-900"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    whileInView={{ scale: 1, opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 0.8 }}
-                  >
-                    {locations.filter(l => l.active).length}
-                  </motion.span>
-                </div>
-                
-                <motion.div 
-                  className="h-px bg-gradient-to-r from-transparent via-primary-200 to-transparent"
-                  initial={{ scaleX: 0 }}
-                  whileInView={{ scaleX: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                />
-                
-                {/* Pays couverts avec compteur animé */}
-                <div className="flex items-center justify-between">
-                  <span className="text-secondary-700 font-medium">Pays couverts</span>
-                  <motion.span 
-                    className="text-2xl font-bold text-secondary-900"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    whileInView={{ scale: 1, opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 1.0 }}
-                  >
-                    {new Set(locations.filter(l => l.active).map(l => l.country)).size}
-                  </motion.span>
-                </div>
-                
-                <motion.div 
-                  className="h-px bg-gradient-to-r from-transparent via-primary-200 to-transparent"
-                  initial={{ scaleX: 0 }}
-                  whileInView={{ scaleX: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                />
-                
-                {/* Total propriétés avec effet counting */}
-                <div className="flex items-center justify-between">
-                  <span className="text-secondary-700 font-medium">Total des propriétés</span>
-                  <motion.span 
-                    className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    whileInView={{ scale: 1, opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 1.2 }}
-                  >
-                    {locations.reduce((sum, location) => sum + location.properties, 0)}
-                  </motion.span>
-                </div>
-                
-                <motion.div 
-                  className="h-px bg-gradient-to-r from-transparent via-primary-200 to-transparent"
-                  initial={{ scaleX: 0 }}
-                  whileInView={{ scaleX: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: 1.0 }}
-                />
-                
-                {/* Timeline expansion animée */}
-                <motion.div 
-                  className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg p-4 border border-primary-200"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 1.4 }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-secondary-700 font-medium">Expansion 2023</span>
-                    <motion.span 
-                      className="text-primary-600 font-bold flex items-center gap-2"
-                      initial={{ x: -20, opacity: 0 }}
-                      whileInView={{ x: 0, opacity: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.6, delay: 1.6 }}
-                    >
-                      <motion.span
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      >
-                        +{locations.filter(l => l.comingSoon).length}
-                      </motion.span>
-                      villes
-                    </motion.span>
+
+              <h3 className="text-2xl font-bold text-secondary-900 mb-2 font-display">Statistiques</h3>
+              <p className="text-secondary-500 text-sm mb-8">Notre impact en chiffres</p>
+
+              <div className="space-y-8">
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-secondary-600 font-medium">Villes couvertes</span>
+                    <span className="text-3xl font-bold text-secondary-900">{locations.filter(l => l.active).length}</span>
                   </div>
-                  
-                  {/* Villes à venir */}
-                  <motion.div 
-                    className="mt-3 flex flex-wrap gap-2"
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 1.8 }}
-                  >
-                    {locations.filter(l => l.comingSoon).map((city, index) => (
-                      <motion.span
-                        key={city.id}
-                        className="text-xs bg-primary-200 text-primary-700 px-2 py-1 rounded-full"
-                        initial={{ scale: 0, opacity: 0 }}
-                        whileInView={{ scale: 1, opacity: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: 2.0 + index * 0.1 }}
-                      >
-                        {city.name}
-                      </motion.span>
-                    ))}
-                  </motion.div>
-                </motion.div>
+                  <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-primary-500 rounded-full"
+                      initial={{ width: 0 }}
+                      whileInView={{ width: '70%' }}
+                      transition={{ duration: 1, delay: 0.6 }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-secondary-600 font-medium">Propriétés</span>
+                    <span className="text-3xl font-bold text-secondary-900">
+                      {locations.reduce((sum, location) => sum + location.properties, 0)}+
+                    </span>
+                  </div>
+                  <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-primary-500 rounded-full"
+                      initial={{ width: 0 }}
+                      whileInView={{ width: '85%' }}
+                      transition={{ duration: 1, delay: 0.8 }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-secondary-600 font-medium">Pays</span>
+                    <span className="text-3xl font-bold text-secondary-900">
+                      {new Set(locations.filter(l => l.active).map(l => l.country)).size}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-primary-500 rounded-full"
+                      initial={{ width: 0 }}
+                      whileInView={{ width: '60%' }}
+                      transition={{ duration: 1, delay: 1 }}
+                    />
+                  </div>
+                </div>
               </div>
-              
-              <motion.div 
-                className="mt-8 relative z-10"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 2.2 }}
-              >
-                <a 
-                  href="/about"
-                  className="inline-flex items-center text-primary-500 font-medium hover:text-primary-600 transition-colors group"
-                >
-                  <span>En savoir plus sur notre expansion</span>
-                  <motion.span 
-                    className="ml-2" 
-                    initial={{ x: 0 }}
-                    whileHover={{ x: 5 }}
-                    transition={{ duration: 0.2 }}
-                  >→</motion.span>
-                </a>
-              </motion.div>
             </motion.div>
-            
-            {/* Légende modernisée */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              className="mt-6 bg-gradient-to-r from-secondary-50 to-primary-50 rounded-lg p-4 flex items-center justify-center space-x-6 border border-primary-100/50"
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="bg-secondary-900 rounded-2xl p-8 shadow-xl text-white relative overflow-hidden"
             >
-              <div className="flex items-center">
-                <motion.div 
-                  className="w-3 h-3 rounded-full bg-primary-400 mr-2"
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    boxShadow: [
-                      '0 0 0 rgba(212, 175, 55, 0)',
-                      '0 0 10px rgba(212, 175, 55, 0.5)',
-                      '0 0 0 rgba(212, 175, 55, 0)'
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-                <span className="text-sm text-secondary-600 font-medium">Villes actives</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-secondary-300 mr-2"></div>
-                <span className="text-sm text-secondary-600 font-medium">Bientôt disponible</span>
+              <div className="absolute inset-0 bg-[url('/assets/pattern-dot.svg')] opacity-10"></div>
+              <div className="relative z-10">
+                <h4 className="text-lg font-bold mb-4 font-display text-primary-300">Prochaines Ouvertures</h4>
+                <div className="flex flex-wrap gap-2">
+                  {locations.filter(l => l.comingSoon).map((city, index) => (
+                    <span key={city.id} className="px-3 py-1 rounded-full bg-white/10 text-sm border border-white/10 text-white/90">
+                      {city.name}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <a href="/contact" className="text-sm text-primary-300 hover:text-white transition-colors flex items-center gap-2 group">
+                    Devenir partenaire local
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </a>
+                </div>
               </div>
             </motion.div>
           </div>

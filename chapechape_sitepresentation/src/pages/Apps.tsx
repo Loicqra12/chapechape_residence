@@ -7,9 +7,9 @@ export default function Apps() {
   // Variantes d'animation pour les titres et textes
   const textVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
+    visible: {
+      opacity: 1,
+      y: 0,
       transition: { duration: 0.6 }
     }
   }
@@ -96,38 +96,55 @@ export default function Apps() {
 
   return (
     <div className="bg-secondary-50">
-      {/* Hero section */}
-      <div className="relative isolate overflow-hidden bg-gradient-to-br from-secondary-900 via-secondary-800 to-secondary-900 py-24 sm:py-32">
-        {/* Grille d'arrière-plan animée */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.3 }}
-          transition={{ duration: 1.5 }}
-          className="absolute inset-0 bg-grid-white/5 bg-[linear-gradient(to_right,#161616_1px,transparent_1px),linear-gradient(to_bottom,#161616_1px,transparent_1px)] bg-[size:4rem_4rem] z-0"
-        />
-        
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl lg:mx-0">
-            <motion.h1 
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              className="text-4xl font-bold tracking-tight text-primary-300 sm:text-6xl font-display"
-            >
-              Nos Applications
-            </motion.h1>
-            <motion.p 
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.2 }}
-              className="mt-6 text-lg leading-8 text-primary-100"
-            >
-              Découvrez comment nos applications mobiles facilitent la gestion et la location de résidences en Afrique de l'Ouest.
-            </motion.p>
-          </div>
+      {/* Hero Section Harmonisé */}
+      <section className="relative py-32 bg-secondary-900 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-b from-secondary-900/50 via-secondary-900/80 to-white" />
+
+        {/* Golden particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute rounded-full bg-primary-400/20 blur-xl"
+              style={{
+                width: Math.random() * 150 + 50 + 'px',
+                height: Math.random() * 150 + 50 + 'px',
+                left: Math.random() * 100 + '%',
+                top: Math.random() * 100 + '%',
+              }}
+              animate={{
+                y: [0, -100, 0],
+                x: [0, Math.random() * 50 - 25, 0],
+                opacity: [0, 0.4, 0],
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
         </div>
-      </div>
+
+        <div className="container mx-auto px-4 max-w-6xl relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-primary-300 text-xs font-bold tracking-widest uppercase mb-6">
+              Innovation & Mobilité
+            </span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
+              Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">Applications</span>
+            </h1>
+            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+              Découvrez comment nos applications mobiles facilitent la gestion et la location de résidences en Afrique de l'Ouest, où que vous soyez.
+            </p>
+          </motion.div>
+        </div>
+      </section>
 
       {/* Applications Screenshots */}
       <AppScreenshots />
@@ -136,16 +153,16 @@ export default function Apps() {
       <div className="py-24 sm:py-32 bg-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-base font-semibold leading-7 text-primary-500"
+              className="text-base font-semibold leading-7 text-primary-500 uppercase tracking-widest"
             >
               Pour les Locataires
             </motion.h2>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -154,7 +171,7 @@ export default function Apps() {
             >
               Application Client
             </motion.p>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -167,22 +184,22 @@ export default function Apps() {
 
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
             <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
-              {appFeatures.client.map((feature) => (
-                <motion.div 
+              {appFeatures.client.map((feature, index) => (
+                <motion.div
                   key={feature.title}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-white p-6 rounded-xl shadow-sm border border-secondary-100 hover:border-primary-200 hover:shadow-md transition-all duration-300"
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:border-primary-200 hover:shadow-xl transition-all duration-300 group"
                 >
-                  <dt className="flex items-center gap-x-3 text-lg font-semibold leading-7 text-secondary-900">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-300 text-secondary-900">
+                  <dt className="flex items-center gap-x-4 text-lg font-bold leading-7 text-secondary-900">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 group-hover:bg-primary-500 group-hover:text-white transition-colors duration-300">
                       {feature.icon}
                     </div>
                     {feature.title}
                   </dt>
-                  <dd className="mt-4 text-base leading-7 text-secondary-600">{feature.description}</dd>
+                  <dd className="mt-4 text-base leading-7 text-secondary-600 pl-16">{feature.description}</dd>
                 </motion.div>
               ))}
             </dl>
@@ -190,23 +207,29 @@ export default function Apps() {
 
           <div className="mt-16 flex justify-center">
             <div className="flex flex-wrap gap-4 justify-center">
-              <a 
-                href="#" 
-                className="inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md bg-primary-400 text-secondary-900 hover:bg-primary-500"
+              <a
+                href="#"
+                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-900 text-white hover:bg-secondary-800 transition-all transform hover:-translate-y-1"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" />
                 </svg>
-                Télécharger sur Google Play
+                <div className="flex flex-col items-start">
+                  <span className="text-[10px] uppercase font-normal opacity-80">Disponible sur</span>
+                  <span className="text-base">Google Play</span>
+                </div>
               </a>
-              <a 
-                href="#" 
-                className="inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md bg-primary-400 text-secondary-900 hover:bg-primary-500"
+              <a
+                href="#"
+                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-900 text-white hover:bg-secondary-800 transition-all transform hover:-translate-y-1"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" />
                 </svg>
-                Télécharger sur App Store
+                <div className="flex flex-col items-start">
+                  <span className="text-[10px] uppercase font-normal opacity-80">Télécharger sur</span>
+                  <span className="text-base">App Store</span>
+                </div>
               </a>
             </div>
           </div>
@@ -217,16 +240,16 @@ export default function Apps() {
       <div className="py-24 sm:py-32 bg-secondary-50">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-base font-semibold leading-7 text-secondary-700"
+              className="text-base font-semibold leading-7 text-secondary-600 uppercase tracking-widest"
             >
               Pour les Propriétaires
             </motion.h2>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -235,7 +258,7 @@ export default function Apps() {
             >
               Application Partenaire
             </motion.p>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -248,22 +271,22 @@ export default function Apps() {
 
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
             <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
-              {appFeatures.partner.map((feature) => (
-                <motion.div 
+              {appFeatures.partner.map((feature, index) => (
+                <motion.div
                   key={feature.title}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-white p-6 rounded-xl shadow-sm border border-secondary-100 hover:border-secondary-300 hover:shadow-md transition-all duration-300"
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="bg-white p-8 rounded-2xl shadow-lg border border-secondary-100 hover:border-secondary-300 hover:shadow-xl transition-all duration-300 group"
                 >
-                  <dt className="flex items-center gap-x-3 text-lg font-semibold leading-7 text-secondary-900">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary-800 text-white">
+                  <dt className="flex items-center gap-x-4 text-lg font-bold leading-7 text-secondary-900">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-800 text-white group-hover:bg-secondary-900 transition-colors duration-300">
                       {feature.icon}
                     </div>
                     {feature.title}
                   </dt>
-                  <dd className="mt-4 text-base leading-7 text-secondary-600">{feature.description}</dd>
+                  <dd className="mt-4 text-base leading-7 text-secondary-600 pl-16">{feature.description}</dd>
                 </motion.div>
               ))}
             </dl>
@@ -271,23 +294,29 @@ export default function Apps() {
 
           <div className="mt-16 flex justify-center">
             <div className="flex flex-wrap gap-4 justify-center">
-              <a 
-                href="#" 
-                className="inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md bg-secondary-800 text-white hover:bg-secondary-900"
+              <a
+                href="#"
+                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-800 text-white hover:bg-secondary-900 transition-all transform hover:-translate-y-1"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" />
                 </svg>
-                Télécharger sur Google Play
+                <div className="flex flex-col items-start">
+                  <span className="text-[10px] uppercase font-normal opacity-80">Disponible sur</span>
+                  <span className="text-base">Google Play</span>
+                </div>
               </a>
-              <a 
-                href="#" 
-                className="inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md bg-secondary-800 text-white hover:bg-secondary-900"
+              <a
+                href="#"
+                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-800 text-white hover:bg-secondary-900 transition-all transform hover:-translate-y-1"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" />
                 </svg>
-                Télécharger sur App Store
+                <div className="flex flex-col items-start">
+                  <span className="text-[10px] uppercase font-normal opacity-80">Télécharger sur</span>
+                  <span className="text-base">App Store</span>
+                </div>
               </a>
             </div>
           </div>
@@ -297,29 +326,29 @@ export default function Apps() {
       {/* CTA Section */}
       <div className="py-24 sm:py-32 bg-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
             viewport={{ once: true }}
-            className="relative isolate overflow-hidden bg-gradient-to-br from-primary-50 to-white px-6 py-24 text-center shadow-sm rounded-3xl border border-primary-100 sm:px-16"
+            className="relative isolate overflow-hidden bg-gradient-to-br from-primary-50 to-white px-6 py-24 text-center shadow-2xl rounded-3xl border border-primary-100 sm:px-16"
           >
             <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl font-display">
               Commencez l'expérience dès aujourd'hui
             </h2>
-            <p className="mt-6 text-lg leading-8 text-secondary-600">
+            <p className="mt-6 text-lg leading-8 text-secondary-600 max-w-2xl mx-auto">
               Rejoignez les milliers d'utilisateurs qui simplifient déjà leur expérience de logement avec ChapeChape Residence.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link
                 to="/"
-                className="rounded-md bg-primary-300 px-3.5 py-2.5 text-sm font-semibold text-secondary-900 shadow-sm hover:bg-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 transition-colors duration-300"
+                className="rounded-full bg-primary-500 px-8 py-4 text-sm font-bold text-white shadow-lg hover:bg-primary-600 hover:shadow-primary-500/30 transition-all duration-300 transform hover:-translate-y-1"
               >
                 Découvrir nos résidences
               </Link>
               <Link
                 to="/contact"
-                className="text-sm font-semibold leading-6 text-secondary-900"
+                className="text-sm font-bold leading-6 text-secondary-900 hover:text-primary-600 transition-colors"
               >
                 Nous contacter <span aria-hidden="true">→</span>
               </Link>
@@ -332,4 +361,4 @@ export default function Apps() {
       <Contact />
     </div>
   )
-} 
+}

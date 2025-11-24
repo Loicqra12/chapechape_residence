@@ -1,531 +1,264 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 // Configuration des applications
 const apps = [
   {
     id: 'client',
-    name: 'Application Client',
-    description: 'Notre application pour les locataires permet de trouver et réserver facilement la résidence idéale pour votre séjour.',
+    name: 'Pour les Locataires',
+    title: 'Trouvez votre résidence idéale',
+    description: 'Une expérience de recherche fluide et intuitive. Réservez votre prochain séjour en quelques clics.',
     features: [
-      'Recherche avancée de résidences',
-      'Réservation en quelques clics',
-      'Paiement sécurisé',
-      'Messagerie avec les propriétaires',
-      'Gestion de vos séjours'
+      { icon: '🔍', title: 'Recherche Intelligente', text: 'Filtres avancés par prix, localisation et équipements' },
+      { icon: '💳', title: 'Paiement Sécurisé', text: 'Transactions cryptées et multiples moyens de paiement' },
+      { icon: '📅', title: 'Gestion Simplifiée', text: 'Suivez vos réservations et historiques en temps réel' }
     ],
-    color: 'primary', // Couleur dorée pour le client
+    color: 'from-primary-500 to-secondary-500',
+    accent: 'text-primary-600',
+    bgGradient: 'from-primary-50/50 via-white to-secondary-50/30',
+    screenshots: [
+      '/assets/apps/client/client-01.jpg',
+      '/assets/apps/client/client-02.jpg',
+      '/assets/apps/client/client-03.jpg'
+    ]
   },
   {
     id: 'partner',
-    name: 'Application Partenaire',
-    description: 'Notre application pour les propriétaires offre tous les outils nécessaires pour gérer efficacement vos résidences.',
+    name: 'Pour les Propriétaires',
+    title: 'Gérez vos biens en toute sérénité',
+    description: 'Un tableau de bord complet pour maximiser vos revenus et gérer vos locations sans effort.',
     features: [
-      'Gestion de vos propriétés',
-      'Calendrier des réservations',
-      'Suivi des revenus',
-      'Communication avec les locataires',
-      'Statistiques de performance'
+      { icon: '📊', title: 'Dashboard Complet', text: 'Vue d\'ensemble de vos performances et revenus' },
+      { icon: '💬', title: 'Messagerie Directe', text: 'Communiquez facilement avec vos locataires' },
+      { icon: '📈', title: 'Statistiques Détaillées', text: 'Analysez vos taux d\'occupation et revenus' }
     ],
-    color: 'secondary', // Couleur foncée pour les partenaires
+    color: 'from-secondary-800 to-secondary-900',
+    accent: 'text-secondary-800',
+    bgGradient: 'from-secondary-50 via-white to-primary-50/30',
+    screenshots: [
+      '/assets/apps/partner/partner-01.jpg',
+      '/assets/apps/partner/partner-02.jpg',
+      '/assets/apps/partner/partner-03.jpg'
+    ]
   }
 ];
 
 const AppScreenshots: React.FC = () => {
-  const [activeApp, setActiveApp] = useState(apps[0]);
-  const [screenshots, setScreenshots] = useState<Record<string, string[]>>({ client: [], partner: [] });
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
+  const [currentScreenshot, setCurrentScreenshot] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Simuler le chargement des captures d'écran
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y = useTransform(scrollYProgress, [0, 1], [100, -100]);
+  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+
+  // Rotation automatique des screenshots
   useEffect(() => {
-    // Dans une application réelle, vous chargeriez dynamiquement les images du dossier
-    // Pour cet exemple, nous utilisons des tableaux statiques
-    
-    // Les images devraient être au format /assets/apps/client/client-01-xx.jpg
-    const clientScreenshots = Array.from({ length: 5 }, (_, i) => 
-      `/assets/apps/client/client-${String(i + 1).padStart(2, '0')}.jpg`
-    );
-    
-    const partnerScreenshots = Array.from({ length: 5 }, (_, i) => 
-      `/assets/apps/partner/partner-${String(i + 1).padStart(2, '0')}.jpg`
-    );
-    
-    setScreenshots({ 
-      client: clientScreenshots,
-      partner: partnerScreenshots
-    });
-  }, []);
-  
-  const handleScreenshotChange = (direction: 'next' | 'prev') => {
-    const currentScreenshots = screenshots[activeApp.id] || [];
-    if (currentScreenshots.length === 0) return;
-    
-    if (direction === 'next') {
-      setCurrentIndex((prev) => (prev + 1) % currentScreenshots.length);
-    } else {
-      setCurrentIndex((prev) => (prev - 1 + currentScreenshots.length) % currentScreenshots.length);
-    }
-  };
-  
-  const checkImageExistence = (url: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
-  };
-  
-  // Vérifier si l'image existe
-  const [imageExists, setImageExists] = useState<Record<string, boolean>>({});
-  
-  useEffect(() => {
-    const checkImages = async () => {
-      const newImageStatus: Record<string, boolean> = {};
-      
-      for (const appId of ['client', 'partner']) {
-        for (const screenshot of screenshots[appId] || []) {
-          const exists = await checkImageExistence(screenshot);
-          newImageStatus[screenshot] = exists;
-        }
-      }
-      
-      setImageExists(newImageStatus);
-    };
-    
-    if (screenshots.client.length > 0 || screenshots.partner.length > 0) {
-      checkImages();
-    }
-  }, [screenshots]);
-  
-  // Auto-rotation du carrousel - Style Stripe
-  useEffect(() => {
-    const currentScreenshots = screenshots[activeApp.id] || [];
-    if (currentScreenshots.length <= 1) return;
-    
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % currentScreenshots.length);
-    }, 4000); // Change toutes les 4 secondes
-    
+      setCurrentScreenshot((prev) => (prev + 1) % apps[activeTab].screenshots.length);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [activeApp.id, screenshots]);
-  
-  // Variants d'animation pour les transitions - Style Stripe
-  const phoneVariants = {
-    initial: { 
-      opacity: 0,
-      y: 80,
-      rotateY: -15,
-      rotateX: 10,
-      scale: 0.8
-    },
-    animate: { 
-      opacity: 1,
-      y: 0,
-      rotateY: 0,
-      rotateX: 0,
-      scale: 1,
-      transition: { 
-        duration: 0.8,
-        type: 'spring',
-        stiffness: 120,
-        damping: 20
-      }
-    },
-    exit: { 
-      opacity: 0,
-      y: -80,
-      rotateY: 15,
-      rotateX: -10,
-      scale: 0.8,
-      transition: { 
-        duration: 0.4
-      }
-    },
-    hover: {
-      rotateY: 5,
-      rotateX: -2,
-      scale: 1.02,
-      transition: {
-        duration: 0.4,
-        ease: "easeOut"
-      }
-    }
-  };
-  
-  // Placeholder pour les captures d'écran non disponibles
-  const ScreenshotPlaceholder = ({ appId }: { appId: string }) => {
-    const colors = appId === 'client' 
-      ? { bg: 'from-primary-50 to-primary-100', text: 'text-primary-800', accent: 'bg-primary-200' }
-      : { bg: 'from-secondary-50 to-secondary-100', text: 'text-secondary-800', accent: 'bg-secondary-200' };
-      
-    return (
-      <div className={`w-full h-full rounded-2xl overflow-hidden bg-gradient-to-b ${colors.bg} flex flex-col items-center justify-center p-6`}>
-        <div className={`w-16 h-16 ${colors.accent} rounded-full mb-4 flex items-center justify-center`}>
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <h3 className={`text-xl font-bold ${colors.text} mb-2`}>
-          {appId === 'client' ? 'Application Client' : 'Application Partenaire'}
-        </h3>
-        <p className="text-sm text-secondary-500 text-center">
-          Captures d'écran à venir
-        </p>
-      </div>
-    );
-  };
-  
+  }, [activeTab]);
+
+  // Reset screenshot index on tab change
+  useEffect(() => {
+    setCurrentScreenshot(0);
+  }, [activeTab]);
+
+  const activeApp = apps[activeTab];
+
   return (
-    <section className="py-24 bg-gradient-to-b from-secondary-50 to-white overflow-hidden">
-      <div className="container-custom">
-        {/* Titre de la section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-3xl font-bold text-secondary-900 mb-4 font-display">Nos Applications Mobiles</h2>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-secondary-600 max-w-2xl mx-auto"
-          >
-            Gérez vos résidences ou trouvez votre logement idéal où que vous soyez grâce à nos applications dédiées.
-          </motion.p>
-          
-          {/* Ligne décorative dorée */}
-          <motion.div 
-            initial={{ width: 0 }}
-            whileInView={{ width: "80px" }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="h-1 bg-primary-300 mx-auto mt-6"
-          />
-        </motion.div>
-        
-        {/* Sélecteur d'application */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-secondary-100 rounded-full p-1">
-            {apps.map((app) => (
-              <motion.button
-                key={app.id}
-                onClick={() => {
-                  setActiveApp(app);
-                  setCurrentIndex(0);
-                }}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  activeApp.id === app.id 
-                    ? app.id === 'client' 
-                      ? 'bg-primary-400 text-secondary-900 shadow-md' 
-                      : 'bg-secondary-700 text-white shadow-md'
-                    : 'text-secondary-700 hover:bg-secondary-200'
-                }`}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {app.name}
-              </motion.button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Contenu principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Téléphone avec captures d'écran */}
+    <section ref={containerRef} className="relative py-32 overflow-hidden">
+      {/* Background dynamique */}
+      <motion.div
+        className={`absolute inset-0 bg-gradient-to-br ${activeApp.bgGradient} transition-colors duration-1000`}
+      />
+
+      {/* Motif de fond */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#D4AF37_1px,transparent_1px)] [background-size:20px_20px]" />
+
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+          {/* Colonne Texte */}
           <motion.div
-            ref={containerRef}
-            className="flex justify-center"
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="relative">
-              {/* Cadre de téléphone */}
-              <div className="relative w-64 h-[500px] mx-auto">
-                <div className="absolute inset-0 bg-secondary-900 rounded-[3rem] shadow-2xl overflow-hidden border-8 border-secondary-800">
-                  {/* Encoche du téléphone */}
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-secondary-900 rounded-b-xl"></div>
-                  
-                  {/* Écran du téléphone */}
-                  <div className="absolute inset-0 mt-4 mb-8 overflow-hidden rounded-3xl bg-white">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={`${activeApp.id}-${currentIndex}`}
-                        variants={phoneVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        className="absolute inset-0"
-                      >
-                        {screenshots[activeApp.id] && screenshots[activeApp.id].length > 0 && 
-                         imageExists[screenshots[activeApp.id][currentIndex]] ? (
-                          <img 
-                            src={screenshots[activeApp.id][currentIndex]} 
-                            alt={`Capture d'écran ${activeApp.name}`} 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <ScreenshotPlaceholder appId={activeApp.id} />
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                  
-                  {/* Bouton home */}
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-secondary-700 rounded-full"></div>
-                </div>
-                
-                {/* Contrôles de navigation */}
-                {screenshots[activeApp.id] && screenshots[activeApp.id].length > 1 && (
-                  <div className="absolute left-1/2 transform -translate-x-1/2 bottom-[-2rem] flex space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="w-10 h-10 rounded-full bg-secondary-100 flex items-center justify-center shadow-md"
-                      onClick={() => handleScreenshotChange('prev')}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="w-10 h-10 rounded-full bg-secondary-100 flex items-center justify-center shadow-md"
-                      onClick={() => handleScreenshotChange('next')}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                )}
-                
-                {/* Indicateurs de pages */}
-                {screenshots[activeApp.id] && screenshots[activeApp.id].length > 1 && (
-                  <div className="absolute left-1/2 transform -translate-x-1/2 bottom-[-4rem] flex space-x-1">
-                    {screenshots[activeApp.id].map((_, i) => (
-                      <motion.button
-                        key={i}
-                        className={`w-2 h-2 rounded-full ${
-                          i === currentIndex 
-                            ? activeApp.id === 'client' ? 'bg-primary-400' : 'bg-secondary-700'
-                            : 'bg-secondary-300'
-                        }`}
-                        onClick={() => setCurrentIndex(i)}
-                        whileHover={{ scale: 1.2 }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-          
-          {/* Description de l'application */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            transition={{ duration: 0.8 }}
           >
-            <h3 className={`text-2xl font-bold mb-4 ${
-              activeApp.id === 'client' ? 'text-primary-500' : 'text-secondary-800'
-            }`}>
-              {activeApp.name}
-            </h3>
-            <p className="text-secondary-600 mb-6">
-              {activeApp.description}
-            </p>
-            
-            <h4 className="text-lg font-semibold text-secondary-800 mb-4">Fonctionnalités principales</h4>
-            {/* Icônes check animées en cascade - Style Stripe */}
-            <div className="space-y-3 mb-8">
-              {activeApp.features.map((feature, index) => (
-                <motion.div
-                  key={`${activeApp.id}-${feature}`}
-                  initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  transition={{ 
-                    delay: index * 0.15,
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 20
-                  }}
-                  className="flex items-start group/feature"
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-primary-100 mb-8">
+              <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+              <span className="text-xs font-bold tracking-widest uppercase text-secondary-600">Disponible sur iOS et Android</span>
+            </div>
+
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 font-display leading-tight">
+              L'immobilier <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-secondary-600">
+                au bout des doigts
+              </span>
+            </h2>
+
+            {/* Tabs Switcher */}
+            <div className="flex p-1 bg-secondary-100/50 rounded-full w-fit mb-10 backdrop-blur-sm border border-secondary-200/50">
+              {apps.map((app, index) => (
+                <button
+                  key={app.id}
+                  onClick={() => setActiveTab(index)}
+                  className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === index
+                      ? 'bg-white text-secondary-900 shadow-md scale-105'
+                      : 'text-secondary-500 hover:text-secondary-700'
+                    }`}
                 >
-                  {/* Icône check animée premium */}
-                  <motion.div
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded-full mr-3 flex-shrink-0 ${
-                      activeApp.id === 'client' ? 'bg-primary-100 text-primary-700' : 'bg-secondary-100 text-secondary-700'
-                    } group-hover/feature:scale-110 transition-transform`}
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ 
-                      delay: index * 0.15 + 0.2,
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 15
-                    }}
-                    whileHover={{
-                      scale: 1.3,
-                      rotate: 360,
-                      transition: { duration: 0.4 }
-                    }}
-                  >
-                    <motion.svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className="h-4 w-4" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ 
-                        delay: index * 0.15 + 0.4,
-                        duration: 0.3
-                      }}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </motion.svg>
-                  </motion.div>
-                  
-                  {/* Texte avec effet de typing */}
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ 
-                      delay: index * 0.15 + 0.3,
-                      duration: 0.4
-                    }}
-                    className="text-secondary-700 group-hover/feature:text-secondary-900 transition-colors"
-                  >
-                    {feature}
-                  </motion.span>
-                </motion.div>
+                  {app.name}
+                </button>
               ))}
             </div>
-            
-            {/* Store buttons premium avec glow et icon movement - Style Stripe */}
-            <div className="flex flex-wrap gap-4">
-              {/* Google Play Button */}
-              <motion.a 
-                href="#" 
-                className={`relative inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md overflow-hidden group cursor-pointer ${
-                  activeApp.id === 'client' 
-                    ? 'bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 text-secondary-900' 
-                    : 'bg-gradient-to-r from-secondary-800 via-secondary-900 to-secondary-800 text-white'
-                }`}
-                whileHover={{ 
-                  scale: 1.05,
-                  boxShadow: activeApp.id === 'client' 
-                    ? "0 20px 40px rgba(212, 175, 55, 0.3)" 
-                    : "0 20px 40px rgba(0, 0, 0, 0.3)"
-                }}
-                whileTap={{ scale: 0.98 }}
-                animate={{
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                }}
-                transition={{
-                  backgroundPosition: {
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "linear"
-                  }
-                }}
-                style={{
-                  backgroundSize: '200% 100%'
-                }}
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeApp.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
               >
-                {/* Glow effect premium */}
-                <motion.div 
-                  className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-100 ${
-                    activeApp.id === 'client' 
-                      ? 'bg-gradient-to-r from-primary-400/50 via-primary-500/50 to-primary-400/50' 
-                      : 'bg-gradient-to-r from-secondary-800/50 via-secondary-900/50 to-secondary-800/50'
-                  }`}
-                  transition={{ duration: 0.3 }}
-                />
-                
-                {/* Icône animée */}
-                <motion.svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5 mr-2 relative z-10" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                  whileHover={{ 
-                    x: 3,
-                    rotate: 10,
-                    transition: { duration: 0.2 }
-                  }}
-                >
-                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z"/>
-                </motion.svg>
-                <span className="relative z-10">Télécharger sur Google Play</span>
-              </motion.a>
-              
-              {/* App Store Button */}
-              <motion.a 
-                href="#" 
-                className={`relative inline-flex items-center px-5 py-3 rounded-full text-sm font-medium shadow-md overflow-hidden group cursor-pointer ${
-                  activeApp.id === 'client' 
-                    ? 'bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 text-secondary-900' 
-                    : 'bg-gradient-to-r from-secondary-800 via-secondary-900 to-secondary-800 text-white'
-                }`}
-                whileHover={{ 
-                  scale: 1.05,
-                  boxShadow: activeApp.id === 'client' 
-                    ? "0 20px 40px rgba(212, 175, 55, 0.3)" 
-                    : "0 20px 40px rgba(0, 0, 0, 0.3)"
-                }}
-                whileTap={{ scale: 0.98 }}
-                animate={{
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                }}
-                transition={{
-                  backgroundPosition: {
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "linear"
-                  }
-                }}
-                style={{
-                  backgroundSize: '200% 100%'
-                }}
-              >
-                {/* Glow effect premium */}
-                <motion.div 
-                  className={`absolute -inset-1 rounded-full blur-md opacity-0 group-hover:opacity-100 ${
-                    activeApp.id === 'client' 
-                      ? 'bg-gradient-to-r from-primary-400/50 via-primary-500/50 to-primary-400/50' 
-                      : 'bg-gradient-to-r from-secondary-800/50 via-secondary-900/50 to-secondary-800/50'
-                  }`}
-                  transition={{ duration: 0.3 }}
-                />
-                
-                {/* Icône animée */}
-                <motion.svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5 mr-2 relative z-10" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                  whileHover={{ 
-                    x: 3,
-                    rotate: -10,
-                    transition: { duration: 0.2 }
-                  }}
-                >
-                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z"/>
-                </motion.svg>
-                <span className="relative z-10">Télécharger sur App Store</span>
-              </motion.a>
+                <h3 className="text-2xl font-bold text-secondary-800 mb-4 font-display">
+                  {activeApp.title}
+                </h3>
+                <p className="text-lg text-secondary-600 mb-10 leading-relaxed max-w-lg">
+                  {activeApp.description}
+                </p>
+
+                <div className="space-y-6 mb-12">
+                  {activeApp.features.map((feature, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 + 0.3 }}
+                      className="flex items-start gap-4 group"
+                    >
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-white shadow-md border border-primary-100 group-hover:scale-110 transition-transform duration-300`}>
+                        {feature.icon}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-secondary-900 mb-1">{feature.title}</h4>
+                        <p className="text-sm text-secondary-500">{feature.text}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <motion.a
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    href="#"
+                    className="flex items-center gap-3 px-6 py-3 bg-secondary-900 text-white rounded-xl shadow-xl hover:bg-secondary-800 transition-colors"
+                  >
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" /></svg>
+                    <div className="text-left">
+                      <div className="text-[10px] uppercase tracking-wider opacity-80">Télécharger sur</div>
+                      <div className="font-bold text-sm">Google Play</div>
+                    </div>
+                  </motion.a>
+
+                  <motion.a
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    href="#"
+                    className="flex items-center gap-3 px-6 py-3 bg-secondary-900 text-white rounded-xl shadow-xl hover:bg-secondary-800 transition-colors"
+                  >
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" /></svg>
+                    <div className="text-left">
+                      <div className="text-[10px] uppercase tracking-wider opacity-80">Télécharger sur</div>
+                      <div className="font-bold text-sm">App Store</div>
+                    </div>
+                  </motion.a>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Colonne Téléphone */}
+          <motion.div
+            style={{ y }}
+            className="relative flex justify-center lg:justify-end"
+          >
+            {/* Cercles décoratifs */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-primary-200/20 to-secondary-200/20 rounded-full blur-3xl -z-10 animate-pulse" />
+
+            {/* Phone Mockup */}
+            <div className="relative w-[300px] h-[600px] bg-secondary-900 rounded-[3rem] border-8 border-secondary-800 shadow-2xl overflow-hidden ring-1 ring-white/20">
+              {/* Dynamic Island / Notch */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-2xl z-20" />
+
+              {/* Screen Content */}
+              <div className="absolute inset-0 bg-white overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={`${activeApp.id}-${currentScreenshot}`}
+                    src={activeApp.screenshots[currentScreenshot]}
+                    alt="App Screenshot"
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="w-full h-full object-cover"
+                  />
+                </AnimatePresence>
+
+                {/* Gradient Overlay Bottom */}
+                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+              </div>
+
+              {/* Floating Elements - Notifications */}
+              <AnimatePresence>
+                {activeTab === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 50, y: -20 }}
+                    animate={{ opacity: 1, x: 20, y: 100 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ delay: 1, duration: 0.8 }}
+                    className="absolute -right-16 top-24 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/50 w-48 z-30 hidden md:block"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">✓</div>
+                      <div>
+                        <div className="text-xs text-secondary-500">Réservation</div>
+                        <div className="text-sm font-bold text-secondary-900">Confirmée</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-secondary-400">Votre séjour à Abidjan est validé !</div>
+                  </motion.div>
+                )}
+
+                {activeTab === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -50, y: 20 }}
+                    animate={{ opacity: 1, x: -20, y: 150 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ delay: 1, duration: 0.8 }}
+                    className="absolute -left-16 top-32 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/50 w-48 z-30 hidden md:block"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">📈</div>
+                      <div>
+                        <div className="text-xs text-secondary-500">Revenus</div>
+                        <div className="text-sm font-bold text-secondary-900">+ 15.4%</div>
+                      </div>
+                    </div>
+                    <div className="w-full bg-secondary-100 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-primary-500 h-full w-[70%]" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         </div>

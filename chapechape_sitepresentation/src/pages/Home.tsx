@@ -12,29 +12,13 @@ import Pricing from '../components/home/Pricing'
 import AboutSection from '../components/home/AboutSection'
 import ResidenceTypes from '../components/home/ResidenceTypes'
 import AppScreenshots from '../components/home/AppScreenshots'
+import Features from '../components/home/Features'
+import SEOHead from '../components/seo/SEOHead'
+import ParallaxSection from '../components/ui/ParallaxSection'
 import { useRef } from 'react'
 import { useReducedMotion, createOptimizedVariants, optimizeTransition } from '../hooks/useReducedMotion'
 
-const features = [
-  {
-    name: 'Application Client',
-    description: 'Trouvez et réservez facilement votre résidence idéale avec notre application mobile dédiée aux clients.',
-    href: '/apps',
-    icon: 'mobile'
-  },
-  {
-    name: 'Application Partenaire',
-    description: 'Gérez efficacement vos résidences et vos réservations avec notre application mobile pour les partenaires.',
-    href: '/apps',
-    icon: 'building'
-  },
-  {
-    name: 'Notre Équipe',
-    description: 'Découvrez l\'équipe passionnée derrière ChapeChape Residence.',
-    href: '/team',
-    icon: 'users'
-  },
-]
+
 
 export default function Home() {
   const heroRef = useRef(null)
@@ -43,7 +27,7 @@ export default function Home() {
   const opacity = useTransform(scrollY, [0, 300], [1, 0])
   const scale = useTransform(scrollY, [0, 300], [1, 0.9])
   const { prefersReducedMotion, isMobile, shouldReduceMotion } = useReducedMotion()
-  
+
   // Variantes d'animation pour les éléments de la section Hero
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -56,22 +40,22 @@ export default function Home() {
       }
     }
   }
-  
+
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { 
-      y: 0, 
+    visible: {
+      y: 0,
       opacity: 1,
-      transition: { 
-        type: "spring", 
+      transition: {
+        type: "spring",
         stiffness: 100,
         damping: 10
-      } 
+      }
     }
   }
-  
+
   const goldGlowVariants = {
-    initial: { 
+    initial: {
       opacity: 0.5,
       scale: 1,
     },
@@ -89,48 +73,56 @@ export default function Home() {
 
   return (
     <div className="bg-secondary-50">
+      <SEOHead
+        title="Accueil"
+        description="ChapeChape Residence révolutionne l'expérience de location avec une plateforme intelligente qui connecte propriétaires et locataires en toute simplicité."
+        url="https://presentation.chapechaperesidence.com/"
+      />
       {/* Hero section avec effets parallaxe et animations avancées - Style Stripe */}
-      <div 
+      <div
         ref={heroRef}
-        className="relative isolate overflow-hidden bg-gradient-to-br from-secondary-25 via-white to-primary-50 min-h-screen flex items-center"
+        className="relative isolate overflow-hidden min-h-screen flex items-center"
       >
-        {/* Grille d'arrière-plan animée */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.3 }}
-          transition={{ duration: 1.5 }}
-          className="absolute inset-0 bg-grid-white/5 bg-[linear-gradient(to_right,#161616_1px,transparent_1px),linear-gradient(to_bottom,#161616_1px,transparent_1px)] bg-[size:4rem_4rem] z-0"
-        />
-        
-        {/* Cercle lumineux doré avec effet de pulsation */}
-        <motion.div 
-          className="absolute left-0 right-0 top-0 -z-10 m-auto h-[60vh] w-full bg-secondary-950"
-        >
-          <motion.div 
-            variants={goldGlowVariants}
-            initial="initial"
-            animate="animate"
-            className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#D4AF37,transparent_70%)]"
+        {/* Cinematic Background Image with Ken Burns Effect */}
+        <div className="absolute inset-0 -z-20 overflow-hidden">
+          <motion.div
+            initial={{ scale: 1 }}
+            animate={{ scale: 1.1 }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "linear"
+            }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: "url('/assets/images/hero-luxury.png')",
+            }}
           />
-        </motion.div>
+          {/* Cinematic Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-secondary-900/90 via-secondary-900/70 to-secondary-900/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-secondary-900 via-transparent to-secondary-900/50" />
+        </div>
+
+
 
         {/* Particules dorées flottantes - Optimisées pour mobile */}
         {!shouldReduceMotion && (
-          <div className="absolute inset-0 opacity-30 z-0 overflow-hidden">
+          <div className="absolute inset-0 opacity-30 z-0 overflow-hidden pointer-events-none">
             {[...Array(isMobile ? 5 : 15)].map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute rounded-full bg-primary-300"
+                className="absolute rounded-full bg-primary-300 blur-[1px]"
                 style={{
-                  width: Math.random() * 10 + 5 + 'px',
-                  height: Math.random() * 10 + 5 + 'px',
+                  width: Math.random() * 6 + 2 + 'px',
+                  height: Math.random() * 6 + 2 + 'px',
                   left: Math.random() * 100 + '%',
                   top: Math.random() * 100 + '%',
                 }}
                 animate={{
                   y: [0, isMobile ? -50 : -100, 0],
                   x: [0, Math.random() * (isMobile ? 25 : 50) - (isMobile ? 12.5 : 25), 0],
-                  opacity: [0, 0.7, 0],
+                  opacity: [0, 0.5, 0],
                 }}
                 transition={{
                   duration: Math.random() * (isMobile ? 8 : 10) + (isMobile ? 8 : 10),
@@ -142,9 +134,9 @@ export default function Home() {
             ))}
           </div>
         )}
-        
+
         <div className="mx-auto max-w-7xl pb-24 pt-10 sm:pb-32 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:px-8 lg:py-40">
-          <motion.div 
+          <motion.div
             style={{ y, opacity }}
             className="px-6 lg:px-0 lg:pt-4 z-10"
           >
@@ -155,75 +147,79 @@ export default function Home() {
                   initial="hidden"
                   animate="visible"
                 >
-                  {/* Badge nouveau style Stripe */}
+                  {/* Badge Premium - Style Luxe & Minimaliste */}
                   <motion.div variants={itemVariants}>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm border border-primary-200/50 shadow-stripe mb-8">
-                      <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
-                      <span className="text-sm font-medium text-secondary-700">
-                           Plateforme N°1 en Côte d'Ivoire
+                    <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl mb-10 group hover:bg-white/15 transition-all duration-300 cursor-default">
+                      <div className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-green opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent-green"></span>
+                      </div>
+                      <span className="text-sm font-medium text-white/90 tracking-wide uppercase text-[11px]">
+                        Plateforme N°1 en Afrique de l'Ouest
                       </span>
                     </div>
                   </motion.div>
-                  
-                  <motion.div variants={itemVariants}>
-                    <h1 className="text-5xl sm:text-7xl lg:text-8xl font-display font-bold text-secondary-900 leading-[0.9] tracking-tight">
+
+                  <motion.div variants={itemVariants} className="relative z-10">
+                    <h1 className="text-5xl sm:text-6xl lg:text-7xl font-display font-bold text-white leading-[1.1] tracking-tight drop-shadow-2xl">
                       L'avenir de la
                       <br />
-                      <span className="bg-gradient-to-r from-primary-700 via-primary-500 to-accent-blue bg-clip-text text-transparent">
-                        location immobilière
+                      <span className="relative inline-block">
+                        <span className="absolute -inset-1 bg-gradient-to-r from-primary-400/20 to-transparent blur-lg"></span>
+                        <span className="relative bg-gradient-to-r from-primary-200 via-primary-100 to-white bg-clip-text text-transparent">
+                          location immobilière
+                        </span>
                       </span>
                       <br />
-                      <span className="text-secondary-600">en Afrique</span>
+                      <span className="text-white/90 font-light italic">en Afrique</span>
                     </h1>
                   </motion.div>
+
                   <motion.div variants={itemVariants}>
-                    <p className="mt-8 text-xl lg:text-2xl leading-relaxed text-secondary-600 max-w-2xl">
-                      ChapeChape Residence révolutionne l'expérience de location avec une plateforme 
-                      intelligente qui connecte propriétaires et locataires en toute simplicité.
+                    <p className="mt-8 text-lg lg:text-xl leading-relaxed text-gray-200/90 max-w-lg font-light tracking-wide border-l-2 border-primary-400/30 pl-6">
+                      ChapeChape Residence révolutionne l'expérience de location avec une plateforme intelligente qui connecte propriétaires et locataires en toute simplicité.
                     </p>
                   </motion.div>
+
                   <motion.div
                     variants={itemVariants}
-                    className="mt-12 flex flex-col sm:flex-row gap-4 items-start"
+                    className="mt-12 flex flex-col sm:flex-row gap-5 items-start"
                   >
+                    {/* Bouton Principal - Or Premium */}
                     <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.02, translateY: -2 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <Link
-                        to="/apps"
-                        className="group relative inline-flex items-center gap-3 px-8 py-4 min-h-[44px] min-w-[44px] bg-secondary-900 text-white rounded-2xl font-semibold text-lg shadow-stripe-lg hover:shadow-stripe transition-all duration-300 overflow-hidden touch-manipulation"
+                        to="/residences"
+                        className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary-400 to-primary-600 text-secondary-900 rounded-full font-bold text-base shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all duration-300 overflow-hidden"
                       >
-                        <motion.span 
-                          className="absolute inset-0 bg-gradient-to-r from-primary-600 to-accent-blue opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                          layoutId="button-bg"
-                        />
-                        <span className="relative z-10">Découvrir nos apps</span>
-                        <motion.svg 
-                          className="w-5 h-5 relative z-10" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
+                        <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></span>
+                        <span className="relative z-10 uppercase tracking-wider text-sm">Explorer la collection</span>
+                        <motion.svg
+                          className="w-4 h-4 relative z-10"
+                          fill="none"
+                          viewBox="0 0 24 24"
                           stroke="currentColor"
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ duration: 2, repeat: Infinity }}
+                          animate={{ x: [0, 4, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </motion.svg>
                       </Link>
                     </motion.div>
 
+                    {/* Bouton Secondaire - Glassmorphism */}
                     <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.02, translateY: -2 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <Link
                         to="/about"
-                        className="inline-flex items-center gap-3 px-8 py-4 bg-white/90 backdrop-blur-sm text-secondary-900 rounded-2xl font-semibold text-lg border border-secondary-200 hover:border-primary-300 shadow-stripe hover:shadow-stripe-lg transition-all duration-300"
+                        className="group inline-flex items-center gap-3 px-8 py-4 bg-white/5 backdrop-blur-sm text-white rounded-full font-medium text-base border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all duration-300"
                       >
-                        <span>En savoir plus</span>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <span className="uppercase tracking-wider text-sm">Notre Vision</span>
+                        <div className="w-8 h-[1px] bg-white/50 group-hover:w-12 transition-all duration-300"></div>
                       </Link>
                     </motion.div>
                   </motion.div>
@@ -249,7 +245,7 @@ export default function Home() {
               </div>
             </div>
           </motion.div>
-          <motion.div 
+          <motion.div
             style={{ scale }}
             className="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl lg:mx-0 lg:mt-0 lg:w-screen z-10"
           >
@@ -272,7 +268,7 @@ export default function Home() {
                 >
                   {/* Gradient background subtil */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary-50/50 via-white to-secondary-50/30 dark:from-primary-400/10 dark:via-secondary-800 dark:to-primary-300/10 -z-10" />
-                  
+
                   {/* Header avec logo ChapeChape */}
                   <div className="p-4 lg:p-6 border-b border-primary-100/50 dark:border-primary-300/20 relative">
                     <div className="flex items-center justify-between">
@@ -282,9 +278,9 @@ export default function Home() {
                           transition={{ duration: 0.6 }}
                           className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden"
                         >
-                          <img 
-                            src="/assets/logo.png" 
-                            alt="ChapeChape Residence" 
+                          <img
+                            src="/assets/logo.png"
+                            alt="ChapeChape Residence"
                             className="w-6 h-6 lg:w-8 lg:h-8 object-contain"
                           />
                           {/* Effet de brillance */}
@@ -327,7 +323,7 @@ export default function Home() {
                         </svg>
                       </motion.div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2 lg:gap-3">
                       {[
                         { label: 'Revenus Mensuels', value: '2,450,000', unit: 'FCFA', change: '+12.5%', positive: true },
@@ -340,8 +336,8 @@ export default function Home() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                          whileHover={{ 
-                            scale: 1.05, 
+                          whileHover={{
+                            scale: 1.05,
                             backgroundColor: 'rgba(212, 175, 55, 0.08)'
                           }}
                           className="bg-gradient-to-br from-primary-25 to-secondary-25 dark:from-secondary-800/50 dark:to-secondary-700/50 rounded-xl lg:rounded-2xl p-2 lg:p-4 border border-primary-100/50 dark:border-primary-300/20 group/stat cursor-pointer"
@@ -350,11 +346,10 @@ export default function Home() {
                             <span className="text-xs text-primary-600/70 dark:text-primary-200/70 font-medium">{stat.label}</span>
                             <motion.span
                               whileHover={{ scale: 1.1 }}
-                              className={`text-xs px-1.5 py-0.5 lg:px-2 lg:py-1 rounded-full font-medium ${
-                                stat.positive 
-                                  ? 'bg-green-100 text-green-700 border border-green-200' 
-                                  : 'bg-red-100 text-red-700 border border-red-200'
-                              }`}
+                              className={`text-xs px-1.5 py-0.5 lg:px-2 lg:py-1 rounded-full font-medium ${stat.positive
+                                ? 'bg-green-100 text-green-700 border border-green-200'
+                                : 'bg-red-100 text-red-700 border border-red-200'
+                                }`}
                             >
                               {stat.change}
                             </motion.span>
@@ -411,7 +406,7 @@ export default function Home() {
                           />
                         ))}
                       </svg>
-                      
+
                       {/* Overlay avec effet de brillance */}
                       <motion.div
                         initial={{ x: '-100%' }}
@@ -429,89 +424,29 @@ export default function Home() {
       </div>
 
       {/* Feature section avec animations améliorées */}
-      <div className="mx-auto mt-32 max-w-7xl px-6 sm:mt-56 lg:px-8">
-        <div className="mx-auto max-w-2xl lg:text-center">
-          <motion.h2 
+      <Features />
+
+      {/* Parallax Section - Interior */}
+      <ParallaxSection image="/assets/images/parallax-interior.png" height="60vh">
+        <div className="text-center text-white px-4">
+          <motion.h3
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true, margin: "-100px" }}
-            className="text-base font-semibold leading-7 text-primary-500"
+            transition={{ duration: 0.8 }}
+            className="text-4xl md:text-6xl font-display font-bold mb-4 text-shadow-lg"
           >
-            Tout ce dont vous avez besoin
-          </motion.h2>
-          <motion.p 
+            L'Élégance au Quotidien
+          </motion.h3>
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            viewport={{ once: true, margin: "-100px" }}
-            className="mt-2 text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl font-display"
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl md:text-2xl font-light text-primary-100"
           >
-            Une expérience complète pour la gestion de résidences
-          </motion.p>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            viewport={{ once: true, margin: "-100px" }}
-            className="mt-6 text-lg leading-8 text-secondary-600"
-          >
-            Découvrez nos solutions innovantes pour simplifier la gestion et la location de résidences.
+            Des espaces conçus pour votre confort absolu
           </motion.p>
         </div>
-        <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-          <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
-            {features.map((feature, index) => (
-              <motion.div
-                key={feature.name}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true, margin: "-100px" }}
-                whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                className="card flex flex-col p-6 bg-secondary-50 hover:bg-white shadow-sm hover:shadow-gold transition-all duration-300 rounded-xl"
-              >
-                <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-secondary-900">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-300 text-secondary-900">
-                    {feature.icon === 'mobile' && (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                      </svg>
-                    )}
-                    {feature.icon === 'building' && (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
-                      </svg>
-                    )}
-                    {feature.icon === 'users' && (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                      </svg>
-                    )}
-                  </div>
-                  {feature.name}
-                </dt>
-                <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-secondary-600">
-                  <p className="flex-auto">{feature.description}</p>
-                  <p className="mt-6">
-                    <Link to={feature.href} className="text-sm font-semibold leading-6 text-primary-500 hover:text-primary-600 group inline-flex items-center">
-                      En savoir plus 
-                      <motion.span 
-                        className="inline-block ml-1"
-                        initial={{ x: 0 }}
-                        whileHover={{ x: 5 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        →
-                      </motion.span>
-                    </Link>
-                  </p>
-                </dd>
-              </motion.div>
-            ))}
-          </dl>
-        </div>
-      </div>
+      </ParallaxSection>
 
       {/* About Section */}
       <AboutSection />
@@ -527,10 +462,32 @@ export default function Home() {
 
       {/* Testimonials section */}
       <Testimonials />
-      
+
+      {/* Parallax Section - Pool */}
+      <ParallaxSection image="/assets/images/parallax-pool.png" height="60vh">
+        <div className="text-center text-white px-4">
+          <motion.h3
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-4xl md:text-6xl font-display font-bold mb-4 text-shadow-lg"
+          >
+            Vivez l'Exceptionnel
+          </motion.h3>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl md:text-2xl font-light text-primary-100"
+          >
+            Des vues imprenables sur Abidjan
+          </motion.p>
+        </div>
+      </ParallaxSection>
+
       {/* Coverage section */}
       <Coverage />
-      
+
       {/* App Screenshots section */}
       <AppScreenshots />
 
@@ -550,92 +507,45 @@ export default function Home() {
       <Contact />
 
       {/* CTA Section avec animation améliorée */}
-      <div className="mx-auto mt-32 max-w-7xl sm:mt-56 sm:px-6 lg:px-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true, margin: "-100px" }}
-          className="relative isolate overflow-hidden bg-secondary-900 px-6 py-24 text-center shadow-2xl sm:rounded-3xl sm:px-16"
-        >
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 0.1, scale: 1 }}
+      <div className="relative isolate mt-32 px-6 py-32 sm:mt-56 sm:px-8 lg:px-8">
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-secondary-900" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-900/20 via-secondary-900 to-secondary-900" />
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 0.3 }}
             transition={{ duration: 1.5 }}
-            viewport={{ once: true }}
-            className="absolute inset-0 -z-10 bg-[linear-gradient(45deg,#D4AF37_25%,transparent_25%,transparent_50%,#D4AF37_50%,#D4AF37_75%,transparent_75%,transparent)] bg-[length:2rem_2rem]"
+            className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay"
           />
-          
-          {/* Particules dorées en arrière-plan - Optimisées */}
-          {!shouldReduceMotion && (
-            <div className="absolute inset-0 opacity-20 z-0 overflow-hidden">
-              {[...Array(isMobile ? 3 : 10)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute rounded-full bg-primary-300"
-                  style={{
-                    width: Math.random() * 8 + 3 + 'px',
-                    height: Math.random() * 8 + 3 + 'px',
-                    left: Math.random() * 100 + '%',
-                    top: Math.random() * 100 + '%',
-                  }}
-                  animate={{
-                    y: [0, isMobile ? -35 : -70, 0],
-                    x: [0, Math.random() * (isMobile ? 20 : 40) - (isMobile ? 10 : 20), 0],
-                    opacity: [0, 0.8, 0],
-                  }}
-                  transition={{
-                    duration: Math.random() * (isMobile ? 6 : 8) + (isMobile ? 4 : 6),
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: Math.random() * 5,
-                  }}
-                />
-              ))}
+        </div>
+
+        <div className="mx-auto max-w-2xl text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl font-display mb-6">
+              Prêt à vivre l'expérience <span className="text-primary-400">ChapeChape</span> ?
+            </h2>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-300">
+              Rejoignez des milliers d'utilisateurs satisfaits et découvrez une nouvelle façon de vivre l'immobilier en Afrique.
+            </p>
+            <div className="mt-10 flex items-center justify-center gap-x-6">
+              <Link
+                to="/apps"
+                className="btn-primary"
+              >
+                Télécharger l'application
+              </Link>
+              <Link to="/contact" className="text-sm font-semibold leading-6 text-white hover:text-primary-300 transition-colors duration-300 flex items-center gap-2 group">
+                Nous contacter
+                <span aria-hidden="true" className="group-hover:translate-x-1 transition-transform">→</span>
+              </Link>
             </div>
-          )}
-          
-          <div className="mx-auto max-w-2xl">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl font-bold tracking-tight text-primary-300 sm:text-4xl font-display">
-                Prêt à trouver votre résidence idéale ?
-              </h2>
-              <p className="mt-6 text-lg leading-8 text-primary-100">
-                Rejoignez ChapeChape Residence aujourd'hui et découvrez comment nous pouvons vous aider à trouver la résidence parfaite ou à gérer efficacement vos propriétés.
-              </p>
-              <div className="mt-10 flex items-center justify-center gap-x-6">
-                <Link
-                  to="/apps"
-                  className="rounded-md bg-primary-300 px-3.5 py-2.5 text-sm font-semibold text-secondary-900 shadow-gold hover:bg-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 relative overflow-hidden group"
-                >
-                  <span className="relative z-10">Télécharger l'application</span>
-                  <motion.span 
-                    className="absolute inset-0 bg-primary-400 z-0"
-                    initial={{ x: '-100%' }}
-                    whileHover={{ x: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                  />
-                </Link>
-                <Link to="/about" className="text-sm font-semibold leading-6 text-primary-300 group relative">
-                  En savoir plus 
-                  <motion.span 
-                    className="inline-block ml-1"
-                    initial={{ x: 0 }}
-                    whileHover={{ x: 5 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    →
-                  </motion.span>
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   )
