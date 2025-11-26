@@ -66,14 +66,14 @@ const createReview = async (req, res) => {
 
             // Invalider le cache Redis ET Node-cache
             const cachePattern = `api:/api/reviews/residence/${residenceId}*`;
-            
+
             // Invalider Redis cache (utilisé par le middleware)
             const keys = await redisClient.keys(cachePattern);
             if (keys.length > 0) {
                 await redisClient.del(keys);
                 console.log(`Redis cache invalidated for keys: ${keys.join(', ')}`);
             }
-            
+
             // Invalider Node cache (pour compatibilité)
             await cacheService.invalidatePattern(`*api/reviews/residence/${residenceId}*`);
 
@@ -127,20 +127,54 @@ const createReview = async (req, res) => {
 
         // Invalider le cache Redis ET Node-cache
         const cachePattern = `api:/api/reviews/residence/${residenceId}*`;
-        
+
         // Invalider Redis cache (utilisé par le middleware)
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
             console.log(`Redis cache invalidated for keys: ${keys.join(', ')}`);
         }
-        
+
         // Invalider Node cache (pour compatibilité)
         await cacheService.invalidatePattern(`*api/reviews/residence/${residenceId}*`);
 
         res.status(201).json({
             success: true,
             data: review
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Obtenir tous les avis (pour l'admin dashboard)
+const getAllReviews = async (req, res) => {
+    try {
+        const { page = 1, limit = 20, sort = '-createdAt' } = req.query;
+
+        // Récupérer tous les avis avec pagination
+        const reviews = await Review.find()
+            .populate('user', 'firstName lastName avatar email')
+            .populate('residence', 'title images city')
+            .sort(sort)
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+
+        // Compter le nombre total d'avis pour la pagination
+        const count = await Review.countDocuments();
+
+        res.status(200).json({
+            success: true,
+            data: reviews,
+            pagination: {
+                total: count,
+                pages: Math.ceil(count / limit),
+                currentPage: parseInt(page),
+                perPage: parseInt(limit)
+            }
         });
     } catch (error) {
         res.status(400).json({
@@ -202,7 +236,7 @@ const respondToReview = async (req, res) => {
                 path: 'residence',
                 select: 'partner'
             });
-        
+
         if (!review) {
             return res.status(404).json({
                 success: false,
@@ -259,7 +293,7 @@ const updateReview = async (req, res) => {
 
         // Récupérer l'avis
         const review = await Review.findById(id);
-        
+
         if (!review) {
             return res.status(404).json({
                 success: false,
@@ -299,9 +333,9 @@ const updateReview = async (req, res) => {
                 };
             }
         }
-        
+
         review.comment = comment || review.comment;
-        
+
         if (photos && Array.isArray(photos)) {
             review.photos = photos;
         }
@@ -327,7 +361,7 @@ const deleteReview = async (req, res) => {
 
         // Trouver l'avis
         const review = await Review.findById(id);
-        
+
         if (!review) {
             return res.status(404).json({
                 success: false,
@@ -361,6 +395,7 @@ const deleteReview = async (req, res) => {
 
 module.exports = {
     createReview,
+    getAllReviews,
     getResidenceReviews,
     respondToReview,
     updateReview,

@@ -11,7 +11,8 @@ const getConversations = {
     limit: Joi.number().integer().min(1).optional().default(10),
     page: Joi.number().integer().min(1).optional().default(1),
     sort: Joi.string().optional().valid('asc', 'desc').default('desc'),
-    search: Joi.string().optional().trim().max(100)
+    search: Joi.string().optional().trim().max(100),
+    folder: Joi.string().optional().valid('inbox', 'sent', 'archived') // Pour compatibilité Dashboard
   })
 };
 

@@ -22,7 +22,7 @@ const systemSettingSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: ['general', 'security', 'email', 'payment', 'notification', 'booking']
+        enum: ['general', 'security', 'email', 'payment', 'notification', 'booking', 'maintenance']
     },
     isPublic: {
         type: Boolean,
@@ -43,7 +43,7 @@ const systemSettingSchema = new mongoose.Schema({
 });
 
 // Middleware pre-save pour mettre à jour updatedAt
-systemSettingSchema.pre('save', function(next) {
+systemSettingSchema.pre('save', function (next) {
     this.updatedAt = Date.now();
     next();
 });

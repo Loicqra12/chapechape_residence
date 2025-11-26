@@ -3,7 +3,7 @@ import { API_URL } from '../config';
 
 class DashboardApiService {
   constructor() {
-    this.baseURL = API_URL || 'http://localhost:4000/api';
+    this.baseURL = API_URL;
     this.api = axios.create({ baseURL: this.baseURL });
     this.setupAxiosInterceptors();
   }
@@ -41,14 +41,14 @@ class DashboardApiService {
   async getDashboardOverview() {
     try {
       const response = await axios.get(`${this.baseURL}/dashboard/overview`);
-      
+
       if (response.data?.success) {
         return {
           success: true,
           data: this.formatOverviewData(response.data.data)
         };
       }
-      
+
       throw new Error(response.data?.message || 'Erreur lors de la récupération des données');
     } catch (error) {
       console.error('Dashboard Overview Error:', error);
@@ -101,14 +101,14 @@ class DashboardApiService {
   async getFinancialStats() {
     try {
       const response = await axios.get(`${this.baseURL}/dashboard/financial-stats`);
-      
+
       if (response.data?.success) {
         return {
           success: true,
           data: response.data.data
         };
       }
-      
+
       throw new Error(response.data?.message || 'Erreur lors de la récupération des statistiques financières');
     } catch (error) {
       console.error('Financial Stats Error:', error);
@@ -126,14 +126,14 @@ class DashboardApiService {
       const response = await axios.get(`${this.baseURL}/reservations/analytics`, {
         params: { timeRange }
       });
-      
+
       if (response.data?.success) {
         return {
           success: true,
           data: response.data.data
         };
       }
-      
+
       throw new Error(response.data?.message || 'Erreur lors de la récupération des analytics de réservation');
     } catch (error) {
       console.error('Booking Analytics Error:', error);
@@ -150,14 +150,14 @@ class DashboardApiService {
       const response = await axios.get(`${this.baseURL}/residences/analytics`, {
         params: { timeRange }
       });
-      
+
       if (response.data?.success) {
         return {
           success: true,
           data: response.data.data
         };
       }
-      
+
       throw new Error(response.data?.message || 'Erreur lors de la récupération des analytics de résidences');
     } catch (error) {
       console.error('Residence Analytics Error:', error);
@@ -174,14 +174,14 @@ class DashboardApiService {
       const response = await axios.get(`${this.baseURL}/messages/analytics`, {
         params: { timeRange }
       });
-      
+
       if (response.data?.success) {
         return {
           success: true,
           data: response.data.data
         };
       }
-      
+
       throw new Error(response.data?.message || 'Erreur lors de la récupération des analytics de communication');
     } catch (error) {
       console.error('Communication Analytics Error:', error);
@@ -245,14 +245,14 @@ class DashboardApiService {
   async getRealtimeStats() {
     try {
       const response = await axios.get(`${this.baseURL}/dashboard/realtime`);
-      
+
       if (response.data?.success) {
         return {
           success: true,
           data: response.data.data
         };
       }
-      
+
       throw new Error(response.data?.message || 'Erreur lors de la récupération des statistiques temps réel');
     } catch (error) {
       console.error('Realtime Stats Error:', error);
@@ -269,7 +269,7 @@ class DashboardApiService {
       // Erreur de réponse du serveur
       const status = error.response.status;
       const message = error.response.data?.message || 'Erreur serveur';
-      
+
       switch (status) {
         case 400:
           return { success: false, error: `Requête invalide: ${message}` };

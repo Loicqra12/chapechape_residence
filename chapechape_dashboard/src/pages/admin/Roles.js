@@ -12,6 +12,7 @@ import {
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import RoleModal from '../../components/admin/RoleModal';
+import { API_URL } from '../../config';
 
 const Roles = () => {
   const { isSuperAdmin } = useAuth();
@@ -26,9 +27,13 @@ const Roles = () => {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch('/api/admin/roles');
-      const data = await response.json();
-      setRoles(data);
+      const response = await fetch(`${API_URL}/admin/roles`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const result = await response.json();
+      setRoles(result.data || []);  // Extract data from result and fallback to empty array
       setLoading(false);
     } catch (error) {
       toast.error('Erreur lors du chargement des rôles');
@@ -42,8 +47,11 @@ const Roles = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/roles/${roleId}`, {
+      const response = await fetch(`${API_URL}/admin/roles/${roleId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
 
       if (!response.ok) {

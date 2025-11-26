@@ -14,7 +14,7 @@ import {
   CircularProgress,
   Skeleton
 } from '@mui/material';
-import { 
+import {
   Search as SearchIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
@@ -111,9 +111,9 @@ const CheckInPage = () => {
     }
   };
 
-  const filteredBookings = bookings.filter(booking => 
-    booking.client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    booking.residence.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredBookings = bookings.filter(booking =>
+    (booking.client?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (booking.residence?.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -168,7 +168,7 @@ const CheckInPage = () => {
                   <Grid container spacing={3} alignItems="center">
                     <Grid item xs={12} sm={2}>
                       <Avatar
-                        src={booking.residence.imageUrl}
+                        src={booking.residence?.imageUrl}
                         variant="rounded"
                         sx={{
                           width: 100,
@@ -178,28 +178,29 @@ const CheckInPage = () => {
                         }}
                       />
                     </Grid>
-                    
+
                     <Grid item xs={12} sm={7}>
                       <Box>
                         <Typography variant="h6" gutterBottom>
-                          {booking.residence.title}
+                          {booking.residence?.title || 'Résidence inconnue'}
                         </Typography>
-                        
+
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <LocationIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
                           <Typography variant="body2" color="text.secondary">
-                            {booking.residence.location}
+                            {booking.residence?.address || booking.residence?.location?.address || 'Adresse inconnue'}
+                            {(booking.residence?.city || booking.residence?.location?.city) && `, ${booking.residence?.city || booking.residence?.location?.city}`}
                           </Typography>
                         </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <PersonIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
                           <Typography variant="body2" color="text.primary">
-                            {booking.client.name}
+                            {booking.client?.name || 'Client inconnu'}
                           </Typography>
                           <Chip
                             size="small"
-                            label={booking.client.email}
+                            label={booking.client?.email || 'Email inconnu'}
                             sx={{ ml: 2, bgcolor: 'primary.main', opacity: 0.1 }}
                           />
                         </Box>
@@ -218,11 +219,11 @@ const CheckInPage = () => {
                         <Button
                           variant="contained"
                           color="success"
-                          startIcon={actionLoading.id === booking._id && actionLoading.type === 'checkin' ? 
-                            <CircularProgress size={20} color="inherit" /> : 
+                          startIcon={actionLoading.id === booking._id && actionLoading.type === 'checkin' ?
+                            <CircularProgress size={20} color="inherit" /> :
                             <CheckCircleIcon />
                           }
-                          onClick={() => handleCheckIn(booking._id, booking.client.name)}
+                          onClick={() => handleCheckIn(booking._id, booking.client?.name || 'Client')}
                           disabled={!!actionLoading.id}
                           sx={{
                             borderRadius: 2,
@@ -237,7 +238,7 @@ const CheckInPage = () => {
                         </Button>
                         <IconButton
                           color="error"
-                          onClick={() => handleCancel(booking._id, booking.client.name)}
+                          onClick={() => handleCancel(booking._id, booking.client?.name || 'Client')}
                           disabled={!!actionLoading.id}
                           sx={{
                             borderRadius: 2,

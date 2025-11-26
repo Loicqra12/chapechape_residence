@@ -25,7 +25,8 @@
     "db:migrate": "node scripts/migrations/run.js",
     "clean": "rimraf logs/* tmp/* coverage/*",
     "monitor": "pm2 monit",
-    "create-superadmin": "node src/scripts/createSuperAdmin.js"
+    "create-superadmin": "node src/scripts/createSuperAdmin.js",
+    "seed:roles-permissions": "node src/scripts/seedRolesPermissions.js"
   },
   "dependencies": {
     "@sentry/node": "^9.40.0",

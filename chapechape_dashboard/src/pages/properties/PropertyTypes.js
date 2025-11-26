@@ -17,85 +17,248 @@ import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
 
 const propertyTypes = [
+  // Résidences Meublées
   {
-    id: 'apartment',
-    name: 'Appartement',
+    id: 'studio_meuble',
+    name: 'Studio Meublé',
     icon: BuildingOfficeIcon,
-    description: 'Unité d\'habitation dans un immeuble résidentiel',
-    features: ['Balcon possible', 'Vue ville', 'Sécurité commune'],
+    description: 'Studio entièrement meublé et équipé',
+    features: ['Meublé', 'Compact', 'Tout équipé'],
     color: 'blue'
   },
   {
-    id: 'studio',
-    name: 'Studio',
+    id: 'appartement_meuble',
+    name: 'Appartement Meublé',
     icon: BuildingOfficeIcon,
-    description: 'Petit appartement compact tout-en-un',
-    features: ['Compact', 'Fonctionnel', 'Économique'],
-    color: 'orange'
+    description: 'Appartement complet avec mobilier',
+    features: ['Meublé', 'Plusieurs pièces', 'Confort'],
+    color: 'blue'
   },
   {
-    id: 'villa',
-    name: 'Villa',
+    id: 'villa_meublee',
+    name: 'Villa Meublée',
     icon: HomeModernIcon,
-    description: 'Grande propriété luxueuse avec extérieurs',
-    features: ['Piscine possible', 'Grand jardin', 'Prestige'],
+    description: 'Villa indépendante meublée',
+    features: ['Jardin', 'Espace', 'Standing'],
     color: 'purple'
-  },
-  {
-    id: 'room',
-    name: 'Chambre',
-    icon: HomeIcon,
-    description: 'Chambre individuelle dans une résidence',
-    features: ['Économique', 'Idéal court séjour', 'Colocation possible'],
-    color: 'yellow'
-  },
-  {
-    id: 'bungalow',
-    name: 'Bungalow',
-    icon: HomeIcon,
-    description: 'Petite maison de plain-pied',
-    features: ['Plain-pied', 'Jardin privé', 'Intimité'],
-    color: 'green'
   },
   {
     id: 'penthouse',
     name: 'Penthouse',
     icon: BuildingLibraryIcon,
-    description: 'Appartement luxueux au dernier étage',
-    features: ['Vue panoramique', 'Prestige', 'Grande terrasse'],
+    description: 'Appartement de luxe au dernier étage',
+    features: ['Vue panoramique', 'Luxe', 'Terrasse'],
     color: 'indigo'
   },
   {
-    id: 'hotel',
-    name: 'Hôtel',
-    icon: BuildingStorefrontIcon,
-    description: 'Chambre ou suite d\'hôtel',
-    features: ['Service complet', 'Confort', 'Flexibilité'],
-    color: 'red'
-  },
-  {
-    id: 'luxury',
-    name: 'Luxe',
+    id: 'loft',
+    name: 'Loft',
     icon: HomeModernIcon,
-    description: 'Propriété haut de gamme avec prestations exclusives',
-    features: ['Sur-mesure', 'Services premium', 'Emplacement privilégié'],
-    color: 'pink'
-  },
-  {
-    id: 'coworking',
-    name: 'Coworking',
-    icon: BriefcaseIcon,
-    description: 'Espace de travail partagé',
-    features: ['Internet haut débit', 'Salles de réunion', 'Espace commun'],
+    description: 'Espace ouvert style industriel',
+    features: ['Grand volume', 'Moderne', 'Atypique'],
     color: 'cyan'
   },
   {
-    id: 'student',
-    name: 'Étudiant',
+    id: 'grenier',
+    name: 'Grenier Aménagé',
+    icon: HomeIcon,
+    description: 'Espace sous les toits aménagé',
+    features: ['Cosy', 'Atypique', 'Calme'],
+    color: 'orange'
+  },
+
+  // Hôtels & Hébergements classiques
+  {
+    id: 'hotel_passage',
+    name: 'Hôtel de Passage',
+    icon: BuildingStorefrontIcon,
+    description: 'Hôtel pour courts séjours',
+    features: ['Court séjour', 'Service', 'Discrétion'],
+    color: 'red'
+  },
+  {
+    id: 'motel',
+    name: 'Motel',
+    icon: BuildingStorefrontIcon,
+    description: 'Hébergement étape sur route',
+    features: ['Parking', 'Accès facile', 'Étape'],
+    color: 'red'
+  },
+  {
+    id: 'boutique_hotel',
+    name: 'Boutique-Hôtel',
+    icon: BuildingStorefrontIcon,
+    description: 'Petit hôtel de charme',
+    features: ['Charme', 'Design', 'Service personnalisé'],
+    color: 'pink'
+  },
+  {
+    id: 'hotel_luxe',
+    name: 'Hôtel de Luxe',
+    icon: BuildingLibraryIcon,
+    description: 'Hôtel haut de gamme 5 étoiles',
+    features: ['Prestige', 'Service complet', 'Excellence'],
+    color: 'pink'
+  },
+  {
+    id: 'guest_house',
+    name: 'Guest House',
+    icon: HomeIcon,
+    description: 'Maison d\'hôtes conviviale',
+    features: ['Convivial', 'Petit déjeuner', 'Accueil'],
+    color: 'green'
+  },
+  {
+    id: 'residence_hoteliere',
+    name: 'Résidence Hôtelière',
+    icon: BuildingOfficeIcon,
+    description: 'Appartements avec services hôteliers',
+    features: ['Services', 'Indépendance', 'Long séjour'],
+    color: 'blue'
+  },
+
+  // Hébergements insolites & nature
+  {
+    id: 'bungalow',
+    name: 'Bungalow',
+    icon: HomeIcon,
+    description: 'Petite maison légère de plain-pied',
+    features: ['Nature', 'Indépendant', 'Vacances'],
+    color: 'green'
+  },
+  {
+    id: 'lodge',
+    name: 'Lodge & Écolodge',
+    icon: HomeModernIcon,
+    description: 'Hébergement en pleine nature',
+    features: ['Nature', 'Écologique', 'Dépaysement'],
+    color: 'green'
+  },
+  {
+    id: 'case_traditionnelle',
+    name: 'Case Traditionnelle',
+    icon: HomeIcon,
+    description: 'Habitat traditionnel local',
+    features: ['Authentique', 'Culturel', 'Simple'],
+    color: 'orange'
+  },
+  {
+    id: 'maison_flottante',
+    name: 'Maison Flottante',
+    icon: HomeModernIcon,
+    description: 'Habitation sur l\'eau',
+    features: ['Eau', 'Insolite', 'Vue'],
+    color: 'cyan'
+  },
+  {
+    id: 'campement_touristique',
+    name: 'Campement Touristique',
+    icon: HomeIcon,
+    description: 'Structure légère pour tourisme',
+    features: ['Aventure', 'Nature', 'Groupe'],
+    color: 'yellow'
+  },
+
+  // Colocation & résidences partagées
+  {
+    id: 'chambre_colocation',
+    name: 'Chambre en Colocation',
+    icon: HomeIcon,
+    description: 'Chambre dans un logement partagé',
+    features: ['Partage', 'Économique', 'Social'],
+    color: 'yellow'
+  },
+  {
+    id: 'coliving',
+    name: 'Coliving',
+    icon: BuildingOfficeIcon,
+    description: 'Espace de vie et travail partagé',
+    features: ['Communauté', 'Services', 'Flexibilité'],
+    color: 'indigo'
+  },
+  {
+    id: 'maison_hotes',
+    name: 'Maison d\'Hôtes',
+    icon: HomeIcon,
+    description: 'Chambre chez l\'habitant',
+    features: ['Accueil', 'Local', 'Convivial'],
+    color: 'green'
+  },
+  {
+    id: 'residence_universitaire',
+    name: 'Résidence Universitaire',
     icon: AcademicCapIcon,
-    description: 'Logement adapté aux étudiants',
-    features: ['Proche campus', 'Meublé', 'Prix abordable'],
+    description: 'Logement pour étudiants',
+    features: ['Étudiant', 'Campus', 'Services'],
     color: 'teal'
+  },
+  {
+    id: 'cite_dortoir',
+    name: 'Cité & Dortoir',
+    icon: BuildingOfficeIcon,
+    description: 'Hébergement collectif économique',
+    features: ['Collectif', 'Économique', 'Basique'],
+    color: 'gray'
+  },
+
+  // Résidences longue durée
+  {
+    id: 'appartement_vide',
+    name: 'Appartement Non Meublé',
+    icon: BuildingOfficeIcon,
+    description: 'Appartement vide à louer',
+    features: ['Vide', 'Longue durée', 'Liberté'],
+    color: 'blue'
+  },
+  {
+    id: 'villa_vide',
+    name: 'Villa Non Meublée',
+    icon: HomeModernIcon,
+    description: 'Villa vide à louer',
+    features: ['Vide', 'Espace', 'Famille'],
+    color: 'purple'
+  },
+  {
+    id: 'immeuble',
+    name: 'Immeuble',
+    icon: BuildingOfficeIcon,
+    description: 'Bâtiment entier',
+    features: ['Investissement', 'Grand', 'Multiple'],
+    color: 'gray'
+  },
+  {
+    id: 'cour_commune',
+    name: 'Cour Commune',
+    icon: HomeIcon,
+    description: 'Habitation en cour commune',
+    features: ['Populaire', 'Convivial', 'Économique'],
+    color: 'orange'
+  },
+
+  // Hébergements économiques
+  {
+    id: 'maison_hotes_economique',
+    name: 'Maison d\'Hôtes Éco',
+    icon: HomeIcon,
+    description: 'Maison d\'hôtes à petit prix',
+    features: ['Économique', 'Simple', 'Accueil'],
+    color: 'green'
+  },
+  {
+    id: 'residence_familiale',
+    name: 'Résidence Familiale',
+    icon: HomeIcon,
+    description: 'Logement pour famille',
+    features: ['Famille', 'Espace', 'Calme'],
+    color: 'blue'
+  },
+  {
+    id: 'chambres_passage',
+    name: 'Chambres de Passage',
+    icon: HomeIcon,
+    description: 'Chambre pour courte durée',
+    features: ['Court séjour', 'Simple', 'Pratique'],
+    color: 'red'
   }
 ];
 
@@ -356,7 +519,7 @@ const PropertyTypes = () => {
       setLoading(true);
       setError(null);
       const response = await adminService.getAllPropertyTypes();
-      
+
       if (response.success) {
         // Transformer les données backend pour correspondre à l'interface
         const transformedTypes = response.data.map(type => ({

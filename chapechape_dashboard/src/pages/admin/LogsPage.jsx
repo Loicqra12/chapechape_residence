@@ -98,7 +98,9 @@ const LogsPage = () => {
 
   const handleExport = async () => {
     // TODO: Implémenter l'export des logs
-    console.log('Export des logs...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Export des logs...');
+    }
   };
 
   const getLevelIcon = (level) => {
@@ -250,7 +252,7 @@ const LogsPage = () => {
               </TableRow>
             ) : (
               logs.map((log) => (
-                <TableRow 
+                <TableRow
                   key={log.id}
                   hover
                   sx={{

@@ -10,7 +10,7 @@ class CommunicationService {
       });
       return {
         success: true,
-        data: response.data.data
+        data: response.data?.data || [] // Fallback to empty array
       };
     } catch (error) {
       return {
@@ -101,7 +101,7 @@ class CommunicationService {
   async sendMessage(messageData) {
     try {
       const formData = new FormData();
-      
+
       // Ajouter les données du message
       formData.append('to', JSON.stringify(messageData.to));
       formData.append('subject', messageData.subject);
@@ -184,7 +184,7 @@ class CommunicationService {
   async createSupportTicket(ticketData) {
     try {
       const formData = new FormData();
-      
+
       // Ajouter les données du ticket
       formData.append('subject', ticketData.subject);
       formData.append('category', ticketData.category);

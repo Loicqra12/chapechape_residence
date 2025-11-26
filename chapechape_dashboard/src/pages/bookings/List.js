@@ -329,13 +329,13 @@ const BookingList = () => {
                     {format(new Date(booking.visitDate), 'dd/MM/yyyy')} à {booking.visitTime}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {booking.residence.title}
+                    {booking.residence?.title || <span className="text-gray-400 italic">Résidence inconnue</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {booking.client.name}
+                    {booking.client?.name || <span className="text-gray-400 italic">Client inconnu</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {booking.partner?.name}
+                    {booking.partner?.name || <span className="text-gray-400 italic">Aucun partenaire</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <StatusBadge status={booking.status} />

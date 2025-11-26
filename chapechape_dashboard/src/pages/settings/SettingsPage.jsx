@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -30,29 +30,59 @@ import {
   Storage as StorageIcon,
   Security as SecurityIcon,
 } from '@mui/icons-material';
+import { settingsService } from '../../services/settingsService';
+import toast from 'react-hot-toast';
 
 const SettingsPage = () => {
-  const [settings, setSettings] = useState({
-    siteName: 'ChapeChape Residence',
-    siteDescription: 'Plateforme de réservation de résidences de luxe',
-    contactEmail: 'contact@chapechape.fr',
-    supportPhone: '+33 1 23 45 67 89',
-    language: 'fr',
-    currency: 'EUR',
-    timezone: 'Europe/Paris',
-    bookingAutoConfirm: false,
-    emailNotifications: true,
-    smsNotifications: true,
-    maintenanceMode: false,
-    defaultCommission: 10,
-    maxBookingsPerDay: 50,
-    maxImagesPerProperty: 20,
-    maxFileSize: 10,
-  });
-
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
   const [edited, setEdited] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const response = await settingsService.getSettings('general');
+
+      if (response.success && response.data.general) {
+        // Convert settings object to flat structure
+        const flatSettings = {};
+        Object.entries(response.data.general).forEach(([key, setting]) => {
+          flatSettings[key.replace('general_', '')] = setting.value;
+        });
+        setSettings(flatSettings);
+      } else {
+        // Use default values if no settings found
+        setSettings({
+          siteName: 'ChapeChape Residence',
+          siteDescription: 'Plateforme de réservation de résidences de luxe',
+          contactEmail: 'contact@chapechape.fr',
+          supportPhone: '+33 1 23 45 67 89',
+          language: 'fr',
+          currency: 'EUR',
+          timezone: 'Europe/Paris',
+          bookingAutoConfirm: false,
+          emailNotifications: true,
+          smsNotifications: true,
+          maintenanceMode: false,
+          defaultCommission: 10,
+          maxBookingsPerDay: 50,
+          maxImagesPerProperty: 20,
+          maxFileSize: 10,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast.error('Erreur lors du chargement des paramètres');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -66,11 +96,34 @@ const SettingsPage = () => {
 
   const handleSave = async () => {
     try {
-      // TODO: Implémenter la sauvegarde API
-      setSuccess(true);
-      setEdited(false);
+      setLoading(true);
+
+      // Convert settings to array format for batch update
+      const settingsArray = Object.entries(settings).map(([key, value]) => ({
+        key: `general_${key}`,
+        value,
+        category: 'general',
+        type: typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string',
+        description: `Setting for ${key}`
+      }));
+
+      const response = await settingsService.updateSettings(settingsArray);
+
+      if (response.success) {
+        setSuccess(true);
+        setEdited(false);
+        toast.success('Paramètres enregistrés avec succès');
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(response.error);
+        toast.error(response.error);
+      }
     } catch (error) {
+      console.error('Error saving settings:', error);
       setError('Erreur lors de la sauvegarde des paramètres');
+      toast.error('Erreur lors de la sauvegarde des paramètres');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,7 +160,7 @@ const SettingsPage = () => {
         {/* Paramètres Généraux */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Paramètres Généraux"
               avatar={<LanguageIcon />}
             />
@@ -165,7 +218,7 @@ const SettingsPage = () => {
         {/* Paramètres de Contact */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Contact"
               avatar={<EmailIcon />}
             />
@@ -196,7 +249,7 @@ const SettingsPage = () => {
         {/* Paramètres de Réservation */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Réservations"
               avatar={<EuroIcon />}
             />
@@ -242,7 +295,7 @@ const SettingsPage = () => {
         {/* Paramètres de Notification */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Notifications"
               avatar={<NotificationsIcon />}
             />
@@ -278,7 +331,7 @@ const SettingsPage = () => {
         {/* Paramètres de Stockage */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Stockage"
               avatar={<StorageIcon />}
             />
@@ -313,7 +366,7 @@ const SettingsPage = () => {
         {/* Paramètres de Maintenance */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Maintenance"
               avatar={<SecurityIcon />}
             />

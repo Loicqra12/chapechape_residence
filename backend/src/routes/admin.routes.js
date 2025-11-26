@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');  // Correction du chemin
 const { isAdmin } = require('../lib/roleMiddleware');
 const adminController = require('../controllers/admin.controller');
+const roleController = require('../controllers/role.controller');
 
 // Dashboard et statistiques
 router.get('/dashboard', protect, isAdmin, adminController.getDashboardStats);
@@ -41,5 +42,19 @@ router.get('/residences/:id', protect, isAdmin, adminController.getResidence);
 router.put('/residences/:id/validate', protect, isAdmin, adminController.validateResidence);
 router.put('/residences/:id/reject', protect, isAdmin, adminController.rejectResidence);
 router.put('/residences/:id/verify', protect, isAdmin, adminController.verifyResidence);
+
+// Gestion des rôles - REAL CONTROLLER
+router.get('/roles', protect, isAdmin, roleController.getAllRoles);
+router.post('/roles', protect, isAdmin, roleController.createRole);
+router.get('/roles/:id', protect, isAdmin, roleController.getRole);
+router.put('/roles/:id', protect, isAdmin, roleController.updateRole);
+router.delete('/roles/:id', protect, isAdmin, roleController.deleteRole);
+
+// Gestion des permissions - REAL CONTROLLER
+router.get('/permissions', protect, isAdmin, roleController.getAllPermissions);
+router.post('/permissions', protect, isAdmin, roleController.createPermission);
+router.get('/permissions/:id', protect, isAdmin, roleController.getPermission);
+router.put('/permissions/:id', protect, isAdmin, roleController.updatePermission);
+router.delete('/permissions/:id', protect, isAdmin, roleController.deletePermission);
 
 module.exports = router;

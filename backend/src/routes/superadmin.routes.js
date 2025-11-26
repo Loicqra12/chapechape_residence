@@ -8,6 +8,13 @@ const superAdminController = require('../controllers/superadmin/superadmin.contr
 router.get('/clients', protect, isSuperAdmin, superAdminController.getAllClients);
 router.get('/partners', protect, isSuperAdmin, superAdminController.getAllPartners);
 
+// Routes pour la gestion des administrateurs
+router.get('/admins', protect, isSuperAdmin, superAdminController.getAllAdmins);
+router.post('/admins', protect, isSuperAdmin, superAdminController.createAdmin);
+router.get('/admins/:id', protect, isSuperAdmin, superAdminController.getAdmin);
+router.put('/admins/:id', protect, isSuperAdmin, superAdminController.updateAdmin);
+router.delete('/admins/:id', protect, isSuperAdmin, superAdminController.deleteAdmin);
+
 // Routes pour les paramètres système
 router.get('/settings', protect, isSuperAdmin, superAdminController.getSystemSettings);
 router.put('/settings', protect, isSuperAdmin, superAdminController.updateSystemSettings);
