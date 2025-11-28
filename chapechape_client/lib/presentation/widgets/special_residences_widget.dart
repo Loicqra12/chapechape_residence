@@ -11,6 +11,7 @@ import '../../core/utils/responsive_utils.dart';
 import '../../core/utils/residence_adapters.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_assets.dart';
+import 'common/premium_card.dart';
 
 class SpecialResidencesWidget extends StatefulWidget {
   final List<dynamic> items;
@@ -291,21 +292,17 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
       onTap: () {
         context.push(detailRoute);
       },
-      child: Container(
+      child: PremiumCard(
         width: 280,
         margin: const EdgeInsets.only(right: 16, bottom: 8),
-        child: Card(
-          elevation: isHovered ? 6 : 3,
-          shadowColor: isHovered 
-              ? AppTheme.primaryColor.withOpacity(0.4) 
-              : Colors.black.withOpacity(0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: isHovered 
-                ? BorderSide(color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5)
-                : BorderSide.none,
-          ),
-          clipBehavior: Clip.antiAlias,
+        borderRadius: 20,
+        elevation: isHovered ? 8 : 4,
+        backgroundColor: Colors.white,
+        border: isHovered 
+            ? Border.all(color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5)
+            : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

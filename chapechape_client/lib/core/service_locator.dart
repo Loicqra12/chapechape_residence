@@ -58,7 +58,7 @@ Future<void> setupServiceLocator() async {
   sl.registerSingleton<SharedPreferences>(sharedPreferences);
   
   final dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.1.65:4000/api', 
+    baseUrl: 'http://192.168.1.72:4000/api', 
     connectTimeout: const Duration(milliseconds: 15000),
     receiveTimeout: const Duration(milliseconds: 15000),
   ));

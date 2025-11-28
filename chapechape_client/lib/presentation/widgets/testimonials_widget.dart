@@ -4,6 +4,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/models/testimonial_model.dart';
 import '../../core/data/testimonials_data.dart';
+import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'common/premium_card.dart';
 
 class TestimonialsWidget extends StatelessWidget {
   final bool showTitle;
@@ -76,102 +79,136 @@ class TestimonialsWidget extends StatelessWidget {
   }
 
   Widget _buildTestimonialCard(BuildContext context, TestimonialModel testimonial) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
+    return PremiumCard(
+      borderRadius: 20,
+      elevation: 5,
+      backgroundColor: Colors.white,
+      child: Stack(
+        children: [
+          // Background Quote Icon
+          Positioned(
+            top: -10,
+            right: -10,
+            child: Icon(
+              FontAwesomeIcons.quoteRight,
+              size: 80,
+              color: AppTheme.primaryColor.withOpacity(0.05),
+            ),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                  backgroundImage: testimonial.userAvatar != null && testimonial.userAvatar!.isNotEmpty
-                      ? AssetImage(testimonial.userAvatar!)
-                      : null,
-                  onBackgroundImageError: testimonial.userAvatar != null && testimonial.userAvatar!.isNotEmpty
-                      ? (exception, stackTrace) {
-                          debugPrint('Erreur de chargement de l\'image: $exception');
-                        }
-                      : null,
-                  child: testimonial.userAvatar == null || testimonial.userAvatar!.isEmpty
-                      ? Text(
-                          testimonial.userName != null && testimonial.userName!.isNotEmpty
-                              ? testimonial.userName![0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        testimonial.userName ?? 'Client anonyme',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          width: 2,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: List.generate(
-                          5,
-                          (index) => Icon(
-                            index < (testimonial.rating ?? 0).floor()
-                                ? Icons.star
-                                : index < (testimonial.rating ?? 0)
-                                    ? Icons.star_half
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        backgroundImage: testimonial.userAvatar != null && testimonial.userAvatar!.isNotEmpty
+                            ? AssetImage(testimonial.userAvatar!)
+                            : null,
+                        child: testimonial.userAvatar == null || testimonial.userAvatar!.isEmpty
+                            ? Text(
+                                testimonial.userName != null && testimonial.userName!.isNotEmpty
+                                    ? testimonial.userName![0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            testimonial.userName ?? 'Utilisateur',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: List.generate(5, (index) {
+                              return Icon(
+                                index < (testimonial.rating ?? 0).toInt()
+                                    ? Icons.star
                                     : Icons.star_border,
-                            color: Colors.amber,
-                            size: 18,
+                                color: const Color(0xFFD4AF37), // Gold
+                                size: 14,
+                              );
+                            }),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: Text(
+                    testimonial.content ?? '',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: Colors.grey[700],
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Text(
+                    _formatDate(testimonial.date),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Text(
-                testimonial.content ?? 'Aucun commentaire',
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  height: 1.5,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                'il y a 2 jours',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    // Example: "2 days ago" or "12/03/2023"
+    final Duration diff = DateTime.now().difference(date);
+    if (diff.inDays == 0) {
+      return 'Aujourd\'hui';
+    } else if (diff.inDays == 1) {
+      return 'Hier';
+    } else if (diff.inDays < 7) {
+      return 'Il y a ${diff.inDays} jours';
+    } else {
+      return DateFormat('dd/MM/yyyy').format(date);
+    }
   }
 
   // Méthode sécurisée pour créer le carousel avec gestion des erreurs

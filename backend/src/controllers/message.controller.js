@@ -27,7 +27,7 @@ ensureUploadDirExists();
 function _getFileTypeFromUrl(url) {
     // Extraire l'extension du fichier de l'URL
     const extension = url.split('?')[0].split('.').pop().toLowerCase();
-    
+
     // Mapping des extensions vers les types de fichiers
     const typeMap = {
         'jpg': 'image',
@@ -45,7 +45,7 @@ function _getFileTypeFromUrl(url) {
         'wav': 'audio',
         'ogg': 'audio'
     };
-    
+
     // Si l'URL contient des paramètres spécifiques de Cloudinary, les analyser
     if (url.includes('cloudinary.com')) {
         if (url.includes('/image/')) return 'image';
@@ -55,7 +55,7 @@ function _getFileTypeFromUrl(url) {
             return typeMap[extension] || 'file';
         }
     }
-    
+
     // Retourner le type basé sur l'extension ou 'file' par défaut
     return typeMap[extension] || 'file';
 }
@@ -71,7 +71,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage,
     limits: {
         fileSize: 5 * 1024 * 1024 // 5MB max
@@ -93,11 +93,11 @@ exports.getConversations = asyncHandler(async (req, res) => {
     const conversations = await Conversation.find({
         participants: req.user.id
     })
-    .populate('participants', 'name avatar')
-    .populate('lastMessage')
-    .populate('reservationId', 'status')
-    .populate('residenceId', 'name')
-    .sort('-updatedAt');
+        .populate('participants', 'name avatar')
+        .populate('lastMessage')
+        .populate('reservationId', 'status')
+        .populate('residenceId', 'name')
+        .sort('-updatedAt');
 
     // Ajouter le compte des messages non lus pour chaque conversation
     const conversationsWithUnread = await Promise.all(conversations.map(async (conv) => {
@@ -179,14 +179,27 @@ exports.sendMessage = asyncHandler(async (req, res) => {
     if (!conversation.participants.some(p => p.toString() === req.user.id)) {
         return res.status(403).json({ success: false, error: 'Non autorisé à envoyer des messages dans cette conversation' });
     }
-    
+
     // Vérifier si la messagerie est activée pour cette réservation
     if (conversation.reservationId) {
         const reservation = await Reservation.findById(conversation.reservationId);
-        if (!reservation || !reservation.messagingEnabled) {
-            return res.status(403).json({ 
-                success: false, 
-                error: 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.' 
+
+        // Compter les messages déjà envoyés par cet utilisateur dans cette conversation
+        const userMessageCount = await Message.countDocuments({
+            conversation: conversationId,
+            sender: req.user.id
+        });
+
+        // Limite de messages gratuits
+        const FREE_MESSAGE_LIMIT = 2;
+
+        // Bloquer seulement si la messagerie n'est pas activée ET la limite est atteinte
+        if (!reservation || (!reservation.messagingEnabled && userMessageCount >= FREE_MESSAGE_LIMIT)) {
+            return res.status(403).json({
+                success: false,
+                error: userMessageCount >= FREE_MESSAGE_LIMIT
+                    ? `Vous avez atteint la limite de ${FREE_MESSAGE_LIMIT} messages gratuits. Effectuez le paiement de votre réservation pour continuer à échanger.`
+                    : 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.'
             });
         }
     }
@@ -273,14 +286,27 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
             error: 'Vous n\'êtes pas autorisé à envoyer des fichiers dans cette conversation'
         });
     }
-    
+
     // Vérifier si la messagerie est activée pour cette réservation
     if (conversation.reservationId) {
         const reservation = await Reservation.findById(conversation.reservationId);
-        if (!reservation || !reservation.messagingEnabled) {
-            return res.status(403).json({ 
-                success: false, 
-                error: 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.' 
+
+        // Compter les messages déjà envoyés par cet utilisateur dans cette conversation
+        const userMessageCount = await Message.countDocuments({
+            conversation: conversationId,
+            sender: req.user.id
+        });
+
+        // Limite de messages gratuits
+        const FREE_MESSAGE_LIMIT = 2;
+
+        // Bloquer seulement si la messagerie n'est pas activée ET la limite est atteinte
+        if (!reservation || (!reservation.messagingEnabled && userMessageCount >= FREE_MESSAGE_LIMIT)) {
+            return res.status(403).json({
+                success: false,
+                error: userMessageCount >= FREE_MESSAGE_LIMIT
+                    ? `Vous avez atteint la limite de ${FREE_MESSAGE_LIMIT} messages gratuits. Effectuez le paiement de votre réservation pour continuer à échanger.`
+                    : 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.'
             });
         }
     }
@@ -289,12 +315,12 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
     if (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
         try {
             const { fileUrl, fileName, fileType, fileSize } = req.body;
-            
-            if (fileUrl && typeof fileUrl === 'string' && 
+
+            if (fileUrl && typeof fileUrl === 'string' &&
                 (fileUrl.startsWith('http://') || fileUrl.startsWith('https://'))) {
-                
+
                 console.log('URL Cloudinary détectée:', fileUrl);
-                
+
                 // Créer un attachement à partir de l'URL
                 const attachment = {
                     url: fileUrl,
@@ -303,7 +329,7 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
                     size: fileSize || 0,
                     source: 'cloudinary'
                 };
-                
+
                 // Créer le message avec l'attachement
                 const message = await Message.create({
                     conversation: conversationId,
@@ -329,7 +355,7 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
             });
         }
     }
-    
+
     // Si pas d'URL Cloudinary, continuer avec l'upload traditionnel
     console.log('Headers:', req.headers);
     console.log('Content-Type:', req.headers['content-type']);
@@ -352,16 +378,16 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
     uploadSingle(req, res, async (err) => {
         if (err) {
             console.error('Upload error:', err);
-            return res.status(400).json({ 
-                success: false, 
+            return res.status(400).json({
+                success: false,
                 error: err.message,
                 details: 'Assurez-vous que le champ est nommé "image" et que le Content-Type est multipart/form-data'
             });
         }
 
         if (!req.file) {
-            return res.status(400).json({ 
-                success: false, 
+            return res.status(400).json({
+                success: false,
                 error: 'Aucun fichier fourni',
                 details: 'Assurez-vous que le champ est nommé "image" et que vous avez sélectionné un fichier'
             });
@@ -399,27 +425,23 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
 exports.createConversation = asyncHandler(async (req, res) => {
     const { title, participants, reservationId, residenceId, initialMessage } = req.body;
 
-    // Vérifier si la conversation est liée à une réservation et si la messagerie est activée
+    // Vérifier si la conversation est liée à une réservation
+    // Note: On permet la création de conversation même sans paiement
+    // La limite de messages sera appliquée lors de l'envoi
     if (reservationId) {
         const reservation = await Reservation.findById(reservationId);
         if (!reservation) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Réservation non trouvée' 
+            return res.status(404).json({
+                success: false,
+                error: 'Réservation non trouvée'
             });
         }
-        
-        if (!reservation.messagingEnabled) {
-            return res.status(403).json({ 
-                success: false, 
-                error: 'La messagerie n\'est pas encore activée pour cette réservation. Le paiement doit être effectué pour débloquer cette fonctionnalité.' 
-            });
-        }
+        // Pas de vérification messagingEnabled ici - on permet la création
     }
 
     // Vérifier si les participants existent et incluent l'utilisateur actuel
     let allParticipants = [...new Set([...participants, req.user.id])];
-    
+
     // Créer la conversation
     const conversation = await Conversation.create({
         title,
@@ -450,7 +472,7 @@ exports.createConversation = asyncHandler(async (req, res) => {
     if (residenceId) {
         await conversation.populate('residenceId', 'name');
     }
-    
+
     res.status(201).json({
         success: true,
         data: conversation
@@ -488,18 +510,18 @@ exports.markAsRead = asyncHandler(async (req, res) => {
 // @access  Private
 exports.testWhatsAppSend = asyncHandler(async (req, res) => {
     const { phoneNumber, message } = req.body;
-    
+
     if (!phoneNumber || !message) {
         return res.status(400).json({
             success: false,
             error: 'phoneNumber et message sont requis'
         });
     }
-    
+
     try {
         const twilioService = require('../services/twilio.service');
         const result = await twilioService.sendWhatsAppMessage(phoneNumber, message);
-        
+
         res.status(200).json({
             success: true,
             data: {
@@ -523,14 +545,14 @@ exports.testWhatsAppSend = asyncHandler(async (req, res) => {
 exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
     const { content, phoneNumber } = req.body;
     const conversationId = req.params.id;
-    
+
     if (!content) {
         return res.status(400).json({
             success: false,
             error: 'Le contenu du message est requis'
         });
     }
-    
+
     // Vérifier que la conversation existe
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
@@ -539,7 +561,7 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
             error: 'Conversation non trouvée'
         });
     }
-    
+
     // Vérifier que l'utilisateur est participant à cette conversation
     if (!conversation.participants.some(p => p.toString() === req.user.id)) {
         return res.status(403).json({
@@ -547,22 +569,22 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
             error: 'Non autorisé à envoyer des messages dans cette conversation'
         });
     }
-    
+
     try {
         // 1. Envoyer le WhatsApp via Twilio
         const twilioService = require('../services/twilio.service');
         let targetPhoneNumber = phoneNumber;
-        
+
         // Si pas de numéro fourni, essayer de le récupérer depuis la conversation
         if (!targetPhoneNumber) {
             // Récupérer les participants avec leurs infos complètes
             await conversation.populate('participants', 'phoneNumber name');
-            
+
             // Trouver le participant qui n'est pas l'expéditeur
             const otherParticipant = conversation.participants.find(
                 p => p._id.toString() !== req.user.id
             );
-            
+
             if (otherParticipant && otherParticipant.phoneNumber) {
                 targetPhoneNumber = otherParticipant.phoneNumber;
             } else {
@@ -572,12 +594,12 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
                 });
             }
         }
-        
+
         const twilioResult = await twilioService.sendWhatsAppMessage(
             targetPhoneNumber,
             content
         );
-        
+
         // 2. Enregistrer le message dans la base de données
         const message = await Message.create({
             conversation: conversationId,
@@ -587,15 +609,15 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
             twilioSid: twilioResult.sid,
             phoneNumber: targetPhoneNumber
         });
-        
+
         // 3. Mettre à jour la conversation
         conversation.lastMessage = message._id;
         conversation.updatedAt = Date.now();
         await conversation.save();
-        
+
         // 4. Populate les données pour la réponse
         await message.populate('sender', 'name avatar');
-        
+
         // 5. Notifications WebSocket temps réel (optionnel)
         try {
             const socketService = require('../services/socket.service');
@@ -604,7 +626,7 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
             console.error('Erreur lors de la notification WebSocket:', socketError);
             // Continue même en cas d'erreur
         }
-        
+
         res.status(201).json({
             success: true,
             data: {
@@ -613,7 +635,7 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
                 sentTo: targetPhoneNumber
             }
         });
-        
+
     } catch (error) {
         console.error('Erreur lors de l\'envoi WhatsApp:', error);
         res.status(500).json({

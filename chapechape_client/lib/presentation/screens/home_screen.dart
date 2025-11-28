@@ -7,7 +7,7 @@ import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/residence_type_enum.dart';
-import '../../core/constants/app_assets.dart' as assets;
+
 import '../../core/services/promotion_service.dart';
 import '../../core/services/logger_service.dart';
 import '../widgets/featured_listings.dart';
@@ -77,195 +77,191 @@ class _HomeScreenState extends State<HomeScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
     return LayoutBuilder(
       builder: (context, constraints) {
         return Scaffold(
-          body: SafeArea(
-            child: ListView(
-              key: const Key('home_screen_list_view'),
-              physics: const ClampingScrollPhysics(),
-              children: [
-                // Bannière d'accueil avec carousel dynamique
-                HomeBannerCarousel(constraints: constraints),
-                
-                // Section de recherche (commune à tous)
-                const AdvancedSearchWidget(),
-                
-                // Section des catégories (commune à tous)
-                _buildSectionHeader(
-                  constraints, 
-                  'Catégories', 
-                  'Explorez nos différents types d\'hébergements'
+          body: ListView(
+            padding: EdgeInsets.zero,
+            key: const Key('home_screen_list_view'),
+            children: [
+              // Bannière d'accueil avec carousel dynamique
+              HomeBannerCarousel(constraints: constraints),
+              
+              // Section de recherche (commune à tous)
+              const AdvancedSearchWidget(),
+              
+              // Section des catégories (commune à tous)
+              _buildSectionHeader(
+                constraints, 
+                'Catégories', 
+                'Explorez nos différents types d\'hébergements'
+              ),
+              
+              // Nouveau widget de catégories populaires avec animations
+              const PopularCategoriesWidget(
+                title: 'Catégories populaires',
+                subtitle: 'Découvrez nos types d\'hébergements les plus demandés',
+                itemsPerRow: 2,
+                viewStyle: 'grid',
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Widget de catégories existant (modes d'affichage alternatifs)
+              SizedBox(
+                height: 280,
+                width: constraints.maxWidth,
+                child: CategoriesMenuWidget(
+                  title: "Explorez par catégories",
+                  filterType: ResidenceType.other,
                 ),
-                
-                // Nouveau widget de catégories populaires avec animations
-                const PopularCategoriesWidget(
-                  title: 'Catégories populaires',
-                  subtitle: 'Découvrez nos types d\'hébergements les plus demandés',
-                  itemsPerRow: 2,
-                  viewStyle: 'grid',
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Widget de catégories existant (modes d'affichage alternatifs)
-                SizedBox(
-                  height: 280,
-                  width: constraints.maxWidth,
-                  child: CategoriesMenuWidget(
-                    title: "Explorez par catégories",
-                    filterType: ResidenceType.other,
-                  ),
-                ),
-                
-                // Section des offres spéciales (commune à tous)
-                _buildSectionHeader(
-                  constraints, 
-                  'Offres spéciales', 
-                  'Résidences avec piscines et aménités exclusives'
-                ),
-                
-                // Widget des promotions exclusives
-                FutureBuilder<PromotionService>(
-                  future: PromotionService.initialize(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 24.0),
-                        child: ExclusivePromotionsWidget(
-                          title: 'Offres & Promotions',
-                          subtitle: 'Nos meilleures offres du moment',
-                          maxItems: 5,
-                          exclusiveOnly: false,
-                          onPromotionSelected: (promotion) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PromotionDetailScreen(
-                                  promotionId: promotion.id,
-                                ),
+              ),
+              
+              // Section des offres spéciales (commune à tous)
+              _buildSectionHeader(
+                constraints, 
+                'Offres spéciales', 
+                'Résidences avec piscines et aménités exclusives'
+              ),
+              
+              // Widget des promotions exclusives
+              FutureBuilder<PromotionService>(
+                future: PromotionService.initialize(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 24.0),
+                      child: ExclusivePromotionsWidget(
+                        title: 'Offres & Promotions',
+                        subtitle: 'Nos meilleures offres du moment',
+                        maxItems: 5,
+                        exclusiveOnly: false,
+                        onPromotionSelected: (promotion) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PromotionDetailScreen(
+                                promotionId: promotion.id,
                               ),
-                            );
-                          },
-                        ),
-                      );
-                    }
-                    return const SizedBox(height: 20);
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }
+                  return const SizedBox(height: 20);
+                },
+              ),
+              
+              SizedBox(
+                // Augmenter la hauteur pour éviter le débordement
+                height: 450,
+                width: constraints.maxWidth,
+                child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
+                  selector: (state) => {
+                    'residences': state is ResidencesLoaded 
+                        ? state.residences 
+                        : (state is ResidenceError && state.preservedResidences != null)
+                            ? state.preservedResidences!
+                            : [],
+                    'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
+                  },
+                  builder: (context, data) {
+                    final residences = data['residences'] as List;
+                    final isLoading = data['isLoading'] as bool;
+                            
+                    return SpecialResidencesWidget(
+                      title: "Résidences Spéciales",
+                      filterType: ResidenceType.luxury,
+                      isLoading: isLoading,
+                      items: residences,
+                    );
                   },
                 ),
-                
-                SizedBox(
-                  // Augmenter la hauteur pour éviter le débordement
-                  height: 450,
-                  width: constraints.maxWidth,
-                  child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
-                    selector: (state) => {
-                      'residences': state is ResidencesLoaded 
-                          ? state.residences 
-                          : (state is ResidenceError && state.preservedResidences != null)
-                              ? state.preservedResidences!
-                              : [],
-                      'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
-                    },
-                    builder: (context, data) {
-                      final residences = data['residences'] as List;
-                      final isLoading = data['isLoading'] as bool;
-                              
-                      return SpecialResidencesWidget(
-                        title: "Résidences Spéciales",
-                        filterType: ResidenceType.luxury,
-                        isLoading: isLoading,
-                        items: residences,
-                      );
-                    },
-                  ),
+              ),
+              
+              // Section Autour de moi (géolocalisation)
+              _buildSectionHeader(
+                constraints, 
+                'Autour de moi', 
+                'Découvrez les résidences à proximité de votre position'
+              ),
+              
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: AroundMeWidget(
+                  title: 'À proximité',
+                  subtitle: 'Explorez les quartiers autour de vous',
+                  itemCount: 5,
+                  radiusKm: 5.0,
+                  showMap: true,
                 ),
-                
-                // Section Autour de moi (géolocalisation)
-                _buildSectionHeader(
-                  constraints, 
-                  'Autour de moi', 
-                  'Découvrez les résidences à proximité de votre position'
+              ),
+              
+              // Section des résidences recommandées (commune à tous)
+              _buildSectionHeader(
+                constraints, 
+                'Résidences recommandées', 
+                'Nos meilleures sélections pour vous'
+              ),
+              
+              SizedBox(
+                // Augmenter la hauteur pour éviter le débordement
+                height: 420,
+                width: constraints.maxWidth,
+                child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
+                  selector: (state) => {
+                    'residences': state is ResidencesLoaded 
+                        ? state.residences 
+                        : (state is ResidenceError && state.preservedResidences != null)
+                            ? state.preservedResidences!
+                            : [],
+                    'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
+                  },
+                  builder: (context, data) {
+                    final residences = data['residences'] as List;
+                    final isLoading = data['isLoading'] as bool;
+                            
+                    return FeaturedListings(
+                      isLoading: isLoading,
+                      listings: residences,
+                      onSeeAllPressed: () {
+                        context.push('/search');
+                      },
+                    );
+                  },
                 ),
-                
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: AroundMeWidget(
-                    title: 'À proximité',
-                    subtitle: 'Explorez les quartiers autour de vous',
-                    itemCount: 5,
-                    radiusKm: 5.0,
-                    showMap: true,
-                  ),
+              ),
+              
+              // Section pour encourager l'inscription (uniquement pour les non-connectés)
+              _buildSignUpPrompt(context, constraints),
+              
+              // Témoignages clients (commun à tous)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: TestimonialsWidget(
+                  key: const Key('home_testimonials'),
                 ),
-                
-                // Section des résidences recommandées (commune à tous)
-                _buildSectionHeader(
-                  constraints, 
-                  'Résidences recommandées', 
-                  'Nos meilleures sélections pour vous'
+              ),
+              
+              // Section blog et conseils (commune à tous)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: BlogAndTipsWidget(
+                  key: const Key('home_blog_tips'),
                 ),
-                
-                SizedBox(
-                  // Augmenter la hauteur pour éviter le débordement
-                  height: 420,
-                  width: constraints.maxWidth,
-                  child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
-                    selector: (state) => {
-                      'residences': state is ResidencesLoaded 
-                          ? state.residences 
-                          : (state is ResidenceError && state.preservedResidences != null)
-                              ? state.preservedResidences!
-                              : [],
-                      'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
-                    },
-                    builder: (context, data) {
-                      final residences = data['residences'] as List;
-                      final isLoading = data['isLoading'] as bool;
-                              
-                      return FeaturedListings(
-                        isLoading: isLoading,
-                        listings: residences,
-                        onSeeAllPressed: () {
-                          context.push('/search');
-                        },
-                      );
-                    },
-                  ),
-                ),
-                
-                // Section pour encourager l'inscription (uniquement pour les non-connectés)
-                _buildSignUpPrompt(context, constraints),
-                
-                // Témoignages clients (commun à tous)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: TestimonialsWidget(
-                    key: const Key('home_testimonials'),
-                  ),
-                ),
-                
-                // Section blog et conseils (commune à tous)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: BlogAndTipsWidget(
-                    key: const Key('home_blog_tips'),
-                  ),
-                ),
-                
-                // Footer (commun à tous)
-                FooterWidget(),
-              ],
-            ),
+              ),
+              
+              // Footer (commun à tous)
+              FooterWidget(),
+            ],
           ),
         );
       },
     );
   }
 
-  // Widget d'en-tête de section réutilisable avec support du mode sombre
+  @override
   Widget _buildSectionHeader(BoxConstraints constraints, String title, String subtitle) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     

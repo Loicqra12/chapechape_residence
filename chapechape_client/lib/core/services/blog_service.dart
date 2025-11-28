@@ -368,20 +368,7 @@ class BlogService {
         tags: ['fiscalité', 'investissement', 'location', 'impôts'],
         isFeatured: false,
       ),
-      BlogPost(
-        id: '8',
-        title: 'Sécurité résidentielle : protégez efficacement votre logement',
-        summary: 'Solutions modernes pour sécuriser votre domicile contre les cambriolages et intrusions.',
-        content: 'La sécurité de votre domicile est une priorité absolue. Cet article présente les différentes technologies de sécurité résidentielle disponibles sur le marché, des serrures connectées aux systèmes de vidéosurveillance, en passant par les alarmes intelligentes. Nous abordons également les mesures de sécurité passive à mettre en place et les comportements à adopter pour dissuader les intrusions.',
-        imageUrl: 'https://images.unsplash.com/photo-1558002038-1055e2e40e52?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-        publishedDate: DateTime.now().subtract(const Duration(days: 15)),
-        authorName: 'Sylvie N\'Guessan',
-        authorImageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
-        category: 'Sécurité',
-        readTimeMinutes: 7,
-        tags: ['sécurité', 'alarme', 'vidéosurveillance', 'protection'],
-        isFeatured: false,
-      ),
+
     ];
   }
   

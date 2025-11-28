@@ -8,6 +8,7 @@ import '../../core/services/promotion_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import 'promotion_countdown_widget.dart';
+import 'common/premium_card.dart';
 
 /// Widget affichant la liste des offres et promotions exclusives
 class ExclusivePromotionsWidget extends StatefulWidget {
@@ -322,21 +323,14 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             context.push('/promotion/${promotion.id}');
           }
         },
-        child: Container(
-          width: 300,
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isHovered ? 0.15 : 0.08),
-                blurRadius: isHovered ? 12 : 8,
-                offset: Offset(0, isHovered ? 6 : 4),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
+        child: PremiumCard(
+        width: 300,
+        margin: const EdgeInsets.only(right: 16),
+        borderRadius: 20,
+        elevation: isHovered ? 8 : 5,
+        backgroundColor: Colors.white,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -488,6 +482,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
               ),
             ],
           ),
+        ),
         )
         .animate(target: isHovered ? 1 : 0)
         .scale(begin: const Offset(1, 1), end: const Offset(1.03, 1.03), duration: 300.ms, curve: Curves.easeOutQuad)
@@ -511,21 +506,14 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             context.push('/promotion/${promotion.id}');
           }
         },
-        child: Container(
-          width: 220,
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isHovered ? 0.12 : 0.06),
-                blurRadius: isHovered ? 10 : 6,
-                offset: Offset(0, isHovered ? 4 : 2),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
+        child: PremiumCard(
+        width: 220,
+        margin: const EdgeInsets.only(right: 12),
+        borderRadius: 16,
+        elevation: isHovered ? 6 : 3,
+        backgroundColor: Colors.white,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -649,6 +637,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
               ),
             ],
           ),
+        ),
         )
         .animate(target: isHovered ? 1 : 0)
         .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 250.ms, curve: Curves.easeOutQuad)

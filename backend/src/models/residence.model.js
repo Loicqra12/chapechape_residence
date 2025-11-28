@@ -73,13 +73,13 @@ const residenceSchema = mongoose.Schema({
   // Maintenir les champs précédents pour compatibilité descendante
   latitude: {
     type: Number,
-    default: function() {
+    default: function () {
       return this.locationData?.coordinates?.latitude || 0;
     }
   },
   longitude: {
     type: Number,
-    default: function() {
+    default: function () {
       return this.locationData?.coordinates?.longitude || 0;
     }
   },
@@ -134,7 +134,7 @@ const residenceSchema = mongoose.Schema({
     default: 480, // 8 heures par défaut
     min: [30, 'Délai minimum d\'acceptation : 30 minutes'],
     max: [2880, 'Délai maximum d\'acceptation : 48 heures'],
-    required: function() {
+    required: function () {
       return this.reservationMode === 'approval_required';
     }
   },
@@ -150,32 +150,32 @@ const residenceSchema = mongoose.Schema({
       'wifi', 'parking', 'pool', 'gym', 'security',
       'air_conditioning', 'heating', 'kitchen', 'tv',
       'washing_machine', 'dryer',
-      
+
       // Options générales étendues
-      'hot_water', 'balcony', 'garden', 'terrace', 
+      'hot_water', 'balcony', 'garden', 'terrace',
       'shared_kitchen', 'generator', 'solar_energy',
-      'spa', 'restaurant', 'bar', 'room_service', 
+      'spa', 'restaurant', 'bar', 'room_service',
       'laundry', 'meeting_room',
-      
+
       // Options liées à l'eau
       'running_water', 'water_tank',
-      
+
       // Options liées à l'électricité
-      'electricity', 'inverter', 
-      
+      'electricity', 'inverter',
+
       // Options liées à Internet
       'fiber_optic', 'ethernet',
-      
+
       // Options liées à la cuisine
-      'full_kitchen', 'kitchenette', 'refrigerator', 
+      'full_kitchen', 'kitchenette', 'refrigerator',
       'microwave', 'oven',
-      
+
       // Options liées au confort climatique
       'fan', 'ceiling_fan',
-      
+
       // Options liées à la sécurité
       'alarm_system', 'cctv', 'security_guard',
-      
+
       // Autres options
       'cleaning'
     ]
@@ -307,7 +307,7 @@ residenceSchema.index({
 residenceSchema.index({ cancellationPolicy: 1 });
 
 // Virtual pour la rétrocompatibilité avec le frontend
-residenceSchema.virtual('location').get(function() {
+residenceSchema.virtual('location').get(function () {
   // Si nous avons des données dans la nouvelle structure, les utiliser
   if (this.locationData && this.locationData.coordinates) {
     return {
@@ -325,36 +325,42 @@ residenceSchema.virtual('location').get(function() {
   };
 });
 
+// Virtual pour compatibilité client Flutter (rating simple)
+// Le client s'attend à un nombre simple, pas un objet complexe
+residenceSchema.virtual('averageRating').get(function () {
+  return this.rating?.overall || 0;
+});
+
 // Méthodes d'instance
-residenceSchema.methods.isAvailableForDates = async function(startDate, endDate) {
+residenceSchema.methods.isAvailableForDates = async function (startDate, endDate) {
   const Availability = mongoose.model('Availability');
   return Availability.isPeriodAvailable(this._id, startDate, endDate);
 };
 
-residenceSchema.methods.calculateTotalPrice = async function(startDate, endDate) {
+residenceSchema.methods.calculateTotalPrice = async function (startDate, endDate) {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   // Différentes méthodes de calcul selon la période de tarification
-  switch(this.pricePeriod) {
+  switch (this.pricePeriod) {
     case 'hour':
       // Calculer le nombre d'heures entre les dates
       const hours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
       console.log(`[Price] Calcul pour résidence horaire: ${hours} heures à ${this.price} par heure`);
       return parseFloat((hours * this.price).toFixed(2)); // Forcer un nombre à virgule flottante
-    
+
     case 'day':
       // Calculer le nombre de jours entre les dates
       const daysForDay = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
       console.log(`[Price] Calcul pour résidence journalière: ${daysForDay} jours à ${this.price} par jour`);
       return parseFloat((daysForDay * this.price).toFixed(2));
-    
+
     case 'week':
       // Calculer le nombre de semaines entre les dates
       const weeks = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24 * 7)));
       console.log(`[Price] Calcul pour résidence hebdomadaire: ${weeks} semaines à ${this.price} par semaine`);
       return parseFloat((weeks * this.price).toFixed(2));
-    
+
     case 'month':
     default:
       // Calculer le nombre de mois approximatif (base 30 jours)

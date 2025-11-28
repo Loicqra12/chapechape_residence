@@ -7,9 +7,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/models/blog_post_model.dart';
 import '../../core/utils/responsive_utils.dart';
+import 'dart:ui';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/blog_service.dart';
 import '../../core/services/logger_service.dart';
+import 'common/premium_card.dart';
 
 class BlogAndTipsWidget extends StatefulWidget {
   final List<BlogPost>? blogPosts;
@@ -166,15 +168,14 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
       onTap: () {
         context.push('/blog/${blogPost.id}');
       },
-      child: Container(
+      child: PremiumCard(
         width: 280,
         margin: const EdgeInsets.only(right: 16, bottom: 8),
-        child: Card(
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          clipBehavior: Clip.antiAlias,
+        borderRadius: 16,
+        elevation: 4,
+        backgroundColor: Colors.white,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -187,26 +188,54 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                     child: _buildImage(blogPost),
                   ),
                   
-                  // Badge de catégorie
+                  // Gradient Overlay
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.3),
+                          ],
+                          stops: const [0.6, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Badge de catégorie Glassmorphic
                   if (blogPost.category != null)
                     Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getCategoryColor(blogPost.category),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _getCategoryText(blogPost.category),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                      top: 12,
+                      right: 12,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _getCategoryColor(blogPost.category).withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              _getCategoryText(blogPost.category).toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
@@ -222,15 +251,17 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Titre
-                      Text(
-                        blogPost.title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      blogPost.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        height: 1.3,
+                        letterSpacing: -0.3,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                       const SizedBox(height: 3),
                       
                       // Sous-titre / résumé

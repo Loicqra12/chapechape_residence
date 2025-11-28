@@ -6,6 +6,7 @@ import '../../core/models/residence_model_alias.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/models/amenity.dart' as amenity;
 import 'residence_amenities.dart';
+import 'animated_favorite_button.dart';
 
 // Renommé pour éviter les conflits avec l'autre widget ResidenceCard
 class StandardResidenceCard extends StatelessWidget {
@@ -77,30 +78,10 @@ class StandardResidenceCard extends StatelessWidget {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onFavoritePressed,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            residence.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            size: 20,
-                            color: residence.isFavorite ? Colors.red : Colors.grey,
-                          ),
-                        ),
-                      ),
+                    child: AnimatedFavoriteButton(
+                      isFavorite: residence.isFavorite,
+                      onPressed: onFavoritePressed!,
+                      size: 20,
                     ),
                   ),
               ],
