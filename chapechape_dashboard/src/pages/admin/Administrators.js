@@ -1,34 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  PencilIcon, 
-  TrashIcon, 
+import {
+  PencilIcon,
+  TrashIcon,
   PlusIcon,
   ShieldCheckIcon,
-  ShieldExclamationIcon 
+  ShieldExclamationIcon
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import AdminModal from '../../components/admin/AdminModal';
+import { API_URL } from '../../config';
 
 const Administrators = () => {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const [administrators, setAdministrators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
 
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('isSuperAdmin check:', isSuperAdmin());
+      console.log('User role:', user?.role);
+    }
     fetchAdministrators();
   }, []);
 
   const fetchAdministrators = async () => {
     try {
-      const response = await fetch('/api/admin/administrators');
-      const data = await response.json();
-      setAdministrators(data);
+      const response = await fetch(`${API_URL}/superadmin/admins`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAdministrators(result.data || []);
       setLoading(false);
     } catch (error) {
+      console.error('Error fetching administrators:', error);
       toast.error('Erreur lors du chargement des administrateurs');
       setLoading(false);
     }
@@ -40,9 +55,17 @@ const Administrators = () => {
     }
 
     try {
-      await fetch(`/api/admin/administrators/${adminId}`, {
+      const response = await fetch(`${API_URL}/superadmin/admins/${adminId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete');
+      }
+
       toast.success('Administrateur supprimé avec succès');
       fetchAdministrators();
     } catch (error) {
@@ -56,15 +79,16 @@ const Administrators = () => {
   };
 
   if (!isSuperAdmin()) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Access denied - not superadmin');
+    }
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <ShieldExclamationIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-            Accès non autorisé
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            Vous devez être super administrateur pour accéder à cette page.
+          <ShieldExclamationIcon className="mx-auto h-12 w-12 text-red-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Accès refusé</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Vous devez être Super Administrateur pour accéder à cette page.
           </p>
         </div>
       </div>
@@ -155,11 +179,10 @@ const Administrators = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      admin.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${admin.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {admin.isActive ? 'Actif' : 'Inactif'}
                     </span>
                   </td>

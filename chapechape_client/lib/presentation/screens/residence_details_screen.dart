@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:chapechape_maps/chapechape_maps.dart';
+import 'package:chapechape_client/presentation/widgets/animated_favorite_button.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 // import '../screens/full_map_screen.dart'; // Commenté car non utilisé
 import '../../core/blocs/auth/auth_bloc.dart';

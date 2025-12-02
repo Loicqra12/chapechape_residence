@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'favorites_screen.dart';
 import 'notifications_screen.dart';
@@ -74,14 +75,34 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     _logger.debug('Construction du MainScreen');
     
+    final location = GoRouterState.of(context).uri.path;
+    final isHomeScreen = location.startsWith('/home') || location == '/';
+
     return Scaffold(
+      extendBody: true,
+      extendBodyBehindAppBar: isHomeScreen,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white,
+        backgroundColor: isHomeScreen 
+            ? Colors.transparent 
+            : (Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _showLocationMenu(context),
-          tooltip: 'Menu',
+        iconTheme: IconThemeData(
+          color: isHomeScreen ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+        ),
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: isHomeScreen ? BoxDecoration(
+            color: Colors.black.withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+          ) : null,
+          child: IconButton(
+            icon: const Icon(Icons.menu),
+            color: isHomeScreen ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+            onPressed: () => _showLocationMenu(context),
+            tooltip: 'Menu',
+            padding: EdgeInsets.zero,
+          ),
         ),
         actions: [
           // Bouton mode offline
@@ -117,21 +138,21 @@ class _MainScreenState extends State<MainScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.location_on, size: 16, color: AppTheme.primaryColor),
+                  Icon(Icons.location_on, size: 16, color: isHomeScreen ? Colors.white : AppTheme.primaryColor),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       _selectedCity!.name,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[800],
+                        color: isHomeScreen ? Colors.white : Colors.grey[800],
                         fontWeight: FontWeight.w600,
                       ),
                       overflow: TextOverflow.ellipsis,
                       semanticsLabel: 'Localisation actuelle: ${_selectedCity!.name}',
                     ),
                   ),
-                  Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.arrow_drop_down, size: 16, color: isHomeScreen ? Colors.white70 : Colors.grey[600]),
                 ],
               ),
             )
@@ -141,43 +162,64 @@ class _MainScreenState extends State<MainScreen> {
       body: ConnectivityBanner(
         child: widget.child,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(index, context),
-        backgroundColor: Theme.of(context).brightness == Brightness.dark ? blackColor : whiteColor,
-        indicatorColor: Theme.of(context).brightness == Brightness.dark 
-            ? AppTheme.primaryColor.withOpacity(0.2) 
-            : Colors.transparent,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        height: 60,
-        elevation: 0,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: Theme.of(context).primaryColor),
-            label: 'Accueil',
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: NavigationBar(
+              selectedIndex: _calculateSelectedIndex(context),
+              onDestinationSelected: (index) => _onItemTapped(index, context),
+              backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.black.withOpacity(0.6) 
+                  : Colors.white.withOpacity(0.8),
+              indicatorColor: Theme.of(context).brightness == Brightness.dark 
+                  ? AppTheme.primaryColor.withOpacity(0.2) 
+                  : AppTheme.primaryColor.withOpacity(0.15),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              height: 70,
+              elevation: 0,
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home, color: Theme.of(context).primaryColor),
+                  label: 'Accueil',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.favorite_outline),
+                  selectedIcon: Icon(Icons.favorite, color: Theme.of(context).primaryColor),
+                  label: 'Favoris',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.notifications_outlined),
+                  selectedIcon: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
+                  label: 'Notifs',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.chat_outlined),
+                  selectedIcon: Icon(Icons.chat, color: Theme.of(context).primaryColor),
+                  label: 'Messages',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
+                  label: 'Profil',
+                ),
+              ],
+            ),
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.favorite_outline),
-            selectedIcon: Icon(Icons.favorite, color: Theme.of(context).primaryColor),
-            label: 'Favoris',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
-            label: 'Notifs',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat, color: Theme.of(context).primaryColor),
-            label: 'Messages',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
-            label: 'Profil',
-          ),
-        ],
+        ),
       ),
     );
   }

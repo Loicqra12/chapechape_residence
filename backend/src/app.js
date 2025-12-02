@@ -37,6 +37,7 @@ const authRoutes = require("./routes/auth.routes");
 const reviewRoutes = require("./routes/review.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const adminRoutes = require("./routes/admin.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 const superAdminRoutes = require("./routes/superadmin.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const promotionRoutes = require("./routes/promotion.routes");
@@ -53,6 +54,10 @@ const smsRoutes = require("./routes/sms.routes");
 const websiteRoutes = require("./routes/website.routes");
 // Import des routes d'audit et sécurité
 const auditRoutes = require("./routes/audit.routes");
+// Import des routes support (tickets de support)
+const supportRoutes = require("./routes/support.routes");
+// Import des routes maintenance (maintenance système)
+const maintenanceRoutes = require("./routes/maintenance.routes");
 // Import des routes pricing (tarification dynamique) - DÉJÀ DÉCLARÉ PLUS HAUT
 // const pricingRoutes = require("./routes/pricing.routes"); // DUPLIQUÉ - SUPPRIMÉ
 // Import des routes payout (reversements partners)
@@ -89,24 +94,24 @@ if (process.env.NODE_ENV === 'production') {
 // Route de test pour l'email - uniquement en environnement non-production
 if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_ROUTES !== 'false') {
   app.post("/api/public-test/email", async (req, res) => {
-  try {
-    const emailService = require('./services/email.service');
-    const { email, subject, content } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "L'adresse email est requise"
-      });
-    }
-    
-    console.log(`Envoi d'un email de test à : ${email}`);
-    
-    // Utiliser le service d'email avec API Brevo
-    const result = await emailService.sendEmail({
-      email,
-      subject: subject || 'Test de l\'intégration Brevo',
-      html: content || `
+    try {
+      const emailService = require('./services/email.service');
+      const { email, subject, content } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "L'adresse email est requise"
+        });
+      }
+
+      console.log(`Envoi d'un email de test à : ${email}`);
+
+      // Utiliser le service d'email avec API Brevo
+      const result = await emailService.sendEmail({
+        email,
+        subject: subject || 'Test de l\'intégration Brevo',
+        html: content || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #4A6BD8;">Test d'email ChapeChape</h1>
           <p style="font-size: 16px; line-height: 1.5;">
@@ -122,62 +127,62 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_ROUTES !== 
           </div>
         </div>
       `
-    });
-    
-    res.status(200).json({
-      success: true,
-      message: 'Email de test envoyé avec succès',
-      result
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email de test:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'envoi de l\'email',
-      error: error.message
-    });
-  }
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Email de test envoyé avec succès',
+        result
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email de test:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'envoi de l\'email',
+        error: error.message
+      });
+    }
   });
 }
 
 // 🔒 Route de test pour OneSignal - STRICTEMENT développement uniquement
 if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !== 'false') {
   app.post("/api/public-test/notification", async (req, res) => {
-  try {
-    const oneSignalService = require('./services/onesignal.service');
-    const { title, message, segment } = req.body;
-    
-    if (!title || !message) {
-      return res.status(400).json({
+    try {
+      const oneSignalService = require('./services/onesignal.service');
+      const { title, message, segment } = req.body;
+
+      if (!title || !message) {
+        return res.status(400).json({
+          success: false,
+          message: "Titre et message sont requis"
+        });
+      }
+
+      console.log(`Envoi d'une notification de test: ${title}`);
+
+      let result;
+      if (segment) {
+        // Envoyer à un segment spécifique
+        result = await oneSignalService.sendToSegment(segment, title, message);
+      } else {
+        // Envoyer à tous les appareils
+        result = await oneSignalService.sendToAll(title, message);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Notification envoyée avec succès',
+        result
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification:', error);
+      res.status(500).json({
         success: false,
-        message: "Titre et message sont requis"
+        message: 'Erreur lors de l\'envoi de la notification',
+        error: error.message
       });
     }
-    
-    console.log(`Envoi d'une notification de test: ${title}`);
-    
-    let result;
-    if (segment) {
-      // Envoyer à un segment spécifique
-      result = await oneSignalService.sendToSegment(segment, title, message);
-    } else {
-      // Envoyer à tous les appareils
-      result = await oneSignalService.sendToAll(title, message);
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Notification envoyée avec succès',
-      result
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'envoi de la notification',
-      error: error.message
-    });
-  }
   });
 }
 
@@ -339,6 +344,7 @@ app.use("/api/favorites", favoriteRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/partners", partnerRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/messages", messageRoutes); // Routes de messagerie
 app.use("/api/availability", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
@@ -353,6 +359,10 @@ app.use("/api/pricing", pricingRoutes); // Routes pour la tarification dynamique
 app.use("/api/payouts", payoutRoutes); // ✅ RÉACTIVÉ - Routes pour les reversements aux partners via CinetPay
 app.use("/api/health", healthRoutes); // Routes pour les health checks avancés
 app.use("/api/ping", pingRoutes); // Routes pour les pings de connectivité
+app.use("/api/support", supportRoutes); // Routes pour les tickets de support
+app.use("/api/maintenance", maintenanceRoutes); // Routes pour la maintenance système (SuperAdmin)
+app.use("/api/superadmin", superAdminRoutes); // Routes pour la gestion superadmin
+app.use("/api/admin", adminRoutes); // Routes pour la gestion admin
 // app.use("/api/blog", cache(1800), blogRoutes); // Routes pour le blog dynamique (temporairement désactivé pour diagnostic)
 
 // 🔒 SÉCURITÉ CRITIQUE : Routes de test (TEMPORAIREMENT DÉSACTIVÉES POUR DIAGNOSTIC)
@@ -379,7 +389,7 @@ app.get("/", (req, res) => {
 app.get("/api/csrf-token", (req, res) => {
   // Importer le middleware CSRF qui utilise csurf
   const { csrfProtection } = require("./middlewares/csrf.middleware");
-  
+
   // Appliquer csrfProtection pour générer un token
   csrfProtection(req, res, (err) => {
     if (err) {
@@ -389,7 +399,7 @@ app.get("/api/csrf-token", (req, res) => {
         message: "Erreur lors de la génération du token CSRF",
       });
     }
-    
+
     // Générer et renvoyer le token
     const token = req.csrfToken();
     res.setHeader("X-CSRF-Token", token);

@@ -6,16 +6,16 @@ const { createActivityLog } = require('../lib/activityLogger');
 exports.getAllRoles = async (req, res) => {
   try {
     const roles = await Role.find().populate('permissions');
-    res.json(roles);
+    res.json({ success: true, data: roles });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.createRole = async (req, res) => {
   try {
     const { name, description, permissions } = req.body;
-    
+
     // Vérifier si le rôle existe déjà
     const existingRole = await Role.findOne({ name });
     if (existingRole) {
@@ -96,7 +96,7 @@ exports.updateRole = async (req, res) => {
 exports.deleteRole = async (req, res) => {
   try {
     const role = await Role.findById(req.params.id);
-    
+
     if (!role) {
       return res.status(404).json({ message: 'Rôle non trouvé' });
     }
@@ -123,16 +123,16 @@ exports.deleteRole = async (req, res) => {
 exports.getAllPermissions = async (req, res) => {
   try {
     const permissions = await Permission.find();
-    res.json(permissions);
+    res.json({ success: true, data: permissions });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.createPermission = async (req, res) => {
   try {
     const { name, description, module, action } = req.body;
-    
+
     // Vérifier si la permission existe déjà
     const existingPermission = await Permission.findOne({ name });
     if (existingPermission) {
@@ -215,7 +215,7 @@ exports.updatePermission = async (req, res) => {
 exports.deletePermission = async (req, res) => {
   try {
     const permission = await Permission.findById(req.params.id);
-    
+
     if (!permission) {
       return res.status(404).json({ message: 'Permission non trouvée' });
     }

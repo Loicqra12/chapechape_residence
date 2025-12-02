@@ -14,6 +14,7 @@ import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/config/app_config_manager.dart'; // Import AppConfigManager
 import '../../core/services/logger_service.dart'; // Import LoggerService
+import 'common/premium_card.dart';
 
 /// Widget pour afficher les annonces et résidences en vedette
 /// 
@@ -317,29 +318,26 @@ class _FeaturedListingsState extends State<FeaturedListings> {
       },
       child: Container(
         width: 280,
-        margin: const EdgeInsets.only(right: 16, bottom: 8),
-        child: Card(
-          elevation: isHovered ? 6 : 3,
-          shadowColor: isHovered 
-              ? AppTheme.primaryColor.withOpacity(0.4) 
-              : Colors.black.withOpacity(0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: isHovered 
-                ? BorderSide(color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5)
-                : BorderSide.none,
-          ),
-          clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.only(right: 16, bottom: 8),
+      child: PremiumCard(
+        borderRadius: 20,
+        elevation: isHovered ? 8 : 4,
+        backgroundColor: Colors.white,
+        border: isHovered 
+            ? Border.all(color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5)
+            : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
           child: Container(
-            constraints: BoxConstraints(maxHeight: 350), // Contrainte de hauteur maximale
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  physics: NeverScrollableScrollPhysics(), // Empêche le défilement tout en permettant le contenu de déborder
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: IntrinsicHeight(
-                      child: Column(
+          constraints: BoxConstraints(maxHeight: 350), // Contrainte de hauteur maximale
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: NeverScrollableScrollPhysics(), // Empêche le défilement tout en permettant le contenu de déborder
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Image - hauteur fixe
@@ -458,6 +456,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
               },
             ),
           ),
+        ),
         ),
       ),
     );

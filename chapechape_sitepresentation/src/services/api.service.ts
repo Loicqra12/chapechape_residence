@@ -1,5 +1,5 @@
 // Configuration de l'API
-const API_BASE_URL = 'http://localhost:4000/api'; // TODO: Configurer via variables d'environnement
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
 // Types pour les requêtes
 export interface ContactFormData {
@@ -18,11 +18,47 @@ export interface NewsletterData {
   lastName?: string;
 }
 
+export interface Residence {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  address: string;
+  city: string;
+  country: string;
+  images: string[];
+  amenities: string[];
+  bedrooms: number;
+  bathrooms: number;
+  surface: number;
+  type: 'apartment' | 'villa' | 'studio' | 'penthouse';
+  status: 'available' | 'rented' | 'maintenance';
+  isPopular?: boolean;
+  rating?: number;
+  reviewsCount?: number;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
   data?: T;
   error?: string;
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface SearchParams {
+  page?: number;
+  limit?: number;
+  city?: string;
+  type?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  bedrooms?: number;
 }
 
 // Classe pour gérer les appels API
@@ -43,7 +79,7 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
       }
 
       return data;
@@ -52,6 +88,44 @@ class ApiService {
       throw error;
     }
   }
+
+  // --- Residences ---
+
+  // Récupérer toutes les résidences (avec pagination et filtres)
+  async getResidences(params: SearchParams = {}): Promise<ApiResponse<Residence[]>> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    return this.makeRequest<Residence[]>(`/residences?${queryParams.toString()}`);
+  }
+
+  // Rechercher des résidences
+  async searchResidences(params: SearchParams = {}): Promise<ApiResponse<Residence[]>> {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    return this.makeRequest<Residence[]>(`/residences/search?${queryParams.toString()}`);
+  }
+
+  // Récupérer une résidence par son ID
+  async getResidenceById(id: string): Promise<ApiResponse<Residence>> {
+    return this.makeRequest<Residence>(`/residences/${id}`);
+  }
+
+  // Récupérer les résidences populaires
+  async getPopularResidences(): Promise<ApiResponse<Residence[]>> {
+    return this.makeRequest<Residence[]>('/residences/popular');
+  }
+
+  // --- Website / Contact ---
 
   // Soumettre le formulaire de contact
   async submitContactForm(formData: ContactFormData): Promise<ApiResponse> {

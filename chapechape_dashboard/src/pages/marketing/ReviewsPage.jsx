@@ -25,13 +25,13 @@ import toast from 'react-hot-toast';
 // ============ COMPOSANTS RÉUTILISABLES ============
 
 // Composant Stats Card pour les avis
-const ReviewStatsCard = ({ 
-  icon: Icon, 
-  title, 
-  value, 
-  subtitle, 
-  trend, 
-  color = 'primary' 
+const ReviewStatsCard = ({
+  icon: Icon,
+  title,
+  value,
+  subtitle,
+  trend,
+  color = 'primary'
 }) => {
   const colorClasses = {
     primary: 'bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600',
@@ -47,22 +47,21 @@ const ReviewStatsCard = ({
           <Icon className="w-6 h-6" />
         </div>
         {trend && (
-          <div className={`flex items-center space-x-1 text-sm font-medium ${
-            trend.positive ? 'text-green-600' : 'text-red-600'
-          }`}>
+          <div className={`flex items-center space-x-1 text-sm font-medium ${trend.positive ? 'text-green-600' : 'text-red-600'
+            }`}>
             <TrendingUp className={`w-4 h-4 ${trend.positive ? '' : 'rotate-180'}`} />
             <span>{trend.value}</span>
           </div>
         )}
       </div>
-      
+
       <div className="mb-2">
         <h3 className="text-sm font-medium text-gray-600 mb-1 uppercase tracking-wide">
           {title}
         </h3>
         <p className="text-3xl font-bold text-gray-900">{value}</p>
       </div>
-      
+
       <div className="text-gray-500 text-sm">{subtitle}</div>
     </div>
   );
@@ -92,11 +91,10 @@ const ReviewCard = ({ review, onApprove, onReject, onReply, onFlag }) => {
     return Array.from({ length: 5 }, (_, index) => (
       <Star
         key={index}
-        className={`w-4 h-4 ${
-          index < rating
-            ? 'text-yellow-400 fill-current'
-            : 'text-gray-300'
-        }`}
+        className={`w-4 h-4 ${index < rating
+          ? 'text-yellow-400 fill-current'
+          : 'text-gray-300'
+          }`}
       />
     ));
   };
@@ -108,8 +106,8 @@ const ReviewCard = ({ review, onApprove, onReject, onReply, onFlag }) => {
         <div className="flex items-center space-x-3">
           <div className="relative">
             {review.user?.avatar ? (
-              <img 
-                src={review.user.avatar} 
+              <img
+                src={review.user.avatar}
                 alt={review.user.name}
                 className="w-12 h-12 rounded-full object-cover"
               />
@@ -129,7 +127,7 @@ const ReviewCard = ({ review, onApprove, onReject, onReply, onFlag }) => {
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusStyle(review.status)}`}>
             {getStatusLabel(review.status)}
@@ -143,10 +141,10 @@ const ReviewCard = ({ review, onApprove, onReject, onReply, onFlag }) => {
       {/* Rating */}
       <div className="flex items-center space-x-2 mb-4">
         <div className="flex space-x-1">
-          {renderStars(review.rating)}
+          {renderStars(typeof review.rating === 'number' ? review.rating : review.rating?.overall || 0)}
         </div>
         <span className="text-sm font-medium text-gray-700">
-          {review.rating}/5
+          {typeof review.rating === 'number' ? review.rating : review.rating?.overall || 0}/5
         </span>
       </div>
 
@@ -198,7 +196,7 @@ const ReviewCard = ({ review, onApprove, onReject, onReply, onFlag }) => {
             </>
           )}
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <button
             onClick={() => onReply(review)}
@@ -261,7 +259,7 @@ const FilterSection = ({ filter, setFilter, searchTerm, setSearchTerm }) => (
           />
         </div>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Statut
@@ -277,7 +275,7 @@ const FilterSection = ({ filter, setFilter, searchTerm, setSearchTerm }) => (
           <option value="rejected">Rejetés</option>
         </select>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Note minimale
@@ -335,11 +333,10 @@ const ReplyDialog = ({ isOpen, onClose, review, onSubmit }) => {
                 {Array.from({ length: 5 }, (_, index) => (
                   <Star
                     key={index}
-                    className={`w-4 h-4 ${
-                      index < review.rating
-                        ? 'text-yellow-400 fill-current'
-                        : 'text-gray-300'
-                    }`}
+                    className={`w-4 h-4 ${index < (typeof review.rating === 'number' ? review.rating : review.rating?.overall || 0)
+                      ? 'text-yellow-400 fill-current'
+                      : 'text-gray-300'
+                      }`}
                   />
                 ))}
               </div>
@@ -425,7 +422,7 @@ const ReviewsPage = () => {
   const handleApprove = async (reviewId) => {
     try {
       // Simuler l'approbation
-      setReviews(prev => prev.map(review => 
+      setReviews(prev => prev.map(review =>
         review.id === reviewId ? { ...review, status: 'approved' } : review
       ));
       toast.success('Avis approuvé avec succès');
@@ -437,7 +434,7 @@ const ReviewsPage = () => {
   const handleReject = async (reviewId) => {
     try {
       // Simuler le rejet
-      setReviews(prev => prev.map(review => 
+      setReviews(prev => prev.map(review =>
         review.id === reviewId ? { ...review, status: 'rejected' } : review
       ));
       toast.success('Avis rejeté');
@@ -454,7 +451,7 @@ const ReviewsPage = () => {
   const handleSubmitReply = async (reviewId, response) => {
     try {
       // Simuler l'ajout de réponse
-      setReviews(prev => prev.map(review => 
+      setReviews(prev => prev.map(review =>
         review.id === reviewId ? { ...review, response } : review
       ));
       toast.success('Réponse ajoutée avec succès');
@@ -475,8 +472,11 @@ const ReviewsPage = () => {
     const total = reviews.length;
     const approved = reviews.filter(r => r.status === 'approved').length;
     const pending = reviews.filter(r => r.status === 'pending').length;
-    const avgRating = reviews.length > 0 
-      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    const avgRating = reviews.length > 0
+      ? (reviews.reduce((sum, r) => {
+        const rating = typeof r.rating === 'number' ? r.rating : r.rating?.overall || 0;
+        return sum + rating;
+      }, 0) / reviews.length).toFixed(1)
       : 0;
 
     return [
@@ -517,10 +517,10 @@ const ReviewsPage = () => {
 
   const filteredReviews = reviews.filter(review => {
     const matchesFilter = filter === 'all' || review.status === filter;
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       review.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.comment?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesFilter && matchesSearch;
   });
 
@@ -574,7 +574,7 @@ const ReviewsPage = () => {
         </div>
 
         {/* Filtres */}
-        <FilterSection 
+        <FilterSection
           filter={filter}
           setFilter={setFilter}
           searchTerm={searchTerm}
@@ -605,7 +605,7 @@ const ReviewsPage = () => {
               Aucun avis trouvé
             </h3>
             <p className="text-gray-600">
-              {searchTerm || filter !== 'all' 
+              {searchTerm || filter !== 'all'
                 ? 'Aucun avis ne correspond à vos critères de recherche.'
                 : 'Aucun avis client n\'a encore été soumis.'
               }

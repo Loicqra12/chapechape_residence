@@ -10,6 +10,7 @@ import {
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import PermissionModal from '../../components/admin/PermissionModal';
+import { API_URL } from '../../config';
 
 const Permissions = () => {
   const { isSuperAdmin } = useAuth();
@@ -25,10 +26,15 @@ const Permissions = () => {
 
   const fetchPermissions = async () => {
     try {
-      const response = await fetch('/api/admin/permissions');
-      const data = await response.json();
+      const response = await fetch(`${API_URL}/admin/permissions`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const result = await response.json();
+      const data = result.data || [];  // Extract data and fallback to empty array
       setPermissions(data);
-      
+
       // Grouper les permissions par module
       const grouped = data.reduce((acc, permission) => {
         if (!acc[permission.module]) {
@@ -38,7 +44,7 @@ const Permissions = () => {
         return acc;
       }, {});
       setGroupedPermissions(grouped);
-      
+
       setLoading(false);
     } catch (error) {
       toast.error('Erreur lors du chargement des permissions');
@@ -52,7 +58,7 @@ const Permissions = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/permissions/${permissionId}`, {
+      const response = await fetch(`${API_URL}/admin/permissions/${permissionId}`, {
         method: 'DELETE',
       });
 

@@ -7,206 +7,145 @@ class FooterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDarkMode ? const Color(0xFF1A1A1A) : Colors.grey[50];
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final iconColor = const Color(0xFFD4AF37); // Gold
+
     return Container(
-      color: Colors.grey[100],
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      color: backgroundColor,
+      padding: const EdgeInsets.only(top: 32, bottom: 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Liens rapides
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // 1. Liens en Accordéon (ExpansionTiles)
+          _buildExpansionTile(
+            context,
+            title: 'À propos',
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              _buildFooterLink('Qui sommes-nous ?', isDarkMode: isDarkMode),
+              _buildFooterLink('Notre mission', isDarkMode: isDarkMode),
+              _buildFooterLink('Nos partenaires', isDarkMode: isDarkMode),
+              _buildFooterLink('Blog', isDarkMode: isDarkMode),
+            ],
+            isDarkMode: isDarkMode,
+          ),
+          _buildDivider(isDarkMode),
+          
+          _buildExpansionTile(
+            context,
+            title: 'Aide',
+            children: [
+              _buildFooterLink('Centre d\'aide', isDarkMode: isDarkMode),
+              _buildFooterLink('FAQ', isDarkMode: isDarkMode),
+              _buildFooterLink('Nous contacter', isDarkMode: isDarkMode),
+              _buildFooterLink('Signaler un problème', isDarkMode: isDarkMode),
+            ],
+            isDarkMode: isDarkMode,
+          ),
+          _buildDivider(isDarkMode),
+
+          _buildExpansionTile(
+            context,
+            title: 'Légal',
+            children: [
+              _buildFooterLink('Conditions d\'utilisation', isDarkMode: isDarkMode),
+              _buildFooterLink('Politique de confidentialité', isDarkMode: isDarkMode),
+              _buildFooterLink('Mentions légales', isDarkMode: isDarkMode),
+              _buildFooterLink('Cookies', isDarkMode: isDarkMode),
+            ],
+            isDarkMode: isDarkMode,
+          ),
+          _buildDivider(isDarkMode),
+
+          const SizedBox(height: 32),
+
+          // 2. Contact Compact
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                Text(
+                  'Besoin d\'aide ?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'À propos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    _buildCompactContactButton(
+                      icon: FontAwesomeIcons.whatsapp,
+                      label: 'WhatsApp',
+                      onTap: _launchWhatsApp,
+                      color: iconColor,
+                      isDarkMode: isDarkMode,
                     ),
-                    const SizedBox(height: 16),
-                    _buildFooterLink('Qui sommes-nous ?'),
-                    _buildFooterLink('Notre mission'),
-                    _buildFooterLink('Nos partenaires'),
-                    _buildFooterLink('Blog'),
+                    const SizedBox(width: 24),
+                    _buildCompactContactButton(
+                      icon: Icons.email_outlined,
+                      label: 'Email',
+                      onTap: _launchEmail,
+                      color: iconColor,
+                      isDarkMode: isDarkMode,
+                    ),
+                    const SizedBox(width: 24),
+                    _buildCompactContactButton(
+                      icon: Icons.chat_bubble_outline,
+                      label: 'Chat',
+                      onTap: _openChat,
+                      color: iconColor,
+                      isDarkMode: isDarkMode,
+                    ),
                   ],
                 ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Aide',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFooterLink('Centre d\'aide'),
-                    _buildFooterLink('FAQ'),
-                    _buildFooterLink('Nous contacter'),
-                    _buildFooterLink('Signaler un problème'),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Légal',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildFooterLink('Conditions d\'utilisation'),
-                    _buildFooterLink('Politique de confidentialité'),
-                    _buildFooterLink('Mentions légales'),
-                    _buildFooterLink('Cookies'),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+
           const SizedBox(height: 40),
 
-          // Contactez-nous
-          Column(
-            children: [
-              const Text(
-                'Contactez-nous',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildContactButton(
-                    icon: FontAwesomeIcons.whatsapp,
-                    text: 'WhatsApp',
-                    onTap: _launchWhatsApp,
-                  ),
-                  const SizedBox(width: 16),
-                  _buildContactButton(
-                    icon: Icons.email,
-                    text: 'Email',
-                    onTap: _launchEmail,
-                  ),
-                  const SizedBox(width: 16),
-                  _buildContactButton(
-                    icon: Icons.chat_bubble_outline,
-                    text: 'Chat',
-                    onTap: _openChat,
-                  ),
-                ],
-              ),
-            ],
-          ),
+          // 3. Paiements & Partenaires (Carrousel Grayscale)
+          _buildSectionTitle('Nos partenaires & Paiements', textColor),
+          const SizedBox(height: 16),
+          _buildLogosCarousel(isDarkMode),
+
           const SizedBox(height: 40),
 
-          // Méthodes de paiement
-          Column(
-            children: [
-              const Text(
-                'Méthodes de paiement',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          // 4. App Download
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildCompactStoreButton(
+                  icon: FontAwesomeIcons.appStore,
+                  onTap: () {},
+                  isDarkMode: isDarkMode,
                 ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _buildPaymentMethodLogo('assets/images/payment/visa.png'),
-                  _buildPaymentMethodLogo('assets/images/payment/mastercard.png'),
-                  _buildPaymentMethodLogo('assets/images/payment/paypal.png'),
-                  _buildPaymentMethodLogo('assets/images/payment/orange_money.png'),
-                  _buildPaymentMethodLogo('assets/images/payment/mtn_money.png'),
-                  _buildPaymentMethodLogo('assets/images/payment/moov_money.png'),
-                  _buildPaymentMethodLogo('assets/images/payment/wave_money.png'),
-                ],
-              ),
-            ],
+                const SizedBox(width: 16),
+                _buildCompactStoreButton(
+                  icon: FontAwesomeIcons.googlePlay,
+                  onTap: () {},
+                  isDarkMode: isDarkMode,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 40),
 
-          // Nos partenaires
-          Column(
-            children: [
-              const Text(
-                'Nos partenaires',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _buildPartnerLogo('assets/logos/partners/partner1_logo.png'),
-                  _buildPartnerLogo('assets/logos/partners/partner2_logo.png'),
-                  _buildPartnerLogo('assets/logos/partners/partner3_logo.png'),
-                  _buildPartnerLogo('assets/logos/partners/partner4_logo.png'),
-                  _buildPartnerLogo('assets/logos/partners/partner5_logo.png'),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 40),
-
-          // Téléchargez notre application
-          Column(
-            children: [
-              const Text(
-                'Téléchargez notre application',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  _buildStoreButton(
-                    'App Store',
-                    FontAwesomeIcons.appStoreIos,
-                    () {},
-                  ),
-                  _buildStoreButton(
-                    'Google Play',
-                    FontAwesomeIcons.googlePlay,
-                    () {},
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
 
           // Copyright
-          const Text(
-            ' 2025 ChapeChape Résidences. Tous droits réservés.',
-            style: TextStyle(
-              color: Colors.grey,
+          Center(
+            child: Text(
+              '© 2025 ChapeChape Résidences',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -214,91 +153,159 @@ class FooterWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterLink(String text) {
+  Widget _buildExpansionTile(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+    required bool isDarkMode,
+  }) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
+        iconColor: const Color(0xFFD4AF37),
+        collapsedIconColor: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+        childrenPadding: const EdgeInsets.only(bottom: 16, left: 16),
+        children: children.map((child) => Align(
+          alignment: Alignment.centerLeft,
+          child: child,
+        )).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDivider(bool isDarkMode) {
+    return Divider(
+      height: 1,
+      color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+    );
+  }
+
+  Widget _buildFooterLink(String text, {required bool isDarkMode}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       child: InkWell(
         onTap: () {},
         child: Text(
           text,
-          style: const TextStyle(
-            color: Colors.grey,
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 14,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildContactButton({
+  Widget _buildCompactContactButton({
     required IconData icon,
-    required String text,
+    required String label,
     required VoidCallback onTap,
+    required Color color,
+    required bool isDarkMode,
   }) {
     return InkWell(
       onTap: onTap,
-      child: Column(
-        children: [
-          Icon(icon, size: 30, color: const Color(0xFFFFD700)),
-          const SizedBox(height: 8),
-          Text(text),
-        ],
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+          ),
+        ),
+        child: Icon(icon, size: 20, color: color),
       ),
     );
   }
 
-  Widget _buildPaymentMethodLogo(String assetPath) {
+  Widget _buildSectionTitle(String title, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Image.asset(
-        assetPath,
-        height: 30,
-        width: 50,
-        fit: BoxFit.contain,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: color.withOpacity(0.7),
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 
-  Widget _buildPartnerLogo(String assetPath) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Image.asset(
-        assetPath,
-        height: 40,
-        width: 80,
-        fit: BoxFit.contain,
+  Widget _buildLogosCarousel(bool isDarkMode) {
+    final logos = [
+      'assets/images/payment/visa.png',
+      'assets/images/payment/mastercard.png',
+      'assets/images/payment/orange_money.png',
+      'assets/images/payment/mtn_money.png',
+      'assets/images/payment/wave_money.png',
+      'assets/logos/partners/partner1_logo.png',
+      'assets/logos/partners/partner2_logo.png',
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: logos.length,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Opacity(
+              opacity: 0.7,
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0,      0,      0,      1, 0,
+                ]),
+                child: Image.asset(
+                  logos[index],
+                  height: 30,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStoreButton(String text, IconData icon, VoidCallback onTap) {
+  Widget _buildCompactStoreButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool isDarkMode,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
+          color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black,
+          borderRadius: BorderRadius.circular(30),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
 
   Future<void> _launchWhatsApp() async {
-    const phoneNumber = '+2250000000000'; // Remplacer par le vrai numéro
+    const phoneNumber = '+2250000000000';
     final url = 'https://wa.me/$phoneNumber';
     await _launchURL(url);
   }

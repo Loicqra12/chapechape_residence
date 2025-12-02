@@ -6,11 +6,11 @@ import ResidencePlaceholder from './ResidencePlaceholders';
 const ResidenceTypes = () => {
   // Vérifier que les données sont correctement importées
   console.log('Types de résidences disponibles:', residenceTypes);
-  
+
   const [selectedType, setSelectedType] = useState<ResidenceType>(residenceTypes[0]);
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
   const containerRef = useRef(null);
-  
+
   // Vérification de la disponibilité des images
   useEffect(() => {
     const checkImages = async () => {
@@ -31,7 +31,7 @@ const ResidenceTypes = () => {
         }
       }
     };
-    
+
     checkImages();
   }, []);
 
@@ -47,11 +47,11 @@ const ResidenceTypes = () => {
     target: containerRef,
     offset: ["start end", "end start"]
   });
-  
+
   // Effet de parallaxe
   const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.3, 1, 1, 0.3]);
-  
+
   // Variants d'animation pour le conteneur
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -63,20 +63,20 @@ const ResidenceTypes = () => {
       }
     }
   };
-  
+
   // Fonction de gestion du changement de type
   const handleTypeChange = (type: ResidenceType) => {
     console.log('Type sélectionné:', type.name);
     setSelectedType(type);
   };
-  
+
   // Variants d'animation pour les cartes
   const cardVariants = {
-    hidden: { 
+    hidden: {
       opacity: 0,
       y: 50,
     },
-    visible: { 
+    visible: {
       opacity: 1,
       y: 0,
       transition: {
@@ -95,12 +95,12 @@ const ResidenceTypes = () => {
       }
     }
   };
-  
+
   // Variants d'animation pour l'image sélectionnée
   const selectedImageVariants = {
     initial: { opacity: 0, scale: 0.8 },
-    animate: { 
-      opacity: 1, 
+    animate: {
+      opacity: 1,
       scale: 1,
       transition: {
         type: "spring",
@@ -108,15 +108,15 @@ const ResidenceTypes = () => {
         damping: 20
       }
     },
-    exit: { 
-      opacity: 0, 
+    exit: {
+      opacity: 0,
       scale: 0.8,
-      transition: { 
+      transition: {
         duration: 0.3
       }
     }
   };
-  
+
   // Variants pour l'effet de particules dorées
   const glitterVariants = {
     animate: (i: number) => ({
@@ -131,26 +131,26 @@ const ResidenceTypes = () => {
       }
     })
   };
-  
+
   return (
     <section
       ref={containerRef}
-      className="relative py-24 overflow-hidden bg-gradient-to-b from-white to-secondary-50"
+      className="relative py-16 overflow-hidden bg-gradient-to-b from-white to-secondary-50"
     >
       {/* Arrière-plan avec dégradé */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(212,175,55,0.03),transparent_70%)] -z-10"
         style={{ y, opacity }}
       />
-      
+
       {/* Motif élégant en arrière-plan */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.02)_1px,transparent_1px),linear-gradient(45deg,rgba(212,175,55,0.02)_1px,transparent_1px)] bg-[size:50px_50px] -z-10"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.5 }}
       />
-      
+
       {/* Particules dorées subtiles */}
       <div className="absolute inset-0 overflow-hidden -z-5">
         {[...Array(15)].map((_, i) => (
@@ -169,52 +169,55 @@ const ResidenceTypes = () => {
           />
         ))}
       </div>
-      
-      <div className="container-custom">
+
+      <div className="mx-auto max-w-6xl px-6 lg:px-8 relative z-10">
         {/* Titre de la section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          className="text-center mb-16"
         >
-          <h2 className="text-3xl font-bold text-secondary-900 mb-4 font-display">Nos Types de Résidences</h2>
-          <motion.p 
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm border border-primary-100 text-primary-800 text-xs font-bold tracking-widest uppercase mb-6"
+          >
+            <span className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
+            Collection Exclusive
+          </motion.div>
+
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 font-display tracking-tight">
+            Nos Types de Résidences
+          </h2>
+
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-secondary-600 max-w-2xl mx-auto"
+            className="text-xl text-secondary-600 max-w-2xl mx-auto text-base font-light leading-relaxed"
           >
-            Découvrez notre sélection variée de résidences, conçues pour répondre à tous vos besoins et préférences.
+            Une sélection variée d'espaces de vie, conçus pour répondre à vos exigences de <span className="text-primary-600 font-medium">confort et de style</span>.
           </motion.p>
-          
-          {/* Ligne décorative dorée */}
-          <motion.div 
-            initial={{ width: 0 }}
-            whileInView={{ width: "80px" }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="h-1 bg-primary-300 mx-auto mt-6"
-          />
         </motion.div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Section de gauche - Visualisation avec parallax 3D */}
           <motion.div
-            className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-xl group perspective-1000"
+            className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl group perspective-1000 transition-all duration-500 border border-white/20"
             whileHover={{
-              rotateY: 5,
-              rotateX: 2,
+              scale: 1.02,
               transition: { duration: 0.4, ease: "easeOut" }
             }}
-            style={{
-              transformStyle: 'preserve-3d'
-            }}
           >
+            <div className="absolute inset-0 bg-secondary-900/10 group-hover:bg-transparent transition-colors duration-500 z-10 pointer-events-none" />
+
             <AnimatePresence mode="wait">
-              <motion.div 
+              <motion.div
                 key={selectedType.id}
                 variants={selectedImageVariants}
                 initial="initial"
@@ -224,45 +227,52 @@ const ResidenceTypes = () => {
               >
                 {/* Image avec parallax 3D effect */}
                 {selectedType.imageUrl && (imagesLoaded[selectedType.id] !== false) ? (
-                  <motion.div 
+                  <motion.div
                     className="w-full h-full bg-cover bg-center"
-                    style={{ 
+                    style={{
                       backgroundImage: `url(${selectedType.imageUrl})`,
-                      transform: 'translateZ(20px)'
                     }}
                     whileHover={{
                       scale: 1.1,
-                      rotateZ: 1,
-                      transition: { duration: 0.6, ease: "easeOut" }
+                      transition: { duration: 0.8, ease: "easeOut" }
                     }}
                   ></motion.div>
                 ) : (
                   <ResidencePlaceholder type={selectedType.id as any} className="w-full h-full" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/70 to-transparent">
-                  <div className="absolute bottom-0 left-0 p-6">
-                    <h3 className="text-2xl font-bold text-white mb-2">{selectedType.name}</h3>
-                    <p className="text-primary-300 text-sm mb-3">
-                      <span className="inline-block mr-1">★</span>
-                      <span className="inline-block mr-1">★</span>
-                      <span className="inline-block mr-1">★</span>
-                      <span className="inline-block mr-1">★</span>
-                      <span className="inline-block mr-1">★</span>
-                    </p>
-                    <motion.button
-                      initial={{ opacity: 0, y: 10 }}
+
+                {/* Overlay Gradient Premium */}
+                <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/90 via-secondary-900/20 to-transparent opacity-90">
+                  <div className="absolute bottom-0 left-0 p-8 w-full">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="px-4 py-2 bg-primary-300 text-secondary-900 rounded-full text-sm font-medium hover:bg-primary-400 transition-colors"
+                      transition={{ delay: 0.2 }}
                     >
-                      Voir disponibilités
-                    </motion.button>
+                      <h3 className="text-3xl font-display font-bold text-white mb-2 tracking-wide">{selectedType.name}</h3>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="flex text-primary-400">
+                          {[...Array(5)].map((_, i) => (
+                            <span key={i} className="text-sm">★</span>
+                          ))}
+                        </div>
+                        <span className="text-white/60 text-sm font-light uppercase tracking-wider">Premium Collection</span>
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-6 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white rounded-full text-sm font-medium hover:bg-white hover:text-secondary-900 transition-all duration-300"
+                      >
+                        Voir les disponibilités
+                      </motion.button>
+                    </motion.div>
                   </div>
                 </div>
               </motion.div>
             </AnimatePresence>
           </motion.div>
-          
+
           {/* Section de droite - Sélection et description */}
           <div>
             <motion.div
@@ -289,10 +299,10 @@ const ResidenceTypes = () => {
                     duration: 0.6
                   }}
                 />
-                
+
                 {residenceTypes.map((type, index) => {
                   const isSelected = selectedType.id === type.id;
-                  
+
                   return (
                     <motion.button
                       key={type.id}
@@ -301,13 +311,12 @@ const ResidenceTypes = () => {
                         console.log('Clic sur le bouton:', type.name);
                         handleTypeChange(type);
                       }}
-                      className={`relative z-10 inline-flex items-center justify-center px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer min-w-[120px] ${
-                        isSelected 
-                          ? 'text-secondary-900 font-semibold' 
-                          : 'text-secondary-600 hover:text-secondary-900'
-                      }`}
-                      whileHover={{ 
-                        y: -2, 
+                      className={`relative z-10 inline-flex items-center justify-center px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer min-w-[120px] ${isSelected
+                        ? 'text-secondary-900 font-semibold'
+                        : 'text-secondary-600 hover:text-secondary-900'
+                        }`}
+                      whileHover={{
+                        y: -2,
                         scale: 1.05,
                         transition: { duration: 0.2 }
                       }}
@@ -317,19 +326,19 @@ const ResidenceTypes = () => {
                       }}
                     >
                       {/* Glow effect au hover */}
-                      <motion.div 
+                      <motion.div
                         className="absolute inset-0 rounded-xl bg-primary-300/10 opacity-0"
                         whileHover={{ opacity: isSelected ? 0 : 1 }}
                         transition={{ duration: 0.2 }}
                       />
-                      
+
                       {type.name}
                     </motion.button>
                   );
                 })}
               </div>
             </motion.div>
-            
+
             <motion.div
               key={selectedType.id}
               initial={{ opacity: 0, y: 20 }}
@@ -339,16 +348,16 @@ const ResidenceTypes = () => {
             >
               <h4 className="text-xl font-bold text-secondary-900 mb-3">{selectedType.name}</h4>
               <p className="text-secondary-600 mb-6">{selectedType.description}</p>
-              
+
               <h5 className="text-md font-semibold text-secondary-800 mb-3">Caractéristiques</h5>
               {/* Checklist animée avec icônes en cascade - Style Stripe */}
               <div className="space-y-2 mb-6">
                 {selectedType.features.map((feature, index) => (
-                  <motion.div 
+                  <motion.div
                     key={`${selectedType.id}-${index}`}
                     initial={{ opacity: 0, x: -20, scale: 0.8 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
-                    transition={{ 
+                    transition={{
                       delay: index * 0.15,
                       type: "spring",
                       stiffness: 200,
@@ -361,7 +370,7 @@ const ResidenceTypes = () => {
                       className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-300/20 flex items-center justify-center mr-3 group-hover/item:bg-primary-300/30 transition-colors"
                       initial={{ scale: 0, rotate: -180 }}
                       animate={{ scale: 1, rotate: 0 }}
-                      transition={{ 
+                      transition={{
                         delay: index * 0.15 + 0.2,
                         type: "spring",
                         stiffness: 300,
@@ -373,14 +382,14 @@ const ResidenceTypes = () => {
                         transition: { duration: 0.4 }
                       }}
                     >
-                      <motion.svg 
+                      <motion.svg
                         className="w-3 h-3 text-primary-300"
-                        fill="none" 
-                        viewBox="0 0 24 24" 
+                        fill="none"
+                        viewBox="0 0 24 24"
                         stroke="currentColor"
                         initial={{ pathLength: 0 }}
                         animate={{ pathLength: 1 }}
-                        transition={{ 
+                        transition={{
                           delay: index * 0.15 + 0.4,
                           duration: 0.3
                         }}
@@ -388,12 +397,12 @@ const ResidenceTypes = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </motion.svg>
                     </motion.div>
-                    
+
                     {/* Texte avec effet de typing */}
                     <motion.span
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ 
+                      transition={{
                         delay: index * 0.15 + 0.3,
                         duration: 0.4
                       }}
@@ -404,7 +413,7 @@ const ResidenceTypes = () => {
                   </motion.div>
                 ))}
               </div>
-              
+
               {/* Gradient hover button premium - Style Stripe */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -412,10 +421,10 @@ const ResidenceTypes = () => {
                 transition={{ delay: 0.5 }}
                 className="flex justify-center md:justify-start"
               >
-                <motion.a 
-                  href="/residences" 
+                <motion.a
+                  href="/residences"
                   className="relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-300 via-primary-400 to-primary-300 text-secondary-900 rounded-full font-medium overflow-hidden group cursor-pointer"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     boxShadow: "0 20px 40px rgba(212, 175, 55, 0.3)",
                     transition: { duration: 0.3 }
@@ -436,23 +445,23 @@ const ResidenceTypes = () => {
                   }}
                 >
                   {/* Effet ripple au hover */}
-                  <motion.div 
+                  <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                     initial={{ x: '-100%' }}
-                    whileHover={{ 
+                    whileHover={{
                       x: '100%',
                       transition: { duration: 0.6, ease: "easeInOut" }
                     }}
                   />
-                  
+
                   {/* Glow effect premium */}
-                  <motion.div 
+                  <motion.div
                     className="absolute -inset-1 bg-gradient-to-r from-primary-300/50 via-primary-400/50 to-primary-300/50 rounded-full blur-md opacity-0 group-hover:opacity-100"
                     transition={{ duration: 0.3 }}
                   />
-                  
+
                   <span className="relative z-10">Explorer cette option</span>
-                  <motion.span 
+                  <motion.span
                     className="relative z-10 bg-secondary-900/20 w-6 h-6 rounded-full flex items-center justify-center"
                     whileHover={{ x: 5, rotate: 90 }}
                     transition={{ duration: 0.2 }}

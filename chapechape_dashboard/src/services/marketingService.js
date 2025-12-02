@@ -100,11 +100,9 @@ class MarketingService {
 
   async getReviews() {
     try {
-      const response = await axios.get(`${API_URL}/api/reviews`);
-      return {
-        success: true,
-        data: response.data
-      };
+      const response = await axios.get(`${API_URL}/reviews`);
+      // Le backend retourne déjà { success: true, data: [...], pagination: {...} }
+      return response.data;
     } catch (error) {
       return {
         success: false,

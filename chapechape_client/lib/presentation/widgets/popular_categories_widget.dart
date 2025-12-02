@@ -8,6 +8,7 @@ import '../../core/models/residence_type_enum.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/theme/app_theme.dart';
+import 'common/premium_card.dart';
 
 /// Widget amélioré affichant les catégories populaires avec des visuels attractifs,
 /// animations fluides, et support du mode sombre.
@@ -357,20 +358,16 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
         onTap: () {
           _navigateToCategory(category);
         },
-        borderRadius: BorderRadius.circular(16), // Rayon plus grand pour un look plus moderne
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: isDarkMode 
-                  ? AppTheme.primaryColor.withOpacity(0.2) 
-                  : Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                spreadRadius: 1,
-                offset: const Offset(0, 3),
-              ),
-            ],
+        borderRadius: BorderRadius.circular(20),
+        child: PremiumCard(
+          borderRadius: 20,
+          elevation: isHovered ? 8 : 4,
+          backgroundColor: isDarkMode 
+            ? AppTheme.primaryColor.withOpacity(0.1) 
+            : Colors.white,
+          border: Border.all(
+            color: isDarkMode ? Colors.white.withOpacity(0.1) : AppTheme.primaryColor.withOpacity(0.1),
+            width: 1,
           ),
           child: Stack(
             children: [
@@ -509,20 +506,15 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
   Widget _buildCarouselItem(Map<String, dynamic> category, int index, bool isActive, bool isDarkMode) {
     return GestureDetector(
       onTap: () => _navigateToCategory(category),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isDarkMode
-                ? AppTheme.primaryColor.withOpacity(isActive ? 0.25 : 0.15)
-                : Colors.black.withOpacity(isActive ? 0.15 : 0.08),
-              blurRadius: isActive ? 10 : 6,
-              spreadRadius: isActive ? 1 : 0,
-              offset: Offset(0, isActive ? 4 : 2),
-            ),
-          ],
+      child: PremiumCard(
+        borderRadius: 20,
+        elevation: isActive ? 10 : 4,
+        backgroundColor: isDarkMode
+          ? AppTheme.primaryColor.withOpacity(isActive ? 0.25 : 0.15)
+          : Colors.white,
+        border: Border.all(
+          color: isActive ? AppTheme.primaryColor : Colors.transparent,
+          width: isActive ? 2 : 0,
         ),
         child: Stack(
           children: [
@@ -645,18 +637,14 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       onExit: (_) => setState(() => _hoveredIndex = -1),
       child: GestureDetector(
         onTap: () => _navigateToCategory(category),
-        child: Container(
+        child: PremiumCard(
           height: 80,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isHovered ? 0.15 : 0.08),
-                blurRadius: isHovered ? 8 : 4,
-                offset: Offset(0, isHovered ? 4 : 2),
-              ),
-            ],
+          borderRadius: 12,
+          elevation: isHovered ? 8 : 4,
+          backgroundColor: Colors.white,
+          border: Border.all(
+            color: Colors.black.withOpacity(0.05),
+            width: 1,
           ),
           child: Row(
             children: [

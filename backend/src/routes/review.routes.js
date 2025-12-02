@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    createReview, 
-    getResidenceReviews, 
-    respondToReview, 
-    updateReview, 
-    deleteReview 
+const {
+    createReview,
+    getAllReviews,
+    getResidenceReviews,
+    respondToReview,
+    updateReview,
+    deleteReview
 } = require('../controllers/review.controller');
 const { protect } = require('../middlewares/auth.middleware');
 
@@ -32,6 +33,34 @@ const { protect } = require('../middlewares/auth.middleware');
  *           type: string
  *           description: ID of the reviewed residence
  */
+
+/**
+ * @swagger
+ * /api/reviews:
+ *   get:
+ *     summary: Get all reviews (Admin)
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           default: -createdAt
+ *     responses:
+ *       200:
+ *         description: List of all reviews
+ */
+router.get('/', getAllReviews);
 
 /**
  * @swagger

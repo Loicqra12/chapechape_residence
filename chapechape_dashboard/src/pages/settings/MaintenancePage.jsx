@@ -40,45 +40,75 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { maintenanceService } from '../../services/maintenanceService';
+import toast from 'react-hot-toast';
 
 const MaintenancePage = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [backups, setBackups] = useState([
-    {
-      id: 1,
-      name: 'backup_20250306_143000.zip',
-      size: '256MB',
-      date: '2025-03-06T14:30:00',
-      type: 'auto',
-      status: 'success'
-    },
-    // Autres sauvegardes...
-  ]);
-  const [systemStatus, setSystemStatus] = useState({
-    diskSpace: {
-      total: 1000,
-      used: 450,
-      available: 550
-    },
-    databaseSize: 120,
-    cacheSize: 25,
-    uploadSize: 305,
-    lastCleanup: '2025-03-01T10:00:00'
-  });
+  const [backups, setBackups] = useState([]);
+  const [systemStatus, setSystemStatus] = useState(null);
   const [openBackupDialog, setOpenBackupDialog] = useState(false);
   const [backupName, setBackupName] = useState('');
+
+  useEffect(() => {
+    loadSystemStatus();
+    loadBackups();
+    loadMaintenanceMode();
+  }, []);
+
+  const loadSystemStatus = async () => {
+    try {
+      const response = await maintenanceService.getSystemStatus();
+      if (response.success) {
+        setSystemStatus(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading system status:', error);
+    }
+  };
+
+  const loadBackups = async () => {
+    try {
+      const response = await maintenanceService.getBackups();
+      if (response.success) {
+        setBackups(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading backups:', error);
+    }
+  };
+
+  const loadMaintenanceMode = async () => {
+    try {
+      const response = await maintenanceService.getMaintenanceMode();
+      if (response.success) {
+        setMaintenanceMode(response.data.maintenanceMode);
+      }
+    } catch (error) {
+      console.error('Error loading maintenance mode:', error);
+    }
+  };
 
   const handleMaintenanceToggle = async () => {
     try {
       setLoading(true);
-      // TODO: Appel API pour activer/désactiver le mode maintenance
-      setMaintenanceMode(!maintenanceMode);
-      setSuccess(`Mode maintenance ${!maintenanceMode ? 'activé' : 'désactivé'}`);
+      const response = await maintenanceService.toggleMaintenanceMode(!maintenanceMode);
+
+      if (response.success) {
+        setMaintenanceMode(!maintenanceMode);
+        setSuccess(response.message);
+        toast.success(response.message);
+      } else {
+        setError(response.error);
+        toast.error(response.error);
+      }
     } catch (error) {
+      console.error('Error toggling maintenance mode:', error);
       setError('Erreur lors du changement du mode maintenance');
+      toast.error('Erreur lors du changement du mode maintenance');
     } finally {
       setLoading(false);
     }
@@ -88,21 +118,22 @@ const MaintenancePage = () => {
     if (!backupName) return;
     try {
       setLoading(true);
-      // TODO: Appel API pour créer une sauvegarde
-      const newBackup = {
-        id: Date.now(),
-        name: backupName,
-        size: '0MB',
-        date: new Date().toISOString(),
-        type: 'manual',
-        status: 'pending'
-      };
-      setBackups([newBackup, ...backups]);
-      setOpenBackupDialog(false);
-      setBackupName('');
-      setSuccess('Sauvegarde lancée avec succès');
+      const response = await maintenanceService.createBackup(backupName);
+
+      if (response.success) {
+        setOpenBackupDialog(false);
+        setBackupName('');
+        setSuccess(response.message);
+        toast.success(response.message);
+        loadBackups(); // Reload backups list
+      } else {
+        setError(response.error);
+        toast.error(response.error);
+      }
     } catch (error) {
+      console.error('Error creating backup:', error);
       setError('Erreur lors de la création de la sauvegarde');
+      toast.error('Erreur lors de la création de la sauvegarde');
     } finally {
       setLoading(false);
     }
@@ -111,11 +142,20 @@ const MaintenancePage = () => {
   const handleDeleteBackup = async (backupId) => {
     try {
       setLoading(true);
-      // TODO: Appel API pour supprimer la sauvegarde
-      setBackups(backups.filter(b => b.id !== backupId));
-      setSuccess('Sauvegarde supprimée avec succès');
+      const response = await maintenanceService.deleteBackup(backupId);
+
+      if (response.success) {
+        setSuccess(response.message);
+        toast.success(response.message);
+        loadBackups(); // Reload backups list
+      } else {
+        setError(response.error);
+        toast.error(response.error);
+      }
     } catch (error) {
+      console.error('Error deleting backup:', error);
       setError('Erreur lors de la suppression de la sauvegarde');
+      toast.error('Erreur lors de la suppression');
     } finally {
       setLoading(false);
     }
@@ -124,10 +164,20 @@ const MaintenancePage = () => {
   const handleCleanup = async (type) => {
     try {
       setLoading(true);
-      // TODO: Appel API pour le nettoyage
-      setSuccess(`Nettoyage ${type} effectué avec succès`);
+      const response = await maintenanceService.cleanup(type);
+
+      if (response.success) {
+        setSuccess(response.data.message);
+        toast.success(response.data.message);
+        loadSystemStatus(); // Reload system status to reflect changes
+      } else {
+        setError(response.error);
+        toast.error(response.error);
+      }
     } catch (error) {
+      console.error('Error during cleanup:', error);
       setError(`Erreur lors du nettoyage ${type}`);
+      toast.error(`Erreur lors du nettoyage ${type}`);
     } finally {
       setLoading(false);
     }
@@ -190,63 +240,67 @@ const MaintenancePage = () => {
         {/* État du Système */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="État du Système"
               avatar={<BuildIcon />}
             />
             <CardContent>
-              <List>
-                <ListItem>
-                  <ListItemIcon>
-                    <StorageIcon />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Espace Disque"
-                    secondary={`${formatSize(systemStatus.diskSpace.used)} utilisés sur ${formatSize(systemStatus.diskSpace.total)}`}
-                  />
-                  <LinearProgress 
-                    variant="determinate"
-                    value={(systemStatus.diskSpace.used / systemStatus.diskSpace.total) * 100}
-                    sx={{ width: 100, ml: 2 }}
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon>
-                    <StorageIcon />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Taille Base de Données"
-                    secondary={`${formatSize(systemStatus.databaseSize)}`}
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon>
-                    <StorageIcon />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Taille Cache"
-                    secondary={`${formatSize(systemStatus.cacheSize)}`}
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon>
-                    <UploadIcon />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Taille Fichiers Uploadés"
-                    secondary={`${formatSize(systemStatus.uploadSize)}`}
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon>
-                    <ScheduleIcon />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary="Dernier Nettoyage"
-                    secondary={formatDate(systemStatus.lastCleanup)}
-                  />
-                </ListItem>
-              </List>
+              {systemStatus ? (
+                <List>
+                  <ListItem>
+                    <ListItemIcon>
+                      <StorageIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Espace Disque"
+                      secondary={`${systemStatus.disk?.used || 0}GB utilisés sur ${systemStatus.disk?.total || 0}GB`}
+                    />
+                    <LinearProgress
+                      variant="determinate"
+                      value={systemStatus.disk ? (systemStatus.disk.used / systemStatus.disk.total) * 100 : 0}
+                      sx={{ width: 100, ml: 2 }}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <StorageIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Taille Base de Données"
+                      secondary={`${systemStatus.database?.size || 0}GB`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <StorageIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Taille Cache"
+                      secondary={`${systemStatus.cache?.size || 0}GB`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <UploadIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Taille Fichiers Uploadés"
+                      secondary={`${systemStatus.uploads?.size || 0}GB`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <ScheduleIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Uptime Système"
+                      secondary={systemStatus.uptime?.formatted || 'N/A'}
+                    />
+                  </ListItem>
+                </List>
+              ) : (
+                <Typography>Chargement...</Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -254,7 +308,7 @@ const MaintenancePage = () => {
         {/* Actions de Maintenance */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Actions de Maintenance"
               avatar={<CleanupIcon />}
             />
@@ -313,7 +367,7 @@ const MaintenancePage = () => {
         {/* Sauvegardes */}
         <Grid item xs={12}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Sauvegardes"
               avatar={<BackupIcon />}
               action={
@@ -358,7 +412,7 @@ const MaintenancePage = () => {
                     <ListItemSecondaryAction>
                       <IconButton
                         edge="end"
-                        onClick={() => {/* TODO: Télécharger */}}
+                        onClick={() => {/* TODO: Télécharger */ }}
                         disabled={backup.status !== 'success'}
                         sx={{ mr: 1 }}
                       >
@@ -381,8 +435,8 @@ const MaintenancePage = () => {
       </Grid>
 
       {/* Dialog Nouvelle Sauvegarde */}
-      <Dialog 
-        open={openBackupDialog} 
+      <Dialog
+        open={openBackupDialog}
         onClose={() => setOpenBackupDialog(false)}
         maxWidth="sm"
         fullWidth
@@ -404,7 +458,7 @@ const MaintenancePage = () => {
           <Button onClick={() => setOpenBackupDialog(false)}>
             Annuler
           </Button>
-          <Button 
+          <Button
             variant="contained"
             onClick={handleCreateBackup}
             disabled={!backupName}

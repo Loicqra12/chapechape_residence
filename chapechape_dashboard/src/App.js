@@ -63,23 +63,23 @@ function App() {
                         <Layout>
                           <Routes>
                             <Route path="/dashboard" element={<DashboardPage />} />
-                            
+
                             {/* Routes Marketing */}
                             <Route path="/marketing/reviews" element={<ReviewsPage />} />
                             <Route path="/marketing/promotions" element={<PromotionsPage />} />
                             <Route path="/marketing/campaigns" element={<CampaignsPage />} />
-                            
+
                             {/* Routes Immobilier */}
                             <Route path="/properties" element={<Properties />} />
                             <Route path="/property-types" element={<PropertyTypes />} />
                             <Route path="/amenities" element={<Amenities />} />
                             <Route path="/media" element={<Media />} />
-                            
+
                             {/* Routes Réservations */}
                             <Route path="/bookings/calendar" element={<BookingCalendar />} />
                             <Route path="/bookings/list" element={<BookingList />} />
                             <Route path="/bookings/checkin" element={<CheckInPage />} />
-                            
+
                             {/* Routes Finance */}
                             <Route path="/finance/transactions" element={<TransactionsPage />} />
                             <Route path="/finance/payments" element={<PaymentsPage />} />
@@ -94,13 +94,13 @@ function App() {
                             <Route path="/communication/messages" element={<MessagesPage />} />
                             <Route path="/communication/notifications" element={<NotificationsPage />} />
                             <Route path="/communication/support" element={<SupportPage />} />
-                            
+
                             {/* Routes Administration */}
                             <Route path="/admin/administrators" element={<Administrators />} />
                             <Route path="/admin/roles" element={<Roles />} />
                             <Route path="/admin/permissions" element={<Permissions />} />
                             <Route path="/admin/logs" element={<SystemLogs />} />
-                            
+
                             {/* Routes Utilisateurs */}
                             <Route path="/users/clients" element={<ClientsPage />} />
                             <Route path="/users/partners" element={<PartnersPage />} />
@@ -109,7 +109,7 @@ function App() {
                             <Route path="/settings" element={<SettingsPage />} />
                             <Route path="/settings/security" element={<SecurityPage />} />
                             <Route path="/settings/maintenance" element={<MaintenancePage />} />
-                            
+
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />
                           </Routes>
                         </Layout>

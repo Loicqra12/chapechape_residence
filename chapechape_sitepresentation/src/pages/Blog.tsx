@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { apiService, validateNewsletterForm, type NewsletterData } from '../services/api.service'
 import { trackContactForm } from '../components/analytics/GoogleAnalytics'
+import { useToast } from '../components/ui/ToastProvider'
 
 // Données des articles de blog
 const blogPosts = [
@@ -104,7 +105,7 @@ const categories = [
 
 const Blog = () => {
   const [activeCategory, setActiveCategory] = useState("tous")
-  
+
   // État pour le formulaire newsletter
   const [newsletterData, setNewsletterData] = useState<NewsletterData>({
     email: '',
@@ -114,6 +115,8 @@ const Blog = () => {
   const [isSubmittingNewsletter, setIsSubmittingNewsletter] = useState(false)
   const [newsletterErrors, setNewsletterErrors] = useState<string[]>([])
   const [newsletterSuccess, setNewsletterSuccess] = useState(false)
+
+  const { showToast } = useToast()
 
   // Gestion de la soumission newsletter
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
@@ -125,6 +128,7 @@ const Blog = () => {
     const errors = validateNewsletterForm(newsletterData)
     if (errors.length > 0) {
       setNewsletterErrors(errors)
+      showToast('Veuillez corriger les erreurs dans le formulaire', 'error')
       return
     }
 
@@ -132,72 +136,100 @@ const Blog = () => {
 
     try {
       const response = await apiService.subscribeNewsletter(newsletterData)
-      
+
       if (response.success) {
         setNewsletterSuccess(true)
+        showToast('Inscription à la newsletter réussie !', 'success')
         // Tracker l'événement Google Analytics
         trackContactForm('newsletter')
         setNewsletterData({ email: '', firstName: '', lastName: '' })
       } else {
-        setNewsletterErrors([response.message || 'Une erreur est survenue lors de l\'inscription.'])
+        const errorMsg = response.message || 'Une erreur est survenue lors de l\'inscription.'
+        setNewsletterErrors([errorMsg])
+        showToast(errorMsg, 'error')
       }
     } catch (error) {
       console.error('Erreur lors de l\'inscription à la newsletter:', error)
-      setNewsletterErrors(['Une erreur est survenue. Veuillez réessayer plus tard.'])
+      const errorMsg = 'Une erreur est survenue. Veuillez réessayer plus tard.'
+      setNewsletterErrors([errorMsg])
+      showToast(errorMsg, 'error')
     } finally {
       setIsSubmittingNewsletter(false)
     }
   }
 
   // Filtrer les articles par catégorie
-  const filteredPosts = activeCategory === "tous" 
-    ? blogPosts 
+  const filteredPosts = activeCategory === "tous"
+    ? blogPosts
     : blogPosts.filter(post => post.category === activeCategory)
 
   return (
     <div className="bg-white">
-      {/* Hero section */}
-      <div className="relative bg-secondary-900 py-24 px-6 sm:py-32 sm:px-12">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary-900 to-secondary-800 opacity-90" />
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-20" 
-            style={{ backgroundImage: 'url(/assets/blog/hero-bg.jpg)' }}
-          />
+      {/* Hero Section Harmonisé */}
+      <section className="relative py-32 bg-secondary-900 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-b from-secondary-900/50 via-secondary-900/80 to-white" />
+
+        {/* Golden particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute rounded-full bg-primary-400/20 blur-xl"
+              style={{
+                width: Math.random() * 150 + 50 + 'px',
+                height: Math.random() * 150 + 50 + 'px',
+                left: Math.random() * 100 + '%',
+                top: Math.random() * 100 + '%',
+              }}
+              animate={{
+                y: [0, -100, 0],
+                x: [0, Math.random() * 50 - 25, 0],
+                opacity: [0, 0.4, 0],
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
         </div>
-        <div className="relative mx-auto max-w-7xl">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+
+        <div className="container mx-auto px-4 max-w-6xl relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
+            transition={{ duration: 0.8 }}
           >
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Blog ChapeChape
+            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-primary-300 text-xs font-bold tracking-widest uppercase mb-6">
+              Actualités & Conseils
+            </span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
+              Le Blog <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">ChapeChape</span>
             </h1>
-            <p className="mt-6 max-w-lg mx-auto text-xl text-primary-200">
-              Actualités, conseils et tendances sur l'immobilier en Afrique de l'Ouest.
+            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+              Restez informé des dernières tendances du marché immobilier, découvrez nos conseils d'experts et suivez l'actualité de ChapeChape Residence.
             </p>
           </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Main content */}
-      <div className="container-custom py-16 sm:py-24">
+      <div className="container mx-auto px-4 max-w-7xl py-16 sm:py-24">
         {/* Filtres */}
         <div className="mb-16">
-          <h2 className="text-xl font-semibold text-secondary-900 mb-6 text-center">
+          <h2 className="text-xl font-semibold text-secondary-900 mb-6 text-center font-display">
             Explorer par catégorie
           </h2>
           <div className="flex flex-wrap justify-center gap-3">
             {categories.map(category => (
               <button
                 key={category.id}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  activeCategory === category.id 
-                    ? 'bg-primary-300 text-secondary-900 shadow-md' 
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${activeCategory === category.id
+                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-gray-100 text-secondary-600 hover:bg-gray-200'
+                  }`}
                 onClick={() => setActiveCategory(category.id)}
               >
                 {category.name}
@@ -215,30 +247,32 @@ const Blog = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full"
+              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col h-full border border-gray-100 group"
             >
-              <div className="overflow-hidden h-48">
-                <img 
-                  src={post.image} 
+              <div className="overflow-hidden h-56 relative">
+                <div className="absolute inset-0 bg-secondary-900/10 group-hover:bg-secondary-900/0 transition-colors z-10" />
+                <img
+                  src={post.image}
                   alt={post.title}
-                  className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
                 />
-              </div>
-              <div className="p-6 flex-grow flex flex-col">
-                <div className="mb-4">
-                  <span className="inline-block px-3 py-1 text-xs font-semibold bg-primary-100 text-primary-600 rounded-full">
+                <div className="absolute top-4 left-4 z-20">
+                  <span className="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-primary-600 rounded-full shadow-sm">
                     {categories.find(cat => cat.id === post.category)?.name || post.category}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-secondary-900 mb-3">{post.title}</h3>
-                <p className="text-secondary-600 mb-4 flex-grow">{post.excerpt}</p>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-secondary-100">
+              </div>
+              <div className="p-8 flex-grow flex flex-col">
+                <h3 className="text-xl font-bold text-secondary-900 mb-3 font-display group-hover:text-primary-600 transition-colors">{post.title}</h3>
+                <p className="text-secondary-600 mb-6 flex-grow leading-relaxed">{post.excerpt}</p>
+
+                <div className="flex items-center justify-between mt-auto pt-6 border-t border-gray-100">
                   <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-primary-100 mr-3">
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-primary-100 mr-3 ring-2 ring-white shadow-sm">
                       {post.authorImage ? (
-                        <img 
-                          src={post.authorImage} 
-                          alt={post.author} 
+                        <img
+                          src={post.authorImage}
+                          alt={post.author}
                           className="h-full w-full object-cover"
                         />
                       ) : (
@@ -248,46 +282,48 @@ const Blog = () => {
                       )}
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-secondary-900">{post.author}</span>
+                      <span className="font-bold text-secondary-900 block">{post.author}</span>
+                      <span className="text-xs text-gray-500">{post.date}</span>
                     </div>
                   </div>
-                  <div className="text-xs text-secondary-500">
-                    {post.date} · {post.readTime} de lecture
+                  <div className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-md">
+                    {post.readTime}
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-secondary-50">
-                <a
-                  href={`/blog/${post.id}`}
-                  className="inline-flex items-center text-primary-500 hover:text-primary-600 font-medium"
-                >
-                  Lire l'article
-                  <svg className="ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
+              <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center group-hover:bg-primary-50/30 transition-colors">
+                <span className="text-sm font-medium text-gray-500">Lire la suite</span>
+                <svg className="w-5 h-5 text-primary-500 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
               </div>
             </motion.div>
           ))}
         </div>
 
         {/* Newsletter */}
-        <div className="mt-24 bg-secondary-900 rounded-2xl p-8 sm:p-12">
-          <div className="max-w-3xl mx-auto">
-            <motion.div 
+        <div className="mt-24 bg-secondary-900 rounded-3xl p-8 sm:p-16 relative overflow-hidden shadow-2xl">
+          {/* Background pattern */}
+          <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-5 mix-blend-overlay" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
+
+          <div className="max-w-3xl mx-auto relative z-10">
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               className="text-center"
             >
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Recevez nos actualités immobilières
+              <h2 className="text-3xl font-bold text-white mb-6 font-display">
+                Restez connecté à l'immobilier
               </h2>
-              <p className="text-primary-200 mb-8">
-                Inscrivez-vous à notre newsletter pour recevoir nos derniers articles, conseils et 
-                nouvelles du marché immobilier en Afrique de l'Ouest.
+              <p className="text-primary-100 mb-10 text-lg">
+                Inscrivez-vous à notre newsletter pour recevoir nos derniers articles, conseils exclusifs et
+                opportunités d'investissement en avant-première.
               </p>
+
               <form onSubmit={handleNewsletterSubmit} className="space-y-4 max-w-lg mx-auto">
                 {/* Champs prénom et nom (optionnels) */}
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -296,17 +332,17 @@ const Blog = () => {
                     placeholder="Prénom (optionnel)"
                     value={newsletterData.firstName}
                     onChange={(e) => setNewsletterData(prev => ({ ...prev, firstName: e.target.value }))}
-                    className="px-4 py-3 rounded-lg bg-white text-secondary-900 placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all duration-200"
+                    className="px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:bg-white/20 transition-all duration-200 w-full"
                   />
                   <input
                     type="text"
                     placeholder="Nom (optionnel)"
                     value={newsletterData.lastName}
                     onChange={(e) => setNewsletterData(prev => ({ ...prev, lastName: e.target.value }))}
-                    className="px-4 py-3 rounded-lg bg-white text-secondary-900 placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all duration-200"
+                    className="px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:bg-white/20 transition-all duration-200 w-full"
                   />
                 </div>
-                
+
                 {/* Email (obligatoire) et bouton */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   <input
@@ -315,21 +351,21 @@ const Blog = () => {
                     value={newsletterData.email}
                     onChange={(e) => setNewsletterData(prev => ({ ...prev, email: e.target.value }))}
                     required
-                    className="px-4 py-3 rounded-lg flex-grow bg-white text-secondary-900 placeholder-secondary-500 focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all duration-200"
+                    className="px-4 py-3 rounded-xl flex-grow bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:bg-white/20 transition-all duration-200"
                   />
                   <motion.button
                     type="submit"
                     disabled={isSubmittingNewsletter}
-                    whileHover={{ scale: isSubmittingNewsletter ? 1 : 1.02 }}
-                    whileTap={{ scale: isSubmittingNewsletter ? 1 : 0.98 }}
-                    className="btn-primary whitespace-nowrap relative overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
+                    whileHover={{ scale: isSubmittingNewsletter ? 1 : 1.05 }}
+                    whileTap={{ scale: isSubmittingNewsletter ? 1 : 0.95 }}
+                    className="btn-primary whitespace-nowrap relative overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-primary-500/30"
                   >
                     {isSubmittingNewsletter ? (
                       <span className="flex items-center">
-                        <motion.svg 
-                          className="animate-spin -ml-1 mr-3 h-4 w-4" 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          fill="none" 
+                        <motion.svg
+                          className="animate-spin -ml-1 mr-3 h-4 w-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
                           viewBox="0 0 24 24"
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -344,7 +380,7 @@ const Blog = () => {
                     )}
                   </motion.button>
                 </div>
-                
+
                 {/* Affichage des erreurs */}
                 <AnimatePresence>
                   {newsletterErrors.length > 0 && (
@@ -352,7 +388,7 @@ const Blog = () => {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg"
+                      className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl backdrop-blur-sm"
                     >
                       <ul className="list-disc list-inside space-y-1">
                         {newsletterErrors.map((error, index) => (
@@ -362,7 +398,7 @@ const Blog = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
-                
+
                 {/* Message de succès */}
                 <AnimatePresence>
                   {newsletterSuccess && (
@@ -370,7 +406,7 @@ const Blog = () => {
                       initial={{ opacity: 0, y: -10, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                      className="bg-green-100 border border-green-300 text-green-700 px-4 py-3 rounded-lg flex items-center"
+                      className="bg-green-500/20 border border-green-500/50 text-green-200 px-4 py-3 rounded-xl flex items-center backdrop-blur-sm"
                     >
                       <motion.svg
                         className="w-5 h-5 mr-2"
@@ -388,7 +424,7 @@ const Blog = () => {
                   )}
                 </AnimatePresence>
               </form>
-              <p className="text-primary-200/80 text-xs mt-4">
+              <p className="text-gray-400 text-xs mt-6">
                 Vous pouvez vous désinscrire à tout moment. En vous inscrivant, vous acceptez notre politique de confidentialité.
               </p>
             </motion.div>
@@ -399,4 +435,4 @@ const Blog = () => {
   )
 }
 
-export default Blog 
+export default Blog

@@ -13,91 +13,336 @@ import {
   XMarkIcon,
   SwatchIcon,
   WindowIcon,
-  HomeIcon
+  HomeIcon,
+  BeakerIcon,
+  BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
 
 const amenities = [
+  // Connectivité & Multimédia
   {
     id: 'wifi',
     name: 'Wi-Fi',
     icon: WifiIcon,
-    description: 'Internet haut débit gratuit',
-    features: ['Haut débit', 'Gratuit', 'Couverture complète'],
+    description: 'Internet sans fil',
+    features: ['Haut débit', 'Gratuit'],
     color: 'blue'
   },
   {
-    id: 'ac',
+    id: 'fiber_optic',
+    name: 'Fibre Optique',
+    icon: WifiIcon,
+    description: 'Connexion internet très haut débit',
+    features: ['Très haut débit', 'Stable'],
+    color: 'blue'
+  },
+  {
+    id: 'ethernet',
+    name: 'Ethernet',
+    icon: WifiIcon,
+    description: 'Prise réseau filaire',
+    features: ['Connexion filaire', 'Stable'],
+    color: 'blue'
+  },
+  {
+    id: 'tv',
+    name: 'Télévision',
+    icon: WindowIcon,
+    description: 'Téléviseur disponible',
+    features: ['Chaînes câblées', 'Smart TV'],
+    color: 'gray'
+  },
+
+  // Confort & Climatisation
+  {
+    id: 'air_conditioning',
     name: 'Climatisation',
     icon: SunIcon,
-    description: 'Climatisation dans toutes les pièces',
-    features: ['Toutes les pièces', 'Contrôle individuel', 'Économie d\'énergie'],
+    description: 'Air conditionné',
+    features: ['Réglable', 'Toutes pièces'],
     color: 'cyan'
   },
   {
-    id: 'parking',
-    name: 'Parking',
-    icon: Square2StackIcon,
-    description: 'Parking sécurisé disponible',
-    features: ['Sécurisé', 'Disponible', 'Facile d\'accès'],
+    id: 'fan',
+    name: 'Ventilateur',
+    icon: SunIcon,
+    description: 'Ventilateur sur pied ou mural',
+    features: ['Ventilation', 'Mobile'],
+    color: 'cyan'
+  },
+  {
+    id: 'ceiling_fan',
+    name: 'Ventilateur Plafond',
+    icon: SunIcon,
+    description: 'Ventilateur de plafond',
+    features: ['Silencieux', 'Efficace'],
+    color: 'cyan'
+  },
+  {
+    id: 'hot_water',
+    name: 'Eau Chaude',
+    icon: BeakerIcon,
+    description: 'Eau chaude disponible',
+    features: ['Douche', 'Cuisine'],
+    color: 'red'
+  },
+
+  // Cuisine & Électroménager
+  {
+    id: 'kitchen',
+    name: 'Cuisine',
+    icon: HomeModernIcon,
+    description: 'Espace cuisine disponible',
+    features: ['Évier', 'Plan de travail'],
+    color: 'orange'
+  },
+  {
+    id: 'full_kitchen',
+    name: 'Cuisine Équipée',
+    icon: HomeModernIcon,
+    description: 'Cuisine entièrement équipée',
+    features: ['Four', 'Plaques', 'Frigo'],
+    color: 'orange'
+  },
+  {
+    id: 'kitchenette',
+    name: 'Kitchenette',
+    icon: HomeModernIcon,
+    description: 'Petite cuisine d\'appoint',
+    features: ['Compact', 'Basique'],
+    color: 'orange'
+  },
+  {
+    id: 'shared_kitchen',
+    name: 'Cuisine Partagée',
+    icon: HomeModernIcon,
+    description: 'Cuisine commune',
+    features: ['Partage', 'Équipé'],
+    color: 'orange'
+  },
+  {
+    id: 'refrigerator',
+    name: 'Réfrigérateur',
+    icon: HomeModernIcon,
+    description: 'Réfrigérateur disponible',
+    features: ['Froid', 'Conservation'],
     color: 'gray'
   },
+  {
+    id: 'microwave',
+    name: 'Micro-ondes',
+    icon: HomeModernIcon,
+    description: 'Four micro-ondes',
+    features: ['Réchauffage', 'Rapide'],
+    color: 'gray'
+  },
+  {
+    id: 'oven',
+    name: 'Four',
+    icon: HomeModernIcon,
+    description: 'Four traditionnel',
+    features: ['Cuisson', 'Pâtisserie'],
+    color: 'gray'
+  },
+
+  // Extérieur & Détente
   {
     id: 'pool',
     name: 'Piscine',
     icon: HomeModernIcon,
-    description: 'Piscine privée ou commune',
-    features: ['Entretenue', 'Sécurisée', 'Accessible'],
+    description: 'Accès piscine',
+    features: ['Baignade', 'Détente'],
     color: 'blue'
-  },
-  {
-    id: 'gym',
-    name: 'Salle de sport',
-    icon: HomeModernIcon,
-    description: 'Équipements de fitness modernes',
-    features: ['Équipement moderne', 'Accessible', 'Entretenu'],
-    color: 'red'
-  },
-  {
-    id: 'security',
-    name: 'Sécurité 24/7',
-    icon: ShieldCheckIcon,
-    description: 'Gardiennage et vidéosurveillance',
-    features: ['24/7', 'Gardiennage', 'Vidéosurveillance'],
-    color: 'green'
-  },
-  {
-    id: 'elevator',
-    name: 'Ascenseur',
-    icon: BuildingOfficeIcon,
-    description: 'Accès facile aux étages supérieurs',
-    features: ['Moderne', 'Sécurisé', 'Accessible PMR'],
-    color: 'purple'
   },
   {
     id: 'garden',
     name: 'Jardin',
     icon: SwatchIcon,
-    description: 'Zone verte aménagée',
-    features: ['Aménagé', 'Entretenu', 'Espace détente'],
+    description: 'Espace vert',
+    features: ['Verdure', 'Calme'],
     color: 'green'
   },
   {
-    id: 'balcony',
-    name: 'Balcon/Terrasse',
+    id: 'terrace',
+    name: 'Terrasse',
     icon: WindowIcon,
-    description: 'Vue extérieure privée',
-    features: ['Privé', 'Vue dégagée', 'Espace extérieur'],
+    description: 'Terrasse aménagée',
+    features: ['Extérieur', 'Repas'],
     color: 'yellow'
   },
   {
-    id: 'furnished',
-    name: 'Meublé',
+    id: 'balcony',
+    name: 'Balcon',
+    icon: WindowIcon,
+    description: 'Balcon privé',
+    features: ['Vue', 'Air frais'],
+    color: 'yellow'
+  },
+  {
+    id: 'gym',
+    name: 'Salle de Sport',
+    icon: HomeModernIcon,
+    description: 'Espace fitness',
+    features: ['Musculation', 'Cardio'],
+    color: 'red'
+  },
+  {
+    id: 'spa',
+    name: 'Spa / Bien-être',
+    icon: HomeModernIcon,
+    description: 'Espace détente et soins',
+    features: ['Massage', 'Sauna'],
+    color: 'purple'
+  },
+
+  // Services & Commodités
+  {
+    id: 'parking',
+    name: 'Parking',
+    icon: Square2StackIcon,
+    description: 'Place de stationnement',
+    features: ['Sécurisé', 'Privé'],
+    color: 'gray'
+  },
+  {
+    id: 'elevator',
+    name: 'Ascenseur',
+    icon: BuildingOfficeIcon,
+    description: 'Accès étages',
+    features: ['Pratique', 'Accessible'],
+    color: 'gray'
+  },
+  {
+    id: 'cleaning',
+    name: 'Ménage',
     icon: HomeIcon,
-    description: 'Entièrement équipé et meublé',
-    features: ['Équipé', 'Meublé', 'Prêt à vivre'],
-    color: 'orange'
+    description: 'Service de ménage inclus',
+    features: ['Propreté', 'Régulier'],
+    color: 'green'
+  },
+  {
+    id: 'laundry',
+    name: 'Laverie / Pressing',
+    icon: HomeIcon,
+    description: 'Service de linge',
+    features: ['Lavage', 'Repassage'],
+    color: 'blue'
+  },
+  {
+    id: 'restaurant',
+    name: 'Restaurant',
+    icon: BuildingStorefrontIcon,
+    description: 'Restauration sur place',
+    features: ['Repas', 'Carte'],
+    color: 'red'
+  },
+  {
+    id: 'bar',
+    name: 'Bar',
+    icon: BuildingStorefrontIcon,
+    description: 'Bar sur place',
+    features: ['Boissons', 'Détente'],
+    color: 'purple'
+  },
+  {
+    id: 'room_service',
+    name: 'Room Service',
+    icon: HomeIcon,
+    description: 'Service en chambre',
+    features: ['Repas', 'Confort'],
+    color: 'pink'
+  },
+  {
+    id: 'meeting_room',
+    name: 'Salle de Réunion',
+    icon: BuildingOfficeIcon,
+    description: 'Espace de travail pro',
+    features: ['Professionnel', 'Équipé'],
+    color: 'gray'
+  },
+
+  // Sécurité & Infrastructures
+  {
+    id: 'security',
+    name: 'Sécurité 24/7',
+    icon: ShieldCheckIcon,
+    description: 'Dispositif de sécurité',
+    features: ['Gardien', 'Surveillance'],
+    color: 'green'
+  },
+  {
+    id: 'security_guard',
+    name: 'Gardien',
+    icon: ShieldCheckIcon,
+    description: 'Agent de sécurité sur place',
+    features: ['Présence', 'Contrôle'],
+    color: 'green'
+  },
+  {
+    id: 'cctv',
+    name: 'Vidéosurveillance',
+    icon: ShieldCheckIcon,
+    description: 'Caméras de sécurité',
+    features: ['Enregistrement', 'Dissuasion'],
+    color: 'green'
+  },
+  {
+    id: 'alarm_system',
+    name: 'Alarme',
+    icon: ShieldCheckIcon,
+    description: 'Système d\'alarme',
+    features: ['Protection', 'Alerte'],
+    color: 'red'
+  },
+  {
+    id: 'generator',
+    name: 'Groupe Électrogène',
+    icon: SunIcon,
+    description: 'Alimentation de secours',
+    features: ['Autonomie', 'Continuité'],
+    color: 'yellow'
+  },
+  {
+    id: 'solar_energy',
+    name: 'Énergie Solaire',
+    icon: SunIcon,
+    description: 'Panneaux solaires',
+    features: ['Écologique', 'Économie'],
+    color: 'yellow'
+  },
+  {
+    id: 'inverter',
+    name: 'Onduleur',
+    icon: SunIcon,
+    description: 'Système de secours électrique',
+    features: ['Batterie', 'Relais'],
+    color: 'yellow'
+  },
+  {
+    id: 'electricity',
+    name: 'Électricité',
+    icon: SunIcon,
+    description: 'Raccordement électrique',
+    features: ['Stable', 'Compteur'],
+    color: 'yellow'
+  },
+  {
+    id: 'water_tank',
+    name: 'Réservoir d\'Eau',
+    icon: BeakerIcon,
+    description: 'Réserve d\'eau autonome',
+    features: ['Autonomie', 'Secours'],
+    color: 'blue'
+  },
+  {
+    id: 'running_water',
+    name: 'Eau Courante',
+    icon: BeakerIcon,
+    description: 'Raccordement eau de ville',
+    features: ['SODECI', 'Pression'],
+    color: 'blue'
   }
 ];
 
@@ -356,7 +601,7 @@ const Amenities = () => {
       setLoading(true);
       setError(null);
       const response = await adminService.getAllAmenities();
-      
+
       if (response.success) {
         // Transformer les données backend pour correspondre à l'interface
         const transformedAmenities = response.data.map(amenity => ({

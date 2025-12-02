@@ -6,8 +6,8 @@ import ThemeToggle from '../ui/ThemeToggle'
 
 const navigation = [
   { name: 'Accueil', href: '/' },
-  { 
-    name: 'Résidences', 
+  {
+    name: 'Résidences',
     href: '/residences',
     submenu: [
       { name: 'Tous les types', href: '/residences' },
@@ -15,10 +15,10 @@ const navigation = [
       { name: 'Villas luxueuses', href: '/residences/villas' },
       { name: 'Studios', href: '/residences/studios' },
       { name: 'Duplex & Lofts', href: '/residences/duplex' },
-    ] 
+    ]
   },
-  { 
-    name: 'Services', 
+  {
+    name: 'Services',
     href: '/services',
     submenu: [
       { name: 'Pour propriétaires', href: '/services/owners' },
@@ -27,8 +27,8 @@ const navigation = [
       { name: 'Conciergerie', href: '/services/concierge' },
     ]
   },
-  { 
-    name: 'À propos', 
+  {
+    name: 'À propos',
     href: '/about',
     submenu: [
       { name: 'Notre vision', href: '/about' },
@@ -37,8 +37,8 @@ const navigation = [
     ]
   },
   { name: 'Applications', href: '/apps' },
-  { 
-    name: 'Ressources', 
+  {
+    name: 'Ressources',
     href: '/resources',
     submenu: [
       { name: 'Blog', href: '/blog' },
@@ -57,9 +57,9 @@ export default function Navbar() {
   console.log('Mobile menu open:', mobileMenuOpen)
 
   const toggleSubMenu = (name: string) => {
-    setOpenSubMenus(prev => 
-      prev.includes(name) 
-        ? prev.filter(item => item !== name) 
+    setOpenSubMenus(prev =>
+      prev.includes(name)
+        ? prev.filter(item => item !== name)
         : [...prev, name]
     )
   }
@@ -69,19 +69,19 @@ export default function Navbar() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-8" aria-label="Global">
         <div className="flex lg:flex-1">
           <Link to="/" className="-m-1.5 p-1.5 group">
-            <img 
-              src="/assets/logo.png" 
-              alt="ChapeChape Residence" 
-              className="h-10 w-auto transition-transform duration-200 group-hover:scale-105" 
+            <img
+              src="/assets/logo.png"
+              alt="ChapeChape Residence"
+              className="h-10 w-auto transition-transform duration-200 group-hover:scale-105"
             />
           </Link>
         </div>
-        
+
         {/* Theme Toggle - Desktop */}
         <div className="hidden lg:flex lg:items-center lg:gap-x-4">
           <ThemeToggle />
         </div>
-        
+
         <div className="flex lg:hidden">
           <button
             type="button"
@@ -99,13 +99,27 @@ export default function Navbar() {
           {navigation.map((item) => (
             item.submenu ? (
               <div key={item.name} className="relative group">
-                <div className="flex items-center gap-x-1 text-sm font-medium leading-6 text-primary-300 hover:text-primary-400 transition-all duration-200 px-3 py-2 rounded-lg hover:bg-secondary-800 cursor-pointer">
+                <button
+                  className="flex items-center gap-x-1 text-sm font-medium leading-6 text-primary-300 hover:text-primary-400 transition-all duration-200 px-3 py-2 rounded-lg hover:bg-secondary-800 cursor-pointer"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      // Toggle menu visibility by focusing on first submenu item
+                      const firstLink = e.currentTarget.nextElementSibling?.querySelector('a')
+                      if (firstLink instanceof HTMLElement) {
+                        firstLink.focus()
+                      }
+                    }
+                  }}
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
                   {item.name}
                   <ChevronDownIcon className="h-4 w-4 transition-transform duration-200 text-primary-400 group-hover:rotate-180 group-hover:text-primary-300" />
-                </div>
-                
+                </button>
+
                 {/* Dropdown au survol */}
-                <div className="absolute z-10 mt-2 w-screen max-w-md transform px-4 sm:px-0 lg:max-w-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out">
+                <div className="absolute z-10 mt-2 w-screen max-w-md transform px-4 sm:px-0 lg:max-w-xs opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all duration-200 ease-out">
                   <div className="overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 border border-gray-100">
                     <div className="relative grid gap-1 p-4">
                       {item.submenu.map((subItem, index) => (
@@ -142,10 +156,10 @@ export default function Navbar() {
           <div className="fixed inset-y-0 left-0 w-full overflow-y-auto bg-secondary-900 px-6 py-6 sm:max-w-sm border-r border-primary-300/20 shadow-2xl" style={{ zIndex: 999999 }}>
             <div className="flex items-center justify-between">
               <Link to="/" className="-m-1.5 p-1.5">
-                <img 
-                  src="/assets/logo.png" 
-                  alt="ChapeChape Residence" 
-                  className="h-10 w-auto" 
+                <img
+                  src="/assets/logo.png"
+                  alt="ChapeChape Residence"
+                  className="h-10 w-auto"
                 />
               </Link>
               <button
@@ -164,7 +178,7 @@ export default function Navbar() {
                     <Fragment key={item.name}>
                       {item.submenu ? (
                         <>
-                          <div 
+                          <div
                             className="flex items-center justify-between -mx-3 rounded-xl px-4 py-3 text-base font-medium leading-7 text-primary-300 hover:bg-secondary-800 hover:text-primary-400 cursor-pointer transition-all duration-200"
                             onClick={() => toggleSubMenu(item.name)}
                           >

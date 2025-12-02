@@ -12,6 +12,7 @@ import 'multilevel_location_selector.dart';
 import 'animated_search_field.dart';
 import 'animated_filter_option.dart';
 import 'date_range_picker_widget.dart';
+import 'common/premium_card.dart';
 
 class AdvancedSearchWidget extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSearch;

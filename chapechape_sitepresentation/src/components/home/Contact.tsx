@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { MapPinIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 import { apiService, getErrorMessage, type ContactFormData } from '../../services/api.service'
 import { trackContactForm } from '../analytics/GoogleAnalytics'
+import { useToast } from '../../components/ui/ToastProvider'
 
 const Contact = () => {
   const [formState, setFormState] = useState({
@@ -19,7 +20,7 @@ const Contact = () => {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [focusedField, setFocusedField] = useState<string | null>(null)
-  const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const containerRef = useRef(null)
 
   const { scrollYProgress } = useScroll({
@@ -32,7 +33,7 @@ const Contact = () => {
 
   const validateField = (name: string, value: string) => {
     const newErrors = { ...errors }
-    
+
     switch (name) {
       case 'firstName':
         if (!value.trim()) newErrors.firstName = 'Le prénom est requis'
@@ -69,7 +70,7 @@ const Contact = () => {
         else delete newErrors.message
         break
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -88,24 +89,29 @@ const Contact = () => {
     setFocusedField(null)
   }
 
+  const { showToast } = useToast()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Valider tous les champs requis
     const isValid = ['firstName', 'lastName', 'email', 'subject', 'message'].every(key => {
       return validateField(key, formState[key as keyof typeof formState])
     })
-    
+
     // Valider le téléphone s'il est renseigné
     if (formState.phone) {
       validateField('phone', formState.phone)
     }
-    
-    if (!isValid || Object.keys(errors).length > 0) return
-    
+
+    if (!isValid || Object.keys(errors).length > 0) {
+      showToast('Veuillez corriger les erreurs dans le formulaire', 'error')
+      return
+    }
+
     setIsSubmitting(true)
     setSubmitError(null)
-    
+
     try {
       // Préparer les données pour l'API
       const contactData: ContactFormData = {
@@ -117,16 +123,17 @@ const Contact = () => {
         subject: formState.subject || undefined,
         message: formState.message,
       }
-      
+
       // Envoyer à l'API backend
       const response = await apiService.submitContactForm(contactData)
-      
+
       if (response.success) {
         setIsSubmitted(true)
-        
+        showToast('Votre message a été envoyé avec succès !', 'success')
+
         // Tracker l'événement Google Analytics
         trackContactForm('contact')
-        
+
         setFormState({
           firstName: '',
           lastName: '',
@@ -137,17 +144,21 @@ const Contact = () => {
           message: '',
         })
         setErrors({})
-        
+
         // Reset le message de succès après 5 secondes
         setTimeout(() => {
           setIsSubmitted(false)
         }, 5000)
       } else {
-        setSubmitError(response.message || 'Erreur lors de l\'envoi du message')
+        const errorMsg = response.message || 'Erreur lors de l\'envoi du message'
+        setSubmitError(errorMsg)
+        showToast(errorMsg, 'error')
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi du formulaire:', error)
-      setSubmitError(getErrorMessage(error))
+      const errorMsg = getErrorMessage(error)
+      setSubmitError(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -155,7 +166,7 @@ const Contact = () => {
 
   return (
     <section id="contact" className="py-24 bg-white dark:bg-secondary-900">
-      <div className="container-custom">
+      <div className="container-custom max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -177,8 +188,9 @@ const Contact = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="bg-white dark:bg-secondary-800 rounded-xl shadow-xl p-8"
+            className="bg-white dark:bg-secondary-800 rounded-xl shadow-2xl p-8 border border-secondary-100 dark:border-secondary-700 relative overflow-hidden"
           >
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-300 via-primary-500 to-primary-300"></div>
             {isSubmitted ? (
               <div className="flex flex-col items-center justify-center h-full py-12">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
@@ -212,13 +224,12 @@ const Contact = () => {
                         onFocus={() => handleFocus('firstName')}
                         onBlur={handleBlur}
                         required
-                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${
-                          focusedField === 'firstName'
-                            ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                            : errors.firstName
+                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${focusedField === 'firstName'
+                          ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                          : errors.firstName
                             ? 'border-red-300 shadow-lg shadow-red-300/25'
                             : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
-                        }`}
+                          }`}
                         placeholder="Votre prénom"
                       />
                       <AnimatePresence>
@@ -256,13 +267,12 @@ const Contact = () => {
                         onFocus={() => handleFocus('lastName')}
                         onBlur={handleBlur}
                         required
-                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${
-                          focusedField === 'lastName'
-                            ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                            : errors.lastName
+                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${focusedField === 'lastName'
+                          ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                          : errors.lastName
                             ? 'border-red-300 shadow-lg shadow-red-300/25'
                             : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
-                        }`}
+                          }`}
                         placeholder="Votre nom"
                       />
                       <AnimatePresence>
@@ -300,13 +310,12 @@ const Contact = () => {
                         onFocus={() => handleFocus('email')}
                         onBlur={handleBlur}
                         required
-                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${
-                          focusedField === 'email'
-                            ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                            : errors.email
+                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${focusedField === 'email'
+                          ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                          : errors.email
                             ? 'border-red-300 shadow-lg shadow-red-300/25'
                             : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
-                        }`}
+                          }`}
                         placeholder="votre@email.com"
                       />
                       <AnimatePresence>
@@ -346,13 +355,12 @@ const Contact = () => {
                         onChange={handleChange}
                         onFocus={() => handleFocus('phone')}
                         onBlur={handleBlur}
-                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${
-                          focusedField === 'phone'
-                            ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                            : errors.phone
+                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${focusedField === 'phone'
+                          ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                          : errors.phone
                             ? 'border-red-300 shadow-lg shadow-red-300/25'
                             : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
-                        }`}
+                          }`}
                         placeholder="+33 1 23 45 67 89"
                       />
                       <AnimatePresence>
@@ -389,11 +397,10 @@ const Contact = () => {
                         onChange={handleChange}
                         onFocus={() => handleFocus('company')}
                         onBlur={handleBlur}
-                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${
-                          focusedField === 'company'
-                            ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                            : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
-                        }`}
+                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white ${focusedField === 'company'
+                          ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                          : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
+                          }`}
                         placeholder="Votre entreprise (optionnel)"
                       />
                     </div>
@@ -430,50 +437,49 @@ const Contact = () => {
                     Sujet *
                   </label>
                   <div className="relative">
-                      <select
-                        id="subject"
-                        name="subject"
-                        value={formState.subject}
-                        onChange={handleChange}
-                        onFocus={() => handleFocus('subject')}
-                        onBlur={handleBlur}
-                        required
-                        className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white appearance-none cursor-pointer ${
-                          focusedField === 'subject'
-                            ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                            : errors.subject
-                            ? 'border-red-300 shadow-lg shadow-red-300/25'
-                            : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
+                    <select
+                      id="subject"
+                      name="subject"
+                      value={formState.subject}
+                      onChange={handleChange}
+                      onFocus={() => handleFocus('subject')}
+                      onBlur={handleBlur}
+                      required
+                      className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white appearance-none cursor-pointer ${focusedField === 'subject'
+                        ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                        : errors.subject
+                          ? 'border-red-300 shadow-lg shadow-red-300/25'
+                          : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
                         }`}
-                      >
-                        <option value="">Sélectionnez un sujet</option>
-                        <option value="general">Renseignement général</option>
-                        <option value="partnership">Devenir partenaire</option>
-                        <option value="support">Support technique</option>
-                        <option value="other">Autre</option>
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                      <AnimatePresence>
-                        {errors.subject && (
-                          <motion.p
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="text-red-500 text-sm mt-1 flex items-center"
-                          >
-                            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            {errors.subject}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
+                    >
+                      <option value="">Sélectionnez un sujet</option>
+                      <option value="general">Renseignement général</option>
+                      <option value="partnership">Devenir partenaire</option>
+                      <option value="support">Support technique</option>
+                      <option value="other">Autre</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
-                  </motion.div>
+                    <AnimatePresence>
+                      {errors.subject && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="text-red-500 text-sm mt-1 flex items-center"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {errors.subject}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -493,13 +499,12 @@ const Contact = () => {
                       onFocus={() => handleFocus('message')}
                       onBlur={handleBlur}
                       required
-                      className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white resize-none ${
-                        focusedField === 'message'
-                          ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
-                          : errors.message
+                      className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-300 dark:bg-secondary-700 dark:text-white resize-none ${focusedField === 'message'
+                        ? 'border-primary-300 shadow-lg shadow-primary-300/25 ring-4 ring-primary-300/10'
+                        : errors.message
                           ? 'border-red-300 shadow-lg shadow-red-300/25'
                           : 'border-secondary-300 dark:border-secondary-600 hover:border-primary-200 dark:hover:border-primary-400'
-                      }`}
+                        }`}
                       placeholder="Décrivez votre demande en détail..."
                     ></textarea>
                     <div className="absolute bottom-3 right-3 text-xs text-secondary-400">
@@ -533,16 +538,16 @@ const Contact = () => {
                     disabled={isSubmitting}
                     whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
                     whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-                    className="w-full relative overflow-hidden bg-gradient-to-r from-primary-300 to-primary-400 hover:from-primary-400 hover:to-primary-500 text-white font-semibold py-4 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed group"
+                    className="w-full btn-primary disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     <div className="relative flex items-center justify-center">
                       {isSubmitting ? (
                         <>
-                          <motion.svg 
-                            className="animate-spin -ml-1 mr-3 h-5 w-5" 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            fill="none" 
+                          <motion.svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
                             viewBox="0 0 24 24"
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -555,11 +560,11 @@ const Contact = () => {
                       ) : (
                         <>
                           Envoyer le message
-                          <motion.svg 
+                          <motion.svg
                             className="ml-2 w-5 h-5"
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24" 
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg"
                             initial={{ x: -10, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -586,16 +591,16 @@ const Contact = () => {
             className="space-y-8 relative"
           >
             {/* Background parallax elements */}
-            <motion.div 
+            <motion.div
               className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-primary-200/20 to-primary-300/20 rounded-full blur-xl"
               style={{ y, opacity }}
             />
-            <motion.div 
+            <motion.div
               className="absolute top-1/2 -left-10 w-24 h-24 bg-gradient-to-br from-primary-300/20 to-primary-400/20 rounded-full blur-lg"
               style={{ y: useTransform(scrollYProgress, [0, 1], [-50, 50]), opacity }}
             />
             {/* Email Card */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -605,9 +610,9 @@ const Contact = () => {
             >
               {/* Gradient overlay on hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary-50/50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
+
               <div className="relative flex items-start">
-                <motion.div 
+                <motion.div
                   className="flex-shrink-0"
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.6, type: "spring", stiffness: 300 }}
@@ -617,7 +622,7 @@ const Contact = () => {
                   </div>
                 </motion.div>
                 <div className="ml-6">
-                  <motion.h3 
+                  <motion.h3
                     className="text-xl font-bold text-secondary-900 dark:text-white mb-2"
                     whileHover={{ x: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -627,17 +632,17 @@ const Contact = () => {
                   <p className="text-secondary-600 dark:text-secondary-300 mb-3">
                     Vous préférez l'email ? Contactez-nous à :
                   </p>
-                  <motion.a 
-                    href="mailto:contact@chapechaperesidence.com" 
+                  <motion.a
+                    href="mailto:contact@chapechaperesidence.com"
                     className="inline-flex items-center text-primary-400 hover:text-primary-500 font-semibold group/link"
                     whileHover={{ x: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     contact@chapechaperesidence.com
-                    <motion.svg 
-                      className="ml-2 w-4 h-4" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <motion.svg
+                      className="ml-2 w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                       whileHover={{ x: 3 }}
                       transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -650,7 +655,7 @@ const Contact = () => {
             </motion.div>
 
             {/* Address Card */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -660,9 +665,9 @@ const Contact = () => {
             >
               {/* Gradient overlay on hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
+
               <div className="relative flex items-start">
-                <motion.div 
+                <motion.div
                   className="flex-shrink-0"
                   whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
                   transition={{ duration: 0.6, type: "spring", stiffness: 300 }}
@@ -672,7 +677,7 @@ const Contact = () => {
                   </div>
                 </motion.div>
                 <div className="ml-6">
-                  <motion.h3 
+                  <motion.h3
                     className="text-xl font-bold text-secondary-900 dark:text-white mb-2"
                     whileHover={{ x: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -682,7 +687,7 @@ const Contact = () => {
                   <p className="text-secondary-600 dark:text-secondary-300 mb-3">
                     Visitez nos bureaux à Abidjan :
                   </p>
-                  <motion.div 
+                  <motion.div
                     className="text-secondary-700 dark:text-secondary-300 mb-4 leading-relaxed"
                     whileHover={{ x: 3 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -692,19 +697,19 @@ const Contact = () => {
                     92HH+CVM Riviera, Abidjan<br />
                     Côte d'Ivoire
                   </motion.div>
-                  <motion.a 
-                    href="https://maps.app.goo.gl/1iBVEeDp6Q58RSB69" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                  <motion.a
+                    href="https://maps.app.goo.gl/1iBVEeDp6Q58RSB69"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center text-blue-500 hover:text-blue-600 font-semibold group/link"
                     whileHover={{ x: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     Voir sur Google Maps
-                    <motion.svg 
-                      className="ml-2 w-4 h-4" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <motion.svg
+                      className="ml-2 w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                       whileHover={{ rotate: 45, scale: 1.1 }}
                       transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -717,7 +722,7 @@ const Contact = () => {
             </motion.div>
 
             {/* Support Card */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -727,9 +732,9 @@ const Contact = () => {
             >
               {/* Gradient overlay on hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
+
               <div className="relative flex items-start">
-                <motion.div 
+                <motion.div
                   className="flex-shrink-0"
                   whileHover={{ scale: 1.1, rotate: 360 }}
                   transition={{ duration: 0.8, type: "spring", stiffness: 200 }}
@@ -741,7 +746,7 @@ const Contact = () => {
                   </div>
                 </motion.div>
                 <div className="ml-6">
-                  <motion.h3 
+                  <motion.h3
                     className="text-xl font-bold text-secondary-900 dark:text-white mb-2"
                     whileHover={{ x: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -751,17 +756,17 @@ const Contact = () => {
                   <p className="text-secondary-600 dark:text-secondary-300 mb-3">
                     Besoin d'aide avec nos applications ?
                   </p>
-                  <motion.a 
-                    href="mailto:support@chapechaperesidence.com" 
+                  <motion.a
+                    href="mailto:support@chapechaperesidence.com"
                     className="inline-flex items-center text-purple-500 hover:text-purple-600 font-semibold group/link"
                     whileHover={{ x: 5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     support@chapechaperesidence.com
-                    <motion.svg 
-                      className="ml-2 w-4 h-4" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <motion.svg
+                      className="ml-2 w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                       whileHover={{ x: 3 }}
                       transition={{ type: "spring", stiffness: 400, damping: 10 }}

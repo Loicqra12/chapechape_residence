@@ -46,16 +46,16 @@ const Testimonials = () => {
   const [direction, setDirection] = useState(0)
   const intervalRef = useRef<number | null>(null)
   const containerRef = useRef(null)
-  
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
   })
-  
+
   // Effets de parallaxe
   const y = useTransform(scrollYProgress, [0, 1], [50, -50])
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.3, 1, 1, 0.3])
-  
+
   // Défilement automatique des témoignages
   useEffect(() => {
     const startAutoSlide = () => {
@@ -64,36 +64,36 @@ const Testimonials = () => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % testimonials.length)
       }, 8000)
     }
-    
+
     startAutoSlide()
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
     }
   }, [])
-  
+
   // Réinitialiser le timer lors du changement manuel
   const handleSlideChange = (index: number) => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
-    
+
     setDirection(index > currentIndex ? 1 : -1)
     setCurrentIndex(index)
-    
+
     intervalRef.current = window.setInterval(() => {
       setDirection(1)
       setCurrentIndex((prevIndex) => (prevIndex + 1) % testimonials.length)
     }, 8000)
   }
-  
+
   // Fonction pour naviguer au témoignage suivant
   const goToNext = () => {
     setDirection(1)
     setCurrentIndex((prevIndex) => (prevIndex + 1) % testimonials.length)
-    
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = window.setInterval(() => {
@@ -102,12 +102,12 @@ const Testimonials = () => {
       }, 8000)
     }
   }
-  
+
   // Fonction pour naviguer au témoignage précédent
   const goToPrevious = () => {
     setDirection(-1)
     setCurrentIndex((prevIndex) => (prevIndex - 1 + testimonials.length) % testimonials.length)
-    
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = window.setInterval(() => {
@@ -116,7 +116,7 @@ const Testimonials = () => {
       }, 8000)
     }
   }
-  
+
   // Variants d'animation pour le conteneur
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -128,7 +128,7 @@ const Testimonials = () => {
       }
     }
   }
-  
+
   // Variants d'animation pour le témoignage
   const cardVariants = {
     enter: (direction: number) => ({
@@ -155,7 +155,7 @@ const Testimonials = () => {
       }
     })
   }
-  
+
   // Variants pour l'effet de scintillement de l'étoile
   const starGlowVariants = {
     initial: { opacity: 0.3, scale: 1 },
@@ -169,7 +169,7 @@ const Testimonials = () => {
       }
     }
   }
-  
+
   // Variantes pour les quotes
   const quoteVariants = {
     hidden: { opacity: 0, scale: 0 },
@@ -184,7 +184,7 @@ const Testimonials = () => {
       }
     }
   }
-  
+
   // Effet de particules dorées
   const glitterVariants = {
     animate: (i: number) => ({
@@ -199,26 +199,26 @@ const Testimonials = () => {
       }
     })
   }
-  
+
   return (
-    <section 
+    <section
       ref={containerRef}
       className="relative py-24 overflow-hidden"
     >
       {/* Arrière-plan avec dégradé */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-white -z-10"
         style={{ y, opacity }}
       />
-      
+
       {/* Motif élégant en arrière-plan */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.03)_1px,transparent_1px),linear-gradient(45deg,rgba(212,175,55,0.03)_1px,transparent_1px)] bg-[size:30px_30px] -z-10"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.5 }}
       />
-      
+
       {/* Symboles de guillemets géants en arrière-plan */}
       <div className="absolute top-20 left-10 opacity-5 text-primary-300 text-[200px] font-serif">
         <motion.div
@@ -240,7 +240,7 @@ const Testimonials = () => {
           "
         </motion.div>
       </div>
-      
+
       {/* Particules dorées subtiles */}
       <div className="absolute inset-0 overflow-hidden -z-5">
         {[...Array(20)].map((_, i) => (
@@ -259,7 +259,7 @@ const Testimonials = () => {
           />
         ))}
       </div>
-      
+
       <div className="container-custom">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -269,7 +269,7 @@ const Testimonials = () => {
           className="text-center mb-16"
         >
           <h2 className="text-3xl font-bold text-secondary-900 mb-4 font-display">Ce que disent nos utilisateurs</h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -278,9 +278,9 @@ const Testimonials = () => {
           >
             Découvrez les témoignages de nos clients satisfaits qui ont trouvé la résidence de leurs rêves grâce à ChapeChape Residence.
           </motion.p>
-          
+
           {/* Ligne décorative dorée */}
-          <motion.div 
+          <motion.div
             initial={{ width: 0 }}
             whileInView={{ width: "80px" }}
             viewport={{ once: true }}
@@ -288,7 +288,7 @@ const Testimonials = () => {
             className="h-1 bg-primary-300 mx-auto mt-6"
           />
         </motion.div>
-        
+
         <div className="relative max-w-4xl mx-auto px-4">
           {/* Contrôles de navigation */}
           <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 flex justify-between z-10 pointer-events-none">
@@ -313,7 +313,7 @@ const Testimonials = () => {
               </svg>
             </motion.button>
           </div>
-          
+
           {/* Témoignages */}
           <motion.div
             variants={containerVariants}
@@ -342,13 +342,13 @@ const Testimonials = () => {
                           {testimonials[currentIndex].name.charAt(0)}
                         </div>
                       </div>
-                      
+
                       <div className="text-center md:text-left">
                         <h3 className="text-lg font-semibold text-secondary-900">{testimonials[currentIndex].name}</h3>
                         <p className="text-sm text-secondary-500">{testimonials[currentIndex].role}</p>
                         <p className="text-xs text-secondary-400 mt-1">{testimonials[currentIndex].location}</p>
                       </div>
-                      
+
                       {/* Étoiles de notation */}
                       <div className="flex space-x-1">
                         {[...Array(5)].map((_, i) => (
@@ -366,15 +366,15 @@ const Testimonials = () => {
                         ))}
                       </div>
                     </div>
-                    
+
                     {/* Contenu du témoignage */}
                     <div className="md:w-2/3 relative">
                       {/* Guillemets */}
                       <svg className="absolute -top-2 -left-2 h-8 w-8 text-primary-200 opacity-50" fill="currentColor" viewBox="0 0 32 32">
                         <path d="M9.352 4C4.456 7.456 1 13.12 1 19.36c0 5.088 3.072 8.064 6.624 8.064 3.36 0 5.856-2.688 5.856-5.856 0-3.168-2.208-5.472-5.088-5.472-.576 0-1.344.096-1.536.192.48-3.264 3.552-7.104 6.624-9.024L9.352 4zm16.512 0c-4.8 3.456-8.256 9.12-8.256 15.36 0 5.088 3.072 8.064 6.624 8.064 3.264 0 5.856-2.688 5.856-5.856 0-3.168-2.304-5.472-5.184-5.472-.576 0-1.248.096-1.44.192.48-3.264 3.456-7.104 6.528-9.024L25.864 4z" />
                       </svg>
-                      
-                      <motion.p 
+
+                      <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
@@ -388,7 +388,7 @@ const Testimonials = () => {
               </motion.div>
             </AnimatePresence>
           </motion.div>
-          
+
           {/* Indicateurs */}
           <div className="flex justify-center space-x-2 mt-8">
             {testimonials.map((_, index) => (
@@ -407,4 +407,4 @@ const Testimonials = () => {
   )
 }
 
-export default Testimonials 
+export default Testimonials

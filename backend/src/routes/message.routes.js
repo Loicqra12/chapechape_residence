@@ -18,6 +18,9 @@ const {
 // Middleware d'authentification pour toutes les routes
 router.use(protect);
 
+// Route racine - alias pour /conversations (pour compatibilité avec le Dashboard)
+router.get('/', validate(messageValidation.getConversations), getConversations);
+
 // Routes des conversations
 router.route('/conversations')
     .get(validate(messageValidation.getConversations), getConversations)

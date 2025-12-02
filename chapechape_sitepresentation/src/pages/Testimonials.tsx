@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import Contact from '../components/home/Contact'
 
 // Données des témoignages
 const testimonials = [
@@ -72,7 +73,7 @@ const StarRating = ({ rating }: { rating: number }) => {
       {[...Array(5)].map((_, i) => (
         <svg
           key={i}
-          className={`h-5 w-5 ${i < rating ? 'text-yellow-400' : 'text-gray-300'}`}
+          className={`h-5 w-5 ${i < rating ? 'text-yellow-400' : 'text-gray-200'}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -89,73 +90,97 @@ const StarRating = ({ rating }: { rating: number }) => {
 
 const Testimonials = () => {
   const [filter, setFilter] = useState<'all' | 'locataire' | 'proprietaire'>('all')
-  
+
   // Filtrer les témoignages
-  const filteredTestimonials = filter === 'all' 
-    ? testimonials 
+  const filteredTestimonials = filter === 'all'
+    ? testimonials
     : testimonials.filter(t => t.role.toLowerCase().includes(filter))
 
   return (
     <div className="bg-white">
-      {/* Hero section */}
-      <div className="relative bg-secondary-900 py-24 px-6 sm:py-32 sm:px-12">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary-900 to-secondary-800 opacity-90" />
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-20" 
-            style={{ backgroundImage: 'url(/assets/testimonials/hero-bg.jpg)' }}
-          />
+      {/* Hero Section Harmonisé */}
+      <section className="relative py-32 bg-secondary-900 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-b from-secondary-900/50 via-secondary-900/80 to-white" />
+
+        {/* Golden particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute rounded-full bg-primary-400/20 blur-xl"
+              style={{
+                width: Math.random() * 150 + 50 + 'px',
+                height: Math.random() * 150 + 50 + 'px',
+                left: Math.random() * 100 + '%',
+                top: Math.random() * 100 + '%',
+              }}
+              animate={{
+                y: [0, -100, 0],
+                x: [0, Math.random() * 50 - 25, 0],
+                opacity: [0, 0.4, 0],
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
         </div>
-        <div className="relative mx-auto max-w-7xl">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+
+        <div className="container mx-auto px-4 max-w-6xl relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
+            transition={{ duration: 0.8 }}
           >
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Témoignages
+            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-primary-300 text-xs font-bold tracking-widest uppercase mb-6">
+              Avis Clients
+            </span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
+              Ils nous font <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">Confiance</span>
             </h1>
-            <p className="mt-6 max-w-lg mx-auto text-xl text-primary-200">
-              Découvrez ce que nos clients disent de ChapeChape Residence.
+            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+              Découvrez les retours d'expérience de nos propriétaires et locataires qui ont choisi ChapeChape Residence.
             </p>
           </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Main content */}
-      <div className="container-custom py-16 sm:py-24">
+      <div className="container mx-auto px-4 max-w-6xl py-16 sm:py-24">
         {/* Introduction */}
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-secondary-900 mb-6">
+          <h2 className="text-3xl font-bold text-secondary-900 mb-6 font-display">
             Nos Clients Témoignent
           </h2>
           <p className="text-lg text-secondary-600">
-            La satisfaction de nos clients est notre priorité. Voici quelques témoignages 
+            La satisfaction de nos clients est notre priorité. Voici quelques témoignages
             de propriétaires et locataires qui nous font confiance pour leurs besoins immobiliers.
           </p>
         </div>
 
         {/* Filtres */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex rounded-md shadow-sm p-1 bg-secondary-100">
+        <div className="flex justify-center mb-16">
+          <div className="inline-flex rounded-full shadow-md p-1.5 bg-gray-100">
             <button
               type="button"
-              className={`px-4 py-2 text-sm font-medium rounded-md ${filter === 'all' ? 'bg-white shadow-sm text-secondary-900' : 'text-secondary-600 hover:text-secondary-900'}`}
+              className={`px-6 py-2.5 text-sm font-bold rounded-full transition-all duration-300 ${filter === 'all' ? 'bg-white shadow-sm text-secondary-900' : 'text-secondary-500 hover:text-secondary-900'}`}
               onClick={() => setFilter('all')}
             >
               Tous
             </button>
             <button
               type="button"
-              className={`px-4 py-2 text-sm font-medium rounded-md ${filter === 'locataire' ? 'bg-white shadow-sm text-secondary-900' : 'text-secondary-600 hover:text-secondary-900'}`}
+              className={`px-6 py-2.5 text-sm font-bold rounded-full transition-all duration-300 ${filter === 'locataire' ? 'bg-white shadow-sm text-secondary-900' : 'text-secondary-500 hover:text-secondary-900'}`}
               onClick={() => setFilter('locataire')}
             >
               Locataires
             </button>
             <button
               type="button"
-              className={`px-4 py-2 text-sm font-medium rounded-md ${filter === 'proprietaire' ? 'bg-white shadow-sm text-secondary-900' : 'text-secondary-600 hover:text-secondary-900'}`}
+              className={`px-6 py-2.5 text-sm font-bold rounded-full transition-all duration-300 ${filter === 'proprietaire' ? 'bg-white shadow-sm text-secondary-900' : 'text-secondary-500 hover:text-secondary-900'}`}
               onClick={() => setFilter('proprietaire')}
             >
               Propriétaires
@@ -164,7 +189,7 @@ const Testimonials = () => {
         </div>
 
         {/* Témoignages */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24">
           {filteredTestimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.id}
@@ -172,39 +197,51 @@ const Testimonials = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
+              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col border border-gray-100 group"
             >
-              <div className="p-6 flex-grow">
-                <div className="flex justify-between items-start mb-4">
+              <div className="p-8 flex-grow">
+                <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center">
-                    <div className="h-12 w-12 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center mr-4">
+                    <div className="h-14 w-14 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center mr-4 ring-2 ring-white shadow-md">
                       {testimonial.image ? (
-                        <img 
-                          src={testimonial.image} 
-                          alt={testimonial.name} 
+                        <img
+                          src={testimonial.image}
+                          alt={testimonial.name}
                           className="h-full w-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.nextElementSibling?.classList.remove('hidden');
+                          }}
                         />
-                      ) : (
-                        <span className="text-xl font-bold text-primary-500">
-                          {testimonial.name.charAt(0)}
-                        </span>
-                      )}
+                      ) : null}
+                      <span className={`text-xl font-bold text-primary-500 ${testimonial.image ? 'hidden' : ''}`}>
+                        {testimonial.name.charAt(0)}
+                      </span>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-secondary-900">{testimonial.name}</h3>
-                      <p className="text-sm text-primary-500">{testimonial.role}</p>
+                      <h3 className="text-lg font-bold text-secondary-900">{testimonial.name}</h3>
+                      <p className="text-sm font-medium text-primary-500 uppercase tracking-wide">{testimonial.role}</p>
                     </div>
                   </div>
-                  <div>
-                    <StarRating rating={testimonial.rating} />
-                  </div>
                 </div>
-                <blockquote className="italic text-secondary-600 mb-4">
+
+                <div className="mb-4">
+                  <StarRating rating={testimonial.rating} />
+                </div>
+
+                <blockquote className="italic text-secondary-600 mb-6 leading-relaxed">
                   "{testimonial.content}"
                 </blockquote>
               </div>
-              <div className="px-6 py-4 bg-secondary-50 text-sm text-secondary-500 flex justify-between items-center">
-                <span>{testimonial.location}</span>
+              <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs font-medium text-gray-500">
+                <span className="flex items-center">
+                  <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {testimonial.location}
+                </span>
                 <span>{testimonial.date}</span>
               </div>
             </motion.div>
@@ -212,34 +249,40 @@ const Testimonials = () => {
         </div>
 
         {/* Section de soumission de témoignage */}
-        <div className="mt-24 bg-primary-50 rounded-2xl p-8 sm:p-12">
-          <div className="max-w-3xl mx-auto">
-            <motion.div 
+        <div className="bg-secondary-900 rounded-3xl p-10 sm:p-16 relative overflow-hidden shadow-2xl text-center">
+          <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-5 mix-blend-overlay" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-3xl mx-auto">
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-8"
+              className="mb-10"
             >
-              <h2 className="text-2xl font-bold text-secondary-900 mb-4">
+              <h2 className="text-3xl font-bold text-white mb-6 font-display">
                 Partagez votre expérience
               </h2>
-              <p className="text-lg text-secondary-600">
-                Nous serions ravis de connaître votre expérience avec ChapeChape Residence. 
-                Votre témoignage nous aide à améliorer continuellement nos services.
+              <p className="text-lg text-primary-100 leading-relaxed">
+                Nous serions ravis de connaître votre expérience avec ChapeChape Residence.
+                Votre témoignage nous aide à améliorer continuellement nos services et à inspirer notre communauté.
               </p>
             </motion.div>
             <a
               href="/contact"
-              className="block w-full md:w-auto md:mx-auto md:inline-block text-center btn-primary"
+              className="btn-primary inline-block px-10 py-4 text-base shadow-lg shadow-primary-500/20"
             >
               Soumettre un témoignage
             </a>
           </div>
         </div>
       </div>
+
+      {/* Contact Section */}
+      <Contact />
     </div>
   )
 }
 
-export default Testimonials 
+export default Testimonials

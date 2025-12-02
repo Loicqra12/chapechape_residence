@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -34,26 +34,12 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
+import { settingsService } from '../../services/settingsService';
+import toast from 'react-hot-toast';
 
 const SecurityPage = () => {
-  const [settings, setSettings] = useState({
-    passwordMinLength: 8,
-    passwordRequireUppercase: true,
-    passwordRequireNumbers: true,
-    passwordRequireSpecial: true,
-    passwordExpiryDays: 90,
-    maxLoginAttempts: 5,
-    lockoutDuration: 30,
-    sessionTimeout: 60,
-    twoFactorEnabled: true,
-    twoFactorMandatory: false,
-    jwtExpiryHours: 24,
-    ipWhitelist: ['192.168.1.1', '10.0.0.1'],
-    apiRateLimit: 100,
-    sslEnabled: true,
-    corsAllowedOrigins: ['https://chapechape.fr'],
-  });
-
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
   const [edited, setEdited] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -61,6 +47,49 @@ const SecurityPage = () => {
   const [newWhitelistIP, setNewWhitelistIP] = useState('');
   const [showOriginInput, setShowOriginInput] = useState(false);
   const [newOrigin, setNewOrigin] = useState('');
+
+  useEffect(() => {
+    loadSecuritySettings();
+  }, []);
+
+  const loadSecuritySettings = async () => {
+    try {
+      setLoading(true);
+      const response = await settingsService.getSettings('security');
+
+      if (response.success && response.data.security) {
+        const flatSettings = {};
+        Object.entries(response.data.security).forEach(([key, setting]) => {
+          flatSettings[key.replace('security_', '')] = setting.value;
+        });
+        setSettings(flatSettings);
+      } else {
+        // Default values
+        setSettings({
+          passwordMinLength: 8,
+          passwordRequireUppercase: true,
+          passwordRequireNumbers: true,
+          passwordRequireSpecial: true,
+          passwordExpiryDays: 90,
+          maxLoginAttempts: 5,
+          lockoutDuration: 30,
+          sessionTimeout: 60,
+          twoFactorEnabled: true,
+          twoFactorMandatory: false,
+          jwtExpiryHours: 24,
+          ipWhitelist: ['192.168.1.1', '10.0.0.1'],
+          apiRateLimit: 100,
+          sslEnabled: true,
+          corsAllowedOrigins: ['https://chapechape.fr'],
+        });
+      }
+    } catch (error) {
+      console.error('Error loading security settings:', error);
+      toast.error('Erreur lors du chargement des paramètres de sécurité');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -74,11 +103,33 @@ const SecurityPage = () => {
 
   const handleSave = async () => {
     try {
-      // TODO: Implémenter la sauvegarde API
-      setSuccess(true);
-      setEdited(false);
+      setLoading(true);
+
+      const settingsArray = Object.entries(settings).map(([key, value]) => ({
+        key: `security_${key}`,
+        value,
+        category: 'security',
+        type: Array.isArray(value) ? 'json' : typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string',
+        description: `Security setting for ${key}`
+      }));
+
+      const response = await settingsService.updateSettings(settingsArray);
+
+      if (response.success) {
+        setSuccess(true);
+        setEdited(false);
+        toast.success('Paramètres de sécurité enregistrés');
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(response.error);
+        toast.error(response.error);
+      }
     } catch (error) {
+      console.error('Error saving security settings:', error);
       setError('Erreur lors de la sauvegarde des paramètres de sécurité');
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -153,7 +204,7 @@ const SecurityPage = () => {
         {/* Politique de Mot de Passe */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Politique de Mot de Passe"
               avatar={<KeyIcon />}
             />
@@ -224,7 +275,7 @@ const SecurityPage = () => {
         {/* Authentification */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Authentification"
               avatar={<LockIcon />}
             />
@@ -293,7 +344,7 @@ const SecurityPage = () => {
         {/* Sécurité des Sessions */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Sécurité des Sessions"
               avatar={<TimerIcon />}
             />
@@ -331,18 +382,18 @@ const SecurityPage = () => {
         {/* Liste Blanche IP */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Liste Blanche IP"
               avatar={<ShieldIcon />}
             />
             <CardContent>
               <List>
-                {settings.ipWhitelist.map((ip) => (
+                {(settings.ipWhitelist || []).map((ip) => (
                   <ListItem key={ip}>
                     <ListItemText primary={ip} />
                     <ListItemSecondaryAction>
-                      <IconButton 
-                        edge="end" 
+                      <IconButton
+                        edge="end"
                         onClick={() => handleRemoveWhitelistIP(ip)}
                         size="small"
                       >
@@ -375,7 +426,7 @@ const SecurityPage = () => {
         {/* Paramètres CORS */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader 
+            <CardHeader
               title="Paramètres CORS"
               avatar={<SecurityIcon />}
             />
@@ -393,12 +444,12 @@ const SecurityPage = () => {
                 Origines autorisées
               </Typography>
               <List>
-                {settings.corsAllowedOrigins.map((origin) => (
+                {(settings.corsAllowedOrigins || []).map((origin) => (
                   <ListItem key={origin}>
                     <ListItemText primary={origin} />
                     <ListItemSecondaryAction>
-                      <IconButton 
-                        edge="end" 
+                      <IconButton
+                        edge="end"
                         onClick={() => handleRemoveOrigin(origin)}
                         size="small"
                       >
