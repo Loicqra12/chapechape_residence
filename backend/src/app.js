@@ -10,7 +10,7 @@ const {
 const {
   csrfMiddleware,
   generateCsrfToken,
-} = require("./middlewares/csrf.middleware");
+} = require("./middlewares/csrf-custom.middleware");
 const cache = require("./middlewares/cache.middleware");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -388,7 +388,7 @@ app.get("/", (req, res) => {
 // Ajouter un endpoint pour vérifier le CSRF
 app.get("/api/csrf-token", (req, res) => {
   // Importer le middleware CSRF qui utilise csurf
-  const { csrfProtection } = require("./middlewares/csrf.middleware");
+  const { csrfProtection } = require("./middlewares/csrf-custom.middleware");
 
   // Appliquer csrfProtection pour générer un token
   csrfProtection(req, res, (err) => {

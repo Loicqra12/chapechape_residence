@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Reservation = require('../models/reservation.model');
 const notificationService = require('./notification.service');
 const availabilityService = require('./availability.service');
+const { scheduleReservationExpiration, cancelReservationExpiration } = require('./agenda.service');
 
 /**
 
@@ -17,7 +18,7 @@ const availabilityService = require('./availability.service');
 const startPaymentTimer = async (reservationId, durationMinutes = 30) => {
   try {
     const deadline = new Date(Date.now() + durationMinutes * 60 * 1000);
-    
+
     const reservation = await Reservation.findByIdAndUpdate(
       reservationId,
       {
@@ -45,12 +46,10 @@ const startPaymentTimer = async (reservationId, durationMinutes = 30) => {
     // ✅ Envoyer notification SMS/Push de délai de paiement
     await notificationService.sendPaymentDeadlineNotification(reservation, deadline);
 
-    // ✅ Programmer l'expiration automatique
-    setTimeout(() => {
-      checkAndExpireReservation(reservationId);
-    }, durationMinutes * 60 * 1000);
+    // ✅ Programmer l'expiration automatique via Agenda (persistant au restart)
+    await scheduleReservationExpiration(reservationId, deadline);
 
-    console.log(`Timer de paiement démarré pour réservation ${reservationId}: ${durationMinutes} min`);
+    console.log(`Timer de paiement démarré pour réservation ${reservationId}: ${durationMinutes} min (via Agenda)`);
     return {
       success: true,
       reservationId,
@@ -156,7 +155,7 @@ const checkAndExpireReservation = async (reservationId) => {
 const extendPaymentDeadline = async (reservationId, additionalMinutes = 15) => {
   try {
     const reservation = await Reservation.findById(reservationId);
-    
+
     if (!reservation || reservation.status !== 'payment_pending') {
       throw new Error('Réservation non éligible à une extension');
     }
@@ -202,7 +201,7 @@ const extendPaymentDeadline = async (reservationId, additionalMinutes = 15) => {
 const checkAllExpiredReservations = async () => {
   try {
     const now = new Date();
-    
+
     // Trouver toutes les réservations en attente avec délai dépassé
     const expiredReservations = await Reservation.find({
       status: 'payment_pending',
@@ -266,11 +265,14 @@ const confirmPaymentAndStopTimer = async (reservationId, paymentData = {}) => {
       throw new Error('Réservation non trouvée');
     }
 
+    // ✅ Annuler le job d'expiration Agenda
+    await cancelReservationExpiration(reservationId);
+
     // ✅ Envoyer confirmations de paiement
     await notificationService.sendPaymentConfirmationNotification(reservation);
 
     await session.commitTransaction();
-    console.log(`Paiement confirmé et timer arrêté pour réservation ${reservationId}`);
+    console.log(`Paiement confirmé et timer Agenda annulé pour réservation ${reservationId}`);
 
     return {
       success: true,
