@@ -62,6 +62,12 @@ async function getDatabaseSize() {
 async function getCacheSize() {
   try {
     const redisClient = require('../config/redis');
+
+    // Vérification défensive : si le client (ex: Mock) n'a pas la méthode info, retourner 0
+    if (typeof redisClient.info !== 'function') {
+      return 0;
+    }
+
     const info = await redisClient.info('memory');
 
     // Parse memory info
