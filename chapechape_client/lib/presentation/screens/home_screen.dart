@@ -23,6 +23,7 @@ import '../screens/promotion_detail_screen.dart';
 import '../widgets/home_banner_carousel.dart';
 import '../widgets/popular_categories_widget.dart';
 import '../widgets/around_me_widget.dart';
+import '../widgets/promo_banner_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -105,16 +106,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 viewStyle: 'grid',
               ),
               
-              const SizedBox(height: 24),
+              const PromoBannerWidget(),
+              const SizedBox(height: 8),
               
               // Widget de catégories existant (modes d'affichage alternatifs)
-              SizedBox(
-                height: 280,
-                width: constraints.maxWidth,
-                child: CategoriesMenuWidget(
-                  title: "Explorez par catégories",
-                  filterType: ResidenceType.other,
-                ),
+              CategoriesMenuWidget(
+                title: "Explorez par catégories",
+                filterType: ResidenceType.other,
               ),
               
               // Section des offres spéciales (commune à tous)

@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/residence_type_enum.dart';
-import '../../core/utils/responsive_utils.dart';
-import '../../core/blocs/residence/residence_bloc.dart';
-import '../../core/services/category_cache_service.dart';
-import '../../core/services/type_sync_service.dart';
 
+/// Widget premium pour afficher les catégories de résidences
+/// Design modernisé avec glassmorphism, icônes différenciées et texte complet
 class CategoriesMenuWidget extends StatefulWidget {
   final bool showTitle;
   final String title;
@@ -17,7 +13,7 @@ class CategoriesMenuWidget extends StatefulWidget {
   
   const CategoriesMenuWidget({
     super.key,
-    this.showTitle = false, // Le titre est désactivé par défaut
+    this.showTitle = false,
     this.title = "Catégories",
     this.filterType = ResidenceType.other,
   });
@@ -28,46 +24,46 @@ class CategoriesMenuWidget extends StatefulWidget {
 
 class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
   final ScrollController _scrollController = ScrollController();
-  late final CategoryCacheService _categoryCacheService;
-  late final TypeSyncService _typeSyncService;
-  
-  // Récupération des services via GetIt
-  void _initServices() {
-    final getIt = GetIt.instance;
-    _categoryCacheService = getIt<CategoryCacheService>();
-    _typeSyncService = getIt<TypeSyncService>();
-  }
-  
-  List<CategoryData>? _categories;
-  bool _isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _initServices();
-    _loadCategories();
-  }
-
-  Future<void> _loadCategories() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final categories = await _categoryCacheService.getAllCategories();
-      if (!mounted) return;
-      setState(() {
-        _categories = categories;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
+  // Données statiques pour les catégories avec icônes et couleurs différenciées
+  final List<Map<String, dynamic>> _staticCategories = [
+    {
+      'title': 'Colocation & partage',
+      'icon': Icons.people,
+      'type': ResidenceType.chambreEnColocation,
+      'color': Color(0xFFFF6B6B), // Rouge corail
+    },
+    {
+      'title': 'Résidences longue durée',
+      'icon': Icons.home_work,
+      'type': ResidenceType.appartementNonMeuble,
+      'color': Color(0xFF4ECDC4), // Turquoise
+    },
+    {
+      'title': 'Hébergements économiques',
+      'icon': Icons.attach_money,
+      'type': ResidenceType.maisonDHotesEconomique,
+      'color': Color(0xFFFFD93D), // Jaune doré
+    },
+    {
+      'title': 'Studios meublés',
+      'icon': Icons.weekend,
+      'type': ResidenceType.studioMeuble,
+      'color': Color(0xFF6BCF7F), // Vert menthe
+    },
+    {
+      'title': 'Hôtels & Résidences',
+      'icon': Icons.hotel,
+      'type': ResidenceType.hotelDePassage,
+      'color': Color(0xFFB47AEA), // Violet
+    },
+    {
+      'title': 'Hébergements insolites',
+      'icon': Icons.landscape,
+      'type': ResidenceType.bungalow,
+      'color': Color(0xFFFF8C42), // Orange
+    },
+  ];
 
   @override
   void dispose() {
@@ -77,10 +73,8 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
 
   void _scrollLeft() {
     if (_scrollController.hasClients) {
-      final double currentPosition = _scrollController.offset;
-      final double newPosition = currentPosition - 240;
       _scrollController.animateTo(
-        newPosition < 0 ? 0 : newPosition,
+        (_scrollController.offset - 200).clamp(0, _scrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -89,11 +83,8 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
 
   void _scrollRight() {
     if (_scrollController.hasClients) {
-      final double currentPosition = _scrollController.offset;
-      final double maxPosition = _scrollController.position.maxScrollExtent;
-      final double newPosition = currentPosition + 240;
       _scrollController.animateTo(
-        newPosition > maxPosition ? maxPosition : newPosition,
+        (_scrollController.offset + 200).clamp(0, _scrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -102,406 +93,164 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isMobile = context.screenWidth <= 600;
-    
-    if (_isLoading) {
-      return _buildLoadingState();
-    }
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.showTitle) ... [
+        if (widget.showTitle) ...[
           Padding(
-            padding: context.responsivePadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: TextStyle(
-                              fontSize: context.responsiveFontSize(24),
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Explorez les meilleurs types de logements disponibles',
-                            style: TextStyle(
-                              fontSize: context.responsiveFontSize(14),
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isMobile) ...[
-                      Flexible(
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.swipe,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Faites défiler',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () async {
-                        await _categoryCacheService.forceRefresh();
-                        _loadCategories();
-                      },
-                      tooltip: 'Actualiser les catégories',
-                    ),
-                  ],
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              widget.title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
         ],
         
-        Stack(
-          children: [
-            if (!isMobile) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: _buildCategoryItems(context),
-                ),
-              ),
-            ] else ...[
-              Container(
-                height: 280, // Légère augmentation de la hauteur
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.8)
-                        : Colors.white.withOpacity(0.8),
-                      Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.0)
-                        : Colors.white.withOpacity(0.0),
-                      Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.0)
-                        : Colors.white.withOpacity(0.0),
-                      Theme.of(context).brightness == Brightness.dark
-                        ? Colors.black.withOpacity(0.8)
-                        : Colors.white.withOpacity(0.8),
-                    ],
-                    stops: const [0.0, 0.05, 0.95, 1.0],
-                  ),
-                ),
-                child: ListView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(), // Meilleure sensation de défilement
-                  children: _buildCategoryItems(context),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Ajout de padding vertical
-                ),
-              ),
-              
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: InkWell(
-                    onTap: _scrollLeft,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.arrow_back_ios, size: 24),
-                    ),
-                  ),
-                ),
-              ),
-              
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: InkWell(
-                    onTap: _scrollRight,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.arrow_forward_ios, size: 24),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+        // Grid View - 3 colonnes, 2 rangées
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.75, // Ratio optimisé pour le contenu
+            ),
+            itemCount: _staticCategories.length,
+            itemBuilder: (context, index) {
+              final category = _staticCategories[index];
+              return _buildCategoryCard(
+                context: context,
+                title: category['title'],
+                icon: category['icon'],
+                type: category['type'],
+                accentColor: category['color'],
+                isDarkMode: isDarkMode,
+                index: index,
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
-  }
-
-  List<Widget> _buildCategoryItems(BuildContext context) {
-    if (_categories == null || _categories!.isEmpty) {
-      return _buildDefaultCategories(context);
-    }
-    
-    return _categories!.map((category) {
-      return _buildCategoryItem(
-        context: context,
-        title: category.title,
-        icon: _getCategoryIcon(category.type),
-        type: category.type,
-      );
-    }).toList();
-  }
-
-  IconData _getCategoryIcon(ResidenceType type) {
-    // Utiliser une icône par défaut si non disponible
-    return Icons.home;
-  }
-
-  Widget _buildCategoryItem({
+  Widget _buildCategoryCard({
     required BuildContext context,
     required String title,
     required IconData icon,
     required ResidenceType type,
+    required Color accentColor,
+    required bool isDarkMode,
+    required int index,
   }) {
-    final bool isMobile = context.screenWidth <= 600;
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = type == widget.filterType;
     
     return Container(
-      width: isMobile ? 110 : 130, // Largeur optimisée pour affichage
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), // Marges améliorées
-      child: InkWell(
-        onTap: () {
-          _onCategoryTap(type);
-        },
-        borderRadius: BorderRadius.circular(16),
-        splashColor: AppTheme.primaryColor.withOpacity(0.2),
-        highlightColor: AppTheme.primaryColor.withOpacity(0.1),
-        child: Card(
-          elevation: 3, // Ombre légèrement plus prononcée pour la profondeur
-          shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-          color: isDarkMode ? Color(0xFF2D2D2D) : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: type == widget.filterType
-                ? AppTheme.primaryColor
-                : isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-              width: type == widget.filterType ? 2.0 : 0.5,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Indicateur de sélection
-                if (type == widget.filterType)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.check,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                      ? AppTheme.primaryColor.withOpacity(0.2)
-                      : AppTheme.primaryColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 30,
-                    color: AppTheme.primaryColor,
-                    semanticLabel: 'Icône pour $title',
-                  ),
-                )
-                .animate(autoPlay: true, onPlay: (controller) => controller.repeat())
-                .shimmer(
-                  duration: 2000.ms,
-                  color: AppTheme.primaryColor.withOpacity(0.3),
-                )
-                .scaleXY(
-                  duration: 2000.ms,
-                  curve: Curves.easeInOut,
-                  begin: 1.0,
-                  end: 1.05,
-                )
-                .then()
-                .scaleXY(
-                  duration: 2000.ms,
-                  curve: Curves.easeInOut,
-                  begin: 1.05,
-                  end: 1.0,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  semanticsLabel: 'Catégorie: $title',
-                  style: TextStyle(
-                    fontSize: context.responsiveFontSize(14),
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _onCategoryTap(type),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDarkMode
+                    ? [
+                        Color(0xFF2D2D2D),
+                        Color(0xFF1F1F1F),
+                      ]
+                    : [
+                        Colors.white,
+                        Colors.grey.shade50,
+                      ],
+              ),
+              border: Border.all(
+                color: isSelected 
+                    ? accentColor 
+                    : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200),
+                width: isSelected ? 2.5 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withOpacity(isSelected ? 0.3 : 0.1),
+                  blurRadius: isSelected ? 12 : 6,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-          ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icône dans un cercle coloré
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          accentColor.withOpacity(0.2),
+                          accentColor.withOpacity(0.05),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withOpacity(0.3),
+                          blurRadius: 12,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 28,
+                      color: accentColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Titre sur 2 lignes maximum
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 400.ms, delay: (index * 80).ms)
+              .slideX(begin: 0.2, end: 0, duration: 400.ms, delay: (index * 80).ms),
         ),
       ),
-    )
-    .animate()
-    .fadeIn(duration: 500.ms, curve: Curves.easeOut)
-    .slideY(begin: 0.1, end: 0, duration: 500.ms, curve: Curves.easeOutQuint);
-  }
-
-  List<Widget> _buildDefaultCategories(BuildContext context) {
-    return [
-      _buildCategoryItem(
-        context: context,
-        title: 'Appartements',
-        icon: Icons.apartment,
-        type: ResidenceType.apartment,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Villas',
-        icon: Icons.villa,
-        type: ResidenceType.villa,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Studios',
-        icon: Icons.single_bed,
-        type: ResidenceType.studio,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Hôtels',
-        icon: Icons.hotel,
-        type: ResidenceType.hotel,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Résidences de vacances',
-        icon: Icons.beach_access,
-        type: ResidenceType.resort,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Éco-lodges',
-        icon: Icons.nature_people,
-        type: ResidenceType.cottage,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Maisons de plage',
-        icon: Icons.waves,
-        type: ResidenceType.bungalow,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Logements étudiants',
-        icon: Icons.school,
-        type: ResidenceType.student,
-      ),
-      _buildCategoryItem(
-        context: context,
-        title: 'Airbnb locaux',
-        icon: Icons.home,
-        type: ResidenceType.guesthouse,
-      ),
-    ];
+    );
   }
 
   void _onCategoryTap(ResidenceType type) {
-    // Envoyer l'événement au Bloc pour filtrer les résidences
-    context.read<ResidenceBloc>().add(
-      FilterResidencesByTypeEvent(widget.filterType == ResidenceType.other ? type : widget.filterType), // Utiliser le filterType si spécifié
-    );
-    
-    // Naviguer vers la page de recherche
-    final router = GoRouter.of(context);
-    final currentLocation = router.routerDelegate.currentConfiguration.uri.path;
-    if (!currentLocation.startsWith('/search')) {
-      context.push('/search');
-    }
+    // Navigation vers la page de recherche avec le type sélectionné
+    context.push('/search?type=${type.toString().split('.').last}');
   }
 }
