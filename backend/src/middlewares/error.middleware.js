@@ -2,14 +2,21 @@ const ApiError = require('../utils/apiError');
 const { logger } = require('../utils/logger');
 const { ERROR_MESSAGES } = require('../utils/constants');
 const errorCodes = require('../utils/errorCodes');
+const { sanitizeError, extractSafeErrorInfo } = require('../utils/sanitize-error');
 
 /**
  * Middleware de gestion d'erreurs global pour l'API
  * Traite toutes les erreurs et renvoie une réponse standardisée
+ * 
+ * SÉCURITÉ RENFORCÉE:
+ * - Logs sécurisés (pas de stack trace en production logs publics)
+ * - Messages sanitisés
+ * - Stack trace supprimée des réponses en production
  */
 const errorHandler = (err, req, res, next) => {
-    // Log l'erreur
-    logger.error(`${err.name}: ${err.message}\n${err.stack}`);
+    // ✅ Log sécurisé avec infos contextuelles
+    const safeErrorInfo = extractSafeErrorInfo(err, req);
+    logger.error('Error occurred:', safeErrorInfo);
 
     // Structure de réponse d'erreur standardisée
     let error = {
@@ -26,7 +33,7 @@ const errorHandler = (err, req, res, next) => {
             field: e.path,
             message: e.message
         }));
-        
+
         return res.status(400).json({
             success: false,
             message: ERROR_MESSAGES.VALIDATION_ERROR,
@@ -54,14 +61,14 @@ const errorHandler = (err, req, res, next) => {
     if (err.code === 11000) {
         const field = Object.keys(err.keyValue)[0];
         const value = err.keyValue[field];
-        
+
         // Déterminer le code d'erreur approprié en fonction du champ dupliqué
         let errorCode = errorCodes.GENERAL.VALIDATION_ERROR;
-        
+
         if (field === 'email') {
             errorCode = errorCodes.USER.DUPLICATE_EMAIL;
         }
-        
+
         return res.status(409).json({
             success: false,
             message: `Duplicate value for field: ${field}`,
@@ -97,9 +104,9 @@ const errorHandler = (err, req, res, next) => {
     }
 
     // Erreur de transition d'état invalide (409 Conflict)
-    if (err.message && (err.message.includes('Invalid state transition') || 
-                       err.message.includes('Transition vers') ||
-                       err.message.includes('Échec de la transition atomique'))) {
+    if (err.message && (err.message.includes('Invalid state transition') ||
+        err.message.includes('Transition vers') ||
+        err.message.includes('Échec de la transition atomique'))) {
         return res.status(409).json({
             success: false,
             message: err.message,
@@ -152,13 +159,13 @@ const errorHandler = (err, req, res, next) => {
             errors: [],
             data: {}
         };
-        
+
         // Pour les erreurs 4xx, on peut préserver le message d'erreur même en production
         if (err.statusCode && err.statusCode < 500) {
             errorResponse.message = err.message;
             errorResponse.errors = err.errors || [];
         }
-        
+
         return res.status(err.statusCode || 500).json(errorResponse);
     }
 

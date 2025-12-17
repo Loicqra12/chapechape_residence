@@ -1,16 +1,27 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const validator = require('validator');
 
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: [true, 'Veuillez fournir un email'],
         unique: true,
-        match: [
-            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-            'Veuillez fournir un email valide'
-        ]
+        lowercase: true,  // Normalisation automatique
+        trim: true,       // Suppression espaces
+        validate: {
+            validator: function (email) {
+                // ✅ Validation robuste avec validator.js
+                // Supporte TLDs modernes (.technology, .info, etc.)
+                return validator.isEmail(email, {
+                    allow_display_name: false,
+                    allow_utf8_local_part: true,  // Support caractères internationaux
+                    require_tld: true
+                });
+            },
+            message: 'Veuillez fournir un email valide'
+        }
     },
     // Identifiants pour l'authentification sociale
     googleId: {
@@ -102,7 +113,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         next();
     }
@@ -112,12 +123,12 @@ userSchema.pre('save', async function(next) {
 });
 
 // Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Generate and hash password token
-userSchema.methods.getResetPasswordToken = function() {
+userSchema.methods.getResetPasswordToken = function () {
     // Generate token
     const resetToken = crypto.randomBytes(20).toString('hex');
 
