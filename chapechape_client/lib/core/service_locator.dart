@@ -60,7 +60,7 @@ Future<void> setupServiceLocator() async {
   
   // 🚀 Utiliser l'URL de l'API depuis AppConfigManager (production ou dev)
   final dio = Dio(BaseOptions(
-    baseUrl: AppConfigManager.apiUrl, 
+    baseUrl: AppConfigManager.apiUrl,
     connectTimeout: const Duration(milliseconds: 15000),
     receiveTimeout: const Duration(milliseconds: 15000),
   ));

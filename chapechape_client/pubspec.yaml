@@ -138,6 +138,7 @@ flutter:
     - assets/images/residences/
     - assets/images/residences/apartments/
     - assets/images/residences/luxury/
+    - assets/images/empty_states/
     - assets/images/residences/studios/
     - assets/images/residences/villas/
 

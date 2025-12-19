@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
+import 'package:chapechape_client/core/services/error_message_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:math';
@@ -114,20 +115,17 @@ class _StorageScreenState extends State<StorageScreen> {
       
       // Afficher une confirmation
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cache effacé avec succès'),
-            duration: Duration(seconds: 2),
-          ),
+        ErrorMessageService.showSuccess(
+          context,
+          'Cache effacé avec succès',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de l\'effacement du cache: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorMessageService.showError(
+          context,
+          e,
+          contextType: 'cache_clear',
         );
       }
     } finally {
@@ -442,22 +440,19 @@ class _StorageScreenState extends State<StorageScreen> {
       await prefs.clear();
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Préférences réinitialisées avec succès'),
-            duration: Duration(seconds: 2),
-          ),
+        ErrorMessageService.showSuccess(
+          context,
+          'Préférences réinitialisées avec succès',
         );
         
         await _loadStorageInfo();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la réinitialisation: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorMessageService.showError(
+          context,
+          e,
+          contextType: 'cache_clear',
         );
       }
     }

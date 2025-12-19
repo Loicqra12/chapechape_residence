@@ -9,11 +9,11 @@ module.exports = {
     max_memory_restart: '1G', // Redémarrage si la mémoire dépasse 1GB
     env: {
       NODE_ENV: 'production',
-      PORT: 5000
+      PORT: 4000
     },
     env_development: {
       NODE_ENV: 'development',
-      PORT: 5000
+      PORT: 4000
     },
     // Configuration des logs
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
@@ -43,7 +43,7 @@ module.exports = {
     // Variables d'environnement spécifiques
     env_production: {
       NODE_ENV: 'production',
-      PORT: 5000
+      PORT: 4000
     }
   }],
 
@@ -73,3 +73,5 @@ module.exports = {
     }
   }
 };
+
+

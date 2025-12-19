@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -277,7 +278,10 @@ class _BookingScreenState extends State<BookingScreen> {
         if (_checkInDate != null && _checkOutDate != null) ...[
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _checkAvailability,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _checkAvailability();
+            },
             child: const Text('Vérifier la disponibilité'),
           ),
         ],
@@ -385,6 +389,7 @@ class _BookingScreenState extends State<BookingScreen> {
   }) {
     return InkWell(
       onTap: () async {
+        HapticFeedback.selectionClick();
         final selectedDate = await showDatePicker(
           context: context,
           initialDate: date ?? DateTime.now().add(const Duration(days: 1)),
@@ -544,7 +549,10 @@ class _BookingScreenState extends State<BookingScreen> {
         }
       },
       child: ElevatedButton(
-        onPressed: _isAvailable ? _handleSubmit : null,
+        onPressed: _isAvailable ? () {
+          HapticFeedback.heavyImpact();
+          _handleSubmit();
+        } : null,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),

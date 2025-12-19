@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/favorite/favorite_bloc.dart';
@@ -6,7 +7,9 @@ import '../../core/blocs/favorite/favorite_event.dart';
 import '../../core/blocs/favorite/favorite_state.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/theme/app_theme.dart';
+import '../widgets/skeletons/residence_card_skeleton.dart';
 import 'residence_details_screen.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({Key? key}) : super(key: key);
@@ -32,7 +35,11 @@ class FavoritesScreen extends StatelessWidget {
         body: BlocBuilder<FavoriteBloc, FavoriteState>(
           builder: (context, state) {
             if (state is FavoriteLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: 3,
+                itemBuilder: (context, index) => const ResidenceCardSkeleton(),
+              );
             } else if (state is FavoriteLoaded) {
               if (state.favorites.isEmpty) {
                 return _buildEmptyFavorites(context);
@@ -85,57 +92,22 @@ class FavoritesScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyFavorites(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            'images/empty_favorites.png',
-            height: 150,
-            width: 150,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(
-                Icons.favorite_border,
-                size: 150,
-                color: Colors.grey[300],
-              );
-            },
+    return EmptyStateWidget(
+      imagePath: 'assets/images/empty_states/empty_favorites_illustration.png',
+      title: 'Aucun coup de cœur',
+      subtitle: 'Explorez nos résidences et sauvegardez vos préférées pour les retrouver facilement',
+      action: ElevatedButton.icon(
+        icon: const Icon(Icons.explore),
+        label: const Text('Découvrir les résidences'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: goldColor,
+          foregroundColor: blackColor,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Aucun favori',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Vous n\'avez pas encore ajouté de résidences à vos favoris',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.search),
-            label: const Text('Découvrir des résidences'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: goldColor,
-              foregroundColor: blackColor,
-            ),
-            onPressed: () {
-              // Navigation vers l'écran d'accueil avec GoRouter
-              // Note: En cas de problème, vous pouvez utiliser Navigator.of(context).pop()
-              try {
-                context.go('/home');
-              } catch (e) {
-                debugPrint('Erreur de navigation: $e');
-                // Fallback en cas d'erreur
-                Navigator.of(context).pop();
-              }
-            },
-          ),
-        ],
+        ),
+        onPressed: () => context.go('/home'),
       ),
     );
   }
@@ -143,6 +115,7 @@ class FavoritesScreen extends StatelessWidget {
   Widget _buildFavoritesList(BuildContext context, List<Residence> favorites) {
     return RefreshIndicator(
       onRefresh: () async {
+        HapticFeedback.mediumImpact();
         context.read<FavoriteBloc>().add(const LoadFavorites());
       },
       child: ListView.builder(

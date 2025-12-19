@@ -34,7 +34,7 @@ exports.register = asyncHandler(async (req, res) => {
 
         // Générer le token d'accès avec la nouvelle fonction
         const accessToken = jwt.generateAccessToken(user._id, user.role);
-        
+
         // Générer le token de rafraîchissement
         const refreshToken = jwt.generateRefreshToken(user._id);
 
@@ -67,7 +67,7 @@ exports.registerPartner = asyncHandler(async (req, res) => {
 
         // Normaliser le numéro de téléphone en E.164 avec le code pays
         const normalizedPhone = normalizePhoneToE164(phoneNumber, countryCode);
-        
+
         // Vérifier que la normalisation a réussi
         if (!isValidE164(normalizedPhone)) {
             throw new apiError(`Numéro de téléphone invalide pour le pays ${countryCode}. Formats acceptés: +225..., 07..., 77...`, 400);
@@ -92,7 +92,7 @@ exports.registerPartner = asyncHandler(async (req, res) => {
 
         // Générer le token d'accès avec la nouvelle fonction
         const accessToken = jwt.generateAccessToken(user._id, user.role);
-        
+
         // Générer le token de rafraîchissement
         const refreshToken = jwt.generateRefreshToken(user._id);
 
@@ -130,9 +130,9 @@ exports.login = asyncHandler(async (req, res) => {
 
         // Importer l'utilitaire de normalisation téléphone
         const { normalizePhoneToE164, isValidE164 } = require('../../utils/phone.util');
-        
+
         let user = null;
-        
+
         // Détecter si c'est un email ou un numéro de téléphone
         if (email.includes('@')) {
             // C'est un email
@@ -143,20 +143,28 @@ exports.login = asyncHandler(async (req, res) => {
             if (isValidE164(normalizedPhone)) {
                 user = await User.findOne({ phoneNumber: normalizedPhone }).select('+password');
             }
-            
+
             // Si pas trouvé avec la normalisation, essayer tel quel (fallback)
             if (!user) {
                 user = await User.findOne({ phoneNumber: email }).select('+password');
             }
         }
-        
-        if (!user) {
-            throw new apiError('Email ou téléphone ou mot de passe incorrect', 401);
-        }
 
-        // Vérifier le mot de passe
-        const isMatch = await user.matchPassword(password);
-        if (!isMatch) {
+        // ✅ PROTECTION TIMING ATTACK: Hash dummy si utilisateur inexistant
+        // Cela garantit que le temps de réponse est constant, que l'utilisateur existe ou non
+        const dummyPassword = '$2a$10$dummyhashtopreventtimingattacksonnonexistentusers1234567890';
+        const userPassword = user ? user.password : dummyPassword;
+
+        // ✅ TOUJOURS exécuter bcrypt.compare (même si user n'existe pas)
+        // Temps de réponse constant
+        const isMatch = await bcrypt.compare(password, userPassword);
+
+        // ✅ Vérifier APRÈS le hash (évite short-circuit)
+        if (!user || !isMatch) {
+            // ✅ Délai aléatoire pour masquer le timing (50-150ms)
+            const randomDelay = Math.floor(Math.random() * 100) + 50;
+            await new Promise(resolve => setTimeout(resolve, randomDelay));
+
             // Enregistrer la tentative de connexion échouée
             await LoginAttempt.create({
                 ip: req.ip,
@@ -166,18 +174,20 @@ exports.login = asyncHandler(async (req, res) => {
                 lastAttempt: new Date()
             });
 
-            // Enregistrer l'échec dans l'audit trail
-            await auditService.logActivity({
-                userId: user._id,
-                action: 'login_failed',
-                module: 'auth',
-                description: `Tentative de connexion échouée depuis ${req.ip}`,
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent'),
-                metadata: { email, reason: 'invalid_password' },
-                status: 'failure',
-                severity: 'medium'
-            });
+            // Enregistrer l'échec dans l'audit trail (si user existe)
+            if (user) {
+                await auditService.logActivity({
+                    userId: user._id,
+                    action: 'login_failed',
+                    module: 'auth',
+                    description: `Tentative de connexion échouée depuis ${req.ip}`,
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                    metadata: { email, reason: 'invalid_password' },
+                    status: 'failure',
+                    severity: 'medium'
+                });
+            }
 
             throw new apiError('Email ou mot de passe incorrect', 401);
         }
@@ -221,7 +231,7 @@ exports.login = asyncHandler(async (req, res) => {
 
         // Générer le token d'accès avec la nouvelle fonction
         const accessToken = jwt.generateAccessToken(user._id, user.role);
-        
+
         // Générer le token de rafraîchissement
         const refreshToken = jwt.generateRefreshToken(user._id);
 
@@ -249,7 +259,7 @@ exports.login = asyncHandler(async (req, res) => {
 exports.getMe = asyncHandler(async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        
+
         if (!user) {
             throw new apiError('Utilisateur non trouvé', 404);
         }
@@ -295,7 +305,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
         try {
             const emailService = require('../../services/email.service');
             await emailService.sendPasswordReset(email, resetToken);
-            
+
             res.json({
                 success: true,
                 message: 'Instructions envoyées par email'
@@ -305,7 +315,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
             user.resetPasswordToken = undefined;
             user.resetPasswordExpire = undefined;
             await user.save();
-            
+
             throw new apiError('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.', 500);
         }
     } catch (error) {
@@ -412,7 +422,7 @@ exports.logout = asyncHandler(async (req, res) => {
         // Optionnel: on pourrait ajouter le token à une liste noire
         // mais cela nécessiterait une infrastructure Redis ou similaire
         // pour une gestion efficace des tokens invalidés
-        
+
         // Pour l'instant, nous retournons simplement un succès
         // La déconnexion réelle se fait côté client en supprimant le token
         res.status(200).json({
@@ -430,14 +440,14 @@ exports.logout = asyncHandler(async (req, res) => {
 exports.uploadProfilePicture = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        
+
         // Vérifier si un fichier a été uploadé (format Multer)
         if (!req.file) {
             throw new apiError('Aucun fichier fourni', 400);
         }
 
         const file = req.file;
-        
+
         // Valider le type de fichier
         if (!file.mimetype.startsWith('image/')) {
             throw new apiError('Le fichier doit être une image', 400);
@@ -538,12 +548,12 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 // Fonction utilitaire pour normaliser les numéros de téléphone
 const normalizePhoneToE164 = (phoneNumber) => {
     if (!phoneNumber) return phoneNumber;
-    
+
     // Si déjà en format E.164, retourner tel quel
     if (phoneNumber.startsWith('+')) {
         return phoneNumber;
     }
-    
+
     // Par défaut, ajouter le code pays de la Côte d'Ivoire (+225)
     return `+225${phoneNumber}`;
 };

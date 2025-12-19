@@ -297,7 +297,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
         margin: const EdgeInsets.only(right: 16, bottom: 8),
         borderRadius: 20,
         elevation: isHovered ? 8 : 4,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         border: isHovered 
             ? Border.all(color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5)
             : null,
@@ -640,13 +640,13 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
                           Container(
                             width: 150,
                             height: 16,
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                           ),
                           const SizedBox(height: 8),
                           Container(
                             width: 100,
                             height: 12,
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                           ),
                           const SizedBox(height: 16),
                           Row(
@@ -656,7 +656,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
                               (i) => Container(
                                 width: 60,
                                 height: 24,
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                               ),
                             ),
                           ),

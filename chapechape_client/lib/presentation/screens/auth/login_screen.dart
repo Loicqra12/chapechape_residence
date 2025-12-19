@@ -6,6 +6,7 @@ import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
+import 'package:chapechape_client/core/services/error_message_service.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
 import 'package:chapechape_client/presentation/widgets/custom_text_field.dart';
 
@@ -51,11 +52,11 @@ class _LoginScreenState extends State<LoginScreen> {
             );
         // Le BlocConsumer s'occupera de la navigation en cas de succès
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de connexion: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorMessageService.showError(
+          context,
+          e,
+          contextType: 'login',
+          onRetry: _submitForm,
         );
       }
     }
@@ -67,18 +68,16 @@ class _LoginScreenState extends State<LoginScreen> {
       listener: (context, state) {
         if (state is Authenticated) {
           context.go('/home');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Connexion réussie!'),
-              backgroundColor: Colors.green,
-            ),
+          ErrorMessageService.showSuccess(
+            context,
+            'Connexion réussie !',
           );
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
+          ErrorMessageService.showError(
+            context,
+            state.message,
+            contextType: 'login',
+            onRetry: _submitForm,
           );
         }
       },

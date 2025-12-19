@@ -10,7 +10,7 @@ const {
 const {
   csrfMiddleware,
   generateCsrfToken,
-} = require("./middlewares/csrf.middleware");
+} = require("./middlewares/csrf-custom.middleware");
 const cache = require("./middlewares/cache.middleware");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -247,23 +247,19 @@ app.use(
   })
 );
 
-// Rate limiting global (plus permissif pour éviter les 429)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Augmenté à 200 requêtes par IP par fenêtre (au lieu de 100)
-  message: {
-    success: false,
-    message: 'Trop de requêtes, veuillez réessayer plus tard',
-    retryAfter: 900 // 15 minutes en secondes
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting pour les health checks et pings
-    return req.path.startsWith('/api/health') || req.path.startsWith('/api/ping');
-  }
-});
-app.use(limiter);
+// ====================================================================
+// RATE LIMITING MULTI-NIVEAUX (Sécurité renforcée)
+// ====================================================================
+const {
+  globalLimiter,
+  authLimiter,
+  paymentLimiter,
+  userLimiter,
+  uploadLimiter
+} = require('./middlewares/rate-limit.middleware');
+
+// Rate limiter global (100 req/15min) - Appliqué à toutes les routes
+app.use('/api/', globalLimiter);
 
 // Middleware de base
 app.use(compression());
@@ -336,9 +332,21 @@ app.use("/api/users", csrfMiddleware);
 // Routes avec cache pour les requêtes GET
 app.use("/api/residences", cache(3600), residenceRoutes);
 app.use("/api/reviews", cache(1800), reviewRoutes);
+
+// ====================================================================
+// ROUTES PROTÉGÉES PAR RATE LIMITING SPÉCIFIQUE
+// ====================================================================
+
+// Routes d'authentification - Rate limit strict (5/15min)
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/register-partner", authLimiter);
 app.use("/api/auth", authRoutes);
+
 app.use("/api/users", userRoutes);
-app.use("/api/payments", paymentRoutes);
+
+// Routes de paiement - Rate limit très strict (3/1min)
+app.use("/api/payments", paymentLimiter, paymentRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -388,7 +396,7 @@ app.get("/", (req, res) => {
 // Ajouter un endpoint pour vérifier le CSRF
 app.get("/api/csrf-token", (req, res) => {
   // Importer le middleware CSRF qui utilise csurf
-  const { csrfProtection } = require("./middlewares/csrf.middleware");
+  const { csrfProtection } = require("./middlewares/csrf-custom.middleware");
 
   // Appliquer csrfProtection pour générer un token
   csrfProtection(req, res, (err) => {

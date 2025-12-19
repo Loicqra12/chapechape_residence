@@ -31,7 +31,7 @@ class NotificationService {
             }
 
             // Envoyer notification push via OneSignal si l'utilisateur a des tokens d'appareils
-            if (user.deviceTokens && user.deviceTokens.length && 
+            if (user.deviceTokens && user.deviceTokens.length &&
                 (!user.notificationSettings || user.notificationSettings.pushEnabled !== false)) {
                 try {
                     await oneSignalService.sendToMultipleUsers(
@@ -116,9 +116,9 @@ class NotificationService {
      */
     async countUnreadNotifications(userId) {
         try {
-            const count = await Notification.countDocuments({ 
-                user: userId, 
-                read: false 
+            const count = await Notification.countDocuments({
+                user: userId,
+                read: false
             });
             return count;
         } catch (error) {
@@ -140,7 +140,7 @@ class NotificationService {
         // Utiliser les types et titres définis
         const title = notificationTypes.getTitleByType(type);
         let message;
-        
+
         switch (type) {
             case notificationTypes.CLIENT.BOOKING_CONFIRMED:
                 message = `Votre réservation ${data.bookingCode ? `#${data.bookingCode} ` : ''}a été confirmée${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
@@ -187,7 +187,7 @@ class NotificationService {
             case notificationTypes.CLIENT.CHECKOUT_REMINDER:
                 message = `Rappel: Votre check-out${data.residenceName ? ` de "${data.residenceName}"` : ''} est prévu ${data.checkoutTime ? `à ${data.checkoutTime}` : 'aujourd\'hui'}.`;
                 break;
-            
+
             // Notifications de sécurité et vérification
             case notificationTypes.CLIENT.PHONE_CHANGED:
                 message = `Votre numéro de téléphone a été changé vers ${data.newPhone || 'nouveau numéro'}.`;
@@ -207,7 +207,7 @@ class NotificationService {
             case notificationTypes.CLIENT.LOGIN_ALERT:
                 message = `Nouvelle connexion détectée${data.location ? ` depuis ${data.location}` : ''}${data.device ? ` sur ${data.device}` : ''}.`;
                 break;
-            
+
             case notificationTypes.COMMON.NEW_MESSAGE:
                 message = `Vous avez reçu un nouveau message${data.senderName ? ` de ${data.senderName}` : ''}.`;
                 break;
@@ -217,7 +217,7 @@ class NotificationService {
 
         // Créer la notification
         const notification = await this.createNotification(clientId, type, message, data);
-        
+
         // Envoyer un email si applicable
         if ([
             notificationTypes.CLIENT.BOOKING_CONFIRMED,
@@ -240,7 +240,7 @@ class NotificationService {
 
         // Utiliser les types et titres définis
         const title = notificationTypes.getTitleByType(type);
-        
+
         switch (type) {
             case notificationTypes.PARTNER.NEW_BOOKING:
                 message = `Vous avez reçu une nouvelle réservation${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
@@ -258,12 +258,12 @@ class NotificationService {
                 message = `Vous avez reçu un dépôt de garantie de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''}${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
                 break;
             case notificationTypes.PARTNER.MONTHLY_STATS:
-                message = `Vos statistiques du mois sont disponibles. ${data.summary || 'Consultez votre tableau de bord pour plus de détails.'}`; 
+                message = `Vos statistiques du mois sont disponibles. ${data.summary || 'Consultez votre tableau de bord pour plus de détails.'}`;
                 break;
             case notificationTypes.PARTNER.NEW_REVIEW:
                 message = `Vous avez reçu une nouvelle évaluation${data.rating ? ` de ${data.rating}/5` : ''}${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
                 break;
-            
+
             // Notifications de payout et transfert
             case notificationTypes.PARTNER.PAYOUT_INITIATED:
                 message = `Votre payout de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} a été initié.`;
@@ -283,7 +283,7 @@ class NotificationService {
             case notificationTypes.PARTNER.TRANSFER_FAILED:
                 message = `Transfert de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''} vers ${data.recipient || 'destinataire'} échoué. ${data.reason || 'Veuillez réessayer.'}`;
                 break;
-            
+
             // Notifications de sécurité et vérification
             case notificationTypes.PARTNER.PHONE_CHANGED:
                 message = `Votre numéro de téléphone a été changé vers ${data.newPhone || 'nouveau numéro'}.`;
@@ -303,7 +303,7 @@ class NotificationService {
             case notificationTypes.PARTNER.LOGIN_ALERT:
                 message = `Nouvelle connexion détectée${data.location ? ` depuis ${data.location}` : ''}${data.device ? ` sur ${data.device}` : ''}.`;
                 break;
-            
+
             default:
                 message = 'Nouvelle notification';
         }
@@ -366,8 +366,8 @@ class NotificationService {
             };
 
             return await this.notifyClient(
-                clientId, 
-                notificationTypes.CLIENT.NEARBY_RESIDENCE, 
+                clientId,
+                notificationTypes.CLIENT.NEARBY_RESIDENCE,
                 data
             );
         } catch (error) {
@@ -378,145 +378,88 @@ class NotificationService {
 
     /**
      * Programme des rappels d'arrivée et de départ pour une réservation
+     * ✅ MIGRÉ: Utilise maintenant Agenda au lieu de setTimeout
      * @param {Object} booking - Objet de réservation
      * @returns {Promise} - Résultat des programmations
      */
     async scheduleBookingReminders(booking) {
         try {
-            const clientId = booking.client;
-            const residenceName = booking.residence.title || booking.residence.name || 'votre résidence';
-            
-            // Données pour les rappels
-            const arrivalData = {
-                bookingId: booking._id,
-                residenceName,
-                arrivalDate: new Date(booking.checkInDate).toLocaleDateString('fr-FR'),
-                arrivalTime: booking.checkInTime || '14:00',
-                address: booking.residence.location?.formattedAddress || booking.residence.address
-            };
-            
-            const departureData = {
-                bookingId: booking._id,
-                residenceName,
-                departureDate: new Date(booking.checkOutDate).toLocaleDateString('fr-FR'),
-                departureTime: booking.checkOutTime || '12:00'
-            };
+            const bookingId = booking._id.toString();
 
-            // Calculer les délais pour les rappels
+            // Importer Agenda service
+            const { scheduleBookingReminder } = require('./agenda.service');
+
+            // Calculer les dates pour les rappels
             const now = new Date();
             const arrivalDate = new Date(booking.checkInDate);
             const departureDate = new Date(booking.checkOutDate);
-            
-            // Programmer les rappels (dans un environnement de production, utilisez un service comme Bull/Agenda)
-            // Exemple simplifié pour la démonstration
-            
-            // Rappel 24h avant l'arrivée
+
+            let scheduledReminders = 0;
+
+            // ✅ Rappel 24h avant l'arrivée via Agenda (persistant)
             if (arrivalDate > now) {
-                const dayBeforeArrival = new Date(arrivalDate);
-                dayBeforeArrival.setDate(dayBeforeArrival.getDate() - 1);
-                
-                // En production, utilisez un système de tâches programmées comme Bull
-                // setTimeout() n'est pas fiable pour des délais longs en production
-                const delayArrival = Math.max(0, dayBeforeArrival.getTime() - now.getTime());
-                
-                if (delayArrival < 2147483647) { // Limite de setTimeout en millisecondes
-                    setTimeout(() => {
-                        this.notifyClient(clientId, notificationTypes.CLIENT.ARRIVAL_REMINDER, arrivalData);
-                    }, delayArrival);
-                    
-                    logger.info(`Rappel d'arrivée programmé pour le client ${clientId} dans ${Math.round(delayArrival/3600000)} heures`);
-                }
-            }
-            
-            // Rappel 24h avant le départ
-            if (departureDate > now) {
-                const dayBeforeDeparture = new Date(departureDate);
-                dayBeforeDeparture.setDate(dayBeforeDeparture.getDate() - 1);
-                
-                const delayDeparture = Math.max(0, dayBeforeDeparture.getTime() - now.getTime());
-                
-                if (delayDeparture < 2147483647) {
-                    setTimeout(() => {
-                        this.notifyClient(clientId, notificationTypes.CLIENT.DEPARTURE_REMINDER, departureData);
-                    }, delayDeparture);
-                    
-                    logger.info(`Rappel de départ programmé pour le client ${clientId} dans ${Math.round(delayDeparture/3600000)} heures`);
+                try {
+                    await scheduleBookingReminder(bookingId, arrivalDate);
+                    scheduledReminders++;
+                    logger.info(`Rappel d'arrivée Agenda programmé pour booking ${bookingId}`);
+                } catch (err) {
+                    logger.warn(`Impossible de programmer rappel arrivée: ${err.message}`);
                 }
             }
 
-            return { 
-                success: true, 
-                message: 'Rappels programmés avec succès'
+            // ✅ Note: Le rappel de départ peut être ajouté comme job séparé si nécessaire
+            // Pour l'instant, le job sendBookingReminder gère le rappel principal
+
+            return {
+                success: true,
+                message: `${scheduledReminders} rappel(s) programmé(s) via Agenda`,
+                scheduledReminders
             };
         } catch (error) {
-            logger.error('Erreur lors de la programmation des rappels:', error);
+            logger.error('Erreur lors de la programmation des rappels Agenda:', error);
             throw error;
         }
     }
 
     /**
      * Programme des rappels d'arrivée et de départ pour une Réservation (Reservation)
-     * Conserve la version Booking pour compatibilité, mais privilégie cette méthode.
+     * ✅ MIGRÉ: Utilise maintenant Agenda au lieu de setTimeout
      * @param {Object} reservation - Objet Reservation (peut contenir différents alias de champs)
      * @returns {Promise<{success: boolean, message: string}>}
      */
     async scheduleReservationReminders(reservation) {
         try {
-            const clientId = reservation.user?._id || reservation.user || reservation.client;
-            const residence = reservation.residence || {};
-            const residenceName = residence.title || residence.name || 'votre résidence';
+            const reservationId = reservation._id.toString();
+
+            // Importer Agenda service
+            const { scheduleReservationReminder } = require('./agenda.service');
 
             // Support de multiples champs selon variantes de modèle
             const checkInRaw = reservation.checkIn || reservation.checkInDate || reservation.startDate;
-            const checkOutRaw = reservation.checkOut || reservation.checkOutDate || reservation.endDate;
-
-            const arrivalData = {
-                reservationId: reservation._id,
-                residenceName,
-                arrivalDate: checkInRaw ? new Date(checkInRaw).toLocaleDateString('fr-FR') : undefined,
-                arrivalTime: reservation.checkInTime || '14:00',
-                address: residence.location?.formattedAddress || residence.address
-            };
-
-            const departureData = {
-                reservationId: reservation._id,
-                residenceName,
-                departureDate: checkOutRaw ? new Date(checkOutRaw).toLocaleDateString('fr-FR') : undefined,
-                departureTime: reservation.checkOutTime || '12:00'
-            };
 
             const now = new Date();
             const arrivalDate = checkInRaw ? new Date(checkInRaw) : null;
-            const departureDate = checkOutRaw ? new Date(checkOutRaw) : null;
 
-            // Note: setTimeout n'est pas fiable pour de longs délais en production
+            let scheduledReminders = 0;
+
+            // ✅ Rappel 24h avant l'arrivée via Agenda (persistant au restart)
             if (arrivalDate && arrivalDate > now) {
-                const dayBeforeArrival = new Date(arrivalDate);
-                dayBeforeArrival.setDate(dayBeforeArrival.getDate() - 1);
-                const delayArrival = Math.max(0, dayBeforeArrival.getTime() - now.getTime());
-                if (delayArrival < 2147483647) {
-                    setTimeout(() => {
-                        this.notifyClient(clientId, notificationTypes.CLIENT.ARRIVAL_REMINDER, arrivalData);
-                    }, delayArrival);
-                    logger.info(`(Reservation) Rappel d'arrivée programmé pour le client ${clientId} dans ${Math.round(delayArrival/3600000)}h`);
+                try {
+                    await scheduleReservationReminder(reservationId, arrivalDate);
+                    scheduledReminders++;
+                    logger.info(`Rappel de réservation Agenda programmé pour ${reservationId}`);
+                } catch (err) {
+                    logger.warn(`Impossible de programmer rappel réservation: ${err.message}`);
                 }
             }
 
-            if (departureDate && departureDate > now) {
-                const dayBeforeDeparture = new Date(departureDate);
-                dayBeforeDeparture.setDate(dayBeforeDeparture.getDate() - 1);
-                const delayDeparture = Math.max(0, dayBeforeDeparture.getTime() - now.getTime());
-                if (delayDeparture < 2147483647) {
-                    setTimeout(() => {
-                        this.notifyClient(clientId, notificationTypes.CLIENT.DEPARTURE_REMINDER, departureData);
-                    }, delayDeparture);
-                    logger.info(`(Reservation) Rappel de départ programmé pour le client ${clientId} dans ${Math.round(delayDeparture/3600000)}h`);
-                }
-            }
-
-            return { success: true, message: 'Rappels Réservation programmés avec succès' };
+            return {
+                success: true,
+                message: `${scheduledReminders} rappel(s) programmé(s) via Agenda`,
+                scheduledReminders
+            };
         } catch (error) {
-            logger.error('Erreur lors de la programmation des rappels (Reservation):', error);
+            logger.error('Erreur lors de la programmation des rappels Agenda (Reservation):', error);
             throw error;
         }
     }
@@ -538,17 +481,17 @@ class NotificationService {
                     locationName: residence.location?.city || residence.location?.formattedAddress,
                     imageUrl: residence.images && residence.images.length > 0 ? residence.images[0] : null
                 };
-                
-                const notificationType = availableUnits <= 2 
-                    ? notificationTypes.CLIENT.LIMITED_AVAILABILITY 
+
+                const notificationType = availableUnits <= 2
+                    ? notificationTypes.CLIENT.LIMITED_AVAILABILITY
                     : notificationTypes.CLIENT.POPULAR_RESIDENCE;
-                
+
                 return this.notifyClient(clientId, notificationType, data);
             });
-            
+
             const results = await Promise.all(promises);
             logger.info(`Notifications d'occupation envoyées à ${results.length} clients`);
-            
+
             return {
                 success: true,
                 notificationsSent: results.length
@@ -567,10 +510,10 @@ class NotificationService {
     async sendMonthlyStatsNotification(partnerStats) {
         try {
             const { partnerId, month, year, totalBookings, totalRevenue, occupancyRate } = partnerStats;
-            
-            const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-            
+
+            const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
             const data = {
                 month: monthNames[month - 1],
                 year,
@@ -579,7 +522,7 @@ class NotificationService {
                 occupancyRate: `${occupancyRate}%`,
                 summary: `${totalBookings} réservations, ${totalRevenue} FCFA de revenus, taux d'occupation de ${occupancyRate}%`
             };
-            
+
             return await this.notifyPartner(
                 partnerId,
                 notificationTypes.PARTNER.MONTHLY_STATS,
@@ -592,7 +535,7 @@ class NotificationService {
     }
 
     // ✅ PHASE 0 BIS : Méthodes manquantes critiques pour payment-timer.service.js
-    
+
     /**
      * Envoie une notification de délai de paiement
      * @param {Object} reservation - Réservation avec user et residence peuplés
@@ -606,7 +549,7 @@ class NotificationService {
             }
 
             const timeLeft = Math.max(0, Math.ceil((deadline - new Date()) / (1000 * 60))); // Minutes restantes
-            
+
             const message = `⏰ Paiement requis ! ${timeLeft} min restantes pour votre réservation à ${reservation.residence?.title || 'la résidence'}. Montant: ${reservation.totalPrice || 0} XOF`;
 
             // Notification push/email standard
@@ -627,9 +570,9 @@ class NotificationService {
                 try {
                     const twilioService = require('./twilio.service');
                     await twilioService.sendReservationNotification(reservation, 'payment_deadline', {
-                        deadline: reservation.ttlSnapshot?.paymentTTLMinutes ? 
-                                 new Date(Date.now() + (reservation.ttlSnapshot.paymentTTLMinutes * 60 * 1000)) : 
-                                 new Date(Date.now() + (24 * 60 * 60 * 1000))
+                        deadline: reservation.ttlSnapshot?.paymentTTLMinutes ?
+                            new Date(Date.now() + (reservation.ttlSnapshot.paymentTTLMinutes * 60 * 1000)) :
+                            new Date(Date.now() + (24 * 60 * 60 * 1000))
                     });
                 } catch (smsError) {
                     logger.error('Erreur envoi SMS délai paiement:', smsError);
@@ -673,7 +616,7 @@ class NotificationService {
             // Notification Partner si disponible
             if (reservation.partner) {
                 const partnerMessage = `📊 Réservation expirée. La réservation de ${reservation.user.firstName || 'Client'} pour "${reservation.residence?.title || 'résidence'}" a expiré (délai paiement dépassé).`;
-                
+
                 await this.createNotification(
                     reservation.partner,
                     notificationTypes.PARTNER.BOOKING_EXPIRED,
@@ -717,7 +660,7 @@ class NotificationService {
     async sendPayoutCreated(partner, payoutData) {
         try {
             const message = `Nouveau reversement programmé: ${payoutData.amount} ${payoutData.currency}`;
-            
+
             // Notification push/email partner
             await this.createNotification(
                 partner._id,
@@ -759,10 +702,10 @@ class NotificationService {
      */
     async sendPayoutInitiated(partner, payoutData) {
         try {
-            const message = payoutData.requires_confirmation ? 
+            const message = payoutData.requires_confirmation ?
                 `Transfert de ${payoutData.amount} ${payoutData.currency} initié. Confirmation email requise.` :
                 `Transfert de ${payoutData.amount} ${payoutData.currency} en cours de traitement.`;
-            
+
             await this.createNotification(
                 partner._id,
                 'PAYOUT_INITIATED',
@@ -782,7 +725,7 @@ class NotificationService {
                     const smsMessage = payoutData.requires_confirmation ?
                         `ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} initié (ID: ${payoutData.transaction_id}). Vérifiez vos emails pour confirmation.` :
                         `ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} en cours (ID: ${payoutData.transaction_id}).`;
-                    
+
                     await twilioService.sendSMS(partner.phoneNumber, smsMessage);
                 } catch (smsError) {
                     logger.error('Erreur SMS payout initié:', smsError);
@@ -805,7 +748,7 @@ class NotificationService {
     async sendPayoutCompleted(partner, payoutData) {
         try {
             const message = `Transfert réussi: ${payoutData.amount} ${payoutData.currency} crédité sur votre compte`;
-            
+
             await this.createNotification(
                 partner._id,
                 'PAYOUT_COMPLETED',
@@ -857,10 +800,10 @@ class NotificationService {
      */
     async sendPayoutFailed(partner, payoutData) {
         try {
-            const message = payoutData.will_retry ? 
+            const message = payoutData.will_retry ?
                 `Transfert temporairement échoué: ${payoutData.reason}. Nouvelle tentative programmée.` :
                 `Transfert échoué définitivement: ${payoutData.reason}. Contactez le support.`;
-            
+
             await this.createNotification(
                 partner._id,
                 'PAYOUT_FAILED',
@@ -881,7 +824,7 @@ class NotificationService {
                     const smsMessage = payoutData.will_retry ?
                         `⚠️ ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} temporairement échoué (${payoutData.reason}). Nouvelle tentative en cours.` :
                         `❌ ChapeChape: Transfert de ${payoutData.amount} ${payoutData.currency} échoué (${payoutData.reason}). Contactez le support: support@chapechape.com`;
-                    
+
                     await twilioService.sendSMS(partner.phoneNumber, smsMessage);
                 } catch (smsError) {
                     logger.error('Erreur SMS payout échoué:', smsError);
@@ -917,7 +860,7 @@ class NotificationService {
     async sendInsufficientBalanceAlert(currentBalance, requiredAmount) {
         try {
             // Notifier tous les admins
-            const admins = await User.find({ 
+            const admins = await User.find({
                 role: { $in: ['admin', 'superadmin'] },
                 isActive: true
             });
@@ -969,8 +912,8 @@ class NotificationService {
      */
     async notifyPhoneChange(userId, userRole, oldPhone, newPhone) {
         try {
-            const type = userRole === 'partner' 
-                ? notificationTypes.PARTNER.PHONE_CHANGED 
+            const type = userRole === 'partner'
+                ? notificationTypes.PARTNER.PHONE_CHANGED
                 : notificationTypes.CLIENT.PHONE_CHANGED;
 
             await this.createNotification(userId, type, '', {
@@ -995,8 +938,8 @@ class NotificationService {
      */
     async notifyVerificationSent(userId, userRole, phoneNumber, channel) {
         try {
-            const type = userRole === 'partner' 
-                ? notificationTypes.PARTNER.VERIFICATION_SENT 
+            const type = userRole === 'partner'
+                ? notificationTypes.PARTNER.VERIFICATION_SENT
                 : notificationTypes.CLIENT.VERIFICATION_SENT;
 
             await this.createNotification(userId, type, '', {
@@ -1020,8 +963,8 @@ class NotificationService {
      */
     async notifyVerificationSuccess(userId, userRole, phoneNumber) {
         try {
-            const type = userRole === 'partner' 
-                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS 
+            const type = userRole === 'partner'
+                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS
                 : notificationTypes.CLIENT.VERIFICATION_SUCCESS;
 
             await this.createNotification(userId, type, '', {
@@ -1045,8 +988,8 @@ class NotificationService {
      */
     async notifyVerificationFailed(userId, userRole, phoneNumber, reason) {
         try {
-            const type = userRole === 'partner' 
-                ? notificationTypes.PARTNER.VERIFICATION_FAILED 
+            const type = userRole === 'partner'
+                ? notificationTypes.PARTNER.VERIFICATION_FAILED
                 : notificationTypes.CLIENT.VERIFICATION_FAILED;
 
             await this.createNotification(userId, type, '', {
@@ -1070,8 +1013,8 @@ class NotificationService {
      */
     async notifyNewLogin(userId, userRole, loginData) {
         try {
-            const type = userRole === 'partner' 
-                ? notificationTypes.PARTNER.LOGIN_ALERT 
+            const type = userRole === 'partner'
+                ? notificationTypes.PARTNER.LOGIN_ALERT
                 : notificationTypes.CLIENT.LOGIN_ALERT;
 
             await this.createNotification(userId, type, '', {
@@ -1098,8 +1041,8 @@ class NotificationService {
      */
     async notifySecurityAlert(userId, userRole, alert, alertData) {
         try {
-            const type = userRole === 'partner' 
-                ? notificationTypes.PARTNER.SECURITY_ALERT 
+            const type = userRole === 'partner'
+                ? notificationTypes.PARTNER.SECURITY_ALERT
                 : notificationTypes.CLIENT.SECURITY_ALERT;
 
             await this.createNotification(userId, type, '', {
@@ -1194,8 +1137,8 @@ class NotificationService {
             const user = await User.findById(userId);
             if (!user) return;
 
-            const type = user.role === 'partner' 
-                ? notificationTypes.PARTNER.VERIFICATION_SENT 
+            const type = user.role === 'partner'
+                ? notificationTypes.PARTNER.VERIFICATION_SENT
                 : notificationTypes.CLIENT.VERIFICATION_SENT;
 
             const message = `Code de vérification envoyé par ${channel.toUpperCase()} au ${phoneNumber}`;
@@ -1223,8 +1166,8 @@ class NotificationService {
             const user = await User.findById(userId);
             if (!user) return;
 
-            const type = user.role === 'partner' 
-                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS 
+            const type = user.role === 'partner'
+                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS
                 : notificationTypes.CLIENT.VERIFICATION_SUCCESS;
 
             const message = `Numéro ${phoneNumber} vérifié avec succès`;
@@ -1252,8 +1195,8 @@ class NotificationService {
             const user = await User.findById(userId);
             if (!user) return;
 
-            const type = user.role === 'partner' 
-                ? notificationTypes.PARTNER.LOGIN_ALERT 
+            const type = user.role === 'partner'
+                ? notificationTypes.PARTNER.LOGIN_ALERT
                 : notificationTypes.CLIENT.LOGIN_ALERT;
 
             const message = `Nouvelle connexion détectée depuis ${ip}`;

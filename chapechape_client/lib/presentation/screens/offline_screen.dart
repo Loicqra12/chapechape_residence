@@ -4,6 +4,7 @@ import 'package:chapechape_client/core/services/optimized_connectivity_service.d
 import 'package:chapechape_client/presentation/widgets/residence_card.dart';
 import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/service_locator.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 /// Écran affiché lorsque l'utilisateur est hors ligne
 class OfflineScreen extends StatefulWidget {
@@ -197,35 +198,11 @@ class _OfflineScreenState extends State<OfflineScreen> {
   }
   
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.cloud_off,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Aucune donnée en cache',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Connectez-vous à Internet pour charger des résidences',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return const EmptyStateWidget(
+      imagePath: 'assets/images/empty_states/empty_offline_illustration.png',
+      title: 'Aucune donnée hors ligne',
+      subtitle: 'Connectez-vous à Internet pour découvrir nos résidences et charger le contenu',
+      fallbackIcon: Icons.cloud_off,
     );
   }
   

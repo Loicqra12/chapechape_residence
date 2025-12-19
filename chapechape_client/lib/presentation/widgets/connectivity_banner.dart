@@ -27,6 +27,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   bool _wasOffline = false; // Nouveau : tracker si on était hors ligne
   bool _showSyncBanner = false; // Nouveau : contrôler l'affichage de la bannière sync
   final _connectivityChangeController = StreamController<bool>.broadcast();
+  Timer? _connectivityTimer;
   
   @override
   void initState() {
@@ -34,6 +35,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
     
     // Initialiser l'ApiService correctement
     ApiService.initialize().then((service) {
+      if (!mounted) return;
       _apiService = service;
       // Vérifier la connectivité immédiatement après l'initialisation
       _checkConnectivity();
@@ -45,14 +47,17 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   
   @override
   void dispose() {
+    _connectivityTimer?.cancel();
     _connectivityChangeController.close();
     super.dispose();
   }
   
   // Lancer une vérification périodique simple de connectivité
   void _startPeriodicConnectivityCheck() {
-    Timer.periodic(const Duration(minutes: 5), (timer) {
-      _checkConnectivity();
+    _connectivityTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (mounted) {
+        _checkConnectivity();
+      }
     });
     
     // Vérification initiale
@@ -61,6 +66,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   
   // Vérifier la connectivité de manière robuste
   Future<void> _checkConnectivity() async {
+    if (!mounted) return;
+
     try {
       bool isNowConnected = false;
       
@@ -86,6 +93,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
         isNowConnected = false;
       }
       
+      if (!mounted) return;
+
       // Mettre à jour l'état si changement
       if (isNowConnected != _isConnected) {
         setState(() {
@@ -106,6 +115,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
         _connectivityChangeController.add(isNowConnected);
       }
     } catch (e) {
+      if (!mounted) return;
+
       // En cas d'erreur, considérer que nous sommes hors ligne
       if (_isConnected) {
         setState(() {
