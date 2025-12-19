@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:intl/intl.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class ReviewsScreen extends StatefulWidget {
   final String residenceId;
@@ -112,30 +113,14 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final stats = reviewsData['stats'] as Map<String, dynamic>? ?? {};
 
     if (reviews.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun avis pour cette résidence',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Soyez le premier à laisser un avis !',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
+    if (reviews.isEmpty) {
+      return const EmptyStateWidget(
+        imagePath: 'assets/images/empty_states/empty_reviews_illustration.png',
+        title: 'Aucun avis pour l\'instant',
+        subtitle: 'Soyez le premier à partager votre expérience dans cette résidence',
+        fallbackIcon: Icons.rate_review_outlined,
       );
+    }
     }
 
     return RefreshIndicator(

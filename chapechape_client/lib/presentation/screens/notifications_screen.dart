@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
@@ -6,6 +7,8 @@ import '../../core/blocs/notification/notification_bloc.dart';
 import '../../core/blocs/notification/notification_state.dart';
 import '../../core/blocs/notification/notification_event.dart';
 import '../../core/models/notification_model.dart';
+import '../widgets/skeletons/notification_item_skeleton.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -92,7 +95,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           },
           builder: (context, state) {
             if (state is NotificationLoading && state is! NotificationLoaded) {
-              return const Center(child: CircularProgressIndicator());
+              return ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: 5,
+                itemBuilder: (context, index) => const NotificationItemSkeleton(),
+              );
             } else if (state is NotificationActionInProgress) {
               return const Center(
                 child: Column(
@@ -106,32 +113,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               );
             } else if (state is NotificationLoaded) {
               if (state.notifications.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.notifications_off_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Aucune notification',
-                        style: AppTheme.headingMedium.copyWith(color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Vous n\'avez pas encore de notifications',
-                        style: AppTheme.bodyMedium.copyWith(color: Colors.grey[500]),
-                      ),
-                    ],
-                  ),
+                return const EmptyStateWidget(
+                  imagePath: 'assets/images/empty_states/empty_notifications_illustration.png',
+                  title: 'Aucune notification',
+                  subtitle: 'Nous vous tiendrons informé de vos réservations, promotions et nouveautés important',
                 );
               }
               
               return RefreshIndicator(
                 onRefresh: () async {
+                  HapticFeedback.mediumImpact();
                   context.read<NotificationBloc>().add(const LoadNotifications(isRefresh: true));
                 },
                 child: ListView.builder(

@@ -6,6 +6,7 @@ import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
+import 'package:chapechape_client/core/services/error_message_service.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
 import 'package:chapechape_client/presentation/widgets/custom_text_field.dart';
 import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
@@ -67,11 +68,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           );
     } else if (!_acceptTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez accepter les conditions d\'utilisation'),
-          backgroundColor: Colors.red,
-        ),
+      ErrorMessageService.showWarning(
+        context,
+        'Veuillez accepter les conditions d\'utilisation pour continuer.',
       );
     }
   }
@@ -126,18 +125,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (state is Authenticated) {
           context.go('/home');
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
+          ErrorMessageService.showError(
+            context,
+            state.message,
+            contextType: 'register',
+            onRetry: _submitForm,
           );
         } else if (state is RegisterSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Inscription réussie! Vous pouvez maintenant vous connecter.'),
-              backgroundColor: Colors.green,
-            ),
+          ErrorMessageService.showSuccess(
+            context,
+            'Inscription réussie ! Vous pouvez maintenant vous connecter.',
           );
           context.go('/login');
         }

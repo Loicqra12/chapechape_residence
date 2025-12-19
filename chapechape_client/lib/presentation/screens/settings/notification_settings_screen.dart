@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/services/onesignal_service.dart';
+import 'package:chapechape_client/core/services/error_message_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({Key? key}) : super(key: key);
@@ -48,11 +49,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors du chargement des préférences: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorMessageService.showError(
+          context,
+          e,
+          contextType: 'generic',
         );
       }
     } finally {
@@ -78,20 +78,17 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       );
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Préférences de notification sauvegardées'),
-            backgroundColor: Colors.green,
-          ),
+        ErrorMessageService.showSuccess(
+          context,
+          'Préférences de notification sauvegardées',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la sauvegarde: $e'),
-            backgroundColor: Colors.red,
-          ),
+        ErrorMessageService.showError(
+          context,
+          e,
+          contextType: 'profile_update',
         );
       }
     } finally {
@@ -312,18 +309,15 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     try {
       // Ici vous pourriez implémenter l'envoi d'une notification de test
       // via votre backend ou OneSignal
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notification de test envoyée'),
-          backgroundColor: Colors.green,
-        ),
+      ErrorMessageService.showSuccess(
+        context,
+        'Notification de test envoyée',
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de l\'envoi du test: $e'),
-          backgroundColor: Colors.red,
-        ),
+      ErrorMessageService.showError(
+        context,
+        e,
+        contextType: 'generic',
       );
     }
   }

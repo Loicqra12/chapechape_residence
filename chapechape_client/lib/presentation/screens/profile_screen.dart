@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
@@ -12,6 +13,7 @@ import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
 import 'package:chapechape_client/core/models/phone_number.dart';
+import 'package:chapechape_client/presentation/widgets/skeletons/profile_skeleton.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -225,6 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _logout() {
+    HapticFeedback.mediumImpact();
     context.read<AuthBloc>().add(const LogoutRequested());
     context.go('/home');
   }
@@ -265,13 +268,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
           builder: (context, state) {
             if (state is UserLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const ProfileSkeleton();
             } else if (state is UserProfileLoaded) {
               return _buildProfileContent(state);
             } else if (state is UserError) {
               return Center(child: Text('Erreur: ${state.message}'));
             } else {
-              return const Center(child: CircularProgressIndicator());
+              return const ProfileSkeleton();
             }
           },
         ),
@@ -638,6 +641,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required VoidCallback onTap,
   }) {
     return ListTile(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       leading: Icon(
         icon,
         color: isDestructive ? Colors.red : Colors.black87,
@@ -650,7 +657,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
+      // onTap handled in ListTile property above
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
+import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
+import 'package:chapechape_client/core/services/onboarding_service.dart';
 import 'package:go_router/go_router.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -50,9 +52,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _animationController.forward();
 
-    // Vérifier l'état d'authentification
+    // Vérifier l'état d'authentification et l'onboarding
     try {
-      // Attendre que l'animation soit terminée
+      // Attendre que l'animation soit terminée (max 2s)
       await Future.delayed(const Duration(seconds: 2));
       
       if (!mounted) return;
@@ -61,17 +63,41 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       final authBloc = context.read<AuthBloc>();
       authBloc.add(const AuthCheckRequested());
 
-      // Attendre un peu plus pour l'animation
-      await Future.delayed(const Duration(seconds: 1));
+      // Attendre la réponse de l'auth (max 500ms)
+      await Future.delayed(const Duration(milliseconds: 500));
       
       if (!mounted) return;
       
-      // Naviguer vers la page appropriée
-      context.go('/onboarding');
+      // Vérifier si l'onboarding a déjà été vu
+      final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
+      final authState = authBloc.state;
+      final isAuthenticated = authState is Authenticated;
+      
+      // Navigation intelligente
+      if (!mounted) return;
+      
+      if (isAuthenticated) {
+        // Utilisateur connecté → Aller directement à l'accueil
+        context.go('/home');
+      } else if (hasSeenOnboarding) {
+        // Onboarding déjà vu → Aller à l'accueil
+        context.go('/home');
+      } else {
+        // Premier lancement → Afficher l'onboarding
+        context.go('/onboarding');
+      }
     } catch (e) {
       debugPrint('Erreur lors de l\'initialisation: $e');
       if (mounted) {
-        context.go('/onboarding');
+        // En cas d'erreur, vérifier l'onboarding pour décider
+        final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
+        if (mounted) {
+          if (hasSeenOnboarding) {
+            context.go('/home');
+          } else {
+            context.go('/onboarding');
+          }
+        }
       }
     }
   }

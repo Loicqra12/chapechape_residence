@@ -8,6 +8,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/onesignal_service.dart';
 import '../widgets/loading_widget.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class ChatScreen extends StatelessWidget {
   final ChatService chatService;
@@ -50,8 +51,10 @@ class ChatScreen extends StatelessWidget {
 
             if (state is chat.ChatLoaded) {
               if (state.conversations.isEmpty) {
-                return const Center(
-                  child: Text('Aucune conversation'),
+                return const EmptyStateWidget(
+                  imagePath: 'assets/images/empty_states/empty_chat_illustration.png',
+                  title: 'Aucune conversation',
+                  subtitle: 'Contactez un propriétaire pour poser vos questions et réserver en toute confiance',
                 );
               }
 

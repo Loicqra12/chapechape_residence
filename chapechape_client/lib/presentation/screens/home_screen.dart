@@ -1,5 +1,6 @@
 // lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
@@ -135,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         maxItems: 5,
                         exclusiveOnly: false,
                         onPromotionSelected: (promotion) {
+                          HapticFeedback.selectionClick();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -224,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       isLoading: isLoading,
                       listings: residences,
                       onSeeAllPressed: () {
+                        HapticFeedback.selectionClick();
                         context.push('/search');
                       },
                     );
@@ -360,6 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       message: 'Créer un nouveau compte',
                       child: ElevatedButton(
                         onPressed: () {
+                          HapticFeedback.selectionClick();
                           _logger.info('Navigation vers l\'écran d\'inscription depuis la section d\'invitation');
                           context.push('/register');
                         },
@@ -385,6 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       message: 'Se connecter à votre compte existant',
                       child: OutlinedButton(
                         onPressed: () {
+                          HapticFeedback.selectionClick();
                           _logger.info('Navigation vers l\'écran de connexion depuis la section d\'invitation');
                           context.push('/login');
                         },

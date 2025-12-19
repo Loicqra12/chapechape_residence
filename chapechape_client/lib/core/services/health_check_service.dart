@@ -29,7 +29,7 @@ class HealthCheckService {
       
       // Utiliser l'endpoint ping dédié
       final response = await http.get(
-        Uri.parse('http://192.168.1.71:4000/api/ping'),
+        Uri.parse('http://192.168.1.65:4000/api/ping'),
       ).timeout(const Duration(seconds: 5));
       
       _isServerHealthy = response.statusCode == 200;

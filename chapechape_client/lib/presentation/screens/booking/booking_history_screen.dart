@@ -10,6 +10,7 @@ import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
 import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({Key? key}) : super(key: key);
@@ -105,29 +106,20 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
             final List<Booking> bookings = state.bookings;
 
             if (bookings.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 72,
-                      color: Colors.grey[400],
+              return EmptyStateWidget(
+                imagePath: 'assets/images/empty_states/empty_bookings_illustration.png',
+                title: 'Aucune réservation',
+                subtitle: 'Commencez votre aventure ! Réservez votre première résidence dès maintenant',
+                action: ElevatedButton.icon(
+                  icon: const Icon(Icons.search),
+                  label: const Text('Trouver une résidence'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Aucune réservation trouvée',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Vous n\'avez pas encore de réservations',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
+                  ),
+                  onPressed: () => context.go('/residences'),
                 ),
               );
             }

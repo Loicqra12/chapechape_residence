@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AnimatedFavoriteButton extends StatefulWidget {
   final bool isFavorite;
@@ -89,7 +90,10 @@ class _AnimatedFavoriteButtonState extends State<AnimatedFavoriteButton>
       return Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: widget.onPressed,
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            widget.onPressed();
+          },
           borderRadius: BorderRadius.circular(widget.size),
           child: Container(
             padding: EdgeInsets.all(widget.size * 0.3),
@@ -111,7 +115,10 @@ class _AnimatedFavoriteButtonState extends State<AnimatedFavoriteButton>
     }
 
     return GestureDetector(
-      onTap: widget.onPressed,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        widget.onPressed();
+      },
       child: icon,
     );
   }

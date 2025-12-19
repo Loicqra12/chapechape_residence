@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chapechape_client/core/services/onboarding_service.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
@@ -29,13 +31,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
   ];
 
-  void _nextPage() {
+  void _nextPage() async {
     if (_currentPage < _pages.length - 1) {
       setState(() {
         _currentPage++;
       });
     } else {
-      context.go('/home');
+      // Marquer l'onboarding comme vu avant de naviguer
+      await OnboardingService.markOnboardingAsSeen();
+      if (mounted) {
+        context.go('/home');
+      }
     }
   }
 
@@ -55,7 +61,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => context.go('/home'),
+                  onPressed: () async {
+                    // Marquer l'onboarding comme vu même si on passe
+                    await OnboardingService.markOnboardingAsSeen();
+                    if (mounted) {
+                      context.go('/home');
+                    }
+                  },
                   child: const Text(
                     'Passer',
                     style: TextStyle(
@@ -72,8 +84,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   margin: const EdgeInsets.symmetric(vertical: 20),
                   child: Image.asset(
                     _pages[_currentPage]['image']!,
+                    key: ValueKey('image_$_currentPage'),
                     fit: BoxFit.contain,
-                  ),
+                  )
+                  .animate()
+                  .fadeIn(duration: 600.ms)
+                  .slideX(begin: 0.2, end: 0, curve: Curves.easeOutQuart),
                 ),
               ),
               // Text section
@@ -90,8 +106,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,
-                    ),
+                    )
+                    .animate(key: ValueKey('title_$_currentPage'))
+                    .fadeIn(duration: 500.ms, delay: 200.ms)
+                    .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuart),
+                    
                     const SizedBox(height: 20),
+                    
                     Text(
                       _pages[_currentPage]['description']!,
                       style: const TextStyle(
@@ -100,7 +121,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,
-                    ),
+                    )
+                    .animate(key: ValueKey('desc_$_currentPage'))
+                    .fadeIn(duration: 500.ms, delay: 400.ms)
+                    .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuart),
                   ],
                 ),
               ),

@@ -10,6 +10,7 @@ import '../../core/services/logger_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../widgets/multilevel_location_selector.dart';
+import '../widgets/common/empty_state_widget.dart';
 
 class LocationSelectorScreen extends StatefulWidget {
   static const String routeName = '/location-selector';
@@ -184,12 +185,17 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                      ? _hasError 
                         ? _buildErrorState()
                         : Center(
-                          child: Text(
-                            'Aucune localisation populaire disponible',
-                            semanticsLabel: 'Liste vide, aucune localisation populaire n\'est disponible',
-                            style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-                          ),
-                        )
+                            child: SingleChildScrollView(
+                              child: EmptyStateWidget(
+                                imagePath: 'assets/images/empty_states/empty_location_illustration.png',
+                                title: 'Aucune localisation trouvée',
+                                subtitle: 'Vérifiez votre connexion ou utilisez la recherche ci-dessus',
+                                fallbackIcon: Icons.location_off_outlined,
+                                padding: const EdgeInsets.all(24.0),
+                                imageHeight: 150,
+                              ),
+                            ),
+                          )
                     : ListView.builder(
                         itemCount: _popularLocations.length,
                         itemBuilder: (context, index) {

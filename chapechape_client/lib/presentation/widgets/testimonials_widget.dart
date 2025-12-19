@@ -82,7 +82,7 @@ class TestimonialsWidget extends StatelessWidget {
     return PremiumCard(
       borderRadius: 20,
       elevation: 5,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       child: Stack(
         children: [
           // Background Quote Icon
@@ -169,7 +169,7 @@ class TestimonialsWidget extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.5,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
                       fontStyle: FontStyle.italic,
                     ),
                     maxLines: 4,
@@ -183,7 +183,7 @@ class TestimonialsWidget extends StatelessWidget {
                     _formatDate(testimonial.date),
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[400],
+                      color: Theme.of(context).textTheme.labelSmall?.color,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

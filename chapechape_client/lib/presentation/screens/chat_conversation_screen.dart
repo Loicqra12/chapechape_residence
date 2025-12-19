@@ -8,6 +8,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/socket_service.dart';
 import '../widgets/chat/message_bubble.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class ChatConversationScreen extends StatefulWidget {
   final ChatConversation conversation;
@@ -190,56 +191,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
   
   Widget _buildMessagingLockedUI() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.lock_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Messagerie verrouillée',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'La messagerie avec le propriétaire sera disponible après le paiement de votre réservation.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (widget.conversation.reservationId != null)
-              ElevatedButton(
-                onPressed: () {
-                  // Rediriger vers la page de paiement
-                  context.push('/payment/${widget.conversation.reservationId}');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text(
-                  'Procéder au paiement',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+    return EmptyStateWidget(
+      imagePath: 'assets/images/empty_states/locked_messaging_illustration.png',
+      title: 'Messagerie verrouillée',
+      subtitle: 'Finalisez votre réservation pour débloquer la messagerie directe avec le propriétaire',
+      imageHeight: 200,
+      action: widget.conversation.reservationId != null
+          ? ElevatedButton(
+              onPressed: () {
+                context.push('/payment/${widget.conversation.reservationId}');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-          ],
-        ),
-      ),
+              child: const Text(
+                'Procéder au paiement',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -334,7 +311,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   children: [
                     Expanded(
                       child: messages.isEmpty
-                          ? const Center(child: Text('Aucun message dans cette conversation'))
+                          ? const EmptyStateWidget(
+                              imagePath: 'assets/images/empty_states/empty_conversation_illustration.png',
+                              title: 'Démarrez la conversation',
+                              subtitle: 'Envoyez votre premier message au propriétaire pour en savoir plus',
+                              imageHeight: 180,
+                            )
                           : ListView.builder(
                               controller: _scrollController,
                               reverse: true,

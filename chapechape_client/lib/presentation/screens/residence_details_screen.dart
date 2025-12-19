@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -19,6 +20,7 @@ import '../../core/theme/app_theme.dart';
 import '../screens/booking_screen.dart';
 import '../../core/blocs/booking/booking_bloc.dart';
 import '../../core/services/booking_service.dart';
+import '../widgets/skeletons/residence_details_skeleton.dart';
 
 class ResidenceDetailsScreen extends StatefulWidget {
   final String residenceId;
@@ -96,7 +98,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
         body: BlocBuilder<ResidenceBloc, ResidenceState>(
           builder: (context, state) {
             if (state is ResidenceLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const ResidenceDetailsSkeleton();
             } else if (state is ResidenceDetailsLoaded) {
               final residence = state.residence;
               
@@ -110,6 +112,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         Positioned.fill(
                           child: GestureDetector(
                             onTap: () {
+                              HapticFeedback.selectionClick();
                               _openGallery(context, residence.images, _currentImageIndex);
                             },
                             child: Stack(
@@ -163,6 +166,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                         GestureDetector(
                                           onTap: () {
                                             if (_currentImageIndex > 0) {
+                                              HapticFeedback.selectionClick();
                                               _pageController.previousPage(
                                                 duration: const Duration(milliseconds: 300),
                                                 curve: Curves.easeInOut,
@@ -195,6 +199,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                         GestureDetector(
                                           onTap: () {
                                             if (_currentImageIndex < residence.images.length - 1) {
+                                              HapticFeedback.selectionClick();
                                               _pageController.nextPage(
                                                 duration: const Duration(milliseconds: 300),
                                                 curve: Curves.easeInOut,

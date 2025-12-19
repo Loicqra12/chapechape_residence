@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'favorites_screen.dart';
 import 'notifications_screen.dart';
@@ -16,6 +18,8 @@ import '../../core/models/city.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/optimized_connectivity_service.dart';
+import '../../core/blocs/notification/notification_bloc.dart';
+import '../../core/blocs/notification/notification_state.dart';
 
 class MainScreen extends StatefulWidget {
   final Widget child;
@@ -37,6 +41,36 @@ class _MainScreenState extends State<MainScreen> {
   
   // Service de connectivité optimisé
   final OptimizedConnectivityService _connectivityService = OptimizedConnectivityService();
+  
+  // Variables pour le hide-on-scroll du bottom navigation bar
+  bool _isNavBarVisible = true;
+  double _lastScrollOffset = 0;
+  
+  /// Gère la détection du scroll pour afficher/masquer la barre de navigation
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification) {
+      final currentOffset = notification.metrics.pixels;
+      final delta = currentOffset - _lastScrollOffset;
+      
+      // Seuil de 15 pixels pour éviter les micro-scrolls
+      if (delta > 15 && _isNavBarVisible && currentOffset > 50) {
+        setState(() => _isNavBarVisible = false);
+      } else if (delta < -15 && !_isNavBarVisible) {
+        setState(() => _isNavBarVisible = true);
+      }
+      
+      _lastScrollOffset = currentOffset;
+    }
+    
+    // Réafficher la navbar quand on atteint le haut
+    if (notification is ScrollEndNotification) {
+      if (notification.metrics.pixels <= 0 && !_isNavBarVisible) {
+        setState(() => _isNavBarVisible = true);
+      }
+    }
+    
+    return false; // Ne pas intercepter les notifications
+  }
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -66,6 +100,7 @@ class _MainScreenState extends State<MainScreen> {
     ];
     
     if (index >= 0 && index < routes.length) {
+      HapticFeedback.selectionClick();
       _logger.debug('Navigation vers ${routeLabels[index]} (${routes[index]})');
       context.go(routes[index]);
     }
@@ -159,64 +194,104 @@ class _MainScreenState extends State<MainScreen> {
           : null,
         centerTitle: false,
       ),
-      body: ConnectivityBanner(
-        child: widget.child,
-      ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: ConnectivityBanner(
+          child: widget.child,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: NavigationBar(
-              selectedIndex: _calculateSelectedIndex(context),
-              onDestinationSelected: (index) => _onItemTapped(index, context),
-              backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.black.withOpacity(0.6) 
-                  : Colors.white.withOpacity(0.8),
-              indicatorColor: Theme.of(context).brightness == Brightness.dark 
-                  ? AppTheme.primaryColor.withOpacity(0.2) 
-                  : AppTheme.primaryColor.withOpacity(0.15),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              height: 70,
-              elevation: 0,
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home, color: Theme.of(context).primaryColor),
-                  label: 'Accueil',
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.favorite_outline),
-                  selectedIcon: Icon(Icons.favorite, color: Theme.of(context).primaryColor),
-                  label: 'Favoris',
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.notifications_outlined),
-                  selectedIcon: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
-                  label: 'Notifs',
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.chat_outlined),
-                  selectedIcon: Icon(Icons.chat, color: Theme.of(context).primaryColor),
-                  label: 'Messages',
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
-                  label: 'Profil',
+      ),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        offset: _isNavBarVisible ? Offset.zero : const Offset(0, 1.5),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _isNavBarVisible ? 1.0 : 0.0,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: NavigationBar(
+                  selectedIndex: _calculateSelectedIndex(context),
+                  onDestinationSelected: (index) => _onItemTapped(index, context),
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.black.withOpacity(0.6) 
+                      : Colors.white.withOpacity(0.8),
+                  indicatorColor: Theme.of(context).brightness == Brightness.dark 
+                      ? AppTheme.primaryColor.withOpacity(0.2) 
+                      : AppTheme.primaryColor.withOpacity(0.15),
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  height: 70,
+                  elevation: 0,
+                  destinations: [
+                    NavigationDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home, color: Theme.of(context).primaryColor),
+                      label: 'Accueil',
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.favorite_outline),
+                      selectedIcon: Icon(Icons.favorite, color: Theme.of(context).primaryColor),
+                      label: 'Favoris',
+                    ),
+                    NavigationDestination(
+                      icon: BlocBuilder<NotificationBloc, NotificationState>(
+                        builder: (context, state) {
+                          int unreadCount = 0;
+                          if (state is NotificationLoaded) {
+                            unreadCount = state.notifications.where((n) => !n.isRead).length;
+                          }
+                          
+                          return Badge(
+                            label: unreadCount > 0 
+                              ? Text(unreadCount > 99 ? '99+' : unreadCount.toString())
+                              : null,
+                            child: const Icon(Icons.notifications_outlined),
+                          );
+                        },
+                      ),
+                      selectedIcon: BlocBuilder<NotificationBloc, NotificationState>(
+                        builder: (context, state) {
+                          int unreadCount = 0;
+                          if (state is NotificationLoaded) {
+                            unreadCount = state.notifications.where((n) => !n.isRead).length;
+                          }
+                          
+                          return Badge(
+                            label: unreadCount > 0 
+                              ? Text(unreadCount > 99 ? '99+' : unreadCount.toString())
+                              : null,
+                            child: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
+                          );
+                        },
+                      ),
+                      label: 'Notifs',
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.chat_outlined),
+                      selectedIcon: Icon(Icons.chat, color: Theme.of(context).primaryColor),
+                      label: 'Messages',
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
+                      label: 'Profil',
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

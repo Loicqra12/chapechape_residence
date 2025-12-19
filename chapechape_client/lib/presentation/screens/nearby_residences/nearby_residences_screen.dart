@@ -5,6 +5,7 @@ import '../../../core/services/nearby_residences_service.dart';
 import '../../../core/models/residence_model.dart';
 import '../../../core/services/map_provider/google_maps_service.dart';
 import '../../../core/extensions/residence_marker_extension.dart';
+import '../../widgets/common/empty_state_widget.dart';
 
 class NearbyResidencesScreen extends StatefulWidget {
   const NearbyResidencesScreen({Key? key}) : super(key: key);
@@ -353,7 +354,30 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
         Expanded(
           flex: 2,
           child: _residences.isEmpty
-              ? const Center(child: Text('Aucune résidence trouvée à proximité'))
+              ? SingleChildScrollView(
+                  child: EmptyStateWidget(
+                    imagePath: 'assets/images/empty_states/empty_nearby_illustration.png',
+                    title: 'Aucune résidence à proximité',
+                    subtitle: 'Élargissez votre rayon de recherche ou explorez une nouvelle zone',
+                    fallbackIcon: Icons.location_off_outlined,
+                    action: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _currentRadius = 10.0;
+                        });
+                        _loadNearbyResidences();
+                      },
+                      icon: const Icon(Icons.map),
+                      label: const Text('Élargir la zone (10 km)'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   itemCount: _residences.length,

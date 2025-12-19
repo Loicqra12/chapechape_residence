@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/location_filter_widget.dart';
+import '../widgets/skeletons/search_result_skeleton.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/models/residence_model.dart';
 import '../../config/theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class SearchScreen extends StatefulWidget {
   final String? category;
@@ -123,9 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
               },
               builder: (context, state) {
                 if (state is ResidenceLoading && _filters.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const SearchResultSkeleton(itemCount: 5);
                 }
 
                 if (state is ResidencesLoaded) {
@@ -153,6 +154,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       if (!_showAdvancedFilters)
                         ElevatedButton.icon(
                           onPressed: () {
+                            HapticFeedback.selectionClick();
                             setState(() {
                               _showAdvancedFilters = true;
                             });
@@ -172,37 +174,25 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 72,
-            color: Colors.grey[400],
+    return EmptyStateWidget(
+      imagePath: 'assets/images/empty_states/empty_search_illustration.png',
+      title: 'Aucune résidence trouvée',
+      subtitle: 'Essayez avec d\'autres critères de recherche pour trouver votre bonheur',
+      fallbackIcon: Icons.search_off,
+      action: ElevatedButton.icon(
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          // Réinitialiser filtres ou aller à l'accueil
+          context.go('/home');
+        },
+        icon: const Icon(Icons.home),
+        label: const Text('Retour à l\'accueil'),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Aucune résidence trouvée',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Essayez avec d\'autres critères de recherche',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              context.go('/home');
-            },
-            icon: const Icon(Icons.home),
-            label: const Text('Retour à l\'accueil'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -230,6 +220,7 @@ class _SearchScreenState extends State<SearchScreen> {
       elevation: 2,
       child: InkWell(
         onTap: () {
+          HapticFeedback.selectionClick();
           context.go('/residence/${residence.id}');
         },
         child: Column(
