@@ -1,0 +1,16 @@
+<fr-FR>
+Nouveautés de la version 1.3.0
+
+UX & Design :
+- Amélioration du Mode Sombre
+- Ajout de chargements progressifs et d'états vides illustrés
+- Meilleure gestion de la connectivité
+
+Fonctionnalités :
+- Notifications enrichies (images, icônes)
+- Détection automatique de l'environnement
+
+Performance :
+- Sécurité renforcée (HTTPS) et architecture optimisée
+- Correctifs de bugs et stabilité
+</fr-FR>
