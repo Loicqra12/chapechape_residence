@@ -22,5 +22,5 @@ class AppConstants {
   static const String termsOfServiceUrl = 'https://chapechape.com/terms-of-service';
   
   // Version de l'application
-  static const String appVersion = '1.3.1';
+  static const String appVersion = '1.4.0';
 } 
