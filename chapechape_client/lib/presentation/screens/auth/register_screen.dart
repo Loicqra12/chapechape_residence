@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
@@ -334,9 +335,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 children: [
                                   WidgetSpan(
                                     child: GestureDetector(
-                                      onTap: () {
-                                        context.go('/terms');
-                                      },
+                                      onTap: () => launchUrl(
+                                        Uri.parse('https://presentation.chapechaperesidence.com/conditions'),
+                                        mode: LaunchMode.externalApplication,
+                                      ),
                                       child: Text(
                                         'conditions d\'utilisation',
                                         style: TextStyle(
@@ -351,9 +353,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                   WidgetSpan(
                                     child: GestureDetector(
-                                      onTap: () {
-                                        context.go('/privacy');
-                                      },
+                                      onTap: () => launchUrl(
+                                        Uri.parse('https://presentation.chapechaperesidence.com/politique-de-confidentialite'),
+                                        mode: LaunchMode.externalApplication,
+                                      ),
                                       child: Text(
                                         'politique de confidentialité',
                                         style: TextStyle(

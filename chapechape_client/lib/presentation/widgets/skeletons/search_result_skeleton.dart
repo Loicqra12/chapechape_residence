@@ -24,3 +24,8 @@ class SearchResultSkeleton extends StatelessWidget {
 
 
 
+
+
+
+
+

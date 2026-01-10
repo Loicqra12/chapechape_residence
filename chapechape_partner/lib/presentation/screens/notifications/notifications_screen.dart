@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/blocs/notification/notification_bloc.dart';
 import '../../../core/blocs/notification/notification_event.dart';
 import '../../../core/blocs/notification/notification_state.dart';
 import '../../../core/models/notification/notification_model.dart';
 import '../../../presentation/widgets/notifications/notification_filter_sheet.dart';
+import '../../../presentation/widgets/notifications/grouped_notifications_list.dart';
+import '../../widgets/skeletons/skeletons.dart';
+import '../../../core/services/error_message_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -15,6 +19,7 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _groupByType = true; // Toggle pour groupement intelligent
 
   @override
   void initState() {
@@ -73,34 +78,108 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       // Naviguer selon le type de notification
       switch (notification.type) {
         case 'booking':
-          Navigator.of(context).pushNamed(
-            '/bookings/details',
-            arguments: notification.actionData,
-          );
+          context.push('/reservations', extra: notification.actionData);
           break;
         case 'payment':
-          Navigator.of(context).pushNamed(
-            '/payments',
-            arguments: notification.actionData,
-          );
+          context.push('/reservations', extra: notification.actionData);
+          break;
+        case 'message':
+          context.push('/messages', extra: notification.actionData);
           break;
         case 'support':
-          Navigator.of(context).pushNamed(
-            '/support',
-            arguments: notification.actionData,
-          );
+          context.push('/settings', extra: notification.actionData);
           break;
         case 'reminder':
-          Navigator.of(context).pushNamed(
-            '/calendar',
-            arguments: notification.actionData,
-          );
+          context.push('/reservations', extra: notification.actionData);
           break;
         default:
           // Si le type n'est pas reconnu, utiliser l'URL directement
-          Navigator.of(context).pushNamed(notification.actionUrl!);
+          context.push(notification.actionUrl!);
       }
     }
+  }
+
+  void _handleQuickAction(NotificationModel notification, String action) {
+    // Marquer comme lu si non lu
+    if (!notification.isRead) {
+      context.read<NotificationBloc>().add(
+        MarkNotificationAsRead(notification.id),
+      );
+    }
+
+    switch (action) {
+      case 'approve':
+        _handleApprove(notification);
+        break;
+      case 'reject':
+        _handleReject(notification);
+        break;
+      case 'view':
+        _handleNotificationTap(notification);
+        break;
+      case 'reply':
+        _handleReply(notification);
+        break;
+      case 'invoice':
+        _handleInvoice(notification);
+        break;
+    }
+  }
+
+  void _handleApprove(NotificationModel notification) {
+    ErrorMessageService.showInfo(
+      context,
+      'Réservation approuvée avec succès',
+    );
+    // TODO: Appeler l'API pour approuver la réservation
+    context.push('/reservations', extra: notification.actionData);
+  }
+
+  void _handleReject(NotificationModel notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Refuser la réservation'),
+        content: const Text('Êtes-vous sûr de vouloir refuser cette réservation ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ErrorMessageService.showInfo(
+                context,
+                'Réservation refusée',
+              );
+              // TODO: Appeler l'API pour refuser la réservation
+            },
+            child: const Text('Refuser'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleReply(NotificationModel notification) {
+    if (notification.type == 'message') {
+      context.push('/messages', extra: notification.actionData);
+    } else if (notification.type == 'review') {
+      // TODO: Ouvrir un dialogue pour répondre à l'avis
+      ErrorMessageService.showInfo(
+        context,
+        'Fonctionnalité de réponse aux avis en cours de développement',
+      );
+    }
+  }
+
+  void _handleInvoice(NotificationModel notification) {
+    ErrorMessageService.showInfo(
+      context,
+      'Génération de la facture en cours...',
+    );
+    // TODO: Générer et télécharger la facture
   }
 
   @override
@@ -130,6 +209,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           appBar: AppBar(
             title: const Text('Notifications'),
             actions: [
+              // Bouton pour toggle groupement
+              IconButton(
+                icon: Icon(
+                  _groupByType ? Icons.view_list : Icons.view_module,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _groupByType = !_groupByType;
+                  });
+                },
+                tooltip: _groupByType ? 'Vue liste' : 'Vue groupée',
+              ),
               // Bouton de filtre
               IconButton(
                 icon: Icon(
@@ -166,7 +258,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildBody(BuildContext context, NotificationState state, ThemeData theme) {
     if (state is NotificationLoading && state is! NotificationLoaded) {
-      return const Center(child: CircularProgressIndicator());
+      return const NotificationListSkeleton(itemCount: 6);
     }
 
     if (state is NotificationLoaded) {
@@ -174,49 +266,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return _buildEmptyState();
       }
 
-      return ListView(
-        controller: _scrollController,
+      return Padding(
         padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.1),
-              ),
-            ),
-            child: Column(
-              children: [
-                ...state.notifications.map((notification) {
-                  return Column(
-                    children: [
-                      _NotificationItem(
-                        notification: notification,
-                        onTap: () => _handleNotificationTap(notification),
-                        onDismiss: () {
-                          context.read<NotificationBloc>().add(
-                            DeleteNotification(notification.id),
-                          );
-                        },
-                      ),
-                      if (notification != state.notifications.last)
-                        const Divider(height: 1),
-                    ],
-                  );
-                }).toList(),
-
-                if (!state.hasReachedMax && state is! NotificationLoading)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        child: GroupedNotificationsList(
+          notifications: state.notifications,
+          groupByType: _groupByType,
+          onNotificationTap: _handleNotificationTap,
+          onNotificationDismiss: (notification) {
+            context.read<NotificationBloc>().add(
+              DeleteNotification(notification.id),
+            );
+          },
+          onQuickAction: _handleQuickAction,
+        ),
       );
     }
 
@@ -237,131 +299,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NotificationItem extends StatelessWidget {
-  final NotificationModel notification;
-  final VoidCallback onTap;
-  final VoidCallback onDismiss;
-
-  const _NotificationItem({
-    required this.notification,
-    required this.onTap,
-    required this.onDismiss,
-  });
-
-  String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inMinutes < 60) {
-      return 'Il y a ${difference.inMinutes} minutes';
-    } else if (difference.inHours < 24) {
-      return 'Il y a ${difference.inHours} heures';
-    } else if (difference.inDays < 7) {
-      return 'Il y a ${difference.inDays} jours';
-    } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
-    }
-  }
-
-  IconData _getNotificationIcon(String type) {
-    switch (type) {
-      case 'booking':
-        return Icons.home;
-      case 'payment':
-        return Icons.payment;
-      case 'support':
-        return Icons.support_agent;
-      case 'reminder':
-        return Icons.calendar_today;
-      default:
-        return Icons.notifications;
-    }
-  }
-
-  Color _getNotificationColor(String type) {
-    switch (type) {
-      case 'booking':
-        return Colors.blue;
-      case 'payment':
-        return Colors.green;
-      case 'support':
-        return Colors.orange;
-      case 'reminder':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final icon = _getNotificationIcon(notification.type);
-    final color = _getNotificationColor(notification.type);
-
-    return Dismissible(
-      key: Key(notification.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        color: Colors.red,
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      onDismissed: (_) => onDismiss(),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                notification.title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: !notification.isRead ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-            if (!notification.isRead)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(notification.message),
-            const SizedBox(height: 4),
-            Text(
-              _formatTimestamp(notification.timestamp),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-            ),
-          ],
-        ),
-        onTap: onTap,
       ),
     );
   }

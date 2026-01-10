@@ -7,6 +7,7 @@ import '../../../core/services/api/reservation_service.dart';
 import '../../../core/services/api/api_service.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import '../../widgets/calendar/reservation_calendar_widget.dart';
+import '../../widgets/skeletons/skeletons.dart';
 
 class ReservationsScreen extends StatelessWidget {
   const ReservationsScreen({super.key});
@@ -101,9 +102,7 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
             builder: (context, state) {
               if (state is ReservationLoading) {
                 return const SliverFillRemaining(
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: ReservationListSkeleton(itemCount: 4),
                 );
               }
 
@@ -220,7 +219,7 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
       builder: (context, state) {
         if (state is ReservationLoading) {
           return const Center(
-            child: CircularProgressIndicator(),
+            child: ReservationListSkeleton(itemCount: 3),
           );
         }
 

@@ -18,6 +18,7 @@ import '../../widgets/common/optimized_image.dart';
 import '../../../core/utils/string_utils.dart';
 import '../../../core/services/event_bus/residence_event_bus.dart';
 import '../../widgets/residence/residence_grid_widget.dart';
+import '../../widgets/skeletons/skeletons.dart';
 
 class ResidencesScreen extends StatelessWidget {
   const ResidencesScreen({super.key});
@@ -96,9 +97,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
             child: BlocBuilder<ResidenceBloc, ResidenceState>(
               builder: (context, state) {
                 if (state is ResidenceLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const ResidenceListSkeleton(itemCount: 3);
                 }
 
                 if (state is ResidenceError) {

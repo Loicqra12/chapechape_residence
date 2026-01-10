@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import '../pricing/pricing_stats_screen.dart';
+import '../../widgets/skeletons/skeletons.dart';
+import 'analytics_tab.dart'; // Import du nouvel onglet Analytics
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -34,9 +36,7 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildContent(BuildContext context, DashboardState state) {
     if (state is DashboardLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const DashboardSkeleton();
     }
 
     if (state is DashboardError) {
@@ -74,6 +74,10 @@ class DashboardScreen extends StatelessWidget {
           children: [
             // Sélecteur de période (toujours visible)
             _buildPeriodSelector(context, state),
+            const SizedBox(height: 24),
+            
+            // Bouton Analytics Avancées (NOUVEAU)
+            _buildAnalyticsButton(context),
             const SizedBox(height: 24),
             
             // Section Performance
@@ -185,6 +189,119 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsButton(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        // Naviguer vers la page Analytics
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => Scaffold(
+              appBar: AppBar(
+                title: const Text('Analytics Avancées'),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              body: const AnalyticsTab(),
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4A90E2).withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.analytics,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: const Text(
+                          'Analytics Avancées',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'NOUVEAU',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Graphiques interactifs • Comparaisons • Tendances',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withOpacity(0.7),
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }
