@@ -14,6 +14,7 @@ import '../../../core/config/app_config_manager.dart';
 import '../../widgets/layout/custom_sliver_app_bar.dart';
 import '../../widgets/message/message_bubble.dart';
 import '../../widgets/message/message_input.dart';
+import '../../widgets/skeletons/skeletons.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -645,11 +646,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           builder: (context, state) {
             if (state is ConversationsLoading) {
               return const SliverFillRemaining(
-                child: Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                  ),
-                ),
+                child: MessageListSkeleton(itemCount: 5),
               );
             }
 
@@ -923,9 +920,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             child: BlocBuilder<MessageBloc, MessageState>(
               builder: (context, state) {
                 if (state is MessagesLoading && _currentPage == 1) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const MessageListSkeleton(itemCount: 4);
                 }
 
                 if (state is MessagesLoaded) {

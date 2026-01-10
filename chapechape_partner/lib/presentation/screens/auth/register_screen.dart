@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/auth/auth_event.dart';
 import '../../../core/constants/app_images.dart';
@@ -255,6 +256,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 20),
+                  // Message légal
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'En vous inscrivant, vous acceptez nos ',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                        children: [
+                          WidgetSpan(
+                            child: GestureDetector(
+                              onTap: () => launchUrl(
+                                Uri.parse('https://presentation.chapechaperesidence.com/conditions'),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              child: Text(
+                                'Conditions d\'utilisation',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' et notre ',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                          WidgetSpan(
+                            child: GestureDetector(
+                              onTap: () => launchUrl(
+                                Uri.parse('https://presentation.chapechaperesidence.com/politique-de-confidentialite'),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              child: Text(
+                                'Politique de confidentialité',
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          TextSpan(
+                            text: '.',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),

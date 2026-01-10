@@ -77,3 +77,8 @@ class ResidenceCardSkeleton extends StatelessWidget {
 
 
 
+
+
+
+
+

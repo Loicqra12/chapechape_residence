@@ -4,12 +4,47 @@ import 'package:go_router/go_router.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/auth/auth_event.dart';
+import '../../core/blocs/locale/locale_cubit.dart';
+import '../../core/blocs/locale/locale_state.dart';
 
 class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomNavigationBar({Key? key}) : super(key: key);
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  void _showLanguageDialog(BuildContext context) {
+    final localeCubit = context.read<LocaleCubit>();
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Choisir la langue'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Text('🇫🇷', style: TextStyle(fontSize: 24)),
+                title: const Text('Français'),
+                onTap: () {
+                  localeCubit.setFrench();
+                  Navigator.of(dialogContext).pop();
+                },
+              ),
+              ListTile(
+                leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)),
+                title: const Text('English'),
+                onTap: () {
+                  localeCubit.setEnglish();
+                  Navigator.of(dialogContext).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +63,18 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                 ),
               ),
               const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.language),
-                onPressed: () {
-                  // TODO: Implement language selection
+              BlocBuilder<LocaleCubit, LocaleState>(
+                builder: (context, localeState) {
+                  final currentLocale = localeState.locale.languageCode;
+                  return IconButton(
+                    icon: Text(
+                      currentLocale == 'fr' ? '🇫🇷' : '🇬🇧',
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    onPressed: () => _showLanguageDialog(context),
+                    tooltip: 'Changer de langue',
+                  );
                 },
-                color: Colors.black87,
               ),
               Stack(
                 children: [

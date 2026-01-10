@@ -4,6 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
 import 'package:uuid/uuid.dart';
 import 'connectivity_service.dart';
+import 'api/residence_service.dart';
+import 'api/reservation_service.dart';
+import 'api/message_service.dart';
+import '../models/residence/residence_image.dart';
+import 'package:dio/dio.dart';
 
 /// Service de file d'attente pour les opérations offline
 /// Gère la persistance et l'exécution des opérations en attente
@@ -18,6 +23,9 @@ class OfflineQueueService {
 
   // Services
   final ConnectivityService _connectivityService = ConnectivityService();
+  ResidenceService? _residenceService;
+  ReservationService? _reservationService;
+  MessageService? _messageService;
   
   // Configuration
   static const String _queueBox = 'offline_queue';
@@ -47,9 +55,18 @@ class OfflineQueueService {
   static const String sendMessage = 'send_message';
   static const String updateProfile = 'update_profile';
 
-  /// Initialise le service
-  Future<void> initialize() async {
+  /// Initialise le service avec les dépendances nécessaires
+  Future<void> initialize({
+    ResidenceService? residenceService,
+    ReservationService? reservationService,
+    MessageService? messageService,
+  }) async {
     if (_isInitialized) return;
+
+    // Injecter les services
+    _residenceService = residenceService;
+    _reservationService = reservationService;
+    _messageService = messageService;
 
     await Hive.openBox(_queueBox);
     _connectivityService.initialize();
@@ -58,7 +75,7 @@ class OfflineQueueService {
     _startPeriodicProcessing();
 
     _isInitialized = true;
-    _logger.info('OfflineQueueService initialisé');
+    _logger.info('OfflineQueueService initialisé avec les services API');
     _queueController.add(QueueEvent(QueueEventType.initialized));
   }
 
@@ -241,72 +258,230 @@ class OfflineQueueService {
 
   /// Exécute la création d'une résidence
   Future<void> _executeCreateResidence(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour créer une résidence
-    _logger.info('Exécution de la création de résidence: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_residenceService == null) {
+      throw Exception('ResidenceService non initialisé');
+    }
+    
+    _logger.info('Exécution de la création de résidence: ${operation.data['name']}');
+    
+    try {
+      // Séparer les données et les images
+      final data = Map<String, dynamic>.from(operation.data);
+      final images = <ResidenceImage>[]; // Les images seront uploadées séparément
+      
+      // L'opération data contient déjà toutes les informations de la résidence
+      final residence = await _residenceService!.createResidence(data, images);
+      _logger.info('Résidence créée avec succès: ${residence.id}');
+    } catch (e) {
+      _logger.severe('Erreur lors de la création de résidence: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la mise à jour d'une résidence
   Future<void> _executeUpdateResidence(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour mettre à jour une résidence
-    _logger.info('Exécution de la mise à jour de résidence: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_residenceService == null) {
+      throw Exception('ResidenceService non initialisé');
+    }
+    
+    final residenceId = operation.data['id'] ?? operation.data['residenceId'];
+    if (residenceId == null) {
+      throw Exception('ID de résidence manquant');
+    }
+    
+    _logger.info('Exécution de la mise à jour de résidence: $residenceId');
+    
+    try {
+      // Séparer les données et les images
+      final data = Map<String, dynamic>.from(operation.data);
+      data.remove('id'); // Retirer l'ID des données
+      data.remove('residenceId');
+      final images = <ResidenceImage>[]; // Les images seront uploadées séparément
+      
+      final residence = await _residenceService!.updateResidence(
+        residenceId,
+        data,
+        images,
+      );
+      _logger.info('Résidence mise à jour avec succès: $residenceId');
+    } catch (e) {
+      _logger.severe('Erreur lors de la mise à jour de résidence: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la suppression d'une résidence
   Future<void> _executeDeleteResidence(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour supprimer une résidence
-    _logger.info('Exécution de la suppression de résidence: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_residenceService == null) {
+      throw Exception('ResidenceService non initialisé');
+    }
+    
+    final residenceId = operation.data['id'] ?? operation.data['residenceId'];
+    if (residenceId == null) {
+      throw Exception('ID de résidence manquant');
+    }
+    
+    _logger.info('Exécution de la suppression de résidence: $residenceId');
+    
+    try {
+      await _residenceService!.deleteResidence(residenceId);
+      _logger.info('Résidence supprimée avec succès: $residenceId');
+    } catch (e) {
+      _logger.severe('Erreur lors de la suppression de résidence: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la création d'une réservation
   Future<void> _executeCreateReservation(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour créer une réservation
-    _logger.info('Exécution de la création de réservation: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_reservationService == null) {
+      throw Exception('ReservationService non initialisé');
+    }
+    
+    _logger.info('Exécution de la création de réservation');
+    
+    try {
+      // Note: Les réservations sont généralement créées par les clients
+      // Cette méthode est ici pour la complétude mais rarement utilisée côté partner
+      _logger.warning('Création de réservation non implémentée côté partenaire');
+      throw UnimplementedError('Création de réservation non supportée côté partenaire');
+    } catch (e) {
+      _logger.severe('Erreur lors de la création de réservation: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la mise à jour d'une réservation
   Future<void> _executeUpdateReservation(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour mettre à jour une réservation
-    _logger.info('Exécution de la mise à jour de réservation: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_reservationService == null) {
+      throw Exception('ReservationService non initialisé');
+    }
+    
+    final reservationId = operation.data['id'] ?? operation.data['reservationId'];
+    if (reservationId == null) {
+      throw Exception('ID de réservation manquant');
+    }
+    
+    _logger.info('Exécution de la mise à jour de réservation: $reservationId');
+    
+    try {
+      final status = operation.data['status'];
+      if (status != null) {
+        // Mise à jour du statut (confirmer, refuser, etc.)
+        await _reservationService!.updateReservationStatus(reservationId, status);
+        _logger.info('Statut de réservation mis à jour: $reservationId → $status');
+      } else {
+        _logger.warning('Aucun statut fourni pour la mise à jour de réservation');
+      }
+    } catch (e) {
+      _logger.severe('Erreur lors de la mise à jour de réservation: $e');
+      rethrow;
+    }
   }
 
   /// Exécute l'annulation d'une réservation
   Future<void> _executeCancelReservation(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour annuler une réservation
-    _logger.info('Exécution de l\'annulation de réservation: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_reservationService == null) {
+      throw Exception('ReservationService non initialisé');
+    }
+    
+    final reservationId = operation.data['id'] ?? operation.data['reservationId'];
+    if (reservationId == null) {
+      throw Exception('ID de réservation manquant');
+    }
+    
+    final reason = operation.data['reason'] ?? 'Annulée par le partenaire';
+    
+    _logger.info('Exécution de l\'annulation de réservation: $reservationId');
+    
+    try {
+      await _reservationService!.cancelReservation(reservationId, reason);
+      _logger.info('Réservation annulée avec succès: $reservationId');
+    } catch (e) {
+      _logger.severe('Erreur lors de l\'annulation de réservation: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la création d'un paiement
   Future<void> _executeCreatePayment(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour créer un paiement
-    _logger.info('Exécution de la création de paiement: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    _logger.info('Exécution de la création de paiement');
+    
+    try {
+      // Note: Les paiements sont généralement initiés par les clients via les gateways
+      // Cette opération est rarement utilisée côté partenaire
+      _logger.warning('Création de paiement non implémentée côté partenaire');
+      throw UnimplementedError('Création de paiement non supportée côté partenaire');
+    } catch (e) {
+      _logger.severe('Erreur lors de la création de paiement: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la mise à jour d'un paiement
   Future<void> _executeUpdatePayment(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour mettre à jour un paiement
-    _logger.info('Exécution de la mise à jour de paiement: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    _logger.info('Exécution de la mise à jour de paiement');
+    
+    try {
+      // Note: Les statuts de paiement sont généralement mis à jour par les webhooks des gateways
+      // Cette opération est rarement utilisée manuellement
+      _logger.warning('Mise à jour manuelle de paiement non recommandée');
+      throw UnimplementedError('Mise à jour de paiement non supportée côté partenaire');
+    } catch (e) {
+      _logger.severe('Erreur lors de la mise à jour de paiement: $e');
+      rethrow;
+    }
   }
 
   /// Exécute l'envoi d'un message
   Future<void> _executeSendMessage(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour envoyer un message
-    _logger.info('Exécution de l\'envoi de message: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    if (_messageService == null) {
+      throw Exception('MessageService non initialisé');
+    }
+    
+    final conversationId = operation.data['conversationId'];
+    final content = operation.data['content'];
+    
+    if (conversationId == null || content == null) {
+      throw Exception('ConversationId ou content manquant');
+    }
+    
+    _logger.info('Exécution de l\'envoi de message dans conversation: $conversationId');
+    
+    try {
+      // Note: Les pièces jointes ne sont pas supportées en mode offline
+      // Elles nécessitent un upload qui ne peut se faire que quand online
+      await _messageService!.sendMessage(
+        conversationId,
+        content,
+        attachments: null,
+      );
+      _logger.info('Message envoyé avec succès dans conversation: $conversationId');
+    } catch (e) {
+      _logger.severe('Erreur lors de l\'envoi de message: $e');
+      rethrow;
+    }
   }
 
   /// Exécute la mise à jour du profil
   Future<void> _executeUpdateProfile(QueueOperation operation) async {
-    // TODO: Implémenter l'appel API pour mettre à jour le profil
-    _logger.info('Exécution de la mise à jour de profil: ${operation.data}');
-    await Future.delayed(const Duration(seconds: 1)); // Simulation
+    _logger.info('Exécution de la mise à jour de profil');
+    
+    try {
+      // Note: La mise à jour du profil nécessiterait un service dédié
+      // Pour l'instant, on utilise une approche simple via Dio
+      final dio = Dio();
+      final response = await dio.put('/api/partners/profile', data: operation.data);
+      
+      if (response.statusCode == 200) {
+        _logger.info('Profil mis à jour avec succès');
+      } else {
+        throw Exception('Échec de la mise à jour du profil: ${response.statusCode}');
+      }
+    } catch (e) {
+      _logger.severe('Erreur lors de la mise à jour de profil: $e');
+      rethrow;
+    }
   }
 
   /// Marque une opération comme échouée
