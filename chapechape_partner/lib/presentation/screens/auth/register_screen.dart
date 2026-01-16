@@ -124,6 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Image.asset(
                       AppImages.logoPrimary,
                       height: 80,
+                      semanticLabel: 'Logo ChapeChape Partner',
                     ),
                   ),
                   const SizedBox(height: 40),

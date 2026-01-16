@@ -212,7 +212,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       // Vérifier si la géolocalisation est disponible
       final isAvailable = await locationService.isLocationAvailable();
       if (!isAvailable) {
-        print('⚠️ Géolocalisation non disponible');
         return;
       }
       
@@ -238,12 +237,10 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           });
         }
       } catch (e) {
-        print('⚠️ Erreur lors du géocodage inverse: $e');
+        // Géocodage inverse échoué silencieusement
       }
-      
-      print('✅ Géolocalisation automatique réussie: ${position.latitude}, ${position.longitude}');
     } catch (e) {
-      print('❌ Erreur lors de la géolocalisation automatique: $e');
+      // Géolocalisation échouée silencieusement
     }
   }
 
@@ -484,20 +481,12 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
     // Initialiser le type et la catégorie s'il s'agit d'une édition
     if (widget.residence != null) {
-      // Afficher le type reçu du backend pour diagnostic
-      print('🔍 Type reçu du backend: ${widget.residence!.type}');
-
       // Convertir le type du backend en type frontend si nécessaire
       _selectedType = _mapBackendTypeToFrontendType(widget.residence!.type);
-      print('🔍 Type converti pour l\'interface: $_selectedType');
-
       _selectedCategory = _getCategoryFromType(_selectedType);
-      print('🔍 Catégorie déterminée: $_selectedCategory');
 
       // S'assurer que le type est valide dans sa catégorie
       _ensureSelectedTypeIsValid();
-      print(
-          '🔍 Type final utilisé: $_selectedType (catégorie: $_selectedCategory)');
 
       // Initialiser les états des amenities
       _hasPool = widget.residence!.hasPool;
@@ -750,23 +739,16 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       final picker = ImagePicker();
       final pickedFiles = await picker.pickMultiImage();
 
-      print('Images sélectionnées depuis la galerie: ${pickedFiles.length}');
-
       if (pickedFiles.isNotEmpty) {
         for (final pickedFile in pickedFiles) {
           if (kIsWeb) {
-            // En environnement web, nous devons lire le contenu du fichier
             final bytes = await pickedFile.readAsBytes();
-            print(
-                'Image web lue: ${bytes.length} octets, nom: ${pickedFile.name}');
             setState(() {
               _newImages.add(
                 ResidenceImage.fromWebBytes(bytes, path: pickedFile.name),
               );
             });
           } else {
-            // En environnement mobile, nous pouvons utiliser le chemin du fichier
-            print('Image mobile sélectionnée: ${pickedFile.path}');
             setState(() {
               _newImages.add(
                 ResidenceImage.fromFile(File(pickedFile.path)),
@@ -774,12 +756,8 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
             });
           }
         }
-
-        print(
-            'Total des images dans _newImages après sélection: ${_newImages.length}');
       }
     } catch (e) {
-      print('Erreur lors de la sélection des images: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors de la sélection des images: $e')),
       );
@@ -792,13 +770,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
       if (pickedFile != null) {
-        print('Photo prise avec l\'appareil: ${pickedFile.path}');
-
         setState(() {
           if (kIsWeb) {
-            // En environnement web, nous devons lire le contenu du fichier
             pickedFile.readAsBytes().then((bytes) {
-              print('Photo web lue: ${bytes.length} octets');
               _newImages.add(
                 ResidenceImage.fromWebBytes(bytes, path: pickedFile.name),
               );
@@ -812,7 +786,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         });
       }
     } catch (e) {
-      print('Erreur lors de la prise de photo: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors de la prise de photo: $e')),
       );
@@ -897,8 +870,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                               imageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                print(
-                                    'Erreur de chargement d\'image: $error pour URL $imageUrl');
                                 return Container(
                                   color: Colors.grey.shade200,
                                   child: Column(
@@ -1044,14 +1015,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
 
-      print('\n=== DÉBUT SOUMISSION DU FORMULAIRE ===');
-      print('Nombre d\'images existantes: ${_existingImages?.length ?? 0}');
-      print('Nombre de nouvelles images: ${_newImages.length}');
-
       // Vérifier qu'au moins une image est sélectionnée
       if ((_existingImages == null || _existingImages!.isEmpty) &&
           (_newImages.isEmpty)) {
-        print('❌ Aucune image sélectionnée');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Veuillez ajouter au moins une image')),
         );
@@ -1128,56 +1094,21 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         // Ajouter les images existantes qui n'ont pas été supprimées
         if (_existingImages != null) {
           for (var imageUrl in _existingImages!) {
-            print('✅ Ajout d\'une image existante: $imageUrl');
             images.add(ResidenceImage(url: imageUrl));
           }
         }
 
         // Ajouter les nouvelles images sélectionnées
         for (var image in _newImages) {
-          print('⭐ Traitement d\'une nouvelle image:');
-          print('  - Debug info: ${image.getDebugInfo()}');
-          if (image.file != null) {
-            print('  - Image native (fichier): ${image.file!.path}');
+          if (image.file != null || image.webImage != null || image.url != null) {
             images.add(image);
-          } else if (image.webImage != null) {
-            print('  - Image web (${image.webImage!.length} octets)');
-            images.add(image);
-          } else if (image.url != null) {
-            print('  - Image URL: ${image.url}');
-            images.add(image);
-          } else {
-            print('  - ⚠️ Type d\'image inconnu');
-          }
-        }
-
-        print('\n=== RÉCAPITULATIF IMAGES ===');
-        print('Nombre total d\'images à envoyer: ${images.length}');
-
-        if (images.isEmpty) {
-          print(
-              '⚠️ AVERTISSEMENT: Aucune image à envoyer malgré les contrôles!');
-        }
-
-        for (int i = 0; i < images.length; i++) {
-          final img = images[i];
-          if (img.url != null) {
-            print('Image ${i + 1}: URL = ${img.url}');
-          } else if (img.file != null) {
-            print('Image ${i + 1}: Fichier local (${img.file!.path})');
-          } else if (img.webImage != null) {
-            print('Image ${i + 1}: Image web (${img.webImage!.length} octets)');
-          } else {
-            print('Image ${i + 1}: Type inconnu!');
           }
         }
 
         if (widget.residence == null) {
           // Créer une nouvelle résidence
-          print('\n=== CRÉATION DE RÉSIDENCE ===');
           final residence =
               await _residenceService.createResidence(formData, images);
-          print('✅ Résidence créée avec succès! ID: ${residence.id}');
 
           // Effacer le formulaire après création réussie
           _clearForm();
@@ -1192,14 +1123,11 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           }
         } else {
           // Mettre à jour une résidence existante
-          print('\n=== MISE À JOUR DE RÉSIDENCE ===');
-          print('ID de la résidence: ${widget.residence!.id}');
           final updatedResidence = await _residenceService.updateResidence(
             widget.residence!.id,
             formData,
             images,
           );
-          print('✅ Résidence mise à jour avec succès!');
 
           // Afficher un message de succès
           if (mounted) {
@@ -1212,7 +1140,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           }
         }
       } catch (e) {
-        print('❌ Erreur lors de la soumission du formulaire: $e');
         if (mounted) {
           String errorMessage = 'Une erreur est survenue';
           if (e is ApiException) {
@@ -1228,11 +1155,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
             _isLoading = false;
           });
         }
-        print('=== FIN SOUMISSION DU FORMULAIRE ===\n');
       }
     } else {
       // Formulaire invalide, afficher un message d'erreur
-      print('❌ Formulaire invalide');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Veuillez corriger les erreurs dans le formulaire')),
@@ -2583,8 +2508,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     final validPeriods = ['hour', 'day', 'week', 'month'];
 
     if (!validPeriods.contains(recommendedPeriod)) {
-      print(
-          '⚠️ Période de facturation invalide: $recommendedPeriod. Utilisation de "day" par défaut.');
       setState(() {
         _selectedPricePeriod = 'day';
       });
@@ -2593,7 +2516,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
     setState(() {
       _selectedPricePeriod = recommendedPeriod;
-      print('✅ Période de facturation mise à jour: $_selectedPricePeriod');
     });
   }
 
@@ -3083,8 +3005,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
   // Méthode pour convertir un type backend en type frontend lors de l'édition
   String _mapBackendTypeToFrontendType(String backendType) {
-    print('🔍 Conversion du type: "$backendType"');
-
     // Normaliser le type (enlever espaces en trop, mettre en minuscules)
     final normalizedType = backendType.toLowerCase().trim();
 
@@ -3148,30 +3068,24 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           _residenceCategories[category]!['types'] as List<ResidenceType>;
       for (var residenceType in types) {
         if (residenceType.value.toLowerCase() == normalizedType) {
-          print('✅ Type déjà valide: $backendType → ${residenceType.value}');
-          return residenceType
-              .value; // Retourner le type exact avec la casse correcte
+          return residenceType.value;
         }
       }
     }
 
     // Essayer de trouver une correspondance dans le mapping
     if (typeMapping.containsKey(normalizedType)) {
-      final mappedType = typeMapping[normalizedType]!;
-      print('✅ Type mappé: $backendType → $mappedType');
-      return mappedType;
+      return typeMapping[normalizedType]!;
     }
 
     // Fallback basé sur des préfixes pour les types inconnus
     for (var entry in typeMapping.entries) {
       if (normalizedType.startsWith(entry.key.split('_')[0])) {
-        print('⚠️ Type partiellement mappé: $backendType → ${entry.value}');
         return entry.value;
       }
     }
 
     // Dernier recours: choisir un type par défaut selon la première lettre
-    print('⚠️ Type inconnu: $backendType. Utilisation d\'un type par défaut.');
     if (normalizedType.startsWith('s')) {
       return 'studio_meuble';
     } else if (normalizedType.startsWith('v') ||
@@ -3187,7 +3101,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   // Nouvelle méthode pour s'assurer que le type sélectionné est valide
   void _ensureSelectedTypeIsValid() {
     if (_selectedType == null || _selectedType.isEmpty) {
-      print('⚠️ Type non défini ou vide, utilisation d\'un type par défaut');
       _selectedType = 'appartement_meuble';
       _selectedCategory = _getCategoryFromType(_selectedType);
       return;
@@ -3198,8 +3111,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         _availableTypesForCategory.any((type) => type.value == _selectedType);
 
     if (!typeExistsInCategory) {
-      print('⚠️ Type invalide dans la catégorie: $_selectedType');
-
       // Chercher le type dans toutes les catégories
       String? foundCategory;
       for (var category in _residenceCategories.keys) {
@@ -3213,12 +3124,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
       // Si le type existe dans une autre catégorie, changer de catégorie
       if (foundCategory != null) {
-        print('✅ Type trouvé dans une autre catégorie: $foundCategory');
         _selectedCategory = foundCategory;
       } else {
         // Sinon, utiliser le premier type de la catégorie actuelle
-        print(
-            '⚠️ Type non trouvé dans aucune catégorie, utilisation du premier type disponible');
         _selectedType = _availableTypesForCategory.first.value;
       }
     }
@@ -3232,8 +3140,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
     // Si la valeur n'existe pas, retourner la première option disponible
     if (!valueExists && _availableTypesForCategory.isNotEmpty) {
-      print(
-          '⚠️ Valeur non trouvée dans les options du dropdown: $typeValue. Utilisation de la première option.');
       return _availableTypesForCategory.first.value;
     }
 
@@ -3243,8 +3149,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   // Méthode pour s'assurer que la catégorie existe
   String _ensureCategoryExists(String categoryValue) {
     if (!_residenceCategories.containsKey(categoryValue)) {
-      print(
-          '⚠️ Catégorie non trouvée: $categoryValue. Utilisation de la première catégorie disponible.');
       return _residenceCategories.keys.first;
     }
     return categoryValue;
@@ -3254,8 +3158,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   String _ensurePeriodExists(String periodValue) {
     final validPeriods = ['hour', 'day', 'week', 'month'];
     if (!validPeriods.contains(periodValue)) {
-      print(
-          '⚠️ Période non valide: $periodValue. Utilisation de "day" par défaut.');
       return 'day';
     }
     return periodValue;
@@ -3263,9 +3165,8 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
   // Méthode spécifique pour vérifier si la ville existe dans la région sélectionnée
   String _ensureCityExists(String cityCode, String regionCode) {
-    // Si la liste des villes est vide, retourner null
+    // Si la liste des villes est vide, retourner vide
     if (_getCitiesForRegion(regionCode).isEmpty) {
-      print('⚠️ Aucune ville disponible pour la région: $regionCode');
       return '';
     }
 
@@ -3275,8 +3176,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
     // Si la ville n'existe pas, utiliser la première ville disponible
     if (!cityExists) {
-      print(
-          '⚠️ Ville non trouvée dans la région: $cityCode (région: $regionCode). Utilisation de la première ville disponible.');
       return _getCitiesForRegion(regionCode).first.code;
     }
 

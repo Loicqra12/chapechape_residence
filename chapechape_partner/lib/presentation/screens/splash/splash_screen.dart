@@ -100,10 +100,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ],
                       ),
                       padding: const EdgeInsets.all(20),
-                      child: Image.asset(
-                        AppImages.logoPrimary,
-                        width: 180,
-                        height: 180,
+                      child: Semantics(
+                        label: 'Logo ChapeChape Partner',
+                        image: true,
+                        child: Image.asset(
+                          AppImages.logoPrimary,
+                          width: 180,
+                          height: 180,
+                          semanticLabel: 'Logo ChapeChape Partner',
+                        ),
                       ),
                     ),
                   ),

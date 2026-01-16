@@ -24,6 +24,33 @@ import '../presentation/screens/payments/payouts/payout_details_screen.dart';
 import '../presentation/screens/payments/transactions/transactions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Transition de page personnalisée avec fade + slide
+CustomTransitionPage<T> buildPageWithTransition<T>({
+  required BuildContext context,
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      // Fade + légère slide depuis la droite
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeInOut).animate(animation),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.05, 0), // Légère slide depuis la droite
+            end: Offset.zero,
+          ).animate(CurveTween(curve: Curves.easeOutCubic).animate(animation)),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 class AppRouter {
   final AuthBloc authBloc;
 
@@ -63,72 +90,132 @@ class AppRouter {
       ),
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const OnboardingScreen(),
+        ),
       ),
       GoRoute(
         path: '/auth/login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const LoginScreen(),
+        ),
       ),
       GoRoute(
         path: '/auth/register',
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const RegisterScreen(),
+        ),
       ),
       GoRoute(
         path: '/auth/forgot-password',
-        builder: (context, state) => const ForgotPasswordScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const ForgotPasswordScreen(),
+        ),
       ),
       GoRoute(
         path: '/main',
-        builder: (context, state) => const MainScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const MainScreen(),
+        ),
       ),
       GoRoute(
         path: '/residences/add',
-        builder: (context, state) => EditResidenceScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: EditResidenceScreen(),
+        ),
       ),
       GoRoute(
         path: '/residences/details',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final residence = state.extra as Residence;
-          return ResidenceDetailsScreen(residence: residence);
+          return buildPageWithTransition(
+            context: context,
+            state: state,
+            child: ResidenceDetailsScreen(residence: residence),
+          );
         },
       ),
       GoRoute(
         path: '/residences',
-        builder: (context, state) => const ResidencesScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const ResidencesScreen(),
+        ),
       ),
       GoRoute(
         path: '/reservations/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final reservationId = state.pathParameters['id'] ?? '';
-          return ReservationDetailsScreen(reservationId: reservationId);
+          return buildPageWithTransition(
+            context: context,
+            state: state,
+            child: ReservationDetailsScreen(reservationId: reservationId),
+          );
         },
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const SettingsScreen(),
+        ),
       ),
       GoRoute(
         path: '/notifications/preferences',
-        builder: (context, state) => const NotificationSettingsScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const NotificationSettingsScreen(),
+        ),
       ),
       GoRoute(
         path: '/notifications',
-        builder: (context, state) => const NotificationListScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const NotificationListScreen(),
+        ),
       ),
       GoRoute(
         path: '/payouts',
-        builder: (context, state) => PayoutHistoryScreen.withService(context),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: PayoutHistoryScreen.withService(context),
+        ),
       ),
       GoRoute(
         path: '/payouts/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final payoutId = state.pathParameters['id'] ?? '';
-          return PayoutDetailsScreen(payoutId: payoutId);
+          return buildPageWithTransition(
+            context: context,
+            state: state,
+            child: PayoutDetailsScreen(payoutId: payoutId),
+          );
         },
       ),
       GoRoute(
         path: '/transactions',
-        builder: (context, state) => const TransactionsScreen(),
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const TransactionsScreen(),
+        ),
       ),
     ],
     redirect: (context, state) async {

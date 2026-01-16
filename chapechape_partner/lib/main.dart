@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'core/config/api_config.dart';
 import 'core/config/app_config_manager.dart';
+import 'core/theme/app_theme.dart';
 import 'core/config/environment.dart';
 import 'core/services/api/api_service.dart';
 import 'core/services/api/auth_service.dart';
@@ -294,6 +295,7 @@ Future<void> main() async {
           title: 'ChapeChape Partner',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
+            fontFamily: 'Poppins',
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color(0xFF1A237E),
               brightness: Brightness.light,

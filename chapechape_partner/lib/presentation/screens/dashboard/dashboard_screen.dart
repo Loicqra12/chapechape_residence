@@ -5,6 +5,7 @@ import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../../../core/models/dashboard/dashboard_data.dart';
 import '../../../core/models/payment/payout_model.dart';
 import '../../../core/services/api/payment_service.dart';
+import '../../../core/services/api/residence_service.dart';
 import '../../../core/config/app_config_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
@@ -12,6 +13,8 @@ import '../../widgets/layout/screen_app_bars.dart';
 import '../pricing/pricing_stats_screen.dart';
 import '../../widgets/skeletons/skeletons.dart';
 import 'analytics_tab.dart'; // Import du nouvel onglet Analytics
+import '../main/main_screen.dart'; // Pour MainScreenNavigator
+import '../residences/residence_details_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -205,6 +208,7 @@ class DashboardScreen extends StatelessWidget {
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'Retour',
                 ),
               ),
               body: const AnalyticsTab(),
@@ -327,13 +331,17 @@ class DashboardScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Performance',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                Flexible(
+                  child: Text(
+                    'Performance',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -832,12 +840,16 @@ class DashboardScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  periodTitle,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                Flexible(
+                  child: Text(
+                    periodTitle,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -1178,7 +1190,8 @@ class DashboardScreen extends StatelessWidget {
         Center(
           child: TextButton.icon(
             onPressed: () {
-              // Navigation vers la page des réservations
+              // Notifier le parent (MainScreen) de changer d'onglet vers Réservations (index 2)
+              MainScreenNavigator.of(context)?.navigateToTab(2);
             },
             icon: const Icon(Icons.visibility_outlined),
             label: const Text('Voir toutes les réservations'),
@@ -1214,12 +1227,16 @@ class DashboardScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Résidences par région',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Flexible(
+                      child: Text(
+                        'Résidences par région',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
@@ -1481,8 +1498,34 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton(
-                      onPressed: () {
-                        // Navigation vers la page de détails
+                      onPressed: () async {
+                        try {
+                          // Récupérer la résidence complète par son ID
+                          final residenceService = ResidenceService(
+                            baseUrl: AppConfigManager.apiUrl,
+                          );
+                          final fullResidence = await residenceService.getResidenceById(residence.id);
+                          
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ResidenceDetailsScreen(
+                                  residence: fullResidence,
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 40),
@@ -1618,12 +1661,16 @@ class DashboardScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Aucun avis à afficher',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Flexible(
+                      child: Text(
+                        'Aucun avis à afficher',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: () {
                         // Navigation vers la page des avis

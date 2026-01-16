@@ -4,12 +4,15 @@ class OnboardingPage extends StatelessWidget {
   final String title;
   final String description;
   final String imagePath;
+  /// Label d'accessibilité pour l'image (optionnel, utilise [title] par défaut)
+  final String? imageSemanticLabel;
 
   const OnboardingPage({
     super.key,
     required this.title,
     required this.description,
     required this.imagePath,
+    this.imageSemanticLabel,
   });
 
   @override
@@ -19,10 +22,15 @@ class OnboardingPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            imagePath,
-            height: 300,
-            fit: BoxFit.contain,
+          Semantics(
+            label: imageSemanticLabel ?? 'Illustration: $title',
+            image: true,
+            child: Image.asset(
+              imagePath,
+              height: 300,
+              fit: BoxFit.contain,
+              semanticLabel: imageSemanticLabel ?? 'Illustration: $title',
+            ),
           ),
           const SizedBox(height: 40),
           Text(

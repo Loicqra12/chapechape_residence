@@ -67,12 +67,8 @@ class _SecurityHistoryScreenState extends State<SecurityHistoryScreen>
       onRequest: (options, handler) async {
         const storage = FlutterSecureStorage();
         final token = await storage.read(key: 'token');
-        print('🔐 [DEBUG] Token trouvé: ${token != null ? 'OUI' : 'NON'}');
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
-          print('🔐 [DEBUG] Headers ajoutés: ${options.headers}');
-        } else {
-          print('❌ [DEBUG] Aucun token trouvé dans le stockage sécurisé');
         }
         handler.next(options);
       },

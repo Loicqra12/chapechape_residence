@@ -634,7 +634,6 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
-                                print("Erreur de chargement d'image: $error pour URL $imageUrl");
                                 return Container(
                                   color: Colors.grey[300],
                                   child: const Center(
@@ -685,6 +684,7 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                      tooltip: 'Photo précédente',
                       onPressed: () {
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 300),
@@ -704,6 +704,7 @@ class _ImageGalleryHeaderState extends State<_ImageGalleryHeader> {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
+                      tooltip: 'Photo suivante',
                       onPressed: () {
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 300),
@@ -1614,10 +1615,16 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
-          Text(value),
-              ],
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+          const SizedBox(width: 8),
+          Text(value),
+        ],
+      ),
     );
   }
   
@@ -1627,8 +1634,15 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 allowed ? Icons.check_circle : Icons.cancel,
@@ -1636,7 +1650,10 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
                 size: 16,
               ),
               const SizedBox(width: 4),
-              Text(allowed ? 'Autorisé' : 'Non autorisé'),
+              Text(
+                allowed ? 'Autorisé' : 'Interdit',
+                style: const TextStyle(fontSize: 13),
+              ),
       ],
           ),
         ],
@@ -2066,7 +2083,6 @@ class _EnhancedGalleryTab extends StatelessWidget {
                               width: double.infinity,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                print("Erreur de chargement d'image: $error pour URL $imageUrl");
                                 return Container(
                                   color: Colors.grey[300],
                                   child: const Icon(
@@ -2087,6 +2103,7 @@ class _EnhancedGalleryTab extends StatelessWidget {
                               ),
                               child: IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                tooltip: 'Supprimer la photo',
                                 onPressed: () {
                                   // Action pour supprimer la photo
                                   showDialog(

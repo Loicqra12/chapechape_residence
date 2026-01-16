@@ -40,12 +40,10 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
   }
 
   void _loadReservationDetails() {
-    print("Chargement des détails de la réservation avec ID: ${widget.reservationId}");
     _reservationBloc.add(LoadReservationDetails(widget.reservationId));
   }
 
   void _updateReservationStatus(ReservationStatus newStatus) {
-    print("Mise à jour du statut de la réservation avec ID: ${widget.reservationId}");
     _reservationBloc.add(UpdateReservationStatus(widget.reservationId, newStatus));
     
     // Afficher un message de succès
@@ -345,10 +343,10 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                     subtitle: Text(reservation.clientPhone),
                     trailing: IconButton(
                       icon: const Icon(Icons.phone),
+                      tooltip: 'Appeler le client',
                       onPressed: () {
                         // Action d'appel téléphonique
                       },
-                      tooltip: 'Appeler le client',
                     ),
                   ),
                 ],
@@ -431,6 +429,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.send),
                         onPressed: _addNote,
+                        tooltip: 'Envoyer la note',
                       ),
                     ),
                     maxLines: 3,

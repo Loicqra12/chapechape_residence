@@ -247,7 +247,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
         }
       } catch (e) {
-        print('Erreur lors de la vérification du statut de messagerie: $e');
         // En cas d'erreur, on laisse la messagerie active par défaut
         setState(() {
           _isMessagingEnabled = true;
@@ -465,6 +464,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     ? IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: _clearSearch,
+                        tooltip: 'Effacer la recherche',
                       )
                     : null,
                 border: OutlineInputBorder(
@@ -493,6 +493,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           IconButton(
             onPressed: _toggleSearchMode,
             icon: const Icon(Icons.close),
+            tooltip: 'Fermer la recherche',
             style: IconButton.styleFrom(
               backgroundColor: Colors.grey[200],
               foregroundColor: Colors.grey[600],
@@ -833,6 +834,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: _goBackToConversations,
+          tooltip: 'Retour aux conversations',
         ),
         title: Row(
           children: [
