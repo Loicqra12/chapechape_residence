@@ -80,15 +80,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     _pages.length,
-                    (index) => Container(
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: 8,
+                      width: _currentPage == index ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(4),
                         color: _currentPage == index
                             ? Theme.of(context).colorScheme.primary
-                            : Colors.grey,
+                            : Colors.grey.shade400,
                       ),
                     ),
                   ),
@@ -163,10 +165,15 @@ class OnboardingPageWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            page.imagePath,
-            height: 300,
-            fit: BoxFit.contain,
+          Semantics(
+            label: page.title,
+            image: true,
+            child: Image.asset(
+              page.imagePath,
+              height: 300,
+              fit: BoxFit.contain,
+              semanticLabel: page.title,
+            ),
           ),
           const SizedBox(height: 32),
           Text(

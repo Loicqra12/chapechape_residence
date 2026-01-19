@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/models/phone_number.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/text_styles.dart';
+import '../../../../core/theme/spacing.dart';
 
 /// Widget avancé pour la saisie de numéro de téléphone avec sélection de pays
 class AdvancedPhoneInputWidget extends StatefulWidget {
@@ -173,21 +176,20 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
         // Libellé
         if (widget.label.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
+            padding: EdgeInsets.only(bottom: AppSpacing.sm),
             child: Row(
               children: [
                 Text(
                   widget.label,
-                  style: theme.textTheme.titleSmall?.copyWith(
+                  style: AppTextStyles.title.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 if (widget.isRequired)
                   Text(
                     ' *',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: theme.textTheme.titleSmall?.fontSize,
+                    style: AppTextStyles.title.copyWith(
+                      color: AppTheme.errorColor,
                     ),
                   ),
               ],
@@ -200,11 +202,11 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
           builder: (context, isValid, child) {
             return Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.0),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 border: Border.all(
                   color: isValid
-                      ? Colors.green
-                      : (_phoneController.text.isNotEmpty ? Colors.red : Colors.grey[300]!),
+                      ? AppTheme.successColor
+                      : (_phoneController.text.isNotEmpty ? AppTheme.errorColor : AppTheme.dividerColor),
                   width: isValid || (_phoneController.text.isNotEmpty && !isValid) ? 2.0 : 1.0,
             ),
           ),
@@ -214,10 +216,10 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
               InkWell(
                 onTap: widget.enabled && !widget.readOnly ? _showCountryPicker : null,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+                  padding: AppSpacing.inputPadding,
                   decoration: BoxDecoration(
                     border: Border(
-                      right: BorderSide(color: Colors.grey[300]!),
+                      right: BorderSide(color: AppTheme.dividerColor),
                     ),
                   ),
                   child: Row(
@@ -225,21 +227,21 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
                     children: [
                       Text(
                         countryInfo['flag']!,
-                        style: const TextStyle(fontSize: 20),
+                        style: AppTextStyles.bodyLarge.copyWith(fontSize: 20),
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: AppSpacing.xs),
                       Text(
                         countryInfo['dial']!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        style: AppTextStyles.bodyLarge.copyWith(
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: AppSpacing.xs),
                       Icon(
                         Icons.arrow_drop_down,
                         color: widget.enabled && !widget.readOnly 
-                            ? Colors.grey[600] 
-                            : Colors.grey[400],
+                            ? AppTheme.textSecondary 
+                            : AppTheme.textSecondary.withOpacity(0.5),
                         size: 20,
                       ),
                     ],
@@ -261,14 +263,11 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
                   decoration: InputDecoration(
                     hintText: widget.hint,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 16.0,
-                    ),
+                    contentPadding: AppSpacing.inputPadding,
                     suffixIcon: _phoneController.text.isNotEmpty
                         ? Icon(
                             isValid ? Icons.check_circle : Icons.error,
-                            color: isValid ? Colors.green : Colors.red,
+                            color: isValid ? AppTheme.successColor : AppTheme.errorColor,
                           )
                         : null,
                   ),
@@ -288,15 +287,15 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
             builder: (context, isValid, child) {
               return Column(
                 children: [
-                  const SizedBox(height: 8),
+                  SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
                       Icon(
                         isValid ? Icons.check_circle : Icons.error,
                         size: 16,
-                        color: isValid ? Colors.green : Colors.red,
+                        color: isValid ? AppTheme.successColor : AppTheme.errorColor,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
                           isValid 
@@ -306,8 +305,8 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
                                   dialCode: _getDialCode(_selectedCountryCode),
                                 ).operatorName}'
                               : 'Format de numéro invalide pour ${countryInfo['name']}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isValid ? Colors.green : Colors.red,
+                          style: AppTextStyles.caption.copyWith(
+                            color: isValid ? AppTheme.successColor : AppTheme.errorColor,
                           ),
                         ),
                       ),
@@ -329,21 +328,21 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Sélectionner un pays',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: AppTextStyles.title.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.md),
             ...(_countries.map((country) => ListTile(
               leading: Text(
                 country['flag']!,
-                style: const TextStyle(fontSize: 24),
+                style: AppTextStyles.headline.copyWith(fontSize: 24),
               ),
               title: Text(country['name']!),
               subtitle: Text(country['dial']!),

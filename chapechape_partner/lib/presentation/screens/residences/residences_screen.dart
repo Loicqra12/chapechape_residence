@@ -528,12 +528,6 @@ class _ResidencesViewState extends State<_ResidencesView> {
     final Color statusColor = isAvailable ? Colors.green : Colors.orange;
     final String statusText = isAvailable ? 'Disponible' : 'Non disponible';
     
-    // Debug: afficher les données brutes pour comprendre la structure des images
-    print('====== DÉTAILS DE LA RÉSIDENCE ======');
-    print('Residence ID: ${residence.id}');
-    print('mainImage: ${residence.mainImage}');
-    print('images list: ${residence.images}');
-    
     // Récupérer l'URL de l'image directement
     String imageUrl = residence.mainImage ?? '';
     if (imageUrl.isEmpty && residence.images.isNotEmpty) {
@@ -568,8 +562,6 @@ class _ResidencesViewState extends State<_ResidencesView> {
     if (imageUrl.startsWith('http') && imageUrl.contains('/uploads/') && !imageUrl.contains('/uploads/residences/')) {
       imageUrl = imageUrl.replaceAll('/uploads/', '/uploads/residences/');
     }
-    
-    print('URL finale de l\'image: $imageUrl');
     
     // Formatage du prix avec le séparateur de milliers
     final priceFormatter = NumberFormat('#,###', 'fr');
@@ -660,19 +652,10 @@ class _ResidencesViewState extends State<_ResidencesView> {
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          // Désactiver le cache complètement
-                          cacheHeight: null,
-                          cacheWidth: null,
-                          // Ajouter un timestamp pour éviter tout cache
-                          headers: {
-                            'Cache-Control': 'no-cache, no-store, must-revalidate',
-                            'Pragma': 'no-cache',
-                            'Expires': '0',
-                            'If-Modified-Since': DateTime.now().toUtc().toString(),
-                          },
+                          // Cache optimisé pour les performances
+                          cacheHeight: 200,
+                          cacheWidth: 300,
                           errorBuilder: (context, error, stackTrace) {
-                            print('ERREUR CHARGEMENT IMAGE: $error');
-                            print('URL qui a causé l\'erreur: $imageUrl');
                             return Container(
                               height: 180,
                               width: double.infinity,

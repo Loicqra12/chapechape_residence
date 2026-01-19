@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 import '../../core/models/residence_type_enum.dart' as model_types;
 
 /// Classe pour représenter un type de résidence dans le sélecteur
@@ -102,32 +104,32 @@ class _ResidenceTypeSelectorWidgetState
 
   Widget _buildCategoriesSelector() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDarkMode ? Colors.grey[800] : Colors.white;
-    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
-    final selectedTextColor = isDarkMode ? Colors.white : Colors.white;
+    final cardColor = isDarkMode ? Colors.grey[800] : AppTheme.textLight;
+    final textColor = isDarkMode ? Colors.white70 : AppTheme.textPrimary;
+    final selectedTextColor = isDarkMode ? AppTheme.textLight : AppTheme.textLight;
     final iconColor = isDarkMode ? Colors.white70 : AppTheme.primaryColor;
-    final selectedIconColor = isDarkMode ? Colors.white : Colors.white;
-    final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey.withOpacity(0.3);
+    final selectedIconColor = isDarkMode ? AppTheme.textLight : AppTheme.textLight;
+    final borderColor = isDarkMode ? Colors.grey[700] : AppTheme.dividerColor;
 
     return Container(
       height: 130, // Hauteur augmentée pour correspondre au sélecteur de type
-      margin: const EdgeInsets.only(bottom: 16), // Marge inférieure ajustée
+      margin: EdgeInsets.only(bottom: AppSpacing.md), // Marge inférieure ajustée
       clipBehavior: Clip.hardEdge, // Ajouté pour la cohérence et pour éviter le débordement visuel
       decoration: BoxDecoration(
         // Pas de couleur de fond ici, chaque carte aura la sienne
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         // Pas d'ombre globale ici, chaque carte aura la sienne si nécessaire
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: widget.categories.length,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // Padding vertical ajouté
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm), // Padding vertical ajouté
         itemBuilder: (context, index) {
           final category = widget.categories[index];
           final isSelected = category.id == _selectedCategoryId;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6), // Espacement horizontal entre les cartes
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd / 2), // Espacement horizontal entre les cartes
             child: InkWell(
               onTap: () {
                 setState(() {
@@ -139,20 +141,20 @@ class _ResidenceTypeSelectorWidgetState
                 });
                 _updateFilteredTypes();
               },
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               child: Container(
                 width: 110, // Largeur ajustée
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12), // Padding interne ajusté
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.smd), // Padding interne ajusté
                 decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).primaryColor : cardColor,
-                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected ? AppTheme.primaryColor : cardColor,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
-                    color: isSelected ? Theme.of(context).primaryColor : borderColor!,
+                    color: isSelected ? AppTheme.primaryColor : borderColor!,
                     width: 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: AppTheme.textPrimary.withOpacity(0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 1),
                     ),
@@ -166,13 +168,13 @@ class _ResidenceTypeSelectorWidgetState
                       size: 32, // Taille de l'icône augmentée
                       color: isSelected ? selectedIconColor : iconColor,
                     ),
-                    const SizedBox(height: 8), // Espacement ajusté
+                    SizedBox(height: AppSpacing.sm), // Espacement ajusté
                     Text(
                       category.name,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTextStyles.body.copyWith(
                         color: isSelected ? selectedTextColor : textColor,
                         fontSize: 13, // Taille de police ajustée
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -193,11 +195,11 @@ class _ResidenceTypeSelectorWidgetState
       height: 132, // Augmenté de 2 pixels pour résoudre le débordement
       clipBehavior: Clip.hardEdge, // Ajouté pour éviter tout débordement visuel
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.textLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppTheme.textPrimary.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -206,13 +208,13 @@ class _ResidenceTypeSelectorWidgetState
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _filteredTypes.length,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         itemBuilder: (context, index) {
           final type = _filteredTypes[index];
           final isSelected = type.id == _selectedType?.id;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             child: InkWell(
               onTap: () {
                 setState(() {
@@ -224,14 +226,14 @@ class _ResidenceTypeSelectorWidgetState
               },
               child: Container(
                 width: 100,
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected ? AppTheme.primaryColor : AppTheme.textLight,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
                     color: isSelected
                         ? AppTheme.primaryColor
-                        : Colors.grey.withOpacity(0.3),
+                        : AppTheme.dividerColor,
                   ),
                 ),
                 child: Column(
@@ -240,16 +242,16 @@ class _ResidenceTypeSelectorWidgetState
                     Icon(
                       type.icon,
                       size: 32,
-                      color: isSelected ? Colors.white : AppTheme.primaryColor,
+                      color: isSelected ? AppTheme.textLight : AppTheme.primaryColor,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.sm),
                     Text(
                       type.name,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
+                      style: AppTextStyles.caption.copyWith(
+                        color: isSelected ? AppTheme.textLight : AppTheme.textPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

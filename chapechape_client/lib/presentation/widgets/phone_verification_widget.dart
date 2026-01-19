@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/services/notification_service.dart';
 import 'common/inputs/advanced_phone_input_widget.dart';
 import '../../core/models/phone_number.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 
 /// Widget permettant la vérification d'un numéro de téléphone par SMS
 class PhoneVerificationWidget extends StatefulWidget {
@@ -224,7 +227,7 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppTheme.errorColor : AppTheme.successColor,
       ),
     );
   }
@@ -238,13 +241,13 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.all(AppSpacing.md),
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Form(
           key: _formKey,
           child: Column(
@@ -252,12 +255,12 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
             children: [
               Text(
                 'Vérification du numéro de téléphone',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                style: AppTextStyles.title.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: AppSpacing.md),
               
               AdvancedPhoneInputWidget(
                 label: 'Numéro de téléphone',
@@ -279,7 +282,7 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                 themeColor: Theme.of(context).primaryColor,
               ),
               
-              const SizedBox(height: 16),
+              SizedBox(height: AppSpacing.md),
               
               if (!_codeSent)
                 ElevatedButton(
@@ -288,11 +291,11 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                     _requestCode();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: AppTheme.primaryColor,
+                    padding: AppSpacing.buttonPadding,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const CircularProgressIndicator(color: AppTheme.textLight)
                       : const Text('Recevoir un code par SMS'),
                 )
               else
@@ -326,7 +329,7 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                       },
                     ),
                     
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.sm),
                     
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -334,12 +337,16 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                         if (_remainingSeconds > 0)
                           Text(
                             'Expire dans: ${_formatTime(_remainingSeconds)}',
-                            style: const TextStyle(color: Colors.grey),
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
                           )
                         else
-                          const Text(
+                          Text(
                             'Code expiré',
-                            style: TextStyle(color: Colors.red),
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppTheme.errorColor,
+                            ),
                           ),
                         
                         TextButton(
@@ -353,20 +360,20 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                       ],
                     ),
                     
-                    const SizedBox(height: 16),
+                    SizedBox(height: AppSpacing.md),
                     
                     ElevatedButton(
                       onPressed: _isLoading ? null : _verifyCode,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: AppTheme.primaryColor,
+                        padding: AppSpacing.buttonPadding,
                       ),
                       child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
+                          ? const CircularProgressIndicator(color: AppTheme.textLight)
                           : const Text('Vérifier'),
                     ),
                     
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.sm),
                     
                     TextButton(
                       onPressed: () {
@@ -381,12 +388,12 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                       child: const Text('Modifier le numéro'),
                     ),
                     
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.sm),
                     
                     TextButton(
                       onPressed: widget.onCancel,
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
+                        foregroundColor: AppTheme.errorColor,
                       ),
                       child: const Text('Annuler'),
                     ),

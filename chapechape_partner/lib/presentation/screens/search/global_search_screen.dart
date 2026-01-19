@@ -130,6 +130,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
+                  tooltip: 'Fermer',
                 ),
               ],
             ),
@@ -179,6 +180,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear),
+                    tooltip: 'Effacer la recherche',
                     onPressed: () {
                       _searchController.clear();
                       setState(() {
@@ -223,11 +225,13 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               ],
             ),
             onPressed: _showFiltersSheet,
+            tooltip: 'Filtres',
           ),
           // Bouton de tri
           IconButton(
             icon: const Icon(Icons.sort),
             onPressed: _showSortOptions,
+            tooltip: 'Trier',
           ),
         ],
       ),

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/models/promotion_model.dart';
 import '../../core/utils/responsive_utils.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 
 /// Widget affichant un compte à rebours animé pour les promotions à durée limitée
 class PromotionCountdownWidget extends StatefulWidget {
@@ -107,13 +110,13 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
   
   Widget _buildFullCountdown() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: _isUrgent ? Colors.red : Colors.black.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(8),
+        color: _isUrgent ? AppTheme.errorColor : AppTheme.textPrimary.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         boxShadow: [
           BoxShadow(
-            color: (_isUrgent ? Colors.red : Colors.black).withOpacity(0.3),
+            color: (_isUrgent ? AppTheme.errorColor : AppTheme.textPrimary).withOpacity(0.3),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -127,26 +130,24 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
             children: [
               Icon(
                 Icons.timer,
-                color: Colors.white,
+                color: AppTheme.textLight,
                 size: 16,
               )
               .animate(controller: _pulseController, target: _isUrgent ? 1 : 0)
               .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3)),
               
-              const SizedBox(width: 6),
+              SizedBox(width: AppSpacing.smd / 2),
               
               Text(
                 'Expire dans',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: context.responsiveFontSize(12),
-                  fontWeight: FontWeight.w500,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppTheme.textLight,
                 ),
               ),
             ],
           ),
           
-          const SizedBox(height: 6),
+          SizedBox(height: AppSpacing.smd / 2),
           
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -170,29 +171,29 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
         ],
       )
       .animate(target: _isUrgent ? 1 : 0)
-      .shimmer(duration: 1500.ms, color: Colors.white30, delay: 200.ms, stops: [0, 0.5, 1]),
+      .shimmer(duration: 1500.ms, color: AppTheme.textLight.withOpacity(0.3), delay: 200.ms, stops: [0, 0.5, 1]),
     );
   }
   
   Widget _buildCompactCountdown() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: _isUrgent ? Colors.red.withOpacity(0.9) : Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(6),
+        color: _isUrgent ? AppTheme.errorColor.withOpacity(0.9) : AppTheme.textPrimary.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.timer,
-            color: Colors.white,
+            color: AppTheme.textLight,
             size: 12,
           )
           .animate(controller: _pulseController, target: _isUrgent ? 1 : 0)
           .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2)),
           
-          const SizedBox(width: 4),
+          SizedBox(width: AppSpacing.xs),
           
           Text(
             _days > 0 
@@ -200,43 +201,41 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
                 : _hours > 0 
                     ? '${_hours}h ${_minutes}m'
                     : '${_minutes}m ${_seconds}s',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: context.responsiveFontSize(10),
-              fontWeight: FontWeight.bold,
+            style: AppTextStyles.caption.copyWith(
+              color: AppTheme.textLight,
+              fontSize: 10,
             ),
           ),
         ],
       ),
     )
     .animate(target: _isUrgent ? 1 : 0)
-    .shimmer(duration: 1200.ms, color: Colors.white24, delay: 300.ms, stops: [0, 0.5, 1]);
+    .shimmer(duration: 1200.ms, color: AppTheme.textLight.withOpacity(0.24), delay: 300.ms, stops: [0, 0.5, 1]);
   }
   
   Widget _buildExpiredBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(6),
+        color: AppTheme.textSecondary.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(
             Icons.timer_off,
-            color: Colors.white,
+            color: AppTheme.textLight,
             size: 12,
           ),
           
-          const SizedBox(width: 4),
+          SizedBox(width: AppSpacing.xs),
           
           Text(
             'Expirée',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: context.responsiveFontSize(10),
-              fontWeight: FontWeight.bold,
+            style: AppTextStyles.caption.copyWith(
+              color: AppTheme.textLight,
+              fontSize: 10,
             ),
           ),
         ],
@@ -246,17 +245,16 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
   
   Widget _buildTimeDigit(String digit) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.xs / 2),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(4),
+        color: AppTheme.textLight.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(AppSpacing.xs),
       ),
       child: Text(
         digit,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: context.responsiveFontSize(11),
-          fontWeight: FontWeight.bold,
+        style: AppTextStyles.caption.copyWith(
+          color: AppTheme.textLight,
+          fontSize: 11,
         ),
       ),
     );
@@ -264,12 +262,12 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
   
   Widget _buildTimeSeparator(String label) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs / 2),
       child: Text(
         label,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: context.responsiveFontSize(9),
+        style: AppTextStyles.caption.copyWith(
+          color: AppTheme.textLight,
+          fontSize: 9,
         ),
       ),
     );

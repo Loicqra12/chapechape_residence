@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
@@ -50,7 +51,6 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
   }
 
   void _loadReservations() {
-    print("Chargement des réservations partenaire...");
     context.read<ReservationBloc>().add(LoadPartnerReservations());
   }
 
@@ -107,7 +107,6 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
               }
 
               if (state is ReservationError) {
-                print("Erreur de chargement des réservations: ${state.message}");
                 return SliverFillRemaining(
                   child: Center(
                     child: Text(
@@ -121,7 +120,6 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
               }
 
               if (state is ReservationLoaded) {
-                print("Réservations chargées: ${state.reservations.length}");
                 if (state.reservations.isEmpty) {
                   return const SliverFillRemaining(
                     child: Center(
@@ -285,6 +283,45 @@ class _ReservationCard extends StatelessWidget {
     required this.onCancel,
   });
 
+  /// Retourne l'icône appropriée pour chaque statut
+  IconData _getStatusIcon(ReservationStatus status) {
+    switch (status) {
+      case ReservationStatus.pending:
+        return Icons.schedule;
+      case ReservationStatus.confirmed:
+        return Icons.check_circle;
+      case ReservationStatus.cancelled:
+        return Icons.cancel;
+      case ReservationStatus.completed:
+        return Icons.done_all;
+      case ReservationStatus.awaitingApproval:
+        return Icons.pending_actions;
+      case ReservationStatus.paymentPending:
+        return Icons.payment;
+      case ReservationStatus.rejected:
+        return Icons.block;
+      case ReservationStatus.paymentExpired:
+        return Icons.timer_off;
+      case ReservationStatus.paymentProcessing:
+        return Icons.sync;
+      case ReservationStatus.inStay:
+        return Icons.hotel;
+      case ReservationStatus.expired:
+        return Icons.event_busy;
+      case ReservationStatus.refunded:
+        return Icons.money_off;
+    }
+  }
+
+  /// Convertit la couleur hex en Color
+  Color _getStatusColor(ReservationStatus status) {
+    return Color(
+      int.parse(
+        status.color.replaceAll('#', '0xFF'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -431,49 +468,144 @@ class _ReservationCard extends StatelessWidget {
                   
                   const SizedBox(height: 16),
                   
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       if (reservation.status != ReservationStatus.cancelled)
                         TextButton.icon(
                           onPressed: onCancel,
-                          icon: const Icon(Icons.cancel),
+                          icon: const Icon(Icons.cancel, size: 18),
                           label: const Text('Annuler'),
                           style: TextButton.styleFrom(
                             foregroundColor: theme.colorScheme.error,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                         ),
-                      const SizedBox(width: 8),
                       PopupMenuButton<ReservationStatus>(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 8,
                         itemBuilder: (context) {
-                          return ReservationStatus.values
-                              .where((s) => s != reservation.status)
-                              .map((status) {
-                            return PopupMenuItem(
-                              value: status,
+                          final currentStatusColor = _getStatusColor(reservation.status);
+                          final currentStatusIcon = _getStatusIcon(reservation.status);
+                          
+                          return [
+                            // Statut actuel (non cliquable, grisé)
+                            PopupMenuItem<ReservationStatus>(
+                              enabled: false,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    Icons.circle,
-                                    size: 12,
-                                    color: Color(
-                                      int.parse(
-                                        status.color.replaceAll('#', '0xFF'),
-                                      ),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: currentStatusColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Icon(
+                                      currentStatusIcon,
+                                      size: 18,
+                                      color: currentStatusColor.withOpacity(0.6),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(status.displayName),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Statut actuel',
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          reservation.status.displayName,
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
-                            );
-                          }).toList();
+                            ),
+                            // Séparateur
+                            const PopupMenuDivider(),
+                            // Autres statuts disponibles
+                            ...ReservationStatus.values
+                                .where((s) => s != reservation.status)
+                                .map((status) {
+                              final statusColor = _getStatusColor(status);
+                              final statusIcon = _getStatusIcon(status);
+                              
+                              return PopupMenuItem<ReservationStatus>(
+                                value: status,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Semantics(
+                                  label: 'Changer le statut à ${status.displayName}',
+                                  button: true,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Icon(
+                                          statusIcon,
+                                          size: 18,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          status.displayName,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ];
                         },
-                        onSelected: onStatusUpdate,
-                        child: TextButton.icon(
-                          onPressed: null,
-                          icon: const Icon(Icons.edit),
-                          label: const Text('Changer le statut'),
+                        onSelected: (status) {
+                          HapticFeedback.mediumImpact();
+                          onStatusUpdate(status);
+                        },
+                        child: Semantics(
+                          label: 'Changer le statut de la réservation',
+                          button: true,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.edit, size: 18),
+                                const SizedBox(width: 4),
+                                const Text('Statut'),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],

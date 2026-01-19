@@ -79,6 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Image.asset(
                       AppImages.logoPrimary,
                       height: 80,
+                      semanticLabel: 'Logo ChapeChape Partner',
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -133,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? Icons.visibility_off
                             : Icons.visibility,
                       ),
-                      onPressed: _isLoading ? () {} : _togglePasswordVisibility,
+                      onPressed: _isLoading ? null : _togglePasswordVisibility,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -142,8 +143,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _isLoading
-                          ? () {}
+                          ? null
                           : () => context.push('/auth/forgot-password'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        textStyle: const TextStyle(
+                          decoration: TextDecoration.underline,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       child: const Text('Mot de passe oublié ?'),
                     ),
                   ),
@@ -151,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Bouton de connexion
                   PrimaryButton(
                     text: 'Se connecter',
-                    onPressed: _isLoading ? () {} : _onLoginPressed,
+                    onPressed: _onLoginPressed,
                     isLoading: _isLoading,
                   ),
                   const SizedBox(height: 20),
@@ -162,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text('Pas encore partenaire ?'),
                       TextButton(
                         onPressed: _isLoading
-                            ? () {}
+                            ? null
                             : () => context.push('/auth/register'),
                         child: const Text('S\'inscrire'),
                       ),
@@ -181,17 +189,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         children: [
                           WidgetSpan(
-                            child: GestureDetector(
-                              onTap: () => launchUrl(
-                                Uri.parse('https://presentation.chapechaperesidence.com/conditions'),
-                                mode: LaunchMode.externalApplication,
-                              ),
-                              child: Text(
-                                'Conditions d\'utilisation',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: Semantics(
+                              label: 'Conditions d\'utilisation',
+                              link: true,
+                              child: InkWell(
+                                onTap: () => launchUrl(
+                                  Uri.parse('https://presentation.chapechaperesidence.com/conditions'),
+                                  mode: LaunchMode.externalApplication,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Text(
+                                  'Conditions d\'utilisation',
+                                  style: TextStyle(
+                                    color: Theme.of(context).primaryColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ),
                             ),
@@ -204,17 +220,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           WidgetSpan(
-                            child: GestureDetector(
-                              onTap: () => launchUrl(
-                                Uri.parse('https://presentation.chapechaperesidence.com/politique-de-confidentialite'),
-                                mode: LaunchMode.externalApplication,
-                              ),
-                              child: Text(
-                                'Politique de confidentialité',
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: Semantics(
+                              label: 'Politique de confidentialité',
+                              link: true,
+                              child: InkWell(
+                                onTap: () => launchUrl(
+                                  Uri.parse('https://presentation.chapechaperesidence.com/politique-de-confidentialite'),
+                                  mode: LaunchMode.externalApplication,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Text(
+                                  'Politique de confidentialité',
+                                  style: TextStyle(
+                                    color: Theme.of(context).primaryColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ),
                             ),

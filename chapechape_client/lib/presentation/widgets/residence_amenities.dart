@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/models/amenity.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 import 'svg_icon.dart';
 
 class ResidenceAmenities extends StatelessWidget {
@@ -13,16 +16,16 @@ class ResidenceAmenities extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: amenities.map((amenity) {
         return Tooltip(
           message: amenity.name,
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(8),
+              color: AppTheme.dividerColor,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -32,10 +35,10 @@ class ResidenceAmenities extends StatelessWidget {
                   width: 20,
                   height: 20,
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: AppSpacing.xs),
                 Text(
                   amenity.name,
-                  style: const TextStyle(fontSize: 12),
+                  style: AppTextStyles.caption,
                 ),
               ],
             ),

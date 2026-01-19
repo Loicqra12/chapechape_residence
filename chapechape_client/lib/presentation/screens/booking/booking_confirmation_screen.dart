@@ -18,7 +18,7 @@ import 'package:chapechape_client/core/services/onesignal_service.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:chapechape_client/presentation/widgets/payment_method_selector.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 class BookingConfirmationScreen extends StatefulWidget {

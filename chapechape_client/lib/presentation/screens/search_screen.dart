@@ -7,7 +7,7 @@ import '../widgets/location_filter_widget.dart';
 import '../widgets/skeletons/search_result_skeleton.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/models/residence_model.dart';
-import '../../config/theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 

@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../core/models/promotion_model.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 import '../../core/utils/responsive_utils.dart';
 import 'promotion_countdown_widget.dart';
 import 'common/premium_card.dart';
@@ -70,14 +72,14 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // En-tête avec titre et sous-titre
-          _buildHeader(),
+          _buildHeader(          ),
           
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
           
           // Liste des promotions
           SizedBox(
@@ -112,10 +114,10 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
       children: [
         // Icône décorative
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
           child: Icon(
             Icons.local_offer,
@@ -124,7 +126,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
           ),
         ),
         
-        const SizedBox(width: 12),
+        SizedBox(width: AppSpacing.smd),
         
         // Titre et sous-titre
         Expanded(
@@ -133,19 +135,17 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             children: [
               Text(
                 widget.title,
-                style: TextStyle(
+                style: AppTextStyles.title.copyWith(
                   fontSize: context.responsiveFontSize(20),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
                 ),
               ),
               if (widget.subtitle != null) ...[
-                const SizedBox(height: 4),
+                SizedBox(height: AppSpacing.xs),
                 Text(
                   widget.subtitle!,
-                  style: TextStyle(
+                  style: AppTextStyles.body.copyWith(
                     fontSize: context.responsiveFontSize(14),
-                    color: Colors.grey[600],
+                    color: AppTheme.textSecondary,
                   ),
                 ),
               ],
@@ -162,7 +162,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
               context.push('/promotions');
             },
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Row(
@@ -170,12 +170,11 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
               children: [
                 Text(
                   'Voir tout',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
+                  style: AppTextStyles.link.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: AppSpacing.xs),
                 Icon(
                   Icons.arrow_forward,
                   size: 16,
@@ -197,11 +196,11 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
           CircularProgressIndicator(
             color: AppTheme.primaryColor,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
           Text(
             'Chargement des promotions...',
-            style: TextStyle(
-              color: Colors.grey[600],
+            style: AppTextStyles.body.copyWith(
+              color: AppTheme.textSecondary,
               fontSize: context.responsiveFontSize(14),
             ),
           ),
@@ -217,27 +216,26 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         children: [
           Icon(
             Icons.error_outline,
-            color: Colors.red[400],
+            color: AppTheme.errorColor,
             size: 48,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
           Text(
             'Impossible de charger les promotions',
-            style: TextStyle(
+            style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(16),
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: AppSpacing.sm),
           Text(
             'Veuillez réessayer plus tard',
-            style: TextStyle(
+            style: AppTextStyles.body.copyWith(
               fontSize: context.responsiveFontSize(14),
-              color: Colors.grey[600],
+              color: AppTheme.textSecondary,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -246,7 +244,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: AppTheme.textLight,
             ),
             child: const Text('Réessayer'),
           ),
@@ -262,24 +260,23 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         children: [
           Icon(
             Icons.local_offer_outlined,
-            color: Colors.grey[400],
+            color: AppTheme.textSecondary,
             size: 48,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
           Text(
             'Aucune promotion disponible',
-            style: TextStyle(
+            style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(16),
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: AppSpacing.sm),
           Text(
             'Revenez bientôt pour découvrir nos offres',
-            style: TextStyle(
+            style: AppTextStyles.body.copyWith(
               fontSize: context.responsiveFontSize(14),
-              color: Colors.grey[600],
+              color: AppTheme.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -325,10 +322,10 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         },
         child: PremiumCard(
         width: 300,
-        margin: const EdgeInsets.only(right: 16),
+        margin: EdgeInsets.only(right: AppSpacing.md),
         borderRadius: 20,
         elevation: isHovered ? 8 : 5,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.textLight,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: Column(
@@ -367,31 +364,29 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
               // Contenu
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: AppSpacing.cardPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Titre
                       Text(
                         promotion.title,
-                        style: TextStyle(
+                        style: AppTextStyles.title.copyWith(
                           fontSize: context.responsiveFontSize(16),
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       
-                      const SizedBox(height: 8),
+                      SizedBox(height: AppSpacing.sm),
                       
                       // Description
                       Expanded(
                         child: Text(
                           promotion.description,
-                          style: TextStyle(
+                          style: AppTextStyles.body.copyWith(
                             fontSize: context.responsiveFontSize(14),
-                            color: Colors.grey[600],
+                            color: AppTheme.textSecondary,
                           ),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
@@ -400,7 +395,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                       
                       // Code promo si disponible
                       if (promotion.discountCode != null) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: AppSpacing.sm),
                         Row(
                           children: [
                             Icon(
@@ -408,17 +403,17 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                               size: 16,
                               color: AppTheme.primaryColor,
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: AppSpacing.smd / 2),
                             Text(
                               'Code: ',
-                              style: TextStyle(
+                              style: AppTextStyles.body.copyWith(
                                 fontSize: context.responsiveFontSize(14),
-                                color: Colors.grey[700],
+                                color: AppTheme.textSecondary,
                               ),
                             ),
                             Text(
                               promotion.discountCode!,
-                              style: TextStyle(
+                              style: AppTextStyles.body.copyWith(
                                 fontSize: context.responsiveFontSize(14),
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.primaryColor,
@@ -429,27 +424,27 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                       ],
                       
                       // Validité
-                      const SizedBox(height: 8),
+                      SizedBox(height: AppSpacing.sm),
                       Row(
                         children: [
                           Icon(
                             Icons.event,
                             size: 16,
-                            color: Colors.grey[600],
+                            color: AppTheme.textSecondary,
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: AppSpacing.smd / 2),
                           Text(
                             'Valable jusqu\'au ${DateFormat('dd/MM/yyyy').format(promotion.endDate)}',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.copyWith(
                               fontSize: context.responsiveFontSize(12),
-                              color: Colors.grey[600],
+                              color: AppTheme.textSecondary,
                             ),
                           ),
                         ],
                       ),
                       
                       // Bouton
-                      const SizedBox(height: 12),
+                      SizedBox(height: AppSpacing.smd),
                       Row(
                         children: [
                           Expanded(
@@ -464,10 +459,10 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                foregroundColor: AppTheme.textLight,
+                                padding: AppSpacing.buttonPadding,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                 ),
                                 elevation: isHovered ? 4 : 2,
                               ),
@@ -508,10 +503,10 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         },
         child: PremiumCard(
         width: 220,
-        margin: const EdgeInsets.only(right: 12),
+        margin: EdgeInsets.only(right: AppSpacing.smd),
         borderRadius: 16,
         elevation: isHovered ? 6 : 3,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.textLight,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Column(
@@ -541,45 +536,43 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
               
               // Contenu
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(AppSpacing.smd),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Titre
                     Text(
                       promotion.title,
-                      style: TextStyle(
+                      style: AppTextStyles.title.copyWith(
                         fontSize: context.responsiveFontSize(14),
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     
-                    const SizedBox(height: 6),
+                    SizedBox(height: AppSpacing.smd / 2),
                     
                     // Description
                     Text(
                       promotion.description,
-                      style: TextStyle(
+                      style: AppTextStyles.body.copyWith(
                         fontSize: context.responsiveFontSize(12),
-                        color: Colors.grey[600],
+                        color: AppTheme.textSecondary,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.sm),
                     
                     // Code promo
                     if (promotion.discountCode != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey[300]!),
+                          color: AppTheme.dividerColor,
+                          borderRadius: BorderRadius.circular(AppSpacing.xs),
+                          border: Border.all(color: AppTheme.dividerColor),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -589,10 +582,10 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                               size: 14,
                               color: AppTheme.primaryColor,
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: AppSpacing.xs),
                             Text(
                               promotion.discountCode!,
-                              style: TextStyle(
+                              style: AppTextStyles.caption.copyWith(
                                 fontSize: context.responsiveFontSize(12),
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.primaryColor,
@@ -602,7 +595,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                         ),
                       ),
                     
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.sm),
                     
                     // Bouton
                     SizedBox(
@@ -618,15 +611,14 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          foregroundColor: AppTheme.textLight,
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
                           ),
                           elevation: isHovered ? 3 : 1,
-                          textStyle: TextStyle(
+                          textStyle: AppTextStyles.button.copyWith(
                             fontSize: context.responsiveFontSize(12),
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         child: const Text('En profiter'),
@@ -654,7 +646,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
       fit: BoxFit.cover,
       placeholder: (context, url) => Container(
         height: height,
-        color: Colors.grey[200],
+        color: AppTheme.dividerColor,
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
@@ -664,11 +656,11 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
       ),
       errorWidget: (context, url, error) => Container(
         height: height,
-        color: Colors.grey[200],
+        color: AppTheme.dividerColor,
         child: Center(
           child: Icon(
             Icons.broken_image,
-            color: Colors.grey[400],
+            color: AppTheme.textSecondary,
           ),
         ),
       ),
@@ -680,18 +672,17 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
     
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 6 : 8,
-        vertical: isCompact ? 3 : 4,
+        horizontal: isCompact ? AppSpacing.smd / 2 : AppSpacing.sm,
+        vertical: isCompact ? AppSpacing.xs / 2 : AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: _getBadgeColor(promotion.type),
-        borderRadius: BorderRadius.circular(isCompact ? 4 : 6),
+        borderRadius: BorderRadius.circular(isCompact ? AppSpacing.xs : AppSpacing.smd / 2),
       ),
       child: Text(
         badgeText.toUpperCase(),
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
+        style: AppTextStyles.tag.copyWith(
+          color: AppTheme.textLight,
           fontSize: isCompact 
               ? context.responsiveFontSize(8) 
               : context.responsiveFontSize(10),
@@ -703,18 +694,17 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
   Widget _buildDiscountBadge(Promotion promotion, {bool isCompact = false}) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 6 : 8,
-        vertical: isCompact ? 3 : 4,
+        horizontal: isCompact ? AppSpacing.smd / 2 : AppSpacing.sm,
+        vertical: isCompact ? AppSpacing.xs / 2 : AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(isCompact ? 4 : 6),
+        color: AppTheme.errorColor,
+        borderRadius: BorderRadius.circular(isCompact ? AppSpacing.xs : AppSpacing.smd / 2),
       ),
       child: Text(
         '-${promotion.discountPercentage.toStringAsFixed(0)}%',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
+        style: AppTextStyles.tag.copyWith(
+          color: AppTheme.textLight,
           fontSize: isCompact 
               ? context.responsiveFontSize(10) 
               : context.responsiveFontSize(12),

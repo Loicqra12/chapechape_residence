@@ -9,7 +9,7 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class BookingHistoryScreen extends StatefulWidget {

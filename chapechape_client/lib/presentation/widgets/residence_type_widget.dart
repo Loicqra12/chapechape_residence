@@ -11,6 +11,9 @@ import '../../core/constants/app_assets.dart' as assets;
 // Import des widgets utilisés
 import 'residence_card_alias.dart';
 import 'shimmer_residence_card.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 
 class ResidenceTypeWidget extends StatefulWidget {
   final String title;
@@ -98,7 +101,7 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
           return Center(
             child: Text(
               'Erreur: ${state.message}',
-              style: const TextStyle(color: Colors.red),
+              style: AppTextStyles.error,
             ),
           );
         }
@@ -115,10 +118,10 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
         itemCount: 5,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
         itemBuilder: (context, index) {
-          return const Padding(
-            padding: EdgeInsets.only(right: 16),
+          return Padding(
+            padding: EdgeInsets.only(right: AppSpacing.md),
             child: ShimmerResidenceCard(),
           );
         },
@@ -135,11 +138,11 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
             itemCount: residences.length,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
             itemBuilder: (context, index) {
               final residence = residences[index];
               return Padding(
-                padding: const EdgeInsets.only(right: 16),
+                padding: EdgeInsets.only(right: AppSpacing.md),
                 child: ResidenceCard(
                   residence: residence,
                   onTap: () => context.go('/residence/${residence.id}'),
@@ -157,13 +160,13 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
             child: InkWell(
               onTap: _scrollLeft,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: AppTheme.textLight.withOpacity(0.8),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: AppTheme.textPrimary.withOpacity(0.1),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
                     ),
@@ -184,13 +187,13 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
             child: InkWell(
               onTap: _scrollRight,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: AppTheme.textLight.withOpacity(0.8),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: AppTheme.textPrimary.withOpacity(0.1),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
                     ),

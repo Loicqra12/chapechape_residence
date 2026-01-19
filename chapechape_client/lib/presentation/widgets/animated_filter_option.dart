@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 
 /// Widget d'option de filtre animé pour la section de recherche
 class AnimatedFilterOption extends StatefulWidget {
@@ -77,20 +79,20 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
     final backgroundColor = widget.isActive 
         ? color.withOpacity(0.12) 
         : _isHovered 
-            ? Colors.grey.withOpacity(0.12) 
+            ? AppTheme.textSecondary.withOpacity(0.12) 
             : Colors.transparent;
     
     final borderColor = widget.isActive 
         ? color 
         : _isHovered 
-            ? Colors.grey.shade300 
-            : Colors.grey.shade200;
+            ? AppTheme.dividerColor 
+            : AppTheme.dividerColor;
     
     final iconColor = widget.isActive 
         ? color 
         : _isHovered 
-            ? Colors.grey.shade800 
-            : Colors.grey.shade600;
+            ? AppTheme.textPrimary 
+            : AppTheme.textSecondary;
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -99,10 +101,10 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.smd),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             border: Border.all(
               color: borderColor,
               width: widget.isActive ? 1.5 : 1.0,
@@ -131,7 +133,7 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
                 },
               ),
               
-              const SizedBox(width: 8),
+              SizedBox(width: AppSpacing.sm),
               
               // Texte et sous-titre
               Flexible(
@@ -142,10 +144,9 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
                     // Libellé principal
                     Text(
                       widget.label,
-                      style: TextStyle(
-                        color: widget.isActive ? color : Colors.grey.shade800,
+                      style: AppTextStyles.body.copyWith(
+                        color: widget.isActive ? color : AppTheme.textPrimary,
                         fontWeight: widget.isActive ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 14,
                       ),
                     ),
                     
@@ -153,9 +154,8 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
                     if (widget.subtitle != null)
                       Text(
                         widget.subtitle!,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                   ],
@@ -169,7 +169,7 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
                   return Opacity(
                     opacity: _animationController.value,
                     child: Padding(
-                      padding: EdgeInsets.only(left: 8.0 * _animationController.value),
+                      padding: EdgeInsets.only(left: AppSpacing.sm * _animationController.value),
                       child: Icon(
                         Icons.check_circle,
                         color: color,
