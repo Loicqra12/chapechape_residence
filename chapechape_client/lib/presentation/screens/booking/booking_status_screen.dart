@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 /// Écran générique pour afficher les états de réservation (rejetée, expirée, approuvée)
 class BookingStatusScreen extends StatelessWidget {

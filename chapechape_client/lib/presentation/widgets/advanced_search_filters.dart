@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 import '../../core/models/location_suggestion_model.dart';
 import '../../core/services/location_service.dart';
 
@@ -84,9 +86,9 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
               primary: AppTheme.primaryColor,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
+              onPrimary: AppTheme.textLight,
+              surface: AppTheme.textLight,
+              onSurface: AppTheme.textPrimary,
             ),
           ),
           child: child!,
@@ -112,13 +114,13 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.textLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppTheme.textPrimary.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -134,25 +136,25 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
               hintText: 'Où souhaitez-vous loger ?',
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
 
           // Sélection des dates
           InkWell(
             onTap: _selectDateRange,
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(AppSpacing.smd),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.dividerColor),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.calendar_today),
-                  const SizedBox(width: 8),
+                  SizedBox(width: AppSpacing.sm),
                   Text(
                     _selectedDateRange != null
                         ? '${_selectedDateRange!.start.toString().split(' ')[0]} - ${_selectedDateRange!.end.toString().split(' ')[0]}'
@@ -162,7 +164,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
 
           // Catégorie de résidence
           DropdownButtonFormField<String>(
@@ -171,7 +173,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
               labelText: 'Catégorie de résidence',
               prefixIcon: const Icon(Icons.category),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
             ),
             items: _residenceCategories.keys.map((category) {
@@ -188,7 +190,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
             },
             hint: const Text('Sélectionnez une catégorie'),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
           
           // Type de résidence (s'affiche uniquement si une catégorie est sélectionnée)
           if (_selectedCategory != null)
@@ -198,7 +200,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
                 labelText: 'Type de résidence',
                 prefixIcon: const Icon(Icons.home),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
               ),
               items: _residenceCategories[_selectedCategory]!.map((type) {
@@ -218,7 +220,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
             children: [
               Text(
                 'Budget: ${_priceRange.start.round()} - ${_priceRange.end.round()} FCFA',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: AppTextStyles.title,
               ),
               RangeSlider(
                 values: _priceRange,
@@ -233,24 +235,21 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: AppSpacing.lg),
 
           // Bouton de recherche
           ElevatedButton(
             onPressed: _handleSearch,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
             ),
-            child: const Text(
+            child: Text(
               'Rechercher',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTextStyles.button,
             ),
           ),
         ],

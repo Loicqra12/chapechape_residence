@@ -10,7 +10,7 @@ import 'package:chapechape_client/core/blocs/residence/residence_bloc.dart';
 import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/extensions/model_extensions.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/presentation/widgets/booking/flexible_date_selector.dart';
 import 'package:chapechape_client/presentation/widgets/booking/reservation_mode_banner.dart';
 

@@ -10,7 +10,7 @@ import 'package:chapechape_client/presentation/widgets/modification_history_widg
 import 'package:chapechape_client/presentation/widgets/booking_cancellation_dialog.dart';
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/cancellation_policy_details_widget.dart';
 

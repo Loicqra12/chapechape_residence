@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 
 class PromoBannerWidget extends StatelessWidget {
   const PromoBannerWidget({super.key});
@@ -8,18 +10,18 @@ class PromoBannerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.smd),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
             // Action à définir (ex: scroll vers offres ou dialog)
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
               gradient: LinearGradient(
                 colors: [
                   Color(0xFF1E3C72), // Bleu nuit profond
@@ -40,54 +42,49 @@ class PromoBannerWidget extends StatelessWidget {
               children: [
                 // Icône Cadeau animée
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(AppSpacing.smd),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: AppTheme.textLight.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.card_giftcard,
-                    color: Colors.white,
+                    color: AppTheme.textLight,
                     size: 24,
                   ),
                 )
                 .animate(onPlay: (controller) => controller.repeat(reverse: true))
                 .scaleXY(begin: 1.0, end: 1.1, duration: 1000.ms)
-                .shimmer(duration: 2000.ms, color: Colors.white.withOpacity(0.4)),
+                .shimmer(duration: 2000.ms, color: AppTheme.textLight.withOpacity(0.4)),
 
-                const SizedBox(width: 16),
+                SizedBox(width: AppSpacing.md),
 
                 // Texte
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "Offre de Bienvenue",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppTheme.textLight.withOpacity(0.7),
                           letterSpacing: 1.0,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: AppSpacing.xs),
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             "-15%",
-                            style: TextStyle(
-                              color: Color(0xFFFFD700), // Or
+                            style: AppTextStyles.subtitle.copyWith(
+                              color: AppTheme.primaryColor,
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const Text(
+                          Text(
                             " sur votre 1ère résa !",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppTheme.textLight,
                             ),
                           ),
                         ],
@@ -99,7 +96,7 @@ class PromoBannerWidget extends StatelessWidget {
                 // Flèche
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white.withOpacity(0.7),
+                  color: AppTheme.textLight.withOpacity(0.7),
                   size: 14,
                 ),
               ],

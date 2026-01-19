@@ -6,6 +6,9 @@ import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/auth/auth_event.dart';
 import '../../core/blocs/locale/locale_cubit.dart';
 import '../../core/blocs/locale/locale_state.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 
 class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomNavigationBar({Key? key}) : super(key: key);
@@ -24,7 +27,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Text('🇫🇷', style: TextStyle(fontSize: 24)),
+                leading: Text('🇫🇷', style: AppTextStyles.headline.copyWith(fontSize: 24)),
                 title: const Text('Français'),
                 onTap: () {
                   localeCubit.setFrench();
@@ -32,7 +35,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                 },
               ),
               ListTile(
-                leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)),
+                leading: Text('🇬🇧', style: AppTextStyles.headline.copyWith(fontSize: 24)),
                 title: const Text('English'),
                 onTap: () {
                   localeCubit.setEnglish();
@@ -51,7 +54,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         return AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: AppTheme.textLight,
           elevation: 1,
           title: Row(
             children: [
@@ -69,7 +72,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                   return IconButton(
                     icon: Text(
                       currentLocale == 'fr' ? '🇫🇷' : '🇬🇧',
-                      style: const TextStyle(fontSize: 20),
+                      style: AppTextStyles.bodyLarge.copyWith(fontSize: 20),
                     ),
                     onPressed: () => _showLanguageDialog(context),
                     tooltip: 'Changer de langue',
@@ -81,25 +84,25 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined),
                     onPressed: () => context.push('/notifications'),
-                    color: Colors.black87,
+                    color: AppTheme.textPrimary,
                   ),
                   Positioned(
                     right: 8,
                     top: 8,
                     child: Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: EdgeInsets.all(AppSpacing.xs / 2),
                       decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppTheme.warningColor,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       ),
                       constraints: const BoxConstraints(
                         minWidth: 16,
                         minHeight: 16,
                       ),
-                      child: const Text(
+                      child: Text(
                         '0',
-                        style: TextStyle(
-                          color: Colors.black87,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppTheme.textPrimary,
                           fontSize: 10,
                         ),
                         textAlign: TextAlign.center,
@@ -111,7 +114,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
               IconButton(
                 icon: const Icon(Icons.search),
                 onPressed: () => context.push('/search'),
-                color: Colors.black87,
+                color: AppTheme.textPrimary,
               ),
               if (state is Authenticated)
                 PopupMenuButton<String>(
@@ -130,33 +133,33 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                     }
                   },
                   itemBuilder: (BuildContext context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'profile',
                       child: Row(
                         children: [
-                          Icon(Icons.person, color: Colors.black87),
-                          SizedBox(width: 8),
-                          Text('Mon profil'),
+                          Icon(Icons.person, color: AppTheme.textPrimary),
+                          SizedBox(width: AppSpacing.sm),
+                          const Text('Mon profil'),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'settings',
                       child: Row(
                         children: [
-                          Icon(Icons.settings, color: Colors.black87),
-                          SizedBox(width: 8),
-                          Text('Paramètres'),
+                          Icon(Icons.settings, color: AppTheme.textPrimary),
+                          SizedBox(width: AppSpacing.sm),
+                          const Text('Paramètres'),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'logout',
                       child: Row(
                         children: [
-                          Icon(Icons.logout, color: Colors.black87),
-                          SizedBox(width: 8),
-                          Text('Déconnexion'),
+                          Icon(Icons.logout, color: AppTheme.textPrimary),
+                          SizedBox(width: AppSpacing.sm),
+                          const Text('Déconnexion'),
                         ],
                       ),
                     ),
@@ -173,7 +176,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                       onPressed: () => context.go('/login'),
                       child: const Text('Connexion'),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: AppSpacing.md),
                   ],
                 ),
             ],

@@ -7,6 +7,8 @@ import '../../core/models/city.dart';
 import '../../core/models/neighborhood.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
+import '../../core/theme/spacing.dart';
 import 'multi_level_location_selector.dart';
 
 /// Widget de filtre de localisation pour l'écran de recherche
@@ -88,12 +90,12 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -102,12 +104,11 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
             Row(
               children: [
                 const Icon(Icons.location_on, color: AppTheme.primaryColor),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: AppSpacing.sm),
+                Text(
                   'Localisation',
-                  style: TextStyle(
+                  style: AppTextStyles.title.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const Spacer(),
@@ -121,12 +122,12 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
               ],
             ),
             
-            const SizedBox(height: 8),
+            SizedBox(height: AppSpacing.sm),
             
             // Afficher la sélection actuelle ou un message par défaut
             _buildSelectionSummary(),
             
-            const SizedBox(height: 12),
+            SizedBox(height: AppSpacing.smd),
             
             // Bouton pour afficher/masquer le sélecteur de localisation
             Center(
@@ -162,7 +163,7 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
                 ),
               ).animate().fadeIn(duration: 300.ms),
             
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.md),
             
             // Bouton pour appliquer les filtres
             Center(
@@ -172,10 +173,10 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
                 onPressed: _applyFilters,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  foregroundColor: AppTheme.textLight,
+                  padding: AppSpacing.buttonPadding,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                 ),
               ),
@@ -209,10 +210,10 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
         LocationLevel.country,
       );
     } else {
-      return const Text(
+      return Text(
         'Aucune localisation sélectionnée',
-        style: TextStyle(
-          color: Colors.grey,
+        style: AppTextStyles.body.copyWith(
+          color: AppTheme.textSecondary,
           fontStyle: FontStyle.italic,
         ),
       );
@@ -224,11 +225,10 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
     return Chip(
       label: Text(label),
       backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-      labelStyle: TextStyle(
+      labelStyle: AppTextStyles.tag.copyWith(
         color: AppTheme.primaryColor,
-        fontWeight: FontWeight.bold,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
     );
   }
   

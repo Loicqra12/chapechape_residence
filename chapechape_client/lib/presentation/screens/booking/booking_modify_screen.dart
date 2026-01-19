@@ -8,7 +8,7 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/presentation/widgets/date_range_picker_widget.dart';
 import 'package:chapechape_client/presentation/widgets/booking_modification_dialog.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 class BookingModifyScreen extends StatefulWidget {
   final String bookingId;

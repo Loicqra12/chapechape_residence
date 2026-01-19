@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/models/chat_model.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
 import 'chat/message_bubble.dart';
 
 class ChatMessageWidget extends StatelessWidget {
@@ -17,7 +19,7 @@ class ChatMessageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      margin: EdgeInsets.symmetric(vertical: AppSpacing.xs, horizontal: AppSpacing.sm),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -25,22 +27,22 @@ class ChatMessageWidget extends StatelessWidget {
           if (!isMe && showAvatar)
             CircleAvatar(
               radius: 16,
-              backgroundColor: Colors.grey[300],
-              child: const Icon(Icons.person, color: Colors.white),
+              backgroundColor: AppTheme.dividerColor,
+              child: const Icon(Icons.person, color: AppTheme.textLight),
             ),
-          if (!isMe) const SizedBox(width: 8),
+          if (!isMe) SizedBox(width: AppSpacing.sm),
           Flexible(
             child: MessageBubble(
               message: message,
               isMe: isMe,
             ),
           ),
-          if (isMe) const SizedBox(width: 8),
+          if (isMe) SizedBox(width: AppSpacing.sm),
           if (isMe && showAvatar)
             CircleAvatar(
               radius: 16,
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(Icons.person, color: Colors.white),
+              backgroundColor: AppTheme.primaryColor,
+              child: const Icon(Icons.person, color: AppTheme.textLight),
             ),
         ],
       ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/models/cancellation_policy_model.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
 
