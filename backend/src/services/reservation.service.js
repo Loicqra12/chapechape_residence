@@ -32,11 +32,11 @@ const createReservation = async (reservationBody) => {
     if (!residence.cancellationPolicy) {
       // Récupérer la vraie politique par défaut depuis la base
       const defaultPolicy = await CancellationPolicy.findOne({ isDefault: true });
-      
+
       if (!defaultPolicy) {
         throw new apiError('Aucune politique d\'annulation par défaut trouvée. Veuillez configurer les politiques d\'annulation.', 500);
       }
-      
+
       cancellationPolicyId = defaultPolicy._id;
       console.log('INFO: Utilisation de la politique d\'annulation par défaut existante:', defaultPolicy.name, 'pour la résidence', residence._id);
     } else {
@@ -88,7 +88,7 @@ const createReservation = async (reservationBody) => {
     if (bookingType === 'hour' && residence.hourlyRates) {
       const rates = residence.hourlyRates;
       const hours = duration.hours;
-      
+
       if (hours === 1 && rates.oneHour > 0) {
         totalPrice = rates.oneHour;
         pricingDetails = {
@@ -125,7 +125,7 @@ const createReservation = async (reservationBody) => {
         const additionalHours = Math.max(0, hours - 3);
         const additionalRate = rates.additionalHour > 0 ? rates.additionalHour : (residence.price / 24);
         totalPrice = baseThreeHours + (additionalHours * additionalRate);
-        
+
         pricingDetails = {
           rateType: 'threeHours_plus',
           rateValue: additionalRate,
@@ -142,7 +142,7 @@ const createReservation = async (reservationBody) => {
     } else if (bookingType === 'day' && residence.dailyRates) {
       const rates = residence.dailyRates;
       const days = duration.days;
-      
+
       // Utiliser les tarifs journaliers si disponibles
       if (rates.fullDay > 0) {
         totalPrice = rates.fullDay * days;
@@ -183,26 +183,26 @@ const createReservation = async (reservationBody) => {
     // Appliquer la tarification dynamique optimisée selon la méthode de paiement
     let dynamicPricing = null;
     let finalTotalPrice = totalPrice;
-    
+
     try {
       // Déterminer la méthode de paiement (depuis le body ou par défaut MTN Money)
       const paymentMethod = reservationBody.paymentMethod || 'mtn_money';
       const payoutMethod = reservationBody.payoutMethod || null;
-      
+
       console.log(`Calcul de la tarification dynamique pour ${totalPrice} XOF avec méthode: ${paymentMethod}`);
-      
+
       // Calculer la tarification optimisée
       dynamicPricing = PricingService.calculateOptimalPricing(
         totalPrice,
         paymentMethod,
         payoutMethod
       );
-      
+
       // Utiliser le prix client final (avec frais service optimisés)
       finalTotalPrice = dynamicPricing.totalClientPrice;
-      
+
       console.log(`Tarification dynamique appliquée: ${totalPrice} XOF → ${finalTotalPrice} XOF (économies: ${dynamicPricing.savingsVsExpensive} XOF)`);
-      
+
     } catch (pricingError) {
       console.error('Erreur lors du calcul de la tarification dynamique:', pricingError);
       // En cas d'erreur, continuer avec le prix de base (fallback)
@@ -211,19 +211,19 @@ const createReservation = async (reservationBody) => {
 
     // Vérifier si la résidence a un partenaire associé et gérer ce cas de façon robuste
     let partnerId = null;
-    
+
     if (!residence.partner) {
       console.error(`ERREUR: La résidence ${residence._id} n'a pas de partenaire défini`);
-      
+
       // Rechercher le propriétaire de la résidence ou un admin comme partenaire de secours
       try {
         // Si nous sommes en environnement de dev/test, permettre un fallback
         if (process.env.NODE_ENV !== 'production') {
           console.warn('ATTENTION: Tentative de récupération d\'un partenaire de secours (NON RECOMMANDÉ en production)');
-          
+
           // Chercher un utilisateur avec le rôle 'partner' pour l'associer
           const fallbackPartner = await User.findOne({ role: 'partner' }).select('_id');
-          
+
           if (fallbackPartner) {
             partnerId = fallbackPartner._id;
             console.log(`Partenaire de secours trouvé: ${partnerId}`);
@@ -245,18 +245,18 @@ const createReservation = async (reservationBody) => {
     } else {
       partnerId = residence.partner;
     }
-    
+
     console.log(`Création de réservation avec partenaire: ${partnerId}`);
-    
+
     // Créer la réservation avec tous les champs requis et un partenaire valide
     // ✅ NOUVEAU : Logique de mode de réservation avancé - imposée par la résidence (contrôle partenaire)
     const reservationMode = residence.reservationMode || 'instant';
     const paymentTimerMinutes = reservationBody.paymentTimerDuration || 30;
-    
+
     // Déterminer le statut initial selon le mode
     let initialStatus = 'pending';
     let paymentDeadline = null;
-    
+
     if (reservationMode === 'instant') {
       // Mode instantané : passage direct en attente paiement avec timer
       initialStatus = 'payment_pending';
@@ -265,7 +265,7 @@ const createReservation = async (reservationBody) => {
       // Mode approbation : attendre validation du partenaire
       initialStatus = 'awaiting_approval';
     }
-    
+
     // Générer les codes QR sécurisés
     const generateSecureCode = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const qrCode = {
@@ -290,21 +290,21 @@ const createReservation = async (reservationBody) => {
       paymentMethod: reservationBody.paymentMethod || 'mtn_money',
       payoutMethod: reservationBody.payoutMethod || dynamicPricing?.payoutMethod,
       cancellationPolicy: cancellationPolicyId,
-      
+
       // ✅ NOUVEAU : Champs système de paiement avancé
       status: initialStatus,
       reservationMode,
       paymentDeadline,
       paymentTimerDuration: paymentTimerMinutes,
       qrCode,
-      
+
       // ✅ PHASE 0 : Snapshots lecture seule (immutable après création)
       reservationModeSnapshot: residence.reservationMode,
       ttlSnapshot: {
         paymentTTLMinutes: residence.paymentTTLMinutes,
         hostAcceptTTLMinutes: residence.hostAcceptTTLMinutes
       },
-      
+
       // Historique du statut initial
       statusHistory: [{
         status: initialStatus,
@@ -313,7 +313,7 @@ const createReservation = async (reservationBody) => {
         reason: `Réservation créée en mode ${reservationMode}`
       }]
     }], { session });
-    
+
     // Journaliser les IDs pour faciliter le débogage
     console.log('Réservation créée:', {
       reservationId: reservation[0]._id,
@@ -328,12 +328,13 @@ const createReservation = async (reservationBody) => {
       reservationBody.checkIn,
       reservationBody.checkOut,
       reservation[0]._id,
-      'reserved'
+      'reserved',
+      bookingType  // ✅ Passer le type de réservation pour gérer les réservations horaires
     );
 
     // Valider la transaction
     await session.commitTransaction();
-    
+
     // Fermer la session avant de poursuivre avec les opérations non transactionnelles
     session.endSession();
 
@@ -341,24 +342,24 @@ const createReservation = async (reservationBody) => {
     // Récupérer le client à partir de user ou client selon la propriété disponible
     const clientId = reservation[0].client || reservation[0].user;
     console.log(`DEBUG: ID du client pour la réservation: ${clientId}`);
-    
+
     try {
       // Rechercher l'utilisateur et le partenaire séparément pour gérer les cas null
       const user = clientId ? await User.findById(clientId) : null;
       const partner = residence.owner ? await User.findById(residence.owner) : null;
-      
+
       console.log(`DEBUG: Utilisateur trouvé: ${user ? 'Oui' : 'Non'}, Partenaire trouvé: ${partner ? 'Oui' : 'Non'}`);
-      
+
       // Envoyer les emails seulement si les destinataires existent
       const emailPromises = [];
-      
+
       if (user && user.email) {
         console.log(`DEBUG: Envoi d'email de confirmation à l'utilisateur: ${user.email}`);
         emailPromises.push(emailService.sendBookingConfirmation(user.email, reservation[0]));
       } else {
         console.log('ATTENTION: Impossible d\'envoyer l\'email de confirmation - utilisateur ou email manquant');
       }
-      
+
       if (partner) {
         console.log(`DEBUG: Envoi de notification au partenaire: ${partner.email || 'email inconnu'}`);
         emailPromises.push(emailService.sendPartnerNotification(partner, 'new_booking', {
@@ -369,7 +370,7 @@ const createReservation = async (reservationBody) => {
       } else {
         console.log('ATTENTION: Impossible d\'envoyer l\'email au partenaire - partenaire manquant');
       }
-      
+
       if (emailPromises.length > 0) {
         await Promise.all(emailPromises);
       }
@@ -396,12 +397,12 @@ const createReservation = async (reservationBody) => {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    
+
     // S'assurer que la session est fermée dans tous les cas
     if (session) {
       session.endSession();
     }
-    
+
     throw error;
   }
 };
@@ -473,7 +474,7 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
 
     // Valider la transaction
     await session.commitTransaction();
-    
+
     // Fermer la session avant de poursuivre avec les opérations non transactionnelles
     session.endSession();
 
@@ -497,12 +498,12 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    
+
     // S'assurer que la session est fermée dans tous les cas
     if (session) {
       session.endSession();
     }
-    
+
     throw error;
   }
 };
@@ -605,7 +606,7 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
 
     // Valider la transaction
     await session.commitTransaction();
-    
+
     // Fermer la session avant de poursuivre avec les opérations non transactionnelles
     session.endSession();
 
@@ -642,12 +643,12 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    
+
     // S'assurer que la session est fermée dans tous les cas
     if (session) {
       session.endSession();
     }
-    
+
     throw error;
   }
 };
