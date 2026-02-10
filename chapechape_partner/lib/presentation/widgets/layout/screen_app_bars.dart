@@ -9,6 +9,8 @@ import 'package:chapechape_partner/core/blocs/dashboard/dashboard_bloc.dart';
 import 'package:chapechape_partner/core/blocs/residence/residence_bloc.dart';
 import 'package:chapechape_partner/core/blocs/message/message_bloc.dart';
 import 'package:chapechape_partner/core/blocs/reservation/reservation_bloc.dart';
+import 'package:chapechape_partner/core/blocs/notification/notification_bloc.dart';
+import 'package:chapechape_partner/core/blocs/notification/notification_state.dart';
 import 'package:chapechape_partner/presentation/screens/residences/edit_residence_screen.dart';
 import 'package:chapechape_partner/presentation/widgets/dashboard/dashboard_filter_sheet.dart';
 import 'package:chapechape_partner/presentation/widgets/messages/message_search_sheet.dart';
@@ -56,19 +58,56 @@ class ScreenAppBars {
     return CustomSliverAppBar(
       title: 'Tableau de bord',
       actions: [
-        IconButton(
-          icon: SvgPicture.asset(
-            AppIcons.notifications,
-            width: 24,
-            height: 24,
-            colorFilter: const ColorFilter.mode(
-              Colors.white,
-              BlendMode.srcATop,
-            ),
-          ),
-          onPressed: () {
-            // Naviguer vers l'écran des notifications
-            context.go('/notifications');
+        BlocBuilder<NotificationBloc, NotificationState>(
+          builder: (context, state) {
+            int unreadCount = 0;
+            if (state is NotificationLoaded) {
+              unreadCount = state.totalUnread ?? 0;
+            }
+            return Stack(
+              children: [
+                IconButton(
+                  icon: SvgPicture.asset(
+                    AppIcons.notifications,
+                    width: 24,
+                    height: 24,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcATop,
+                    ),
+                  ),
+                  onPressed: () {
+                    // Naviguer vers l'écran des notifications
+                    context.go('/notifications');
+                  },
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
           },
         ),
         IconButton(
@@ -496,7 +535,14 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            context.read<MessageBloc>().add(LoadConversations());
+            // Filtrer pour n'afficher que les messages non lus
+            context.read<MessageBloc>().add(FilterConversations(onlyUnread: true));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Affichage des conversations non lues'),
+                duration: Duration(seconds: 2),
+              ),
+            );
           },
         ),
         IconButton(
@@ -517,7 +563,11 @@ class ScreenAppBars {
     );
   }
 
-  static CustomSliverAppBar getReservationsAppBar(BuildContext context, {ReservationBloc? reservationBloc}) {
+  static CustomSliverAppBar getReservationsAppBar(
+    BuildContext context, {
+    ReservationBloc? reservationBloc,
+    VoidCallback? onCalendarTap,
+  }) {
     return CustomSliverAppBar(
       title: 'Réservations',
       actions: [
@@ -532,16 +582,13 @@ class ScreenAppBars {
             ),
           ),
           onPressed: () {
-            // Basculer vers la vue calendrier
-            final reservationsBloc = context.read<ReservationBloc>();
-            // Déclencher un événement pour basculer vers la vue calendrier
-            // Cette fonctionnalité sera gérée par l'écran des réservations
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Vue calendrier activée'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            if (onCalendarTap != null) {
+              onCalendarTap();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Vue calendrier activée')),
+              );
+            }
           },
         ),
         IconButton(

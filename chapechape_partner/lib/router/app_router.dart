@@ -22,6 +22,8 @@ import '../presentation/screens/notifications/notification_list_screen.dart';
 import '../presentation/screens/payments/payouts/payouts.dart';
 import '../presentation/screens/payments/payouts/payout_details_screen.dart';
 import '../presentation/screens/payments/transactions/transactions.dart';
+import '../presentation/screens/profile/edit_profile_screen.dart';
+import '../presentation/screens/help/help_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Transition de page personnalisée avec fade + slide
@@ -165,6 +167,22 @@ class AppRouter {
             child: ReservationDetailsScreen(reservationId: reservationId),
           );
         },
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const EditProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/messages/support',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: HelpScreen.withBloc(context),
+        ),
       ),
       GoRoute(
         path: '/settings',

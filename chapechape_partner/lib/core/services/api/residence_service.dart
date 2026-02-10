@@ -612,10 +612,16 @@ class ResidenceService {
       backendData['paymentMethods'] = List<String>.from(data['paymentMethods']);
     }
     
-    // 16. TARIFS ALTERNATIFS - Optionnels
-    if (data.containsKey('hourlyRate')) {
+    // 16. TARIFS HORAIRES (4 paliers) - Optionnels
+    if (data.containsKey('oneHourRate') || 
+        data.containsKey('twoHoursRate') || 
+        data.containsKey('threeHoursRate') || 
+        data.containsKey('additionalHourRate')) {
       backendData['hourlyRates'] = {
-        'oneHour': _extractNumericValue(data['hourlyRate'])?.toDouble() ?? 0,
+        'oneHour': _extractNumericValue(data['oneHourRate'])?.toDouble() ?? 0,
+        'twoHours': _extractNumericValue(data['twoHoursRate'])?.toDouble() ?? 0,
+        'threeHours': _extractNumericValue(data['threeHoursRate'])?.toDouble() ?? 0,
+        'additionalHour': _extractNumericValue(data['additionalHourRate'])?.toDouble() ?? 0,
       };
     }
     

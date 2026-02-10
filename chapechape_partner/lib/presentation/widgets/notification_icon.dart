@@ -22,7 +22,8 @@ class _NotificationIconState extends State<NotificationIcon> {
   Future<void> _loadNotifications() async {
     try {
       final repository = Provider.of<NotificationRepository>(context, listen: false);
-      final notifications = await repository.getNotifications();
+      final paginatedResponse = await repository.getNotifications();
+      final notifications = paginatedResponse.notifications;
       setState(() {
         _unreadCount = notifications.where((n) => !n.isRead).length;
       });

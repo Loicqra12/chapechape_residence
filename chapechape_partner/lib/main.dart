@@ -172,7 +172,7 @@ Future<void> main() async {
   // Créer le repository de notification et le service
   final twilioService = TwilioService();
   await twilioService.initialize();
-  final notificationRepository = NotificationRepository(twilioService);
+  final notificationRepository = NotificationRepository(twilioService, apiService); // Injection de apiService
 
   // Initialiser le bus d'événements pour les résidences
   final eventBus = event_bus.ResidenceEventBus();

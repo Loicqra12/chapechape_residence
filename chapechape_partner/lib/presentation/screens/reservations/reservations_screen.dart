@@ -61,7 +61,17 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          ScreenAppBars.getReservationsAppBar(context, reservationBloc: context.read<ReservationBloc>()),
+          ScreenAppBars.getReservationsAppBar(
+            context,
+            reservationBloc: context.read<ReservationBloc>(),
+            onCalendarTap: () {
+              if (_tabController.index == 1) {
+                _tabController.animateTo(0);
+              } else {
+                _tabController.animateTo(1);
+              }
+            },
+          ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _TabsHeaderDelegate(

@@ -27,34 +27,37 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         emit(NotificationLoading());
       }
 
-      final notifications = await _repository.getNotifications();
+      final paginatedResponse = await _repository.getNotifications(page: event.page);
+      
+      // Récupérer le nombre total de notifications non lues depuis l'API
+      // Cela évite l'accumulation incorrecte lors de la pagination
+      final totalUnread = await _repository.getUnreadCount();
 
-      final unreadCount = notifications.where((n) => !n.isRead).length;
-      final hasReachedMax = true;
+      final hasReachedMax = paginatedResponse.page >= paginatedResponse.pages;
 
       if (state is NotificationLoaded) {
         final currentState = state as NotificationLoaded;
         if (event.page == 1) {
           emit(NotificationLoaded(
-            notifications: notifications,
+            notifications: paginatedResponse.notifications,
             hasReachedMax: hasReachedMax,
-            currentPage: event.page,
-            totalUnread: unreadCount,
+            currentPage: paginatedResponse.page,
+            totalUnread: totalUnread,
           ));
         } else {
           emit(NotificationLoaded(
-            notifications: [...currentState.notifications, ...notifications],
+            notifications: [...currentState.notifications, ...paginatedResponse.notifications],
             hasReachedMax: hasReachedMax,
-            currentPage: event.page,
-            totalUnread: currentState.totalUnread + unreadCount,
+            currentPage: paginatedResponse.page,
+            totalUnread: totalUnread,
           ));
         }
       } else {
         emit(NotificationLoaded(
-          notifications: notifications,
+          notifications: paginatedResponse.notifications,
           hasReachedMax: hasReachedMax,
-          currentPage: event.page,
-          totalUnread: unreadCount,
+          currentPage: paginatedResponse.page,
+          totalUnread: totalUnread,
         ));
       }
     } catch (error) {
@@ -176,7 +179,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     try {
       if (state is NotificationLoaded) {
         // Récupérer toutes les notifications pour ensuite les filtrer
-        final allNotifications = await _repository.getNotifications();
+        final paginatedResponse = await _repository.getNotifications();
+        final allNotifications = paginatedResponse.notifications;
         
         // Appliquer les filtres
         final filteredNotifications = allNotifications.where((notification) {
