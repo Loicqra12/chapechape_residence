@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../models/message/message.dart';
 import '../../models/message/conversation.dart';
 import '../../services/api/message_service.dart';
+import 'package:flutter/foundation.dart';
 
 // Events
 abstract class MessageEvent extends Equatable {
@@ -69,6 +70,14 @@ class MarkAsRead extends MessageEvent {
 
   @override
   List<Object?> get props => [conversationId];
+}
+
+class FilterConversations extends MessageEvent {
+  final bool onlyUnread;
+  FilterConversations({this.onlyUnread = true});
+
+  @override
+  List<Object?> get props => [onlyUnread];
 }
 
 // States
@@ -149,6 +158,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     on<SendMessage>(_onSendMessage);
     on<UploadAttachment>(_onUploadAttachment);
     on<MarkAsRead>(_onMarkAsRead);
+    on<FilterConversations>(_onFilterConversations);
   }
 
   Future<void> _onLoadConversations(LoadConversations event, Emitter<MessageState> emit) async {
@@ -157,7 +167,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       final conversations = await _messageService.getConversations();
       emit(ConversationsLoaded(conversations));
     } catch (e) {
-      print('ERREUR DÉTAILLÉE de chargement des conversations: $e');
+      debugPrint('ERREUR DÉTAILLÉE de chargement des conversations: $e');
       emit(MessageError('Erreur lors du chargement des conversations: ${e.toString()}'));
     }
   }
@@ -249,8 +259,30 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
   Future<void> _onMarkAsRead(MarkAsRead event, Emitter<MessageState> emit) async {
     try {
       await _messageService.markAsRead(event.conversationId);
+      // Recharger les conversations pour mettre à jour les compteurs
+      add(LoadConversations());
     } catch (e) {
       emit(MessageError(e.toString()));
+    }
+  }
+
+  Future<void> _onFilterConversations(FilterConversations event, Emitter<MessageState> emit) async {
+    if (state is ConversationsLoaded) {
+      final currentState = state as ConversationsLoaded;
+      // Note: Idéalement, on devrait garder une copie de la liste originale dans le state
+      // ou refaire une requête si on veut annuler le filtre. 
+      // Pour l'instant, on recharge tout si on désactive le filtre.
+      if (!event.onlyUnread) {
+        add(LoadConversations());
+        return;
+      }
+
+      final filtered = currentState.conversations.where((c) => c.unreadCount > 0).toList();
+      emit(ConversationsLoaded(filtered));
+    } else {
+       // Si pas encore chargé, on charge tout puis on filtre
+       // (Ce cas est rare si l'UI gère bien l'état)
+       add(LoadConversations()); 
     }
   }
 }

@@ -58,8 +58,9 @@ class BookingService {
       }
       
       // Formater les dates au format ISO 8601 comme attendu par l'API
-      final formattedCheckIn = checkIn.toIso8601String().split('T')[0]; // YYYY-MM-DD
-      final formattedCheckOut = checkOut.toIso8601String().split('T')[0]; // YYYY-MM-DD
+      // ✅ CORRECTION RÉSERVATIONS HORAIRES : Envoyer datetime complet avec heures
+      final formattedCheckIn = checkIn.toIso8601String(); // Format ISO complet
+      final formattedCheckOut = checkOut.toIso8601String(); // Format ISO complet
       
       debugPrint('📅 Création de réservation: $formattedCheckIn → $formattedCheckOut pour $numberOfGuests invités');
       
@@ -473,9 +474,9 @@ class BookingService {
         residenceId = "67cb2f6acb3b4423a99c32c8";
       }
       
-      // Formater les dates au format YYYY-MM-DD qui est attendu par l'API
-      final formattedCheckIn = "${checkIn.year}-${checkIn.month.toString().padLeft(2, '0')}-${checkIn.day.toString().padLeft(2, '0')}";
-      final formattedCheckOut = "${checkOut.year}-${checkOut.month.toString().padLeft(2, '0')}-${checkOut.day.toString().padLeft(2, '0')}";
+      // ✅ CORRECTION RÉSERVATIONS HORAIRES : Envoyer datetime complet avec heures
+      final formattedCheckIn = checkIn.toIso8601String(); // Format ISO complet
+      final formattedCheckOut = checkOut.toIso8601String(); // Format ISO complet
       
       debugPrint('🔍 Vérification disponibilité pour residence: $residenceId');
       debugPrint('Dates: $formattedCheckIn → $formattedCheckOut');

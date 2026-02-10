@@ -8,31 +8,71 @@ const logger = require('../utils/logger');
 
 class AvailabilityService {
     // Vérifier la disponibilité d'une résidence pour des dates données
-    async checkAvailability(residenceId, startDate, endDate) {
+    async checkAvailability(residenceId, startDate, endDate, bookingType = 'day') {
         const start = new Date(startDate);
         const end = new Date(endDate);
 
-        // Vérifier si les dates sont valides
         if (start >= end) {
             throw new ApiError('La date de départ doit être ultérieure à la date d\'arrivée', 400);
         }
 
         try {
-            // Vérifier si la résidence existe
             const residence = await Residence.findById(residenceId);
             if (!residence) {
                 throw new ApiError('Résidence non trouvée', 404);
             }
 
-            // Rechercher les disponibilités pour cette période
+            // ✅ CORRECTION RÉSERVATIONS HORAIRES : Vérification temporelle précise pour les heures
+            if (bookingType === 'hour') {
+                console.log(`[Availability] Vérification horaire pour ${residenceId}: ${start.toISOString()} → ${end.toISOString()}`);
+
+                // Chercher les réservations qui chevauchent cette période temporelle
+                const conflictingReservations = await Reservation.find({
+                    residence: residenceId,
+                    status: { $in: ['confirmed', 'pending', 'payment_pending', 'awaiting_approval'] },
+                    $or: [
+                        {
+                            // Cas 1: Réservation existante chevauche le début de la période demandée
+                            checkIn: { $lt: end },
+                            checkOut: { $gt: start }
+                        }
+                    ]
+                });
+
+                // Vérifier aussi si la journée entière est bloquée manuellement par le partenaire
+                const dayStart = new Date(start);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(start);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                const dayBlocked = await Availability.findOne({
+                    residenceId,
+                    date: { $gte: dayStart, $lte: dayEnd },
+                    status: 'blocked'
+                });
+
+                const isAvailable = conflictingReservations.length === 0 && !dayBlocked;
+
+                console.log(`[Availability] Résultat horaire: ${isAvailable ? 'Disponible' : 'Indisponible'} (${conflictingReservations.length} conflits, bloc manuel: ${!!dayBlocked})`);
+
+                return {
+                    available: isAvailable,
+                    existingReservations: conflictingReservations,
+                    blockedDates: dayBlocked ? [dayBlocked.date] : [],
+                    availabilities: [],
+                    bookingType: 'hour'
+                };
+            }
+
+            // Logique existante pour les réservations journalières/hebdomadaires/mensuelles
             const availabilities = await Availability.findForPeriod(residenceId, start, end);
-            
+
             // Si aucune disponibilité n'est configurée, vérifier avec l'ancienne méthode
             if (availabilities.length === 0) {
                 // Vérifier les réservations existantes
                 const existingReservations = await Reservation.find({
                     residence: residenceId,
-                    status: { $in: ['pending', 'confirmed'] },
+                    status: { $in: ['confirmed', 'pending', 'payment_pending'] },
                     $or: [
                         {
                             checkIn: { $lte: end },
@@ -41,50 +81,51 @@ class AvailabilityService {
                     ]
                 });
 
-                // Vérifier les dates bloquées
-                const blockedDates = residence.blockedDates || [];
-
-                // Vérifier si une date dans la plage est bloquée
-                const isDateBlocked = blockedDates.some(date => {
-                    const blockedDate = new Date(date);
-                    return blockedDate >= start && blockedDate <= end;
+                // Vérifier si la date est bloquée par l'hôte
+                const isDateBlocked = residence.blockedDates?.some(blockedDate => {
+                    const blocked = new Date(blockedDate);
+                    return blocked >= start && blocked <= end;
                 });
 
                 return {
                     available: existingReservations.length === 0 && !isDateBlocked,
                     existingReservations,
-                    blockedDates: blockedDates.filter(date => {
-                        const blockedDate = new Date(date);
-                        return blockedDate >= start && blockedDate <= end;
-                    })
+                    blockedDates: isDateBlocked ? residence.blockedDates : [],
+                    availabilities: []
                 };
             }
-            
+
             // Avec le nouveau système, vérifier chaque jour de la période
             const unavailableDates = availabilities.filter(a => a.status !== 'available').map(a => a.date);
-            
-            // Vérifier les règles de séjour minimum
+
+            // Compter le nombre de jours à vérifier
             const daysCount = moment(end).diff(moment(start), 'days');
-            const minStayRule = availabilities.reduce((max, a) => 
+            const requiredAvailabilities = daysCount + 1;
+
+            // Vérifier si toutes les dates ont un statut disponible
+            const availableCount = availabilities.filter(a => a.status === 'available').length;
+
+            // Vérifier les règles de séjour minimum
+            const minStayRule = availabilities.reduce((max, a) =>
                 a.rules && a.rules.minStay ? Math.max(max, a.rules.minStay) : max, 1);
-            
+
             // Vérifier les règles de check-in/check-out
-            const startDateAvailability = availabilities.find(a => 
+            const startDateAvailability = availabilities.find(a =>
                 moment(a.date).isSame(moment(start), 'day'));
-            const endDateAvailability = availabilities.find(a => 
+            const endDateAvailability = availabilities.find(a =>
                 moment(a.date).isSame(moment(end).subtract(1, 'day'), 'day'));
-            
-            const checkInAllowed = !startDateAvailability || 
-                !startDateAvailability.rules || 
+
+            const checkInAllowed = !startDateAvailability ||
+                !startDateAvailability.rules ||
                 startDateAvailability.rules.checkInAllowed !== false;
-                
-            const checkOutAllowed = !endDateAvailability || 
-                !endDateAvailability.rules || 
+
+            const checkOutAllowed = !endDateAvailability ||
+                !endDateAvailability.rules ||
                 endDateAvailability.rules.checkOutAllowed !== false;
-            
+
             // Calculer le prix total pour cette période
             const priceDetails = this._calculatePriceDetails(availabilities, start, end);
-            
+
             return {
                 available: unavailableDates.length === 0 && checkInAllowed && checkOutAllowed && daysCount >= minStayRule,
                 unavailableDates,
@@ -106,25 +147,25 @@ class AvailabilityService {
         const start = moment(startDate);
         const end = moment(endDate);
         const nights = end.diff(start, 'days');
-        
+
         let baseTotal = 0;
         let discountTotal = 0;
         const dailyPrices = [];
-        
+
         // Pour chaque jour de la période
         for (let day = 0; day < nights; day++) {
             const currentDate = moment(startDate).add(day, 'days');
-            const availability = availabilities.find(a => 
+            const availability = availabilities.find(a =>
                 moment(a.date).isSame(currentDate, 'day'));
-            
+
             if (availability && availability.price) {
                 const basePrice = availability.price;
                 baseTotal += basePrice;
-                
+
                 const finalPrice = availability.getFinalPrice() || basePrice;
                 const discount = basePrice - finalPrice;
                 discountTotal += discount;
-                
+
                 dailyPrices.push({
                     date: currentDate.toISOString(),
                     basePrice,
@@ -137,7 +178,7 @@ class AvailabilityService {
                 });
             }
         }
-        
+
         return {
             totalNights: nights,
             baseTotal,
@@ -152,27 +193,27 @@ class AvailabilityService {
         try {
             const start = new Date(startDate);
             const end = new Date(endDate);
-            
+
             // Vérifier si la résidence existe
             const residence = await Residence.findById(residenceId);
             if (!residence) {
                 throw new ApiError('Résidence non trouvée', 404);
             }
-            
+
             // Récupérer les disponibilités
             const availabilities = await Availability.findForPeriod(residenceId, start, end);
-            
+
             // Si aucune disponibilité n'est configurée, générer des disponibilités par défaut
             if (availabilities.length === 0) {
                 const defaultAvailabilities = [];
                 const currentDate = moment(start);
                 const endDateMoment = moment(end);
-                
+
                 while (currentDate.isSameOrBefore(endDateMoment, 'day')) {
                     // Vérifier si la date est bloquée dans l'ancien système
-                    const isBlocked = (residence.blockedDates || []).some(date => 
+                    const isBlocked = (residence.blockedDates || []).some(date =>
                         moment(date).isSame(currentDate, 'day'));
-                    
+
                     // Vérifier s'il existe une réservation pour cette date
                     const existingReservation = await Reservation.findOne({
                         residence: residenceId,
@@ -180,7 +221,7 @@ class AvailabilityService {
                         checkIn: { $lte: currentDate.toDate() },
                         checkOut: { $gt: currentDate.toDate() }
                     });
-                    
+
                     defaultAvailabilities.push({
                         date: currentDate.toDate(),
                         residenceId,
@@ -188,13 +229,13 @@ class AvailabilityService {
                         price: residence.price,
                         reservationId: existingReservation?._id
                     });
-                    
+
                     currentDate.add(1, 'day');
                 }
-                
+
                 return defaultAvailabilities;
             }
-            
+
             return availabilities;
         } catch (error) {
             if (error instanceof ApiError) throw error;
@@ -207,13 +248,13 @@ class AvailabilityService {
         try {
             const start = moment(startDate);
             const end = moment(endDate);
-            
+
             // Vérifier si la résidence existe
             const residence = await Residence.findById(residenceId);
             if (!residence) {
                 throw new ApiError('Résidence non trouvée', 404);
             }
-            
+
             // Vérifier s'il existe des réservations pendant cette période
             const existingReservations = await Reservation.find({
                 residence: residenceId,
@@ -225,22 +266,22 @@ class AvailabilityService {
                     }
                 ]
             });
-            
+
             // Créer les enregistrements à mettre à jour
             const records = [];
             const currentDate = moment(start);
-            
+
             while (currentDate.isSameOrBefore(end, 'day')) {
                 const dayDate = currentDate.toDate();
-                
+
                 // Vérifier si ce jour est déjà réservé
                 const isReserved = existingReservations.some(reservation => {
                     const resStart = moment(reservation.checkIn);
                     const resEnd = moment(reservation.checkOut);
-                    return currentDate.isSameOrAfter(resStart, 'day') && 
-                           currentDate.isBefore(resEnd, 'day');
+                    return currentDate.isSameOrAfter(resStart, 'day') &&
+                        currentDate.isBefore(resEnd, 'day');
                 });
-                
+
                 // Ne pas permettre de changer le statut si déjà réservé
                 if (!isReserved || data.status !== 'available') {
                     records.push({
@@ -249,24 +290,24 @@ class AvailabilityService {
                         ...data,
                         status: isReserved ? 'reserved' : data.status,
                         // Préserver le reservationId si la date est réservée
-                        reservationId: isReserved ? 
+                        reservationId: isReserved ?
                             existingReservations.find(reservation => {
                                 const resStart = moment(reservation.checkIn);
                                 const resEnd = moment(reservation.checkOut);
-                                return currentDate.isSameOrAfter(resStart, 'day') && 
-                                       currentDate.isBefore(resEnd, 'day');
+                                return currentDate.isSameOrAfter(resStart, 'day') &&
+                                    currentDate.isBefore(resEnd, 'day');
                             })?._id : undefined
                     });
                 }
-                
+
                 currentDate.add(1, 'day');
             }
-            
+
             // Mettre à jour les disponibilités
             if (records.length > 0) {
                 await Availability.upsertBulk(records);
             }
-            
+
             // Récupérer et retourner les disponibilités mises à jour
             return this.getAvailabilities(residenceId, startDate, endDate);
         } catch (error) {
@@ -282,11 +323,11 @@ class AvailabilityService {
             if (!booking) {
                 throw new ApiError('Réservation non trouvée', 404);
             }
-            
+
             const residenceId = booking.residence;
             const start = new Date(newStartDate);
             const end = new Date(newEndDate);
-            
+
             // Vérifier la disponibilité pour les nouvelles dates (en excluant cette réservation)
             const existingReservations = await Reservation.find({
                 _id: { $ne: bookingId },
@@ -302,13 +343,13 @@ class AvailabilityService {
 
             // Vérifier les disponibilités avec le nouveau système
             const availabilities = await Availability.findForPeriod(residenceId, start, end);
-            
+
             // Exclure les dates marquées comme 'reserved' par cette réservation
-            const unavailableDates = availabilities.filter(a => 
-                a.status !== 'available' && 
+            const unavailableDates = availabilities.filter(a =>
+                a.status !== 'available' &&
                 (!a.reservationId || !a.reservationId.equals(booking._id))
             ).map(a => a.date);
-            
+
             return {
                 modificationPossible: existingReservations.length === 0 && unavailableDates.length === 0,
                 conflictingReservations: existingReservations,
@@ -323,7 +364,7 @@ class AvailabilityService {
     // Bloquer des dates pour une résidence
     async blockDates(residenceId, { startDate, endDate }) {
         const residence = await Residence.findById(residenceId);
-        
+
         if (!residence) {
             throw new Error('Résidence non trouvée');
         }
@@ -353,9 +394,9 @@ class AvailabilityService {
 
         // Ajouter les nouvelles dates aux dates bloquées existantes
         residence.blockedDates = [...(residence.blockedDates || []), ...dates];
-        
+
         // Supprimer les doublons et trier
-        residence.blockedDates = [...new Set(residence.blockedDates.map(date => 
+        residence.blockedDates = [...new Set(residence.blockedDates.map(date =>
             date.toISOString().split('T')[0]
         ))].sort().map(date => new Date(date));
 
@@ -366,7 +407,7 @@ class AvailabilityService {
     // Débloquer des dates pour une résidence
     async unblockDates(residenceId, { startDate, endDate }) {
         const residence = await Residence.findById(residenceId);
-        
+
         if (!residence) {
             throw new Error('Résidence non trouvée');
         }
@@ -402,7 +443,7 @@ class AvailabilityService {
         for (const reservation of reservations) {
             const start = new Date(reservation.checkIn);
             const end = new Date(reservation.checkOut);
-            
+
             for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
                 reservedDates.push(new Date(date));
             }
@@ -415,7 +456,15 @@ class AvailabilityService {
     }
 
     // Mettre à jour les disponibilités pour une réservation
-    async updateAvailabilityForReservation(residenceId, startDate, endDate, reservationId, status = 'reserved') {
+    async updateAvailabilityForReservation(residenceId, startDate, endDate, reservationId, status = 'reserved', bookingType = 'day') {
+        // ✅ CORRECTION RÉSERVATIONS HORAIRES : Ne pas bloquer la disponibilité pour les réservations horaires
+        // Les réservations horaires utilisent uniquement la collection Reservation pour détecter les conflits
+        if (bookingType === 'hour') {
+            console.log(`[Availability] Réservation horaire détectée pour ${residenceId} - pas de blocage de disponibilité`);
+            return { acknowledged: true, message: 'Hourly booking - no availability block', modifiedCount: 0 };
+        }
+
+        // Logique existante pour les réservations journalières/hebdomadaires/mensuelles
         const dates = [];
         let currentDate = new Date(startDate);
         const end = new Date(endDate);
@@ -434,7 +483,7 @@ class AvailabilityService {
     }
 
     // ✅ PHASE 0 BIS : Méthode manquante critique pour payment-timer.service.js
-    
+
     /**
      * Met à jour la disponibilité pour une réservation spécifique
      * Utilisé lors d'expiration, annulation ou confirmation de réservation
@@ -453,7 +502,7 @@ class AvailabilityService {
 
             const startDate = new Date(checkIn);
             const endDate = new Date(checkOut);
-            
+
             if (startDate >= endDate) {
                 throw new Error('Date de départ doit être ultérieure à la date d\'arrivée');
             }
@@ -467,7 +516,7 @@ class AvailabilityService {
             // Générer toutes les dates concernées
             const dates = [];
             const currentDate = new Date(startDate);
-            
+
             while (currentDate < endDate) {
                 dates.push({
                     residence: residenceId,
@@ -481,9 +530,9 @@ class AvailabilityService {
 
             // Mettre à jour en masse
             const result = await Availability.upsertBulk(dates);
-            
+
             logger.info(`Disponibilité mise à jour pour réservation ${reservationId}: ${dates.length} dates → ${status}`);
-            
+
             return {
                 success: true,
                 residenceId,

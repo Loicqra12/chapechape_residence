@@ -19,6 +19,7 @@ import '../../../core/config/app_config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/exceptions/api_exception.dart';
 import 'package:chapechape_maps/chapechape_maps.dart';
+import 'widgets/hourly_pricing_card.dart';
 
 class EditResidenceScreen extends StatelessWidget {
   final Residence? residence;
@@ -59,7 +60,11 @@ class _EditResidenceView extends StatefulWidget {
   State<_EditResidenceView> createState() => _EditResidenceViewState();
 }
 
-class _EditResidenceViewState extends State<_EditResidenceView> {
+class _EditResidenceViewState extends State<_EditResidenceView>
+    with SingleTickerProviderStateMixin {
+  // TabController pour navigation par sections
+  TabController? _tabController;
+  
   final _formKey = GlobalKey<FormState>();
   final _imagePicker = ImagePicker();
   List<XFile> _selectedImages = [];
@@ -73,6 +78,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   late final TextEditingController _bathroomsController;
   late final TextEditingController _surfaceController;
   late final TextEditingController _hourlyRateController;
+  late final TextEditingController _twoHoursRateController;
+  late final TextEditingController _threeHoursRateController;
+  late final TextEditingController _additionalHourRateController;
   late final TextEditingController _halfDayRateController;
   late final TextEditingController _fullDayRateController;
   late final TextEditingController _weekendRateController;
@@ -437,6 +445,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
   @override
   void initState() {
     super.initState();
+    
+    // Initialiser le TabController pour 5 sections
+    _tabController = TabController(length: 5, vsync: this);
 
     // Initialiser les contrôleurs
     _nameController = TextEditingController(
@@ -465,6 +476,15 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     );
     _hourlyRateController = TextEditingController(
       text: widget.residence?.hourlyRate?.toString() ?? '0',
+    );
+    _twoHoursRateController = TextEditingController(
+      text: '0', // TODO: Lire depuis backend quand modèle mis à jour
+    );
+    _threeHoursRateController = TextEditingController(
+      text: '0', // TODO: Lire depuis backend quand modèle mis à jour
+    );
+    _additionalHourRateController = TextEditingController(
+      text: '0', // TODO: Lire depuis backend quand modèle mis à jour
     );
     _halfDayRateController = TextEditingController(
       text: widget.residence?.halfDayRate?.toString() ?? '0',
@@ -575,6 +595,7 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
   @override
   void dispose() {
+    _tabController?.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
@@ -584,6 +605,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     _bathroomsController.dispose();
     _surfaceController.dispose();
     _hourlyRateController.dispose();
+    _twoHoursRateController.dispose();
+    _threeHoursRateController.dispose();
+    _additionalHourRateController.dispose();
     _halfDayRateController.dispose();
     _fullDayRateController.dispose();
     _weekendRateController.dispose();
@@ -797,28 +821,63 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Photos',
-          style: Theme.of(context).textTheme.titleMedium,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Photos',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: ((_existingImages?.length ?? 0) + _newImages.length) >= 3
+                    ? Colors.green.withOpacity(0.15)
+                    : Colors.orange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: ((_existingImages?.length ?? 0) + _newImages.length) >= 3
+                      ? Colors.green
+                      : Colors.orange,
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    ((_existingImages?.length ?? 0) + _newImages.length) >= 3
+                        ? Icons.check_circle
+                        : Icons.info_outline,
+                    size: 18,
+                    color: ((_existingImages?.length ?? 0) + _newImages.length) >= 3
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${(_existingImages?.length ?? 0) + _newImages.length}/3 min',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: ((_existingImages?.length ?? 0) + _newImages.length) >= 3
+                          ? Colors.green.shade700
+                          : Colors.orange.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
-          'Ajoutez au moins une photo de la résidence',
+          'Ajoutez au moins 3 photos de qualité pour attirer plus de clients',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
-
-        // Compteur d'images
-        Text(
-          'Images: ${(_existingImages?.length ?? 0) + _newImages.length}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: ((_existingImages?.length ?? 0) + _newImages.length) > 0
-                ? Colors.green
-                : Colors.red,
-          ),
-        ),
-        const SizedBox(height: 8),
 
         // Grille d'images
         SizedBox(
@@ -1073,16 +1132,23 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
         // Vérifier pour les tarifs alternatifs
         if (_hasAlternativePricing) {
-          formData['hourlyRate'] =
-              double.tryParse(_hourlyRateController.text) ?? 0;
-          formData['halfDayRate'] =
-              double.tryParse(_halfDayRateController.text) ?? 0;
+          // Tarifs horaires (4 paliers pour tarification dégressive)
+          formData['oneHourRate'] = double.tryParse(_hourlyRateController.text) ?? 0;
+          formData['twoHoursRate'] = double.tryParse(_twoHoursRateController.text) ?? 0;
+          formData['threeHoursRate'] = double.tryParse(_threeHoursRateController.text) ?? 0;
+          formData['additionalHourRate'] = double.tryParse(_additionalHourRateController.text) ?? 0;
+          
+          // Tarifs journaliers
+          formData['halfDayRate'] = double.tryParse(_halfDayRateController.text) ?? 0;
           formData['fullDayRate'] =
               double.tryParse(_fullDayRateController.text) ?? 0;
           formData['weekendRate'] =
               double.tryParse(_weekendRateController.text) ?? 0;
         } else {
-          formData['hourlyRate'] = 0;
+          formData['oneHourRate'] = 0;
+          formData['twoHoursRate'] = 0;
+          formData['threeHoursRate'] = 0;
+          formData['additionalHourRate'] = 0;
           formData['halfDayRate'] = 0;
           formData['fullDayRate'] = 0;
           formData['weekendRate'] = 0;
@@ -1214,6 +1280,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
     _addressController.clear();
 
     _hourlyRateController.clear();
+    _twoHoursRateController.clear();
+    _threeHoursRateController.clear();
+    _additionalHourRateController.clear();
     _halfDayRateController.clear();
     _fullDayRateController.clear();
     _weekendRateController.clear();
@@ -1273,12 +1342,95 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
         title: Text(isEditing ? 'Modifier la résidence' : 'Nouvelle résidence'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _submitForm,
+            icon: _isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.save),
+            onPressed: _isSubmitting ? null : _submitForm,
+            tooltip: _isSubmitting ? 'Enregistrement...' : 'Enregistrer',
           ),
         ],
+        bottom: _tabController != null ? TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: const [
+            Tab(icon: Icon(Icons.info_outline), text: 'Infos'),
+            Tab(icon: Icon(Icons.payments), text: 'Tarifs'),
+            Tab(icon: Icon(Icons.home_work), text: 'Équipements'),
+            Tab(icon: Icon(Icons.location_on), text: 'Localisation'),
+            Tab(icon: Icon(Icons.photo_camera), text: 'Photos'),
+          ],
+        ) : null,
       ),
-      body: BlocListener<ResidenceBloc, ResidenceState>(
+      body: Column(
+        children: [
+          // Progress indicator
+          if (_tabController != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Complétez le formulaire',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Étape ${_tabController!.index + 1}/5',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: (_tabController!.index + 1) / 5,
+                      minHeight: 6,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Main content
+          Expanded(
+            child: BlocListener<ResidenceBloc, ResidenceState>(
         listener: (context, state) {
           if (state is ResidenceSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1324,42 +1476,95 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Informations de base
-              Text(
-                'Informations de base',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nom de la résidence',
-                  hintText: 'ex: Villa Moderne',
+              // Informations de base - Wrapped in Card
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.only(bottom: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Le nom est requis';
-                  }
-                  if (value.length < 5) {
-                    return 'Le nom doit contenir au moins 5 caractères';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'Décrivez la résidence...',
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: theme.colorScheme.primary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Informations de base',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 24),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Nom de la résidence *',
+                          hintText: 'ex: Villa Moderne Cocody',
+                          prefixIcon: const Icon(Icons.home),
+                          suffixIcon: _nameController.text.length >= 5 &&
+                                  _nameController.text.length <= 100
+                              ? const Icon(Icons.check_circle, color: Colors.green)
+                              : null,
+                          helperText: '${_nameController.text.length}/100 caractères',
+                        ),
+                        onChanged: (value) => setState(() {}), // Refresh suffix icon
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '❌ Le nom est requis';
+                          }
+                          if (value.length < 5) {
+                            return '⚠️ Minimum 5 caractères (${value.length}/5)';
+                          }
+                          if (value.length > 100) {
+                            return '⚠️ Maximum 100 caractères (${value.length}/100)';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: InputDecoration(
+                          labelText: 'Description *',
+                          hintText: 'Décrivez votre résidence en détail...',
+                          prefixIcon: const Icon(Icons.description),
+                          suffixIcon: _descriptionController.text.length >= 20 &&
+                                  _descriptionController.text.length <= 500
+                              ? const Icon(Icons.check_circle, color: Colors.green)
+                              : null,
+                          helperText:
+                              '${_descriptionController.text.length}/500 caractères',
+                          helperMaxLines: 1,
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) => setState(() {}), // Refresh suffix icon
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '❌ La description est requise';
+                          }
+                          if (value.length < 20) {
+                            return '⚠️ Minimum 20 caractères pour une bonne description (${value.length}/20)';
+                          }
+                          if (value.length > 500) {
+                            return '⚠️ Maximum 500 caractères (${value.length}/500)';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'La description est requise';
-                  }
-                  return null;
-                },
               ),
 
               const SizedBox(height: 24),
@@ -1381,7 +1586,8 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                 isExpanded: true, // Ajoutez cette ligne
                 value: _ensureCategoryExists(_selectedCategory),
                 decoration: const InputDecoration(
-                  labelText: 'Catégorie d\'hébergement',
+                  labelText: 'Catégorie d\'hébergement *',
+                  prefixIcon: Icon(Icons.category),
                 ),
                 items: _residenceCategories.entries.map((entry) {
                   return DropdownMenuItem<String>(
@@ -1411,7 +1617,8 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               // Type de résidence
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
-                  labelText: 'Type de résidence',
+                  labelText: 'Type de résidence *',
+                  prefixIcon: Icon(Icons.home_work),
                 ),
                 value: _ensureTypeValueExists(_selectedType),
                 items: _availableTypesForCategory.map((type) {
@@ -1444,8 +1651,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                     child: TextFormField(
                       controller: _bedroomsController,
                       decoration: const InputDecoration(
-                        labelText: 'Chambres',
-                        hintText: 'ex: 3',
+                        labelText: 'Chambres *',
+                        hintText: '3',
+                        prefixIcon: Icon(Icons.bed),
                       ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
@@ -1464,8 +1672,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                     child: TextFormField(
                       controller: _bathroomsController,
                       decoration: const InputDecoration(
-                        labelText: 'Salles de bain',
-                        hintText: 'ex: 2',
+                        labelText: 'Salles de bain *',
+                        hintText: '2',
+                        prefixIcon: Icon(Icons.bathroom),
                       ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
@@ -1485,8 +1694,9 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               TextFormField(
                 controller: _surfaceController,
                 decoration: const InputDecoration(
-                  labelText: 'Surface (m²)',
-                  hintText: 'ex: 120',
+                  labelText: 'Surface (m²) *',
+                  hintText: '120',
+                  prefixIcon: Icon(Icons.square_foot),
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
@@ -1577,151 +1787,105 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ),
               const SizedBox(height: 16),
 
-              // Section des tarifs alternatifs
-              Card(
-                elevation: 0,
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withOpacity(0.3),
-                margin: EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tarifs alternatifs',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: _hourlyRateController,
-                        decoration: InputDecoration(
-                          labelText: 'Tarif horaire (FCFA)',
-                          hintText: 'ex: 5000',
-                          filled: true,
-                          fillColor: _selectedPricePeriod == 'hour'
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withOpacity(0.3)
-                              : null,
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*')),
-                        ],
-                        validator: (value) {
-                          if (_selectedPricePeriod == 'hour' &&
-                              (value == null || value.isEmpty)) {
-                            return 'Le tarif horaire est requis pour ce type de résidence';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      TextFormField(
-                        controller: _halfDayRateController,
-                        decoration: InputDecoration(
-                          labelText: 'Tarif demi-journée (FCFA)',
-                          hintText: 'ex: 25000',
-                          filled: _selectedPricePeriod == 'day',
-                          fillColor: _selectedPricePeriod == 'day'
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withOpacity(0.3)
-                              : null,
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*')),
-                        ],
-                        validator: (value) {
-                          if (_selectedPricePeriod == 'day' &&
-                              (value == null || value.isEmpty)) {
-                            return 'Le tarif demi-journée est requis pour ce type de résidence';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      TextFormField(
-                        controller: _fullDayRateController,
-                        decoration: InputDecoration(
-                          labelText: 'Tarif journée (FCFA)',
-                          hintText: 'ex: 50000',
-                          filled: _selectedPricePeriod == 'day',
-                          fillColor: _selectedPricePeriod == 'day'
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withOpacity(0.3)
-                              : null,
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*')),
-                        ],
-                        validator: (value) {
-                          if (_selectedPricePeriod == 'day' &&
-                              (value == null || value.isEmpty)) {
-                            return 'Le tarif journée est requis pour ce type de résidence';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 16),
-                      TextFormField(
-                        controller: _weekendRateController,
-                        decoration: InputDecoration(
-                          labelText: 'Tarif week-end (FCFA)',
-                          hintText: 'ex: 75000',
-                          filled: _selectedPricePeriod == 'week',
-                          fillColor: _selectedPricePeriod == 'week'
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withOpacity(0.3)
-                              : null,
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*')),
-                        ],
-                        validator: (value) {
-                          if (_selectedPricePeriod == 'week' &&
-                              (value == null || value.isEmpty)) {
-                            return 'Le tarif week-end est requis pour ce type de résidence';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
+              // Section des tarifs horaires (widget extrait)
+              HourlyPricingCard(
+                oneHourController: _hourlyRateController,
+                twoHoursController: _twoHoursRateController,
+                threeHoursController: _threeHoursRateController,
+                additionalHourController: _additionalHourRateController,
+                selectedPricePeriod: _selectedPricePeriod,
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _halfDayRateController,
+                decoration: InputDecoration(
+                  labelText: 'Tarif demi-journée (FCFA)',
+                  hintText: 'ex: 25000',
+                  filled: _selectedPricePeriod == 'day',
+                  fillColor: _selectedPricePeriod == 'day'
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withOpacity(0.3)
+                      : null,
+                  border: OutlineInputBorder(),
                 ),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (_selectedPricePeriod == 'day' &&
+                      (value == null || value.isEmpty)) {
+                    return 'Le tarif demi-journée est requis pour ce type de résidence';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _fullDayRateController,
+                decoration: InputDecoration(
+                  labelText: 'Tarif journée (FCFA)',
+                  hintText: 'ex: 50000',
+                  filled: _selectedPricePeriod == 'day',
+                  fillColor: _selectedPricePeriod == 'day'
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withOpacity(0.3)
+                      : null,
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (_selectedPricePeriod == 'day' &&
+                      (value == null || value.isEmpty)) {
+                    return 'Le tarif journée est requis pour ce type de résidence';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _weekendRateController,
+                decoration: InputDecoration(
+                  labelText: 'Tarif week-end (FCFA)',
+                  hintText: 'ex: 75000',
+                  filled: _selectedPricePeriod == 'week',
+                  fillColor: _selectedPricePeriod == 'week'
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withOpacity(0.3)
+                      : null,
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d*')),
+                ],
+                validator: (value) {
+                  if (_selectedPricePeriod == 'week' &&
+                      (value == null || value.isEmpty)) {
+                    return 'Le tarif week-end est requis pour ce type de résidence';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 24),
 
               // Options
-              Text(
-                'Options et équipements',
-                style: theme.textTheme.titleMedium,
-              ),
               const SizedBox(height: 16),
 
               // Nouvelle section d'options dynamiques
@@ -1739,10 +1903,20 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                     children: [
                       // Options communes à toutes les résidences
                       Text(
-                        'Options générales',
-                        style: Theme.of(context).textTheme.titleSmall,
+                        'Options et équipements',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      SwitchListTile(
+                      const SizedBox(height: 8),
+                      Text(
+                        'Cochez les équipements disponibles dans votre résidence',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Options générales (toujours visibles)
+                     SwitchListTile(
                         title: Row(
                           children: [
                             Icon(Icons.pool,
@@ -1769,345 +1943,352 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
                         onChanged: (value) =>
                             setState(() => _isAvailable = value),
                       ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // 💧 EAU & ÉLECTRICITÉ
+                      ExpansionTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.water_drop_rounded, color: Colors.blue.shade700, size: 24),
+                        ),
+                        title: Text('Eau & Électricité', 
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text('8 équipements', style: TextStyle(fontSize: 12)),
+                        children: [
+                          // Eau
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.water_drop, size: 20),
+                                SizedBox(width: 8),
+                                Text('Eau courante'),
+                              ],
+                            ),
+                            value: _hasRunningWater,
+                            onChanged: (value) =>
+                                setState(() => _hasRunningWater = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.hot_tub, size: 20),
+                                SizedBox(width: 8),
+                                Text('Eau chaude'),
+                              ],
+                            ),
+                            value: _hasHotWater,
+                            onChanged: (value) =>
+                                setState(() => _hasHotWater = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.water_damage, size: 20),
+                                SizedBox(width: 8),
+                                Text('Réservoir d\'eau'),
+                              ],
+                            ),
+                            value: _hasWaterTank,
+                            onChanged: (value) =>
+                                setState(() => _hasWaterTank = value),
+                          ),
+                          // Électricité
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.electric_bolt, size: 20),
+                                SizedBox(width: 8),
+                                Text('Électricité'),
+                              ],
+                            ),
+                            value: _hasElectricity,
+                            onChanged: (value) =>
+                                setState(() => _hasElectricity = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.power, size: 20),
+                                SizedBox(width: 8),
+                                Text('Générateur'),
+                              ],
+                            ),
+                            value: _hasGenerator,
+                            onChanged: (value) =>
+                                setState(() => _hasGenerator = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.solar_power, size: 20),
+                                SizedBox(width: 8),
+                                Text('Énergie solaire'),
+                              ],
+                            ),
+                            value: _hasSolarEnergy,
+                            onChanged: (value) =>
+                                setState(() => _hasSolarEnergy = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.battery_charging_full, size: 20),
+                                SizedBox(width: 8),
+                                Text('Onduleur'),
+                              ],
+                            ),
+                            value: _hasInverter,
+                            onChanged: (value) =>
+                                setState(() => _hasInverter = value),
+                          ),
+                          // Internet
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.wifi, size: 20),
+                                SizedBox(width: 8),
+                                Text('WiFi'),
+                              ],
+                            ),
+                            value: _hasWifi,
+                            onChanged: (value) => setState(() => _hasWifi = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.fiber_new, size: 20),
+                                SizedBox(width: 8),
+                                Text('Fibre optique'),
+                              ],
+                            ),
+                            value: _hasFiberOptic,
+                            onChanged: (value) =>
+                                setState(() => _hasFiberOptic = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.lan, size: 20),
+                                SizedBox(width: 8),
+                                Text('Ethernet'),
+                              ],
+                            ),
+                            value: _hasEthernet,
+                            onChanged: (value) =>
+                                setState(() => _hasEthernet = value),
+                          ),
+                        ],
+                      ),
+                      
+                      // 🍳 CUISINE
+                      ExpansionTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.restaurant, color: Colors.amber.shade800, size: 24),
+                        ),
+                        title: Text('Cuisine', 
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text('6 équipements', style: TextStyle(fontSize: 12)),
+                        children: [
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.kitchen, size: 20),
+                                SizedBox(width: 8),
+                                Text('Cuisine'),
+                              ],
+                            ),
+                            value: _hasKitchen,
+                            onChanged: (value) =>
+                                setState(() => _hasKitchen = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.kitchen, size: 20),
+                                SizedBox(width: 8),
+                                Text('Cuisine complète'),
+                              ],
+                            ),
+                            value: _hasFullKitchen,
+                            onChanged: (value) =>
+                                setState(() => _hasFullKitchen = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.countertops, size: 20),
+                                SizedBox(width: 8),
+                                Text('Kitchenette'),
+                              ],
+                            ),
+                            value: _hasKitchenette,
+                            onChanged: (value) =>
+                                setState(() => _hasKitchenette = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.kitchen, size: 20),
+                                SizedBox(width: 8),
+                                Text('Réfrigérateur'),
+                              ],
+                            ),
+                            value: _hasRefrigerator,
+                            onChanged: (value) =>
+                                setState(() => _hasRefrigerator = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.microwave, size: 20),
+                                SizedBox(width: 8),
+                                Text('Micro-ondes'),
+                              ],
+                            ),
+                            value: _hasMicrowave,
+                            onChanged: (value) =>
+                                setState(() => _hasMicrowave = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.local_fire_department, size: 20),
+                                SizedBox(width: 8),
+                                Text('Four'),
+                              ],
+                            ),
+                            value: _hasOven,
+                            onChanged: (value) => setState(() => _hasOven = value),
+                          ),
+                        ],
+                      ),
+                      
+                      // 🛏️ CONFORT
+                      ExpansionTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.air, color: Colors.teal.shade700, size: 24),
+                        ),
+                        title: Text('Confort', 
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text('3 équipements', style: TextStyle(fontSize: 12)),
+                        children: [
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.ac_unit, size: 20),
+                                SizedBox(width: 8),
+                                Text('Climatisation'),
+                              ],
+                            ),
+                            value: _hasAirConditioning,
+                            onChanged: (value) =>
+                                setState(() => _hasAirConditioning = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.air, size: 20),
+                                SizedBox(width: 8),
+                                Text('Ventilateur'),
+                              ],
+                            ),
+                            value: _hasFan,
+                            onChanged: (value) => setState(() => _hasFan = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.cyclone, size: 20),
+                                SizedBox(width: 8),
+                                Text('Ventil. plafond'),
+                              ],
+                            ),
+                            value: _hasCelingFan,
+                            onChanged: (value) =>
+                                setState(() => _hasCelingFan = value),
+                          ),
+                        ],
+                      ),
+                      
+                      // 🔒 SÉCURITÉ
+                      ExpansionTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(Icons.shield_outlined, color: Colors.deepOrange.shade700, size: 24),
+                        ),
+                        title: Text('Sécurité', 
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text('4 équipements', style: TextStyle(fontSize: 12)),
+                        children: [
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.security, size: 20),
+                                SizedBox(width: 8),
+                                Text('Sécurité'),
+                              ],
+                            ),
+                            value: _hasSecurity,
+                            onChanged: (value) =>
+                                setState(() => _hasSecurity = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.alarm, size: 20),
+                                SizedBox(width: 8),
+                                Text('Syst. alarme'),
+                              ],
+                            ),
+                            value: _hasAlarmSystem,
+                            onChanged: (value) =>
+                                setState(() => _hasAlarmSystem = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.videocam, size: 20),
+                                SizedBox(width: 8),
+                                Text('Caméras surveill.'),
+                              ],
+                            ),
+                            value: _hasCCTV,
+                            onChanged: (value) => setState(() => _hasCCTV = value),
+                          ),
+                          SwitchListTile(
+                            title: Row(
+                              children: [
+                                Icon(Icons.person, size: 20),
+                                SizedBox(width: 8),
+                                Text('Gardien sécu.'),
+                              ],
+                            ),
+                            value: _hasSecurityGuard,
+                            onChanged: (value) =>
+                                setState(() => _hasSecurityGuard = value),
+                          ),
+                        ],
+                      ),
 
-// Eau
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.water_drop,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Eau courante'),
-                          ],
-                        ),
-                        value: _hasRunningWater,
-                        onChanged: (value) =>
-                            setState(() => _hasRunningWater = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.hot_tub,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Eau chaude'),
-                          ],
-                        ),
-                        value: _hasHotWater,
-                        onChanged: (value) =>
-                            setState(() => _hasHotWater = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.water_damage,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Réservoir d\'eau'),
-                          ],
-                        ),
-                        value: _hasWaterTank,
-                        onChanged: (value) =>
-                            setState(() => _hasWaterTank = value),
-                      ),
-
-// Électricité
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.electric_bolt,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Électricité'),
-                          ],
-                        ),
-                        value: _hasElectricity,
-                        onChanged: (value) =>
-                            setState(() => _hasElectricity = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.power,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Générateur'),
-                          ],
-                        ),
-                        value: _hasGenerator,
-                        onChanged: (value) =>
-                            setState(() => _hasGenerator = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.solar_power,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Énergie solaire'),
-                          ],
-                        ),
-                        value: _hasSolarEnergy,
-                        onChanged: (value) =>
-                            setState(() => _hasSolarEnergy = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.battery_charging_full,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Onduleur'),
-                          ],
-                        ),
-                        value: _hasInverter,
-                        onChanged: (value) =>
-                            setState(() => _hasInverter = value),
-                      ),
-
-// Internet
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.wifi,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('WiFi'),
-                          ],
-                        ),
-                        value: _hasWifi,
-                        onChanged: (value) => setState(() => _hasWifi = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.fiber_new,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Fibre optique'),
-                          ],
-                        ),
-                        value: _hasFiberOptic,
-                        onChanged: (value) =>
-                            setState(() => _hasFiberOptic = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.lan,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Ethernet'),
-                          ],
-                        ),
-                        value: _hasEthernet,
-                        onChanged: (value) =>
-                            setState(() => _hasEthernet = value),
-                      ),
-
-// Cuisine
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.kitchen,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Cuisine'),
-                          ],
-                        ),
-                        value: _hasKitchen,
-                        onChanged: (value) =>
-                            setState(() => _hasKitchen = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.kitchen,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Cuisine complète'),
-                          ],
-                        ),
-                        value: _hasFullKitchen,
-                        onChanged: (value) =>
-                            setState(() => _hasFullKitchen = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.countertops,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Kitchenette'),
-                          ],
-                        ),
-                        value: _hasKitchenette,
-                        onChanged: (value) =>
-                            setState(() => _hasKitchenette = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.kitchen,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Réfrigérateur'),
-                          ],
-                        ),
-                        value: _hasRefrigerator,
-                        onChanged: (value) =>
-                            setState(() => _hasRefrigerator = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.microwave,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Micro-ondes'),
-                          ],
-                        ),
-                        value: _hasMicrowave,
-                        onChanged: (value) =>
-                            setState(() => _hasMicrowave = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.local_fire_department,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Four'),
-                          ],
-                        ),
-                        value: _hasOven,
-                        onChanged: (value) => setState(() => _hasOven = value),
-                      ),
-
-// Refroidissement
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.ac_unit,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Climatisation'),
-                          ],
-                        ),
-                        value: _hasAirConditioning,
-                        onChanged: (value) =>
-                            setState(() => _hasAirConditioning = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.air,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Ventilateur'),
-                          ],
-                        ),
-                        value: _hasFan,
-                        onChanged: (value) => setState(() => _hasFan = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.cyclone,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Ventil. plafond'),
-                          ],
-                        ),
-                        value: _hasCelingFan,
-                        onChanged: (value) =>
-                            setState(() => _hasCelingFan = value),
-                      ),
-
-// Sécurité
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.security,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Sécurité'),
-                          ],
-                        ),
-                        value: _hasSecurity,
-                        onChanged: (value) =>
-                            setState(() => _hasSecurity = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.alarm,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Syst. alarme'),
-                          ],
-                        ),
-                        value: _hasAlarmSystem,
-                        onChanged: (value) =>
-                            setState(() => _hasAlarmSystem = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.videocam,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Caméras surveill.'),
-                          ],
-                        ),
-                        value: _hasCCTV,
-                        onChanged: (value) => setState(() => _hasCCTV = value),
-                      ),
-                      SwitchListTile(
-                        title: Row(
-                          children: [
-                            Icon(Icons.person,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.primary),
-                            SizedBox(width: 8),
-                            Text('Gardien sécu.'),
-                          ],
-                        ),
-                        value: _hasSecurityGuard,
-                        onChanged: (value) =>
-                            setState(() => _hasSecurityGuard = value),
-                      ),
-
-                      Divider(),
-
-// Options spécifiques à la catégorie
-                      Text(
-                        'Options spécifiques',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      ..._getCategorySpecificOptions(),
 
                       if (_getTypeSpecificOptions().isNotEmpty) ...[
                         Divider(),
@@ -2180,27 +2361,6 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
               ),
               const SizedBox(height: 16),
 
-              DropdownButtonFormField<String>(
-                value: _ensureCityExists(_selectedCity, _selectedRegion),
-                decoration: InputDecoration(
-                  labelText: 'Commune / Quartier',
-                  prefixIcon: Icon(Icons.location_city),
-                  border: OutlineInputBorder(),
-                ),
-                items: _getCitiesForRegion(_selectedRegion).map((city) {
-                  return DropdownMenuItem<String>(
-                    value: city.code,
-                    child: Text(city.name),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedCity = value;
-                    });
-                  }
-                },
-              ),
               const SizedBox(height: 16),
 
               AddressAutocompleteField(
@@ -2449,13 +2609,38 @@ class _EditResidenceViewState extends State<_EditResidenceView> {
 
               const SizedBox(height: 32),
 
-              FilledButton(
-                onPressed: _submitForm,
-                child: Text(isEditing ? 'Mettre à jour' : 'Créer'),
-              ),
             ],
           ),
         ),
+         ), 
+         ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _isSubmitting ? null : _submitForm,
+        backgroundColor: _isSubmitting 
+          ? theme.colorScheme.primary.withOpacity(0.6)
+          : theme.colorScheme.primary,
+        icon: _isSubmitting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : const Icon(Icons.check),
+        label: Text(
+          _isSubmitting
+            ? 'Enregistrement...'
+            : (widget.residence != null ? 'Enregistrer' : 'Créer'),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        elevation: 8,
       ),
     );
   }

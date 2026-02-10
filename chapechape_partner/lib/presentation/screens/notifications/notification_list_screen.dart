@@ -28,7 +28,8 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
     
     try {
       final repository = Provider.of<NotificationRepository>(context, listen: false);
-      final notifications = await repository.getNotifications();
+      final paginatedResponse = await repository.getNotifications();
+      final notifications = paginatedResponse.notifications;
       
       setState(() {
         _notifications = notifications;

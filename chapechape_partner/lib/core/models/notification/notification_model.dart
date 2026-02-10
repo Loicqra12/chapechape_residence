@@ -84,17 +84,17 @@ class NotificationModel {
   /// Crée un objet à partir du JSON
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
+      id: json['_id'] ?? json['id'] ?? '',
+      title: json['title'] ?? json['data']?['title'] ?? 'Notification',
       message: json['message'] ?? '',
-      timestamp: json['timestamp'] != null 
-          ? DateTime.parse(json['timestamp']) 
-          : DateTime.now(),
-      isRead: json['isRead'] ?? false,
-      imageUrl: json['imageUrl'],
-      actionUrl: json['actionUrl'],
-      actionData: json['actionData'] != null 
-          ? Map<String, dynamic>.from(json['actionData']) 
+      timestamp: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : (json['timestamp'] != null ? DateTime.parse(json['timestamp']) : DateTime.now()),
+      isRead: json['read'] ?? json['isRead'] ?? false,
+      imageUrl: json['imageUrl'] ?? json['data']?['imageUrl'],
+      actionUrl: json['actionUrl'] ?? json['data']?['actionUrl'],
+      actionData: json['data'] != null 
+          ? Map<String, dynamic>.from(json['data']) 
           : null,
       type: json['type'] ?? 'system',
     );
@@ -113,4 +113,34 @@ class NotificationModel {
   
   @override
   int get hashCode => id.hashCode;
+}
+
+/// Modèle pour la réponse paginée des notifications
+class PaginatedNotifications {
+  final List<NotificationModel> notifications;
+  final int total;
+  final int page;
+  final int pages;
+  final int unreadCount;
+
+  PaginatedNotifications({
+    required this.notifications,
+    required this.total,
+    required this.page,
+    required this.pages,
+    this.unreadCount = 0,
+  });
+
+  factory PaginatedNotifications.fromJson(Map<String, dynamic> json) {
+    final List<dynamic> list = json['notifications'] ?? [];
+    final notifications = list.map((item) => NotificationModel.fromJson(item)).toList();
+    
+    return PaginatedNotifications(
+      notifications: notifications,
+      total: json['total'] ?? 0,
+      page: json['page'] ?? 1,
+      pages: json['pages'] ?? 1,
+      unreadCount: json['unreadCount'] ?? 0,
+    );
+  }
 } 

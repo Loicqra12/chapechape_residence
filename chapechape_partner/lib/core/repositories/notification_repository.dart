@@ -7,25 +7,70 @@ import '../models/notification/notification_model.dart';
 import '../models/notification/notification_preference.dart';
 import '../config/twilio_config.dart';
 import '../models/residence/residence.dart';
+import '../services/api/api_service.dart';
 
 /// Repository pour gérer les notifications
 class NotificationRepository {
   final TwilioService _twilioService;
+  final ApiService _apiService; // Nouveau
   static const String _prefsKey = 'notification_preferences';
   
-  NotificationRepository(this._twilioService);
+  NotificationRepository(this._twilioService, this._apiService); // Injection de ApiService
   
-  /// Récupérer toutes les notifications
-  Future<List<NotificationModel>> getNotifications() async {
-    // Pour l'instant, retournons une liste vide
-    // Dans une implémentation complète, vous récupéreriez les notifications depuis une API
-    return [];
+  /// Récupérer les notifications avec pagination
+  Future<PaginatedNotifications> getNotifications({int page = 1, int limit = 20}) async {
+    try {
+      final response = await _apiService.get('/notifications', queryParameters: {
+        'page': page,
+        'limit': limit
+      });
+      
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return PaginatedNotifications.fromJson(response.data);
+      }
+      
+      return PaginatedNotifications(
+        notifications: [],
+        total: 0,
+        page: page,
+        pages: 1,
+      );
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la récupération des notifications: $e');
+      return PaginatedNotifications(
+        notifications: [],
+        total: 0,
+        page: page,
+        pages: 1,
+      );
+    }
+  }
+
+  /// Récupérer le nombre de notifications non lues
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _apiService.get('/notifications/unread/count');
+      
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final data = response.data['data'];
+        return (data is Map) ? (data['count'] ?? 0) : 0;
+      }
+      return 0;
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la récupération du nombre de notifications non lues: $e');
+      return 0;
+    }
   }
   
   /// Marquer une notification comme lue
   Future<bool> markAsRead(String notificationId) async {
-    // Implémentation factice
-    return true;
+    try {
+      final response = await _apiService.put('/notifications/$notificationId/read');
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      debugPrint('❌ Erreur lors du marquage comme lu: $e');
+      return false;
+    }
   }
   
   /// Récupère les préférences de l'utilisateur
