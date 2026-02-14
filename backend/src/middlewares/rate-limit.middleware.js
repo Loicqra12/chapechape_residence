@@ -1,6 +1,13 @@
 const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis');
 const logger = require('../utils/logger');
+
+// Chargement optionnel de rate-limit-redis (évite crash si npm install incomplet en prod)
+let RedisStore;
+try {
+  RedisStore = require('rate-limit-redis');
+} catch (e) {
+  logger.warn('rate-limit-redis not installed, rate limiting will use memory store. Run: npm install rate-limit-redis');
+}
 
 // Import du client Redis (avec support Mock)
 let redisClient;
@@ -12,12 +19,16 @@ try {
 
 /**
  * Crée un store Redis avec fallback en mémoire
- * Si Redis est indisponible, rate-limit utilisera la mémoire locale
+ * Si Redis est indisponible ou rate-limit-redis absent, rate-limit utilisera la mémoire locale
  */
 const createStore = (prefix) => {
-  // En développement ou si Redis mock, utiliser mémoire (plus sûr)
-  if (process.env.NODE_ENV === 'development' || !redisClient) {
-    logger.info(`Rate limiter "${prefix}" using memory store (dev mode)`);
+  // En développement, sans Redis ou sans module rate-limit-redis → mémoire
+  if (process.env.NODE_ENV === 'development' || !redisClient || !RedisStore) {
+    if (!RedisStore) {
+      logger.warn(`Rate limiter "${prefix}" using memory store (rate-limit-redis not available)`);
+    } else {
+      logger.info(`Rate limiter "${prefix}" using memory store (dev mode)`);
+    }
     return undefined; // express-rate-limit utilisera MemoryStore par défaut
   }
 
