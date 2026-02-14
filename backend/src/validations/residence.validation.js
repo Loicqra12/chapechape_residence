@@ -36,9 +36,12 @@ const createResidence = {
         paymentMethods: Joi.array().items(
             Joi.string().valid('cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer')
         ),
-        // Nouveau: validation des tarifs horaires
+        // Nouveau: validation des tarifs horaires (aligné sur residence.model.js)
         hourlyRates: Joi.object().keys({
-            oneHour: Joi.number().min(0)
+            oneHour: Joi.number().min(0),
+            twoHours: Joi.number().min(0),
+            threeHours: Joi.number().min(0),
+            additionalHour: Joi.number().min(0)
         }),
         // Nouveau: validation des tarifs journaliers
         dailyRates: Joi.object().keys({
@@ -87,9 +90,12 @@ const updateResidence = {
         paymentMethods: Joi.array().items(
             Joi.string().valid('cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer')
         ),
-        // Nouveau: validation des tarifs horaires
+        // Nouveau: validation des tarifs horaires (aligné sur residence.model.js)
         hourlyRates: Joi.object().keys({
-            oneHour: Joi.number().min(0)
+            oneHour: Joi.number().min(0),
+            twoHours: Joi.number().min(0),
+            threeHours: Joi.number().min(0),
+            additionalHour: Joi.number().min(0)
         }),
         // Nouveau: validation des tarifs journaliers
         dailyRates: Joi.object().keys({
