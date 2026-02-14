@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/core/services/ip_detection_service.dart';
 
@@ -157,19 +159,19 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Statut du serveur
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.cardPadding,
                     decoration: BoxDecoration(
                       color: _isServerReachable
                           ? Colors.green.withOpacity(0.1)
                           : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                       border: Border.all(
                         color: _isServerReachable
                             ? Colors.green
@@ -182,24 +184,22 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                       children: [
                         Text(
                           _statusMessage,
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: _isServerReachable
                                 ? Colors.green
                                 : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8.0),
+                        AppSpacing.verticalSm,
                         Text(
                           'URL API: ${AppConfigManager.apiUrl}',
-                          style: const TextStyle(
-                            fontSize: 12.0,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24.0),
+                  AppSpacing.verticalLg,
 
                   // Mode de configuration
                   SwitchListTile(
@@ -214,29 +214,28 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     },
                   ),
                   const Divider(),
-                  const SizedBox(height: 16.0),
+                  AppSpacing.verticalMd,
 
                   // Configuration manuelle
-                  const Text(
+                  Text(
                     'Configuration du serveur',
-                    style: TextStyle(
-                      fontSize: 18.0,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16.0),
+                  AppSpacing.verticalMd,
                   TextField(
                     controller: _ipController,
                     decoration: InputDecoration(
                       labelText: 'Adresse IP du serveur',
-                      hintText: '192.168.1.65',
+                      hintText: '192.168.1.68',
                       border: OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.computer),
                     ),
                     keyboardType: TextInputType.number,
                     enabled: _useCustomServerUrl,
                   ),
-                  const SizedBox(height: 16.0),
+                  AppSpacing.verticalMd,
                   TextField(
                     controller: _portController,
                     decoration: const InputDecoration(
@@ -248,7 +247,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     keyboardType: TextInputType.number,
                     enabled: _useCustomServerUrl,
                   ),
-                  const SizedBox(height: 24.0),
+                  AppSpacing.verticalLg,
 
                   // Boutons d'action
                   Row(
@@ -259,18 +258,18 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                           label: const Text('Détection automatique'),
                           onPressed: _isLoading ? null : _autoDetectServer,
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16.0),
+                      SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.save),
                           label: const Text('Enregistrer'),
                           onPressed: _isLoading ? null : _saveConfig,
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
                             backgroundColor: Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
                           ),
@@ -278,18 +277,17 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24.0),
+                  AppSpacing.verticalLg,
 
                   // Adresses IP détectées
                   if (_detectedIps.isNotEmpty) ...[
-                    const Text(
+                    Text(
                       'Adresses IP détectées',
-                      style: TextStyle(
-                        fontSize: 18.0,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8.0),
+                    AppSpacing.verticalSm,
                     ...List.generate(
                       _detectedIps.length,
                       (index) => ListTile(

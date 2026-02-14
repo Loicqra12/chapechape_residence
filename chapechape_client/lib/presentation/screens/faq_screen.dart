@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 
 /// Écran FAQ complet avec catégories et questions/réponses
 class FaqScreen extends StatefulWidget {
@@ -121,37 +123,32 @@ class _FaqScreenState extends State<FaqScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.pagePadding,
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(AppSpacing.md + AppSpacing.xs),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Column(
               children: [
                 const Icon(Icons.help_outline, size: 48, color: Colors.white),
-                const SizedBox(height: 12),
-                const Text(
+                AppSpacing.verticalSmd,
+                Text(
                   'Comment pouvons-nous vous aider ?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: AppTextStyles.title.copyWith(color: Colors.white),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                AppSpacing.verticalSm,
                 Text(
                   'Trouvez rapidement des réponses à vos questions',
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.white.withOpacity(0.9),
                   ),
                   textAlign: TextAlign.center,
@@ -160,38 +157,37 @@ class _FaqScreenState extends State<FaqScreen> {
             ),
           ),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // FAQ Categories
           ..._faqCategories.map((category) => _buildFaqCategory(category)),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Contact Section
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMd)),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 children: [
                   const Icon(Icons.chat_bubble_outline, size: 32, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  const Text(
+                  AppSpacing.verticalSmd,
+                  Text(
                     'Vous n\'avez pas trouvé votre réponse ?',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  AppSpacing.verticalSm,
+                  Text(
                     'Notre équipe est disponible pour vous aider',
-                    style: TextStyle(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   ElevatedButton.icon(
                     onPressed: () => context.push('/support'),
                     icon: const Icon(Icons.headset_mic),
@@ -199,7 +195,7 @@ class _FaqScreenState extends State<FaqScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: AppSpacing.buttonPadding,
                     ),
                   ),
                 ],
@@ -207,7 +203,7 @@ class _FaqScreenState extends State<FaqScreen> {
             ),
           ),
           
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
         ],
       ),
     );
@@ -218,15 +214,14 @@ class _FaqScreenState extends State<FaqScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
           child: Row(
             children: [
               Icon(category['icon'], color: AppTheme.primaryColor),
-              const SizedBox(width: 8),
+              SizedBox(width: AppSpacing.sm),
               Text(
                 category['title'],
-                style: const TextStyle(
-                  fontSize: 18,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -237,33 +232,32 @@ class _FaqScreenState extends State<FaqScreen> {
           (category['questions'] as List).length,
           (index) => _buildFaqItem(category['questions'][index]),
         ),
-        const SizedBox(height: 8),
+        AppSpacing.verticalSm,
       ],
     );
   }
 
   Widget _buildFaqItem(Map<String, dynamic> faq) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          tilePadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
           title: Text(
             faq['question'],
-            style: const TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              fontSize: 14,
             ),
           ),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
               child: Text(
                 faq['answer'],
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[700],
                   height: 1.5,
                 ),

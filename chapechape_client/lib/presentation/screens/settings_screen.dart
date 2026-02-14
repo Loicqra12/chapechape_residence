@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/presentation/screens/settings/temperature_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/display_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
@@ -27,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: goldColor,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.pagePadding,
         children: [
           _buildSectionHeader(context, 'Paramètres de l\'appareil'),
           _buildSettingItem(
@@ -118,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           _buildSectionHeader(context, 'Paramètres des e-mails'),
           _buildSettingItem(
             context,
@@ -147,7 +149,7 @@ class SettingsScreen extends StatelessWidget {
               // Navigation vers les paramètres de format des e-mails
             },
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           _buildSectionHeader(context, 'Compte et sécurité'),
           _buildSettingItem(
             context,
@@ -184,7 +186,7 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -206,12 +208,12 @@ class SettingsScreen extends StatelessWidget {
     return Card(
       elevation: 0,
       color: greyColor.withOpacity(0.3),
-      margin: const EdgeInsets.only(bottom: 8.0),
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         leading: Icon(
           icon,
           color: isDestructive ? Colors.red : orangeColor,
@@ -219,7 +221,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         title: Text(
           title,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: isDestructive ? Colors.red : blackColor,
           ),

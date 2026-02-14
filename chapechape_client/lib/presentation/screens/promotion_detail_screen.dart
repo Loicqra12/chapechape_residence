@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import '../../core/models/promotion_model.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/promotion_countdown_widget.dart';
 
@@ -126,22 +128,19 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
             color: Colors.red[400],
             size: 60,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Text(
             'Impossible de charger cette promotion',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.subtitle,
           ),
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           Text(
             error,
-            style: TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           ElevatedButton.icon(
             onPressed: () {
               _loadPromotionDetails();
@@ -168,15 +167,12 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
             color: Colors.grey[400],
             size: 60,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Text(
             'Promotion non trouvée',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.subtitle,
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           ElevatedButton.icon(
             onPressed: () {
               context.go('/');
@@ -202,7 +198,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           pinned: true,
           leading: IconButton(
             icon: Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.4),
                 shape: BoxShape.circle,
@@ -223,16 +219,16 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
         SliverList(
           delegate: SliverChildListDelegate([
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(AppSpacing.lg20), // 20px
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Info validité
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: AppSpacing.cardPadding,
                     decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       border: Border.all(
                         color: Colors.orange.withOpacity(0.3),
                       ),
@@ -243,30 +239,30 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                           Icons.timer,
                           color: Colors.orange,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: AppSpacing.smd),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Offre à durée limitée',
-                                style: TextStyle(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.orange,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              SizedBox(height: AppSpacing.xs),
                               Text(
                                 'Valable du ${DateFormat('dd/MM/yyyy').format(promotion.startDate)} au ${DateFormat('dd/MM/yyyy').format(promotion.endDate)}',
-                                style: TextStyle(
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Colors.grey[800],
                                 ),
                               ),
                               if (promotion.isLastMinute) ...[
-                                const SizedBox(height: 4),
+                                SizedBox(height: AppSpacing.xs),
                                 Text(
                                   'Plus que ${promotion.timeRemaining} pour en profiter !',
-                                  style: const TextStyle(
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.redAccent,
                                   ),
@@ -279,45 +275,38 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
+                  AppSpacing.verticalLg,
                   
                   // Description
-                  const Text(
+                  Text(
                     'À propos de cette offre',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.subtitle,
                   ),
-                  const SizedBox(height: 12),
+                  AppSpacing.verticalSmd,
                   Text(
                     promotion.description,
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[800],
                       height: 1.5,
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
+                  AppSpacing.verticalLg,
                   
                   // Code promo
                   if (promotion.discountCode != null) ...[
-                    const Text(
+                    Text(
                       'Code promo',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.subtitle,
                     ),
-                    const SizedBox(height: 12),
+                    AppSpacing.verticalSmd,
                     GestureDetector(
                       onTap: () => _copyPromoCode(promotion.discountCode!),
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: AppSpacing.cardPadding,
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           border: Border.all(
                             color: Colors.grey[300]!,
                           ),
@@ -327,9 +316,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                             Expanded(
                               child: Text(
                                 promotion.discountCode!,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                style: AppTextStyles.subtitle.copyWith(
                                   color: AppTheme.primaryColor,
                                   letterSpacing: 1.2,
                                 ),
@@ -355,34 +342,30 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     Text(
                       'Cliquez pour copier le code à utiliser lors de votre réservation',
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: AppTextStyles.body.copyWith(
                         color: Colors.grey[600],
                         fontStyle: FontStyle.italic,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                   ],
                   
                   // Résidence associée
                   if (promotion.residence != null) ...[
-                    const Text(
+                    Text(
                       'Résidence concernée',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.subtitle,
                     ),
-                    const SizedBox(height: 12),
+                    AppSpacing.verticalSmd,
                     GestureDetector(
                       onTap: () => context.push('/residences/${promotion.residenceId}'),
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.08),
@@ -424,18 +407,17 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                             
                             // Content
                             Padding(
-                              padding: const EdgeInsets.all(16),
+                              padding: AppSpacing.cardPadding,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     promotion.residence!.title,
-                                    style: const TextStyle(
-                                      fontSize: 18,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  AppSpacing.verticalSm,
                                   Row(
                                     children: [
                                       Icon(
@@ -443,11 +425,11 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                         size: 16,
                                         color: Colors.grey[600],
                                       ),
-                                      const SizedBox(width: 4),
+                                      SizedBox(width: AppSpacing.xs),
                                       Expanded(
                                         child: Text(
                                           promotion.residence!.location['displayAddress'] ?? 'Emplacement inconnu',
-                                          style: TextStyle(
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                             color: Colors.grey[600],
                                           ),
                                           maxLines: 1,
@@ -456,34 +438,31 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+                                  AppSpacing.verticalSm,
                                   Row(
                                     children: [
                                       // Prix original
                                       Text(
                                         '${NumberFormat.currency(symbol: '', decimalDigits: 0).format(promotion.residence!.price)} FCFA',
-                                        style: TextStyle(
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           decoration: TextDecoration.lineThrough,
                                           color: Colors.grey[600],
-                                          fontSize: 14,
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: AppSpacing.sm),
                                       // Prix avec réduction
                                       Text(
                                         '${NumberFormat.currency(symbol: '', decimalDigits: 0).format(promotion.calculateDiscountedPrice(promotion.residence!.price))} FCFA',
-                                        style: TextStyle(
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           color: AppTheme.primaryColor,
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 18,
                                         ),
                                       ),
-                                      const SizedBox(width: 4),
+                                      SizedBox(width: AppSpacing.xs),
                                       Text(
                                         '/nuit',
-                                        style: TextStyle(
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: Colors.grey[600],
-                                          fontSize: 14,
                                         ),
                                       ),
                                     ],
@@ -499,27 +478,23 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                       .slideY(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutQuad),
                     ),
                     
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                   ],
                   
                   // Conditions
                   if (promotion.termsAndConditions != null) ...[
-                    const Text(
+                    Text(
                       'Conditions d\'utilisation',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.subtitle,
                     ),
-                    const SizedBox(height: 12),
+                    AppSpacing.verticalSmd,
                     Text(
                       promotion.termsAndConditions!,
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: AppTextStyles.body.copyWith(
                         color: Colors.grey[700],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                   ],
                   
                   // Bouton réserver
@@ -530,22 +505,21 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(AppSpacing.smd),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Réserver maintenant',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
                   
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Bouton partager
                   SizedBox(
@@ -562,17 +536,17 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                       icon: const Icon(Icons.share),
                       label: const Text('Partager cette offre'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                         side: BorderSide(color: AppTheme.primaryColor),
                         foregroundColor: AppTheme.primaryColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         ),
                       ),
                     ),
                   ),
                   
-                  const SizedBox(height: 40),
+                  AppSpacing.verticalXl,
                 ],
               ),
             ),
@@ -637,31 +611,29 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
             children: [
               // Badge de type de promotion
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: _getPromotionColor(promotion.type),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppSpacing.xs),
                 ),
                 child: Text(
                   promotion.type.displayName.toUpperCase(),
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.white,
-                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
               
-              const SizedBox(height: 8),
+              AppSpacing.verticalSm,
               
               // Titre
               Text(
                 promotion.title,
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
-                  fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  shadows: [
+                  shadows: const [
                     Shadow(
                       color: Colors.black54,
                       blurRadius: 4,
@@ -670,28 +642,28 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                 ),
               ),
               
-              const SizedBox(height: 8),
+              AppSpacing.verticalSm,
               
               // Discount & Timer row
               Row(
                 children: [
                   // Badge de réduction
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                     decoration: BoxDecoration(
                       color: Colors.red,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppSpacing.xs),
                     ),
                     child: Text(
                       "-${promotion.discountPercentage.toStringAsFixed(0)}%",
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   
-                  const SizedBox(width: 8),
+                  SizedBox(width: AppSpacing.sm),
                   
                   // Compte à rebours
                   if (promotion.isLastMinute)

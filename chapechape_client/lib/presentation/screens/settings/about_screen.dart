@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -88,7 +90,7 @@ class _AboutScreenState extends State<AboutScreen> {
         backgroundColor: goldColor,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.pagePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -98,7 +100,7 @@ class _AboutScreenState extends State<AboutScreen> {
               height: 120,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd + AppSpacing.sm),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -107,7 +109,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(AppSpacing.sm),
               child: Image.asset(
                 'assets/logos/app_icon.png',
                 errorBuilder: (ctx, error, _) => Icon(
@@ -118,25 +120,21 @@ class _AboutScreenState extends State<AboutScreen> {
               ),
             ),
             
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             
             // Nom et version de l'application
-            const Text(
+            Text(
               'ChapeChape Résidences',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             Text(
               'Version $_appVersion',
-              style: TextStyle(
-                fontSize: 16,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[600],
               ),
             ),
             
-            const SizedBox(height: 32),
+            AppSpacing.verticalXl,
             
             // Informations sur l'application
             _buildInfoSection(
@@ -144,7 +142,7 @@ class _AboutScreenState extends State<AboutScreen> {
               'ChapeChape Résidences est votre application de réservation d\'hébergement haut de gamme en Afrique de l\'Ouest. Nous proposons une sélection exclusive de résidences, villas et appartements pour vos séjours professionnels ou de loisirs.',
             ),
             
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             
             // Informations légales
             _buildInfoSection(
@@ -152,7 +150,7 @@ class _AboutScreenState extends State<AboutScreen> {
               'ChapeChape Résidences est une marque déposée appartenant à ChapeChape Group. Tous droits réservés.',
             ),
             
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             
             // Informations techniques
             _buildInfoCard(
@@ -164,24 +162,23 @@ class _AboutScreenState extends State<AboutScreen> {
               ],
             ),
             
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             
             // Liens utiles - remplacer par des documents locaux
             _buildLinksCard(),
             
-            const SizedBox(height: 32),
+            AppSpacing.verticalXl,
             
             // Copyright
             Text(
               '© ${DateTime.now().year} ChapeChape Group. Tous droits réservés.',
-              style: TextStyle(
-                fontSize: 14,
+              style: AppTextStyles.body.copyWith(
                 color: Colors.grey[600],
               ),
               textAlign: TextAlign.center,
             ),
             
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
           ],
         ),
       ),
@@ -194,16 +191,12 @@ class _AboutScreenState extends State<AboutScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTextStyles.subtitle,
         ),
-        const SizedBox(height: 8),
+        AppSpacing.verticalSm,
         Text(
           content,
-          style: const TextStyle(
-            fontSize: 16,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             height: 1.5,
           ),
           textAlign: TextAlign.justify,
@@ -220,21 +213,18 @@ class _AboutScreenState extends State<AboutScreen> {
       elevation: 0,
       color: greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.pagePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTextStyles.subtitle,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             ...children,
           ],
         ),
@@ -244,21 +234,19 @@ class _AboutScreenState extends State<AboutScreen> {
 
   Widget _buildKeyValue(String key, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
           Text(
             '$key: ',
-            style: const TextStyle(
-              fontSize: 16,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w500,
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
-                fontSize: 16,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[700],
               ),
             ),
@@ -273,21 +261,18 @@ class _AboutScreenState extends State<AboutScreen> {
       elevation: 0,
       color: greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.pagePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Documents légaux',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTextStyles.subtitle,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             _buildLegalDocumentItem(
               'Site web officiel',
               Icons.language,
@@ -327,7 +312,7 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             
             // Séparateur avant le watermark
-            const SizedBox(height: 30),
+            SizedBox(height: AppSpacing.xl30), // 30px
             
             // Watermark ChapeChape
             const ChapeWatermarkWidget(),
@@ -377,13 +362,13 @@ class _LegalDocumentScreen extends StatelessWidget {
         backgroundColor: _AboutScreenState.goldColor,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.pagePadding,
         child: SingleChildScrollView(
           child: Column(
             children: [
               Text(
                 content,
-                style: const TextStyle(fontSize: 16, height: 1.5),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
               ),
             ],
           ),

@@ -5,6 +5,7 @@ import 'package:chapechape_client/core/blocs/user/user_bloc.dart';
 import 'package:chapechape_client/core/blocs/user/user_event.dart';
 import 'package:chapechape_client/core/blocs/user/user_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:lottie/lottie.dart';
 import 'package:go_router/go_router.dart';
 
@@ -168,16 +169,16 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                 content: Row(
                   children: [
                     const Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 10),
+                    SizedBox(width: AppSpacing.smd),
                     const Text('Mot de passe modifié avec succès'),
                   ],
                 ),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppSpacing.smd),
                 ),
-                margin: const EdgeInsets.all(10),
+                margin: EdgeInsets.all(AppSpacing.smd),
                 duration: const Duration(seconds: 3),
               ),
             );
@@ -192,16 +193,16 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                 content: Row(
                   children: [
                     const Icon(Icons.error_outline, color: Colors.white),
-                    const SizedBox(width: 10),
+                    SizedBox(width: AppSpacing.smd),
                     Expanded(child: Text('Erreur: ${state.message}')),
                   ],
                 ),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppSpacing.smd),
                 ),
-                margin: const EdgeInsets.all(10),
+                margin: EdgeInsets.all(AppSpacing.smd),
               ),
             );
           }
@@ -229,7 +230,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: EdgeInsets.all(AppSpacing.lg),
                       child: FadeTransition(
                         opacity: _fadeAnimation,
                         child: Column(
@@ -242,14 +243,14 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                 height: 1.2,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            AppSpacing.verticalSmd,
                             Text(
                               'Créez un mot de passe fort pour sécuriser votre compte',
                               style: AppTheme.bodyMedium.copyWith(
                                 color: AppTheme.textSecondary,
                               ),
                             ),
-                            const SizedBox(height: 40),
+                            AppSpacing.verticalXl,
                             
                             // Illustration
                             Center(
@@ -259,7 +260,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                 animate: true,
                               ),
                             ),
-                            const SizedBox(height: 40),
+                            AppSpacing.verticalXl,
                             
                             // Formulaire
                             Form(
@@ -280,7 +281,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 24),
+                                  AppSpacing.verticalLg,
                                   
                                   // Nouveau mot de passe
                                   _buildPasswordField(
@@ -301,7 +302,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 8),
+                                  AppSpacing.verticalSm,
                                   
                                   // Indicateur de force du mot de passe
                                   if (_newPasswordController.text.isNotEmpty)
@@ -324,9 +325,9 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 8),
+                                        AppSpacing.verticalSm,
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(AppSpacing.xs),
                                           child: LinearProgressIndicator(
                                             value: _passwordStrength,
                                             backgroundColor: Colors.grey.shade200,
@@ -334,7 +335,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                             minHeight: 6,
                                           ),
                                         ),
-                                        const SizedBox(height: 8),
+                                        AppSpacing.verticalSm,
                                         Text(
                                           'Utilisez au moins 8 caractères avec des lettres majuscules, minuscules, des chiffres et des caractères spéciaux',
                                           style: AppTheme.labelSmall.copyWith(
@@ -343,7 +344,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                         ),
                                       ],
                                     ),
-                                  const SizedBox(height: 24),
+                                  AppSpacing.verticalLg,
                                   
                                   // Confirmer le nouveau mot de passe
                                   _buildPasswordField(
@@ -361,7 +362,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 40),
+                                  AppSpacing.verticalXl,
                                   
                                   // Bouton de soumission
                                   SizedBox(
@@ -374,22 +375,21 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                         foregroundColor: Colors.black,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                                         ),
                                       ),
                                       child: state is UserLoading
-                                          ? const SizedBox(
-                                              width: 24,
-                                              height: 24,
-                                              child: CircularProgressIndicator(
+                                          ? SizedBox(
+                                              width: AppSpacing.lg,
+                                              height: AppSpacing.lg,
+                                              child: const CircularProgressIndicator(
                                                 strokeWidth: 2,
                                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                                               ),
                                             )
-                                          : const Text(
+                                          : Text(
                                               'Mettre à jour le mot de passe',
-                                              style: TextStyle(
-                                                fontSize: 16,
+                                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -431,32 +431,32 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide(
             color: Colors.grey.shade200,
             width: 1,
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: const BorderSide(
             color: AppTheme.primaryColor,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide(
             color: AppTheme.errorColor,
             width: 1,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide(
             color: AppTheme.errorColor,
             width: 2,
@@ -473,9 +473,9 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
           ),
           onPressed: toggleVisibility,
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 20,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.md + AppSpacing.xs,
+          vertical: AppSpacing.md + AppSpacing.xs,
         ),
       ),
       validator: validator,

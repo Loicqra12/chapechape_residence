@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/optimized_connectivity_service.dart';
 import 'package:chapechape_client/presentation/widgets/residence_card.dart';
@@ -135,11 +136,11 @@ class _OfflineScreenState extends State<OfflineScreen> {
   Widget _buildInfoBanner() {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: AppSpacing.pagePadding,
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(color: Colors.orange.shade200),
       ),
       child: Column(
@@ -148,24 +149,22 @@ class _OfflineScreenState extends State<OfflineScreen> {
           Row(
             children: [
               Icon(Icons.wifi_off, color: Colors.orange.shade700),
-              const SizedBox(width: 8),
+              SizedBox(width: AppSpacing.sm),
               Text(
                 'Mode Hors Ligne',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.orange.shade700,
-                  fontSize: 16,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           Text(
             'Vous pouvez consulter les résidences mises en cache et vos favoris. '
             'La connexion sera rétablie automatiquement.',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.orange.shade600,
-              fontSize: 14,
             ),
           ),
         ],
@@ -175,7 +174,7 @@ class _OfflineScreenState extends State<OfflineScreen> {
   
   Widget _buildSearchBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: TextField(
         onChanged: _searchOffline,
         decoration: InputDecoration(
@@ -188,7 +187,7 @@ class _OfflineScreenState extends State<OfflineScreen> {
                 )
               : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
           filled: true,
           fillColor: Colors.grey.shade50,
@@ -215,12 +214,12 @@ class _OfflineScreenState extends State<OfflineScreen> {
         // Liste des résidences
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.pagePadding,
             itemCount: _cachedResidences.length,
             itemBuilder: (context, index) {
               final residence = _cachedResidences[index];
               return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: EdgeInsets.only(bottom: AppSpacing.md),
                 child: ResidenceCard(
                   residence: residence,
                 ),
@@ -234,11 +233,11 @@ class _OfflineScreenState extends State<OfflineScreen> {
   
   Widget _buildStats() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      padding: EdgeInsets.all(AppSpacing.smd),
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         border: Border.all(color: Colors.blue.shade200),
       ),
       child: Row(
@@ -271,19 +270,17 @@ class _OfflineScreenState extends State<OfflineScreen> {
     return Column(
       children: [
         Icon(icon, color: color, size: 20),
-        const SizedBox(height: 4),
+        AppSpacing.verticalXs,
         Text(
           value,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 16,
             color: color,
           ),
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Colors.grey.shade600,
           ),
         ),

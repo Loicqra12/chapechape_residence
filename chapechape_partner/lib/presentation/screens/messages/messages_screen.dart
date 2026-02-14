@@ -607,7 +607,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 width: 24,
                 height: 24,
                 colorFilter: const ColorFilter.mode(
-                  Colors.white,
+                  AppColors.textPrimary,
                   BlendMode.srcATop,
                 ),
               ),
@@ -619,7 +619,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 width: 24,
                 height: 24,
                 colorFilter: const ColorFilter.mode(
-                  Colors.white,
+                  AppColors.textPrimary,
                   BlendMode.srcATop,
                 ),
               ),
@@ -633,7 +633,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 width: 24,
                 height: 24,
                 colorFilter: const ColorFilter.mode(
-                  Colors.white,
+                  AppColors.textPrimary,
                   BlendMode.srcATop,
                 ),
               ),

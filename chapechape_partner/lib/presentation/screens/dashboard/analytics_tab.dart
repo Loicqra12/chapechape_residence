@@ -82,7 +82,7 @@ class AnalyticsTab extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // Comparaisons période à période
-                _buildComparisonsSection(data),
+                _buildComparisonsSection(context, data),
                 const SizedBox(height: 32),
 
                 // Graphique des revenus
@@ -105,6 +105,9 @@ class AnalyticsTab extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final onSurfaceVariant = theme.colorScheme.onSurfaceVariant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -113,12 +116,13 @@ class AnalyticsTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primary.withOpacity(0.2)),
               ),
               child: Icon(
-                Icons.analytics,
-                color: Colors.blue[700],
+                Icons.analytics_outlined,
+                color: primary,
                 size: 28,
               ),
             ),
@@ -127,18 +131,19 @@ class AnalyticsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Analytics Avancées',
-                    style: TextStyle(
-                      fontSize: 22,
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     'Graphiques interactifs et comparaisons',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -150,7 +155,9 @@ class AnalyticsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildComparisonsSection(DashboardData data) {
+  Widget _buildComparisonsSection(BuildContext buildContext, DashboardData data) {
+    final theme = Theme.of(buildContext);
+    final primary = theme.colorScheme.primary;
     final revenue = data.revenue;
     final performance = data.performance;
 
@@ -171,19 +178,17 @@ class AnalyticsTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Comparaisons mensuelles',
-          style: TextStyle(
-            fontSize: 18,
+          style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Évolution par rapport au mois précédent',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 16),
@@ -196,33 +201,33 @@ class AnalyticsTab extends StatelessWidget {
               currentValue: revenue.monthlyRevenue,
               previousValue: previousRevenue,
               unit: 'FCFA',
-              icon: Icons.attach_money,
-              color: Colors.green,
+              icon: Icons.payments_outlined,
+              color: primary,
               isMonetary: true,
             ),
-          PeriodComparisonData(
-            title: 'Réservations',
-            currentValue: performance.totalReservations.toDouble(),
-            previousValue: previousBookings,
-            unit: '',
-            icon: Icons.calendar_today,
-            color: Colors.blue,
-          ),
+            PeriodComparisonData(
+              title: 'Réservations',
+              currentValue: performance.totalReservations.toDouble(),
+              previousValue: previousBookings,
+              unit: '',
+              icon: Icons.calendar_today_outlined,
+              color: primary,
+            ),
             PeriodComparisonData(
               title: 'Taux occupation',
               currentValue: performance.occupancyRate,
               previousValue: previousOccupancy,
               unit: '%',
               icon: Icons.trending_up,
-              color: Colors.orange,
+              color: primary,
             ),
             PeriodComparisonData(
               title: 'Résidences',
               currentValue: performance.totalResidences.toDouble(),
               previousValue: performance.totalResidences.toDouble(),
               unit: '',
-              icon: Icons.home,
-              color: Colors.purple,
+              icon: Icons.home_outlined,
+              color: primary,
             ),
           ],
         ),

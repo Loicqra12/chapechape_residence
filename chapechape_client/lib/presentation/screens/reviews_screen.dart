@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:intl/intl.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
@@ -89,13 +91,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Text(
               errorMessage!,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.red[600]),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red[600]),
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             ElevatedButton(
               onPressed: _loadReviews,
               style: ElevatedButton.styleFrom(
@@ -127,10 +129,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       onRefresh: _loadReviews,
       color: goldColor,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.pagePadding,
         children: [
           if (stats.isNotEmpty) _buildStatsSection(stats),
-          const SizedBox(height: 20),
+          SizedBox(height: AppSpacing.lg20), // 20px
           _buildReviewsList(reviews),
         ],
       ),
@@ -142,10 +144,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final numberOfReviews = stats['numberOfReviews'] as int? ?? 0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(AppSpacing.lg20), // 20px
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -162,22 +164,20 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             children: [
               Text(
                 averageRating.toStringAsFixed(1),
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   fontSize: 48,
-                  fontWeight: FontWeight.bold,
                   color: goldColor,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: AppSpacing.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildStarRating(averageRating),
-                  const SizedBox(height: 4),
+                  SizedBox(height: AppSpacing.xs),
                   Text(
                     '$numberOfReviews avis',
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: AppTextStyles.body.copyWith(
                       color: Colors.grey[600],
                     ),
                   ),
@@ -210,13 +210,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       children: [
         Text(
           'Avis des clients',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: blackColor,
-          ),
+          style: AppTextStyles.title.copyWith(color: blackColor),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.verticalMd,
         ...reviews.map((review) => _buildReviewCard(review)).toList(),
       ],
     );
@@ -242,11 +238,11 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -266,30 +262,28 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 backgroundColor: goldColor,
                 child: Text(
                   userInitial,
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: blackColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.smd),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       userName.isNotEmpty ? userName : 'Utilisateur anonyme',
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
                       ),
                     ),
                     if (reviewDate != null)
                       Text(
                         DateFormat('dd/MM/yyyy').format(reviewDate),
-                        style: TextStyle(
+                        style: AppTextStyles.caption.copyWith(
                           color: Colors.grey[600],
-                          fontSize: 12,
                         ),
                       ),
                   ],
@@ -301,9 +295,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   _buildStarRating(overallRating),
                   Text(
                     overallRating.toStringAsFixed(1),
-                    style: TextStyle(
+                    style: AppTextStyles.caption.copyWith(
                       color: Colors.grey[600],
-                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -312,13 +305,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             ],
           ),
           if (comment.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            AppSpacing.verticalSmd,
             Text(
               comment,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.4,
-              ),
+              style: AppTextStyles.body.copyWith(height: 1.4),
             ),
           ],
         ],

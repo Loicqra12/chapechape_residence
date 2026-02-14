@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
 import 'package:chapechape_client/core/services/error_message_service.dart';
@@ -151,42 +153,39 @@ class _StorageScreenState extends State<StorageScreen> {
           : RefreshIndicator(
               onRefresh: _loadStorageInfo,
               child: ListView(
-                padding: const EdgeInsets.all(16.0),
+                padding: AppSpacing.pagePadding,
                 children: [
                   // En-tête explicatif
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 16.0),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: AppSpacing.md),
                     child: Text(
                       'Gérez l\'espace de stockage utilisé par l\'application.',
-                      style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                     ),
                   ),
                   
                   // Graphique d'utilisation
                   _buildStorageGraph(),
                   
-                  const SizedBox(height: 24),
+                  AppSpacing.verticalLg,
                   
                   // Carte du cache
                   _buildCacheCard(),
                   
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Carte des données persistantes
                   _buildDataCard(),
                   
-                  const SizedBox(height: 32),
+                  AppSpacing.verticalXl,
                   
                   // Actions avancées
-                  const Text(
+                  Text(
                     'Actions avancées',
-                    style: TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.subtitle,
                   ),
                   
-                  const SizedBox(height: 12),
+                  AppSpacing.verticalSmd,
                   
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -206,26 +205,23 @@ class _StorageScreenState extends State<StorageScreen> {
       elevation: 0,
       color: greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Utilisation du stockage',
-              style: TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTextStyles.subtitle,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Row(
               children: [
                 Expanded(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     child: LinearProgressIndicator(
                       value: 0.7,
                       backgroundColor: Colors.grey[300],
@@ -236,7 +232,7 @@ class _StorageScreenState extends State<StorageScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -262,23 +258,17 @@ class _StorageScreenState extends State<StorageScreen> {
             shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: AppSpacing.xs),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
             ),
             Text(
               size,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: AppTextStyles.caption.copyWith(color: Colors.grey[600]),
             ),
           ],
         ),
@@ -291,40 +281,34 @@ class _StorageScreenState extends State<StorageScreen> {
       elevation: 0,
       color: greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 const Icon(Icons.cached, color: orangeColor, size: 24),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: AppSpacing.sm),
+                Text(
                   'Données du cache',
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.subtitle,
                 ),
                 const Spacer(),
                 Text(
                   _cacheSize,
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    color: Colors.grey[600],
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Text(
+            AppSpacing.verticalSmd,
+            Text(
               'Le cache contient des données temporaires comme les images et les réponses API. Effacer le cache peut aider si l\'application rencontre des problèmes ou pour libérer de l\'espace.',
-              style: TextStyle(fontSize: 14.0),
+              style: AppTextStyles.body,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -332,9 +316,9 @@ class _StorageScreenState extends State<StorageScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: orangeColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                 ),
                 child: _isClearingCache
@@ -349,7 +333,7 @@ class _StorageScreenState extends State<StorageScreen> {
                               color: Colors.white,
                             ),
                           ),
-                          SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           Text('Effacement en cours...'),
                         ],
                       )
@@ -367,38 +351,32 @@ class _StorageScreenState extends State<StorageScreen> {
       elevation: 0,
       color: greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 const Icon(Icons.storage, color: orangeColor, size: 24),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: AppSpacing.sm),
+                Text(
                   'Données de l\'application',
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.subtitle,
                 ),
                 const Spacer(),
                 Text(
                   _appSize,
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    color: Colors.grey[600],
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Text(
+            AppSpacing.verticalSmd,
+            Text(
               'Ces données incluent vos préférences, l\'historique local et d\'autres informations nécessaires au bon fonctionnement de l\'application.',
-              style: TextStyle(fontSize: 14.0),
+              style: AppTextStyles.body,
             ),
           ],
         ),

@@ -11,6 +11,7 @@ import 'package:chapechape_client/presentation/widgets/booking_cancellation_dial
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/cancellation_policy_details_widget.dart';
 
@@ -84,7 +85,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             onExpired: () => _handleTimerExpired(booking),
             onRetry: () => _handleRetryAction(booking),
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
         ],
       );
     }
@@ -254,7 +255,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
             return SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.pagePadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -262,7 +263,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     // Informations de base
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: AppSpacing.cardPadding,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -271,7 +272,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               'Réservation #${booking.id.substring(0, 8)}',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
-                            const SizedBox(height: 16),
+                            AppSpacing.verticalMd,
                             _buildDetailRow(
                               'Statut',
                               _getStatusText(booking.status),
@@ -305,11 +306,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
                     // Timer Widget conditionnel
                     if (_buildTimerWidget(booking) != null) ...[
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                       _buildTimerWidget(booking)!,
                     ],
 
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
 
                     // Politique d'annulation
                     if (policy != null)
@@ -319,7 +320,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         totalPrice: booking.totalPrice,
                       ),
 
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
 
                     // Historique des modifications
                     if (booking.modifications != null && booking.modifications!.isNotEmpty) ...[
@@ -327,14 +328,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         'Historique des modifications',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                       ModificationHistoryWidget(
                         modifications: booking.modifications!,
                         bookingId: booking.id,
                       ),
                     ],
 
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
 
                     // Actions
                     if (booking.status == 'pending' || booking.status == 'confirmed')
@@ -365,7 +366,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Widget _buildDetailRow(String label, String value, [Color? valueColor]) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +380,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: AppSpacing.sm),
           Expanded(
             flex: 3,
             child: Text(

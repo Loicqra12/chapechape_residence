@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
 
@@ -190,13 +192,13 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.pagePadding,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16.0),
+                Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Gérez l\'espace de stockage utilisé par l\'application.',
-                    style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ),
                 
@@ -210,7 +212,7 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                   isClearing: _clearingCache,
                 ),
                 
-                const SizedBox(height: 16),
+                AppSpacing.verticalMd,
                 
                 // Carte d'information sur les préférences
                 _buildStorageCard(
@@ -224,23 +226,23 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                   clearButtonColor: Colors.red,
                 ),
                 
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 
                 // Information sur le stockage
                 Card(
                   color: greyColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.pagePadding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: EdgeInsets.all(AppSpacing.smd),
                               decoration: BoxDecoration(
                                 color: orangeColor.withOpacity(0.2),
                                 shape: BoxShape.circle,
@@ -250,27 +252,26 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                                 color: orangeColor,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            const Expanded(
+                            SizedBox(width: AppSpacing.md),
+                            Expanded(
                               child: Text(
                                 'À propos du stockage',
-                                style: TextStyle(
-                                  fontSize: 16,
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
+                        AppSpacing.verticalMd,
+                        Text(
                           'Le cache contient des données temporaires qui aident l\'application à fonctionner plus rapidement. Vous pouvez l\'effacer à tout moment sans perdre d\'informations importantes.',
-                          style: TextStyle(fontSize: 14),
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
+                        AppSpacing.verticalSm,
+                        Text(
                           'Les préférences contiennent vos paramètres personnalisés. La réinitialisation restaurera tous les paramètres par défaut.',
-                          style: TextStyle(fontSize: 14),
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
@@ -294,17 +295,17 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(AppSpacing.smd),
                   decoration: BoxDecoration(
                     color: goldColor.withOpacity(0.2),
                     shape: BoxShape.circle,
@@ -314,23 +315,21 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                     color: goldColor,
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      AppSpacing.verticalXs,
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
                       ),
@@ -339,14 +338,13 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Taille: $size',
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -355,16 +353,16 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: clearButtonColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     ),
                   ),
                   child: isClearing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
+                      ? SizedBox(
+                          width: AppSpacing.md + AppSpacing.xs,
+                          height: AppSpacing.md + AppSpacing.xs,
+                          child: const CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),

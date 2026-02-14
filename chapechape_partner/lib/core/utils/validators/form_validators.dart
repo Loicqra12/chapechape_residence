@@ -57,23 +57,23 @@ class FormValidators {
     }
     
     if (value.length < 8) {
-      return 'Le mot de passe doit contenir au moins 8 caractères';
+      return 'Minimum 8 caractères';
     }
     
     if (!value.contains(RegExp(r'[A-Z]'))) {
-      return 'Le mot de passe doit contenir au moins une majuscule';
+      return 'Ajoutez 1 majuscule (A-Z)';
     }
     
     if (!value.contains(RegExp(r'[a-z]'))) {
-      return 'Le mot de passe doit contenir au moins une minuscule';
+      return 'Ajoutez 1 minuscule (a-z)';
     }
     
     if (!value.contains(RegExp(r'[0-9]'))) {
-      return 'Le mot de passe doit contenir au moins un chiffre';
+      return 'Ajoutez 1 chiffre (0-9)';
     }
     
     if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      return 'Le mot de passe doit contenir au moins un caractère spécial';
+      return 'Ajoutez 1 caractère spécial (!@#\$%...)';
     }
     
     return null;

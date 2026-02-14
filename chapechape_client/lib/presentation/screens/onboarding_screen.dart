@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/services/onboarding_service.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -53,10 +55,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md + AppSpacing.xs),
           child: Column(
             children: [
-              const SizedBox(height: 40),
+              AppSpacing.verticalXl,
               // Skip button
               Align(
                 alignment: Alignment.centerRight,
@@ -68,11 +70,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       context.go('/home');
                     }
                   },
-                  child: const Text(
+                  child: Text(
                     'Passer',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Colors.grey,
-                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -81,7 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Expanded(
                 flex: 3,
                 child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 20),
+                  margin: EdgeInsets.symmetric(vertical: AppSpacing.md + AppSpacing.xs),
                   child: Image.asset(
                     _pages[_currentPage]['image']!,
                     key: ValueKey('image_$_currentPage'),
@@ -99,10 +100,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     Text(
                       _pages[_currentPage]['title']!,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
+                      style: AppTextStyles.headline.copyWith(
+                        color: const Color(0xFF1A1A1A),
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,
@@ -111,12 +110,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     .fadeIn(duration: 500.ms, delay: 200.ms)
                     .slideY(begin: 0.2, end: 0, curve: Curves.easeOutQuart),
                     
-                    const SizedBox(height: 20),
+                    AppSpacing.verticalMd,
                     
                     Text(
                       _pages[_currentPage]['description']!,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.grey,
                         height: 1.5,
                       ),
@@ -130,7 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               // Bottom section with indicators and button
               Container(
-                margin: const EdgeInsets.only(bottom: 40),
+                margin: EdgeInsets.only(bottom: AppSpacing.xl),
                 child: Column(
                   children: [
                     // Page indicators
@@ -140,19 +138,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         _pages.length,
                         (index) => AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          margin: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                           height: 8,
                           width: _currentPage == index ? 24 : 8,
                           decoration: BoxDecoration(
                             color: _currentPage == index
                                 ? const Color(0xFFFFD700)
                                 : Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(AppSpacing.xs),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    AppSpacing.verticalLg,
                     // Next/Start button
                     SizedBox(
                       width: screenSize.width * 0.8,
@@ -163,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           backgroundColor: const Color(0xFFFFD700),
                           foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.smd),
                           ),
                           elevation: 2,
                         ),
@@ -171,8 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           _currentPage < _pages.length - 1
                               ? 'Suivant'
                               : 'Commencer',
-                          style: const TextStyle(
-                            fontSize: 18,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),

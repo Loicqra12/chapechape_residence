@@ -19,6 +19,8 @@ import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:chapechape_client/presentation/widgets/payment_method_selector.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:provider/provider.dart';
 
 class BookingConfirmationScreen extends StatefulWidget {
@@ -230,7 +232,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             PaymentMethodSelector(
               selectedMethod: _selectedPaymentMethod,
               onMethodSelected: (method) {
@@ -240,7 +242,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               },
               showTitle: false,
             ),
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -264,11 +266,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     ? 'Envoi...'
                     : 'Envoyer les instructions'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
           ],
         ),
       ),
@@ -307,7 +309,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               content: Row(
                 children: [
                   const Icon(Icons.check_circle, color: Colors.white),
-                  const SizedBox(width: 8),
+                  SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       'Instructions de paiement ${_getPaymentMethodName(paymentMethod)} envoyées par SMS',
@@ -355,7 +357,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   content: Row(
                     children: [
                       Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 8),
+                      SizedBox(width: AppSpacing.sm),
                       Text('Instructions de paiement envoyées par SMS'),
                     ],
                   ),
@@ -382,7 +384,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             content: Row(
               children: [
                 const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
+                SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text('Erreur: ${e.toString()}'),
                 ),
@@ -493,23 +495,23 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
   Widget _buildBookingConfirmation() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: AppSpacing.cardPadding,
       child: _showPhoneVerification
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 16),
+                AppSpacing.verticalMd,
                 const Text(
                   'Vérification du numéro de téléphone',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.title,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.verticalMd,
                 const Text(
                   'Pour recevoir les détails de votre réservation par SMS, veuillez vérifier votre numéro de téléphone.',
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 PhoneVerificationWidget(
                   initialPhoneNumber: '',
                   onVerificationSuccess: _onPhoneVerified,
@@ -521,11 +523,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSuccessHeader(),
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 _buildBookingDetails(),
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 _buildSmsSection(),
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 _buildPaymentSection(),
               ],
             ),
@@ -536,7 +538,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     if (_booking == null) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Center(child: Text('Chargement des informations...')),
         ),
       );
@@ -545,7 +547,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     return Card(
       color: AppTheme.successColor.withOpacity(0.1),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           children: [
             const Icon(
@@ -553,16 +555,15 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               color: AppTheme.successColor,
               size: 64,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Text(
               'Réservation créée avec succès !',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: AppTheme.successColor,
-                fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             Text(
               'Référence: ${_booking!.id}',
               style: Theme.of(context).textTheme.bodyMedium,
@@ -578,7 +579,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     if (_booking == null) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Center(child: Text('Chargement des détails...')),
         ),
       );
@@ -590,7 +591,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -610,7 +611,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ],
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             _buildDetailRow('Résidence', booking.residenceName),
             _buildDetailRow('Date d\'arrivée', dateFormat.format(booking.checkIn)),
             _buildDetailRow('Date de départ', dateFormat.format(booking.checkOut)),
@@ -618,7 +619,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             _buildDetailRow('Nombre de personnes', '${booking.numberOfGuests}'),
             _buildDetailRow('Statut', _getStatusText(booking.status)),
             _buildDetailRow('Prix total', '${booking.totalPrice.toStringAsFixed(0)} FCFA'),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             Text(
               'Détails de paiement',
               style: Theme.of(context).textTheme.titleMedium,
@@ -633,7 +634,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -641,7 +642,9 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             width: 140,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
@@ -661,7 +664,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       return Card(
         color: AppTheme.successColor.withOpacity(0.1),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Column(
             children: [
               const Icon(
@@ -669,12 +672,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 color: AppTheme.successColor,
                 size: 48,
               ),
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               Text(
                 'Réservation déjà payée',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppTheme.successColor,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -685,7 +687,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -694,22 +696,22 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Text(
               'Votre réservation est confirmée, mais elle ne sera garantie qu\'après le paiement. Veuillez procéder au paiement maintenant.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             ElevatedButton.icon(
               onPressed: _initiatePayment,
               icon: const Icon(Icons.payment),
               label: const Text('Payer maintenant'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               ),
             ),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             OutlinedButton(
               onPressed: () {
                 context.go('/bookings');
@@ -748,25 +750,25 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 const Icon(Icons.message, color: Colors.blue),
-                const SizedBox(width: 8),
+                SizedBox(width: AppSpacing.sm),
                 Text(
                   'Recevoir par SMS',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            AppSpacing.verticalSmd,
             const Text(
               'Recevez les détails de votre réservation par SMS pour y accéder facilement, même sans connexion internet.',
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -777,7 +779,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     onPressed: _isSendingSms ? null : _sendBookingDetailsBySms,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: AppSpacing.sm),
                 if (!_booking!.isPaid)
                   Expanded(
                     child: OutlinedButton.icon(
@@ -799,10 +801,12 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ],
             ),
             if (_smsError && _smsErrorMessage != null) ...[  
-              const SizedBox(height: 12),
+              AppSpacing.verticalSmd,
               Text(
                 'Erreur: $_smsErrorMessage',
-                style: const TextStyle(color: Colors.red),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.red,
+                ),
               ),
             ],
           ],

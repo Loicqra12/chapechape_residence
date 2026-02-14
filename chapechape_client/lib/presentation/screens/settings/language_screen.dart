@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
 
 class LanguageScreen extends StatefulWidget {
@@ -99,13 +101,13 @@ class _LanguageScreenState extends State<LanguageScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.pagePadding,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16.0),
+                Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Choisissez la langue de l\'application.',
-                    style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ),
                 
@@ -113,14 +115,14 @@ class _LanguageScreenState extends State<LanguageScreen> {
                 Card(
                   color: greyColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.pagePadding,
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.all(AppSpacing.smd),
                           decoration: BoxDecoration(
                             color: orangeColor.withOpacity(0.2),
                             shape: BoxShape.circle,
@@ -130,11 +132,11 @@ class _LanguageScreenState extends State<LanguageScreen> {
                             color: orangeColor,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: AppSpacing.md),
                         const Expanded(
                           child: Text(
                             'Changer la langue modifiera tous les textes dans l\'application, mais nécessitera un redémarrage pour être appliquée complètement.',
-                            style: TextStyle(fontSize: 14),
+                            style: AppTextStyles.body,
                           ),
                         ),
                       ],
@@ -142,7 +144,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 
                 // Liste des langues
                 for (var language in _languages)
@@ -156,29 +158,29 @@ class _LanguageScreenState extends State<LanguageScreen> {
     final bool isSelected = _selectedLanguage == language['code'];
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: EdgeInsets.only(bottom: AppSpacing.smd),
       child: Card(
         elevation: isSelected ? 2 : 0,
         color: isSelected ? goldColor.withOpacity(0.2) : Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           side: isSelected
               ? const BorderSide(color: goldColor, width: 2)
               : BorderSide(color: greyColor, width: 1),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           onTap: () => _saveLanguage(language['code']),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.cardPadding,
             child: Row(
               children: [
                 // Drapeau
                 Text(
                   language['flag'],
-                  style: const TextStyle(fontSize: 30),
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(width: 16.0),
+                SizedBox(width: AppSpacing.md),
                 
                 // Information sur la langue
                 Expanded(
@@ -187,25 +189,22 @@ class _LanguageScreenState extends State<LanguageScreen> {
                     children: [
                       Text(
                         language['name'],
-                        style: const TextStyle(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16.0,
                         ),
                       ),
                       Text(
                         language['native'],
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[700],
-                          fontSize: 14.0,
                         ),
                       ),
                       if (language['isRTL'] == true)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4.0),
+                        Padding(
+                          padding: EdgeInsets.only(top: AppSpacing.xs),
                           child: Text(
                             'Écriture de droite à gauche',
-                            style: TextStyle(
-                              fontSize: 12.0,
+                            style: AppTextStyles.caption.copyWith(
                               color: Colors.grey,
                               fontStyle: FontStyle.italic,
                             ),

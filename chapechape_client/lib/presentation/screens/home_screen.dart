@@ -7,6 +7,8 @@ import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/models/residence_type_enum.dart';
 
 import '../../core/services/promotion_service.dart';
@@ -108,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               
               const PromoBannerWidget(),
-              const SizedBox(height: 8),
+              AppSpacing.verticalSm,
               
               // Widget de catégories existant (modes d'affichage alternatifs)
               CategoriesMenuWidget(
@@ -129,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 24.0),
+                      padding: EdgeInsets.only(bottom: AppSpacing.lg),
                       child: ExclusivePromotionsWidget(
                         title: 'Offres & Promotions',
                         subtitle: 'Nos meilleures offres du moment',
@@ -149,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     );
                   }
-                  return const SizedBox(height: 20);
+                  return AppSpacing.verticalLg;
                 },
               ),
               
@@ -188,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: AroundMeWidget(
                   title: 'À proximité',
                   subtitle: 'Explorez les quartiers autour de vous',
@@ -239,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
               
               // Témoignages clients (commun à tous)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: TestimonialsWidget(
                   key: const Key('home_testimonials'),
                 ),
@@ -247,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
               
               // Section blog et conseils (commune à tous)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: BlogAndTipsWidget(
                   key: const Key('home_blog_tips'),
                 ),
@@ -268,25 +270,22 @@ class _HomeScreenState extends State<HomeScreen> {
     
     return Container(
       width: constraints.maxWidth,
-      margin: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      margin: EdgeInsets.only(top: AppSpacing.lg, bottom: AppSpacing.sm),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+            style: AppTextStyles.title.copyWith(
               color: isDarkMode ? Colors.white : Colors.black87,
             ),
             semanticsLabel: 'Section: $title',
           ),
-          const SizedBox(height: 4),
+          AppSpacing.verticalXs,
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 14,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
             ),
             semanticsLabel: subtitle,
@@ -312,11 +311,11 @@ class _HomeScreenState extends State<HomeScreen> {
         
         return Container(
           width: constraints.maxWidth,
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-          padding: const EdgeInsets.all(20.0),
+          margin: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: isDarkMode ? Colors.grey[850] : Colors.white,
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
@@ -333,29 +332,26 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 'Rejoignez ChapeChape Résidences',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: isDarkMode ? Colors.white : Colors.black87,
                 ),
                 textAlign: TextAlign.center,
                 semanticsLabel: 'Invitation à rejoindre ChapeChape Résidences',
               ),
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               Text(
                 'Créez un compte pour accéder à des fonctionnalités exclusives, enregistrer vos favoris et recevoir des offres personnalisées.',
-                style: TextStyle(
-                  fontSize: 14,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: isDarkMode ? Colors.grey[300] : Colors.black87,
                 ),
                 textAlign: TextAlign.center,
                 semanticsLabel: 'Avantages à créer un compte sur ChapeChape Résidences',
               ),
-              const SizedBox(height: 24),
+              AppSpacing.verticalLg,
               Wrap(
                 alignment: WrapAlignment.center,
-                spacing: 16,
-                runSpacing: 16,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
                 children: [
                   SizedBox(
                     width: 140,
@@ -371,9 +367,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
                           elevation: 2,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.smd),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                         ),
                         child: Text(
@@ -397,9 +393,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           side: BorderSide(color: Theme.of(context).primaryColor),
                           foregroundColor: Theme.of(context).primaryColor,
                           backgroundColor: isDarkMode ? Colors.transparent : Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.smd),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                         ),
                         child: Text(

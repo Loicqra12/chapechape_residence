@@ -6,6 +6,8 @@ import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
 import 'package:chapechape_client/core/services/error_message_service.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
@@ -96,14 +98,14 @@ class _LoginScreenState extends State<LoginScreen> {
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalLg,
                       Center(
                         child: SizedBox(
                           width: 200,
@@ -114,25 +116,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40),
-                      const Text(
+                      AppSpacing.verticalXl,
+                      Text(
                         'Bienvenue sur ChapeChape Résidences',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      AppSpacing.verticalSm,
+                      Text(
                         'Connectez-vous pour accéder à votre compte',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 40),
+                      AppSpacing.verticalXl,
                       CustomTextField(
                         controller: _emailController,
                         labelText: 'Email',
@@ -142,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: FormValidators.validateEmail,
                         onSaved: (value) => _email = value ?? '',
                       ),
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       CustomTextField(
                         controller: _passwordController,
                         labelText: 'Mot de passe',
@@ -161,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: FormValidators.validatePassword,
                         onSaved: (value) => _password = value ?? '',
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -182,10 +180,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                     activeColor: AppTheme.primaryColor,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                const Flexible(
+                                AppSpacing.horizontalSm,
+                                Flexible(
                                   child: Text(
                                     'Se souvenir de moi',
+                                    style: Theme.of(context).textTheme.bodyMedium,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -199,21 +198,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 context.go('/forgot-password');
                               },
                               style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                                 minimumSize: const Size(0, 36),
                               ),
                               child: Text(
                                 'Mot de passe oublié?',
-                                style: TextStyle(
-                                  color: AppTheme.primaryColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTextStyles.link,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
+                      AppSpacing.verticalXl,
                       SizedBox(
                         width: double.infinity,
                         child: CustomButton(
@@ -222,30 +218,31 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: state is AuthLoading ? null : _submitForm,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      AppSpacing.verticalLg,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Text('Vous n\'avez pas de compte?'),
+                          Text(
+                            'Vous n\'avez pas de compte?',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           TextButton(
                             onPressed: () {
                               context.go('/register');
                             },
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                               minimumSize: const Size(0, 36),
                             ),
                             child: Text(
                               'S\'inscrire',
-                              style: TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: AppTextStyles.link,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
+                      AppSpacing.verticalXl,
                       Row(
                         children: [
                           Expanded(
@@ -255,12 +252,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                             child: Text(
                               'Ou connectez-vous avec',
-                              style: TextStyle(
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.grey.shade600,
-                                fontSize: 14,
                               ),
                             ),
                           ),
@@ -272,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      AppSpacing.verticalLg,
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -284,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               );
                             },
                           ),
-                          const SizedBox(width: 20),
+                          SizedBox(width: AppSpacing.lg),
                           _socialLoginButton(
                             icon: 'logos/facebook_logo.png',
                             onPressed: () {
@@ -293,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               );
                             },
                           ),
-                          const SizedBox(width: 20),
+                          SizedBox(width: AppSpacing.lg),
                           _socialLoginButton(
                             icon: 'logos/apple_logo.png',
                             onPressed: () {
@@ -302,16 +298,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                       // Message légal
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                         child: Text.rich(
                           TextSpan(
                             text: 'En continuant, vous acceptez nos ',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.copyWith(
                               color: Colors.grey.shade600,
-                              fontSize: 12,
                             ),
                             children: [
                               WidgetSpan(
@@ -322,9 +317,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   child: Text(
                                     'Conditions d\'utilisation',
-                                    style: TextStyle(
+                                    style: AppTextStyles.caption.copyWith(
                                       color: AppTheme.primaryColor,
-                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -332,9 +326,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextSpan(
                                 text: ' et notre ',
-                                style: TextStyle(
+                                style: AppTextStyles.caption.copyWith(
                                   color: Colors.grey.shade600,
-                                  fontSize: 12,
                                 ),
                               ),
                               WidgetSpan(
@@ -345,9 +338,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   child: Text(
                                     'Politique de confidentialité',
-                                    style: TextStyle(
+                                    style: AppTextStyles.caption.copyWith(
                                       color: AppTheme.primaryColor,
-                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -355,9 +347,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextSpan(
                                 text: '.',
-                                style: TextStyle(
+                                style: AppTextStyles.caption.copyWith(
                                   color: Colors.grey.shade600,
-                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -365,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                     ],
                   ),
                 ),
@@ -382,13 +373,13 @@ class _LoginScreenState extends State<LoginScreen> {
       type: MaterialType.transparency,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
           width: 60,
           height: 60,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -399,10 +390,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: EdgeInsets.all(AppSpacing.smd),
                 child: Icon(
                   icon == 'logos/google_logo.png' ? Icons.g_mobiledata : 
                   icon == 'logos/facebook_logo.png' ? Icons.facebook : 

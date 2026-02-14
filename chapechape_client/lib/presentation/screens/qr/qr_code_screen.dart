@@ -6,6 +6,8 @@ import 'package:chapechape_client/core/utils/booking_helpers.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart' as booking_events;
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as booking_states;
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/presentation/widgets/qr/qr_code_display_widget.dart';
 import 'package:chapechape_client/presentation/widgets/booking/reservation_status_badge.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
@@ -162,7 +164,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(),
-          SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Text('Chargement des informations...'),
         ],
       ),
@@ -197,11 +199,11 @@ class _QRCodeScreenState extends State<QRCodeScreen>
 
   Widget _buildBookingHeader() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: AppSpacing.pagePadding,
+      padding: EdgeInsets.all(AppSpacing.lg20), // 20px
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -226,7 +228,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
             ],
           ),
           
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           
           _buildInfoRow(
             icon: Icons.home,
@@ -234,7 +236,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
             value: _booking!.residenceName,
           ),
           
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           
           _buildInfoRow(
             icon: Icons.calendar_today,
@@ -242,7 +244,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
             value: BookingHelpers.formatDate(_booking!.checkIn),
           ),
           
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           
           _buildInfoRow(
             icon: Icons.calendar_today_outlined,
@@ -251,23 +253,22 @@ class _QRCodeScreenState extends State<QRCodeScreen>
           ),
           
           if (_canUseQRCodes()) ...[
-            const SizedBox(height: 12),
+            AppSpacing.verticalSmd,
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 border: Border.all(color: Colors.green[200]!),
               ),
               child: Row(
                 children: [
                   Icon(Icons.verified, color: Colors.green[600], size: 16),
-                  const SizedBox(width: 6),
+                  SizedBox(width: AppSpacing.xs6), // 6px
                   Text(
                     'QR Codes actifs et prêts à utiliser',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.copyWith(
                       color: Colors.green[700],
-                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -288,21 +289,19 @@ class _QRCodeScreenState extends State<QRCodeScreen>
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 8),
+        SizedBox(width: AppSpacing.sm),
         Text(
           '$label:',
-          style: TextStyle(
+          style: AppTextStyles.body.copyWith(
             color: Colors.grey[600],
-            fontSize: 14,
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: AppTextStyles.body.copyWith(
               fontWeight: FontWeight.w500,
-              fontSize: 14,
             ),
           ),
         ),
@@ -312,16 +311,16 @@ class _QRCodeScreenState extends State<QRCodeScreen>
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
         color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.xs),
       ),
       child: TabBar(
         controller: _tabController,
         onTap: (_) => _onTabChanged(),
         indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.xs),
           color: Theme.of(context).primaryColor,
         ),
         labelColor: Colors.white,
@@ -343,10 +342,10 @@ class _QRCodeScreenState extends State<QRCodeScreen>
 
   Widget _buildQRCodeTab(QRCodeType type) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.pagePadding,
       child: Column(
         children: [
-          const SizedBox(height: 20),
+          SizedBox(height: AppSpacing.lg20), // 20px
           
           // QR Code principal
           QRCodeDisplayWidget(
@@ -359,12 +358,12 @@ class _QRCodeScreenState extends State<QRCodeScreen>
             onShare: _shareQRCode,
           ),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Instructions spécifiques au type
           _buildTypeSpecificInstructions(type),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Informations de sécurité
           _buildSecurityInfo(),
@@ -379,7 +378,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -389,17 +388,15 @@ class _QRCodeScreenState extends State<QRCodeScreen>
                   isCheckIn ? Icons.login : Icons.logout,
                   color: Theme.of(context).primaryColor,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: AppSpacing.sm),
                 Text(
                   'Instructions ${isCheckIn ? "Check-in" : "Check-out"}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.subtitle,
                 ),
               ],
             ),
             
-            const SizedBox(height: 12),
+            AppSpacing.verticalSmd,
             
             if (isCheckIn) ...[
               _buildInstructionItem(
@@ -436,14 +433,14 @@ class _QRCodeScreenState extends State<QRCodeScreen>
 
   Widget _buildInstructionItem(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 6,
             height: 6,
-            margin: const EdgeInsets.only(top: 6, right: 8),
+            margin: EdgeInsets.only(top: AppSpacing.xs6, right: AppSpacing.sm), // top: 6px
             decoration: BoxDecoration(
               color: Theme.of(context).primaryColor,
               shape: BoxShape.circle,
@@ -452,7 +449,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 14),
+              style: AppTextStyles.body,
             ),
           ),
         ],
@@ -465,14 +462,14 @@ class _QRCodeScreenState extends State<QRCodeScreen>
       elevation: 2,
       color: Colors.amber[50],
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.security, color: Colors.amber[700]),
-                const SizedBox(width: 8),
+                SizedBox(width: AppSpacing.sm),
                 Text(
                   'Informations de Sécurité',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -483,15 +480,14 @@ class _QRCodeScreenState extends State<QRCodeScreen>
               ],
             ),
             
-            const SizedBox(height: 12),
+            AppSpacing.verticalSmd,
             
             Text(
               '• Ne partagez jamais vos QR codes avec des personnes non autorisées\n'
               '• Ces codes sont uniques à votre réservation\n'
               '• En cas de problème, contactez immédiatement le support\n'
               '• Les codes peuvent être régénérés si nécessaire',
-              style: TextStyle(
-                fontSize: 14,
+              style: AppTextStyles.body.copyWith(
                 color: Colors.amber[800],
               ),
             ),
@@ -503,7 +499,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
 
   Widget _buildBottomActions() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -524,7 +520,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
             ),
           ),
           
-          const SizedBox(width: 12),
+          SizedBox(width: AppSpacing.smd),
           
           Expanded(
             child: ElevatedButton.icon(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/services/onboarding_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -142,11 +143,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         height: 180,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                     Text(
                       'Votre résidence idéale vous attend',
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.white.withOpacity(0.8),
                         letterSpacing: 0.5,
                       ),

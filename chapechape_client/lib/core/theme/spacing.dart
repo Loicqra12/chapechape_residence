@@ -4,13 +4,23 @@ import 'package:flutter/material.dart';
 /// Basé sur une grille de 4px pour une harmonie visuelle
 class AppSpacing {
   // Tokens de base
+  static const double xxs = 2.0;
   static const double xs = 4.0;
+  static const double xs5 = 5.0;
+  static const double xs6 = 6.0;
   static const double sm = 8.0;
+  static const double sm10 = 10.0;
   static const double smd = 12.0; // Small-Medium
+  static const double md13 = 13.0;
+  static const double md15 = 15.0;
   static const double md = 16.0;
+  static const double lg20 = 20.0;
   static const double lg = 24.0;
+  static const double xl30 = 30.0;
   static const double xl = 32.0;
+  static const double xxl40 = 40.0;
   static const double xxl = 48.0;
+  static const double huge = 80.0;
 
   // Presets pour les paddings courants
   static const EdgeInsets pagePadding = EdgeInsets.all(md);

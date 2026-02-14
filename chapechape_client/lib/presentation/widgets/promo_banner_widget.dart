@@ -22,17 +22,10 @@ class PromoBannerWidget extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF1E3C72), // Bleu nuit profond
-                  Color(0xFF2A5298), // Bleu plus clair
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: AppTheme.accentColor, // Fond noir
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xFF1E3C72).withOpacity(0.3),
+                  color: AppTheme.primaryColor.withOpacity(0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -44,18 +37,18 @@ class PromoBannerWidget extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(AppSpacing.smd),
                   decoration: BoxDecoration(
-                    color: AppTheme.textLight.withOpacity(0.2),
+                    color: AppTheme.primaryColor.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.card_giftcard,
-                    color: AppTheme.textLight,
+                    color: AppTheme.secondaryColor, // Or plus vif pour l'icône
                     size: 24,
                   ),
                 )
                 .animate(onPlay: (controller) => controller.repeat(reverse: true))
                 .scaleXY(begin: 1.0, end: 1.1, duration: 1000.ms)
-                .shimmer(duration: 2000.ms, color: AppTheme.textLight.withOpacity(0.4)),
+                .shimmer(duration: 2000.ms, color: AppTheme.secondaryColor.withOpacity(0.5)),
 
                 SizedBox(width: AppSpacing.md),
 
@@ -67,24 +60,26 @@ class PromoBannerWidget extends StatelessWidget {
                       Text(
                         "Offre de Bienvenue",
                         style: AppTextStyles.caption.copyWith(
-                          color: AppTheme.textLight.withOpacity(0.7),
+                          color: AppTheme.secondaryColor.withOpacity(0.9), // Or plus vif
                           letterSpacing: 1.0,
                         ),
                       ),
                       SizedBox(height: AppSpacing.xs),
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             "-15%",
                             style: AppTextStyles.subtitle.copyWith(
-                              color: AppTheme.primaryColor,
+                              color: AppTheme.secondaryColor, // Or plus vif pour le pourcentage
                               fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             " sur votre 1ère résa !",
                             style: AppTextStyles.bodyLarge.copyWith(
-                              color: AppTheme.textLight,
+                              color: AppTheme.textLight, // Blanc pour le texte secondaire
                             ),
                           ),
                         ],
@@ -96,7 +91,7 @@ class PromoBannerWidget extends StatelessWidget {
                 // Flèche
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: AppTheme.textLight.withOpacity(0.7),
+                  color: AppTheme.secondaryColor.withOpacity(0.9), // Or plus vif
                   size: 14,
                 ),
               ],

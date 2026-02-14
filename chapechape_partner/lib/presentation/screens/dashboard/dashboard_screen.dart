@@ -14,6 +14,7 @@ import '../pricing/pricing_stats_screen.dart';
 import '../../widgets/skeletons/skeletons.dart';
 import 'analytics_tab.dart'; // Import du nouvel onglet Analytics
 import '../main/main_screen.dart'; // Pour MainScreenNavigator
+import '../residences/edit_residence_screen.dart';
 import '../residences/residence_details_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -24,6 +25,7 @@ class DashboardScreen extends StatelessWidget {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         return Scaffold(
+          backgroundColor: const Color(0xFFF7F9FC),
           body: CustomScrollView(
             slivers: [
               ScreenAppBars.getDashboardAppBar(context),
@@ -84,7 +86,12 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 24),
             
             // Section Performance
+            // Section Performance
             _buildPerformanceSection(context, state.dashboardData.performance),
+            const SizedBox(height: 24),
+
+            // Section À faire (Action Section - Style Yango)
+            _buildActionSection(context),
             const SizedBox(height: 24),
             
             // Section Revenus
@@ -117,7 +124,7 @@ class DashboardScreen extends StatelessWidget {
             
             // Ajouter la section Avis Clients
             const SizedBox(height: 24),
-            _buildReviewsSection(context),
+            _buildReviewsSection(context, state.dashboardData.stats.rating),
             
             // Pied de page avec la date de mise à jour
             const SizedBox(height: 40),
@@ -138,60 +145,157 @@ class DashboardScreen extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
+  static String _periodLabel(String period) {
+    switch (period) {
+      case 'daily': return 'Journalier';
+      case 'weekly': return 'Hebdomadaire';
+      case 'monthly': return 'Mensuel';
+      case 'yearly': return 'Annuel';
+      default: return 'Mensuel';
+    }
+  }
+
   Widget _buildPeriodSelector(BuildContext context, DashboardLoaded state) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.date_range, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            'Période:',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButton<String>(
-              value: state.period,
-              isExpanded: true,
-              underline: const SizedBox(),
-              onChanged: (String? newValue) {
-                if (newValue != null && newValue != state.period) {
-                  context.read<DashboardBloc>().add(ChangePeriod(period: newValue));
-                }
-              },
-              items: [
-                DropdownMenuItem(
-                  value: 'daily',
-                  child: Text('Journalier'),
-                ),
-                DropdownMenuItem(
-                  value: 'weekly',
-                  child: Text('Hebdomadaire'),
-                ),
-                DropdownMenuItem(
-                  value: 'monthly',
-                  child: Text('Mensuel'),
-                ),
-                DropdownMenuItem(
-                  value: 'yearly',
-                  child: Text('Annuel'),
-                ),
-              ],
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => _showPeriodBottomSheet(context, state),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.date_range, size: 22, color: theme.colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Période',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _periodLabel(state.period),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPeriodBottomSheet(BuildContext context, DashboardLoaded state) {
+    final theme = Theme.of(context);
+    final options = [
+      ('daily', 'Journalier', Icons.today_rounded),
+      ('weekly', 'Hebdomadaire', Icons.date_range_rounded),
+      ('monthly', 'Mensuel', Icons.calendar_month_rounded),
+      ('yearly', 'Annuel', Icons.calendar_today_rounded),
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choisir la période',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...options.map((e) {
+                final value = e.$1;
+                final label = e.$2;
+                final icon = e.$3;
+                final isSelected = state.period == value;
+                return ListTile(
+                  leading: Icon(
+                    icon,
+                    size: 22,
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? Icon(Icons.check_rounded, color: theme.colorScheme.primary, size: 22)
+                      : null,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    if (value != state.period) {
+                      context.read<DashboardBloc>().add(ChangePeriod(period: value));
+                    }
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -220,17 +324,17 @@ class DashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            width: 2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A90E2).withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -239,12 +343,12 @@ class DashboardScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.analytics,
-                color: Colors.white,
+              child: Icon(
+                Icons.analytics_rounded,
+                color: Theme.of(context).colorScheme.primary,
                 size: 28,
               ),
             ),
@@ -255,14 +359,13 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Flexible(
-                        child: const Text(
+                      Expanded(
+                        child: Text(
                           'Analytics Avancées',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -290,9 +393,8 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Graphiques interactifs • Comparaisons • Tendances',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 13,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -301,8 +403,8 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(width: 8),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.7),
-              size: 20,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+              size: 16,
             ),
           ],
         ),
@@ -314,56 +416,56 @@ class DashboardScreen extends StatelessWidget {
     BuildContext context,
     PerformanceStats stats,
   ) {
+    // Même style que les cartes Revenus : bordure, radius 12, fond surface
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6B8DE3), Color(0xFF0C1E3C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Title row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Flexible(
-                  child: Text(
-                    'Performance',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  'Performance',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF757575),
+                      ),
                 ),
-                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: 10,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.trending_up,
-                        color: Colors.greenAccent,
-                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 14,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${stats.occupancyRate}%',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -372,45 +474,51 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
+            // Hero stats inline
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: _buildPerformanceCard(
-                    context,
-                    'Résidences',
-                    stats.totalResidences.toString(),
-                    Icons.home_rounded,
-                  ),
+                _buildHeroStat(
+                  context,
+                  stats.totalResidences.toString(),
+                  'Résidences',
+                  const Color(0xFF1A1A1A),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildPerformanceCard(
-                    context,
-                    'Réservations',
-                    stats.totalReservations.toString(),
-                    Icons.calendar_month_rounded,
-                  ),
+                _buildHeroStat(
+                  context,
+                  stats.totalReservations.toString(),
+                  'Réservations',
+                  const Color(0xFF1A1A1A),
+                ),
+                _buildHeroStat(
+                  context,
+                  stats.newMessages.toString(),
+                  'Messages',
+                  const Color(0xFF1A1A1A),
+                ),
+                _buildHeroStat(
+                  context,
+                  stats.pendingReviews.toString(),
+                  'Avis',
+                  const Color(0xFF1A1A1A),
                 ),
               ],
             ),
             const SizedBox(height: 12),
+            // Last updated
             Row(
               children: [
-                Expanded(
-                  child: _buildPerformanceCard(
-                    context,
-                    'Messages',
-                    stats.newMessages.toString(),
-                    Icons.message_rounded,
-                  ),
+                Icon(
+                  Icons.access_time,
+                  size: 14,
+                  color: Colors.grey[400],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildPerformanceCard(
-                    context,
-                    'Avis en attente',
-                    stats.pendingReviews.toString(),
-                    Icons.rate_review_rounded,
+                const SizedBox(width: 4),
+                Text(
+                  'Mis à jour il y a 2h',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
                   ),
                 ),
               ],
@@ -421,39 +529,247 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildHeroStat(
+    BuildContext context,
+    String value,
+    String label,
+    Color color,
+  ) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1A1A1A),
+            height: 1.0,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: const Color(0xFF757575),
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'À faire',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A1A1A),
+                ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              _buildActionItem(
+                context,
+                icon: Icons.add_business_rounded,
+                title: 'Ajouter votre première résidence',
+                subtitle: 'Commencez à gagner des revenus',
+                color: Theme.of(context).colorScheme.primary,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EditResidenceScreen())),
+                showDivider: true,
+              ),
+              Container(
+                height: 1,
+                color: Colors.grey.withOpacity(0.1),
+                margin: const EdgeInsets.only(left: 60),
+              ),
+              _buildActionItem(
+                context,
+                icon: Icons.calendar_month_rounded,
+                title: 'Configurer vos disponibilités',
+                subtitle: 'Ouvrez votre calendrier',
+                color: Theme.of(context).colorScheme.primary,
+                onTap: () => MainScreenNavigator.of(context)?.navigateToTab(1),
+                showDivider: true,
+              ),
+              Container(
+                height: 1,
+                color: Colors.grey.withOpacity(0.1),
+                margin: const EdgeInsets.only(left: 60),
+              ),
+              _buildActionItem(
+                context,
+                icon: Icons.payment_rounded,
+                title: 'Activer les paiements',
+                subtitle: 'Recevez vos revenus directement',
+                color: Theme.of(context).colorScheme.primary,
+                onTap: () {},
+                showDivider: false,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Section Marketing/Croissance (Violet Yango)
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3E5F5), // Violet très clair
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: _buildActionItem(
+            context,
+            icon: Icons.auto_graph_rounded,
+            title: 'Attirer plus de clients',
+            subtitle: 'Concluez 1 transaction par semaine...',
+            color: const Color(0xFF9C27B0), // Violet
+            onTap: () => MainScreenNavigator.of(context)?.navigateToTab(1),
+            showDivider: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+    bool showDivider = true,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.grey[400],
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
   Widget _buildPerformanceCard(
     BuildContext context,
     String title,
     String value,
     IconData icon,
   ) {
+    // Get color based on icon type
+    Color iconColor;
+    Color bgColor;
+    
+    if (icon == Icons.home_rounded) {
+      iconColor = Theme.of(context).colorScheme.primary; // Bleu
+      bgColor = const Color(0xFFE3F2FD);
+    } else if (icon == Icons.calendar_month_rounded) {
+      iconColor = Colors.green; // Vert
+      bgColor = const Color(0xFFE8F5E9);
+    } else if (icon == Icons.message_rounded) {
+      iconColor = const Color(0xFF00BCD4); // Cyan
+      bgColor = const Color(0xFFE0F7FA);
+    } else {
+      iconColor = const Color(0xFFE91E63); // Rose pour avis
+      bgColor = const Color(0xFFFCE4EC);
+    }
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: const Color(0xFFF7F9FC),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: Colors.white,
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 20,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.7),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
           ),
         ],
@@ -697,45 +1013,53 @@ class DashboardScreen extends StatelessWidget {
     {bool isHighlighted = false}
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isHighlighted 
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.05)
             : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: isHighlighted 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+              : Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: isHighlighted 
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.onSurfaceVariant,
-            size: 24,
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: isHighlighted 
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+              const Spacer(),
+              if (isHighlighted)
+                 Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Theme.of(context).colorScheme.primary),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            '${NumberFormat.compact().format(amount)} FCFA',
+            '${NumberFormat.compact().format(amount)} F',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontSize: 18,
                   color: isHighlighted 
                       ? Theme.of(context).colorScheme.primary
                       : null,
                 ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
                 ),
           ),
         ],
@@ -757,30 +1081,33 @@ class DashboardScreen extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Tendances',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'Tendances',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.show_chart,
-                      size: 48,
-                      color: Colors.grey.withOpacity(0.5),
+                      size: 40,
+                      color: Colors.grey.withOpacity(0.3),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
                       'Pas de données de tendances disponibles',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey,
                       ),
                     ),
@@ -1227,12 +1554,13 @@ class DashboardScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Text(
                         'Résidences par région',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1333,13 +1661,10 @@ class DashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.2),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1366,7 +1691,7 @@ class DashboardScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey.shade700,
                   ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -1568,7 +1893,27 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewsSection(BuildContext context) {
+  /// Retourne le libellé de la note (cohérent avec la valeur : 0 = aucune note).
+  static String _ratingLabel(double rating) {
+    if (rating <= 0) return 'Aucune note';
+    if (rating < 2) return 'Mauvais';
+    if (rating < 3) return 'Moyen';
+    if (rating < 4) return 'Bien';
+    if (rating < 4.5) return 'Bon';
+    return 'Excellent';
+  }
+
+  static Color _ratingLabelColor(double rating) {
+    if (rating <= 0) return Colors.grey;
+    if (rating < 2) return Colors.red;
+    if (rating < 3) return Colors.orange;
+    if (rating < 4) return Colors.amber;
+    if (rating < 4.5) return Colors.lightGreen;
+    return Colors.green;
+  }
+
+  Widget _buildReviewsSection(BuildContext context, double rating) {
+    final hasRating = rating > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1579,29 +1924,30 @@ class DashboardScreen extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 16),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-            ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.star, color: Colors.amber, size: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
+                    child: Icon(
+                      Icons.star,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 24,
+                    ),
+                  ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -1610,7 +1956,7 @@ class DashboardScreen extends StatelessWidget {
                           Row(
                             children: [
                               Text(
-                                '0.0',
+                                rating.toStringAsFixed(1),
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1620,9 +1966,9 @@ class DashboardScreen extends StatelessWidget {
                             ],
                           ),
                           Text(
-                            'Basé sur 0 avis',
+                            hasRating ? 'Basé sur les avis' : 'Aucun avis pour le moment',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey.shade600,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                         ],
@@ -1631,25 +1977,28 @@ class DashboardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: _ratingLabelColor(rating).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
+                          if (hasRating)
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: _ratingLabelColor(rating),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Bon',
+                          if (hasRating) const SizedBox(width: 4),
+                          Text(
+                            _ratingLabel(rating),
                             style: TextStyle(
-                              color: Colors.green,
+                              color: _ratingLabelColor(rating),
                               fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -1661,12 +2010,13 @@ class DashboardScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Text(
                         'Aucun avis à afficher',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1675,7 +2025,13 @@ class DashboardScreen extends StatelessWidget {
                       onPressed: () {
                         // Navigation vers la page des avis
                       },
-                      child: const Text('Voir tous les avis'),
+                      child: Text(
+                        'Voir tous les avis',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -1684,7 +2040,7 @@ class DashboardScreen extends StatelessWidget {
                   child: Icon(
                     Icons.rate_review_outlined,
                     size: 80,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1692,7 +2048,7 @@ class DashboardScreen extends StatelessWidget {
                   child: Text(
                     'Les avis de vos clients apparaîtront ici',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                     textAlign: TextAlign.center,
                   ),
@@ -1700,7 +2056,6 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
           ),
-        ),
       ],
     );
   }
@@ -1742,13 +2097,10 @@ class DashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1785,13 +2137,10 @@ class DashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1846,13 +2195,10 @@ class DashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2144,147 +2490,152 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  /// Section Pricing Dynamique
+  /// Section Pricing Dynamique — une seule couleur d’accent (primary) pour cohérence.
   Widget _buildPricingSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.trending_up, color: Colors.green, size: 20),
-                const SizedBox(width: 6),
-                const Expanded(
-                  child: Text(
-                    'Pricing Dynamique',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const PricingStatsScreen(),
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_up, color: primary, size: 20),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Pricing Dynamique',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.analytics_outlined, size: 14, color: Colors.blue),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'Détails',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const PricingStatsScreen(),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            
-            const Text(
-              'Optimisez vos revenus grâce au pricing intelligent',
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            
-            Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: _buildPricingQuickStat(
-                    'Économies clients',
-                    'Calculées automatiquement',
-                    Icons.savings,
-                    Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 1,
-                  child: _buildPricingQuickStat(
-                    'Méthodes optimisées',
-                    'MTN, Wave recommandés',
-                    Icons.payment,
-                    Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 12),
-            
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                  );
+                },
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.lightbulb_outline, color: Colors.orange),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Encouragez vos clients à utiliser MTN Money ou Wave pour réduire les frais',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.analytics_outlined, size: 14, color: primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Détails',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Optimisez vos revenus grâce au pricing intelligent',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPricingQuickStat(
+                  context,
+                  'Économies clients',
+                  'Calculées automatiquement',
+                  Icons.savings,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildPricingQuickStat(
+                  context,
+                  'Méthodes optimisées',
+                  'MTN, Wave recommandés',
+                  Icons.payment,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: primary.withOpacity(0.2)),
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                Icon(Icons.lightbulb_outline, color: primary, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Encouragez vos clients à utiliser MTN Money ou Wave pour réduire les frais',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: onSurfaceVariant,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPricingQuickStat(String title, String subtitle, IconData icon, Color color) {
+  Widget _buildPricingQuickStat(BuildContext context, String title, String subtitle, IconData icon) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: primary.withOpacity(0.06),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: primary.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 18),
+          Icon(icon, color: primary, size: 18),
           const SizedBox(height: 6),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: onSurfaceVariant,
+                ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),

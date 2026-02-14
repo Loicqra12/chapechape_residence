@@ -11,7 +11,7 @@ import 'package:chapechape_partner/core/blocs/message/message_bloc.dart';
 import 'package:chapechape_partner/core/blocs/reservation/reservation_bloc.dart';
 import 'package:chapechape_partner/core/blocs/notification/notification_bloc.dart';
 import 'package:chapechape_partner/core/blocs/notification/notification_state.dart';
-import 'package:chapechape_partner/presentation/screens/residences/edit_residence_screen.dart';
+import 'package:chapechape_partner/core/theme/colors.dart';
 import 'package:chapechape_partner/presentation/widgets/dashboard/dashboard_filter_sheet.dart';
 import 'package:chapechape_partner/presentation/widgets/messages/message_search_sheet.dart';
 import 'custom_sliver_app_bar.dart';
@@ -22,14 +22,14 @@ class ScreenAppBars {
       title: 'Historique de Sécurité',
       actions: [
         IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.white),
+          icon: const Icon(Icons.refresh, color: Color(0xFF1A1A1A)),
           onPressed: () {
             // Rafraîchir les données de sécurité
             // Cette fonctionnalité sera implémentée dans le bloc
           },
         ),
         IconButton(
-          icon: const Icon(Icons.help_outline, color: Colors.white),
+          icon: const Icon(Icons.help_outline, color: Color(0xFF1A1A1A)),
           onPressed: () {
             // Afficher l'aide sur la sécurité
             showDialog(
@@ -56,7 +56,7 @@ class ScreenAppBars {
 
   static CustomSliverAppBar getDashboardAppBar(BuildContext context) {
     return CustomSliverAppBar(
-      title: 'Tableau de bord',
+      title: 'Dashboard',
       actions: [
         BlocBuilder<NotificationBloc, NotificationState>(
           builder: (context, state) {
@@ -72,7 +72,7 @@ class ScreenAppBars {
                     width: 24,
                     height: 24,
                     colorFilter: const ColorFilter.mode(
-                      Colors.white,
+                      Color(0xFF1A1A1A), // Strict Black
                       BlendMode.srcATop,
                     ),
                   ),
@@ -87,9 +87,10 @@ class ScreenAppBars {
                     top: 8,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                       constraints: const BoxConstraints(
                         minWidth: 16,
@@ -116,7 +117,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A), // Strict Black
               BlendMode.srcATop,
             ),
           ),
@@ -130,7 +131,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A), // Strict Black
               BlendMode.srcATop,
             ),
           ),
@@ -175,7 +176,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -189,7 +190,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -203,7 +204,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -225,7 +226,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              AppColors.textPrimary,
               BlendMode.srcATop,
             ),
           ),
@@ -264,7 +265,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -409,30 +410,11 @@ class ScreenAppBars {
         ),
         IconButton(
           icon: SvgPicture.asset(
-            AppIcons.add,
-            width: 24,
-            height: 24,
-            colorFilter: const ColorFilter.mode(
-              Colors.white,
-              BlendMode.srcATop,
-            ),
-          ),
-          onPressed: () {
-            // Utiliser Navigator plutôt que GoRouter pour une meilleure compatibilité avec IndexedStack
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => EditResidenceScreen(),
-              ),
-            );
-          },
-        ),
-        IconButton(
-          icon: SvgPicture.asset(
             AppIcons.sort,
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -503,7 +485,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              AppColors.textPrimary,
               BlendMode.srcATop,
             ),
           ),
@@ -530,7 +512,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              AppColors.textPrimary,
               BlendMode.srcATop,
             ),
           ),
@@ -551,7 +533,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              AppColors.textPrimary,
               BlendMode.srcATop,
             ),
           ),
@@ -577,7 +559,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -597,7 +579,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),
@@ -625,7 +607,7 @@ class ScreenAppBars {
             width: 24,
             height: 24,
             colorFilter: const ColorFilter.mode(
-              Colors.white,
+              Color(0xFF1A1A1A),
               BlendMode.srcATop,
             ),
           ),

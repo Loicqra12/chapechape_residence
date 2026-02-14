@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
 import 'package:chapechape_client/presentation/widgets/custom_text_field.dart';
@@ -77,36 +79,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget _buildFormView(AuthState state) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(AppSpacing.lg),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
+              AppSpacing.verticalMd,
               Image.asset(
                 'assets/images/forgot_password.png',
                 height: 150,
               ),
-              const SizedBox(height: 30),
-              const Text(
+              AppSpacing.verticalLg,
+              Text(
                 'Mot de passe oublié ?',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.title,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
-              const Text(
+              AppSpacing.verticalMd,
+              Text(
                 'Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.',
-                style: TextStyle(
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Colors.grey,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 40),
+              AppSpacing.verticalXl,
               CustomTextField(
                 controller: _emailController,
                 labelText: 'Email',
@@ -115,18 +113,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 keyboardType: TextInputType.emailAddress,
                 validator: FormValidators.validateEmail,
               ),
-              const SizedBox(height: 30),
+              AppSpacing.verticalLg,
               CustomButton(
                 text: state is AuthLoading ? 'Envoi en cours...' : 'Envoyer le lien',
                 isLoading: state is AuthLoading,
                 onPressed: state is AuthLoading ? null : _submitForm,
               ),
-              const SizedBox(height: 20),
+              AppSpacing.verticalMd,
               TextButton(
                 onPressed: () => context.go('/login'),
-                child: const Text(
+                child: Text(
                   'Retour à la connexion',
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -140,7 +138,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Widget _buildSuccessView() {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -150,39 +148,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             size: 100,
             color: Colors.green,
           ),
-          const SizedBox(height: 30),
-          const Text(
+          AppSpacing.verticalLg,
+          Text(
             'Email envoyé !',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.title,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Text(
             'Nous avons envoyé un lien de réinitialisation à ${_emailController.text}. Veuillez vérifier votre boîte de réception.',
-            style: const TextStyle(
-              fontSize: 16,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.grey,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 40),
+          AppSpacing.verticalXl,
           CustomButton(
             text: 'Retour à la connexion',
             onPressed: () => context.go('/login'),
           ),
-          const SizedBox(height: 20),
+          AppSpacing.verticalMd,
           TextButton(
             onPressed: () {
               setState(() {
                 _emailSent = false;
               });
             },
-            child: const Text(
+            child: Text(
               'Essayer avec une autre adresse email',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
