@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/onesignal_service.dart';
 import 'package:chapechape_client/core/services/error_message_service.dart';
 
@@ -108,7 +110,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         actions: [
           if (_isLoading)
             const Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: SizedBox(
                 width: 20,
                 height: 20,
@@ -129,7 +131,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       body: _isLoading && _pushNotificationsEnabled == true
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               children: [
                 // Section Notifications générales
                 _buildSectionHeader('Notifications générales'),
@@ -148,7 +150,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   icon: Icons.email,
                 ),
                 
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 
                 // Section Types de notifications
                 _buildSectionHeader('Types de notifications'),
@@ -185,7 +187,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   enabled: _pushNotificationsEnabled,
                 ),
                 
-                const SizedBox(height: 24),
+                AppSpacing.verticalLg,
                 
                 // Section Paramètres avancés
                 _buildSectionHeader('Paramètres avancés'),
@@ -206,7 +208,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   enabled: _pushNotificationsEnabled,
                 ),
                 
-                const SizedBox(height: 32),
+                AppSpacing.verticalXl,
                 
                 // Bouton de test
                 if (_pushNotificationsEnabled)
@@ -219,34 +221,35 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     ),
                   ),
                 
-                const SizedBox(height: 16),
+                AppSpacing.verticalMd,
                 
                 // Informations
                 Card(
                   color: Colors.blue.shade50,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.cardPadding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             Icon(Icons.info, color: Colors.blue.shade700),
-                            const SizedBox(width: 8),
+                            SizedBox(width: AppSpacing.sm),
                             Text(
                               'Information',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Colors.blue.shade700,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        AppSpacing.verticalSm,
                         Text(
                           'Les notifications push nécessitent une connexion internet. '
                           'Vous pouvez modifier ces paramètres à tout moment.',
-                          style: TextStyle(color: Colors.blue.shade600),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.blue.shade600,
+                          ),
                         ),
                       ],
                     ),
@@ -259,7 +262,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: EdgeInsets.only(bottom: AppSpacing.md),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -279,7 +282,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     bool enabled = true,
   }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8.0),
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
       child: SwitchListTile(
         secondary: Icon(
           icon,
@@ -287,14 +290,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         ),
         title: Text(
           title,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: enabled ? null : Colors.grey,
             fontWeight: FontWeight.w500,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: enabled ? Colors.grey[600] : Colors.grey,
           ),
         ),

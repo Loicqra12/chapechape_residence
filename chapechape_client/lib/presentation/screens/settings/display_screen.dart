@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
 
 class DisplayScreen extends StatefulWidget {
@@ -82,13 +84,13 @@ class _DisplayScreenState extends State<DisplayScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.pagePadding,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16.0),
+                Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Personnalisez l\'apparence de l\'application selon vos préférences.',
-                    style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ),
                 
@@ -103,7 +105,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                   icon: Icons.light_mode,
                 ),
                 
-                const SizedBox(height: 12.0),
+                AppSpacing.verticalSmd,
                 
                 // Option de thème sombre
                 _buildThemeCard(
@@ -113,7 +115,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                   icon: Icons.dark_mode,
                 ),
                 
-                const SizedBox(height: 12.0),
+                AppSpacing.verticalSmd,
                 
                 // Option de thème du système
                 _buildThemeCard(
@@ -123,7 +125,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                   icon: Icons.settings_brightness,
                 ),
                 
-                const SizedBox(height: 24.0),
+                AppSpacing.verticalLg,
                 
                 // Section Taille du texte
                 _buildSectionHeader('Taille du texte'),
@@ -131,10 +133,10 @@ class _DisplayScreenState extends State<DisplayScreen> {
                 Card(
                   color: greyColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.cardPadding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -142,13 +144,12 @@ class _DisplayScreenState extends State<DisplayScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Icon(Icons.text_fields, color: orangeColor),
-                            const SizedBox(width: 16.0),
-                            const Expanded(
+                            SizedBox(width: AppSpacing.md),
+                            Expanded(
                               child: Text(
                                 'Taille du texte',
-                                style: TextStyle(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16.0,
                                 ),
                               ),
                             ),
@@ -161,10 +162,10 @@ class _DisplayScreenState extends State<DisplayScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16.0),
+                        AppSpacing.verticalMd,
                         Row(
                           children: [
-                            const Text('A', style: TextStyle(fontSize: 14.0)),
+                            Text('A', style: AppTextStyles.body),
                             Expanded(
                               child: Slider(
                                 value: _textSizeScale,
@@ -183,21 +184,23 @@ class _DisplayScreenState extends State<DisplayScreen> {
                                 },
                               ),
                             ),
-                            const Text('A', style: TextStyle(fontSize: 22.0)),
+                            Text('A', style: AppTextStyles.title),
                           ],
                         ),
-                        const SizedBox(height: 16.0),
+                        AppSpacing.verticalMd,
                         // Exemple de texte avec la taille sélectionnée
                         Container(
-                          padding: const EdgeInsets.all(12.0),
+                          padding: EdgeInsets.all(AppSpacing.smd),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                             border: Border.all(color: greyColor),
                           ),
                           child: Text(
                             'Voici un exemple de texte avec la taille sélectionnée.',
-                            style: TextStyle(fontSize: 16.0 * _textSizeScale),
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontSize: 16.0 * _textSizeScale,
+                            ),
                           ),
                         ),
                       ],
@@ -211,14 +214,10 @@ class _DisplayScreenState extends State<DisplayScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 18.0,
-          fontWeight: FontWeight.bold,
-          color: blackColor,
-        ),
+        style: AppTextStyles.subtitle.copyWith(color: blackColor),
       ),
     );
   }
@@ -235,20 +234,20 @@ class _DisplayScreenState extends State<DisplayScreen> {
       elevation: isSelected ? 2 : 0,
       color: isSelected ? goldColor.withOpacity(0.2) : greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         side: isSelected
             ? const BorderSide(color: goldColor, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         onTap: () => _saveTheme(theme),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8.0),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: isSelected ? goldColor : Colors.white,
                   shape: BoxShape.circle,
@@ -259,23 +258,21 @@ class _DisplayScreenState extends State<DisplayScreen> {
                   size: 28,
                 ),
               ),
-              const SizedBox(width: 16.0),
+              SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16.0,
                       ),
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey[700],
-                        fontSize: 14.0,
                       ),
                     ),
                   ],

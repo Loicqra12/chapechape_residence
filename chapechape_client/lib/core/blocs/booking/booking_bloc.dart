@@ -1,8 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/services/booking_service.dart';
 import 'package:chapechape_client/core/services/socket_service.dart';
-import 'package:chapechape_client/core/models/booking_model.dart';
-import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/core/models/residence_model.dart';
 import 'booking_event.dart';
 import 'booking_state.dart';

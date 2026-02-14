@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/blocs/notification/notification_bloc.dart';
 import '../../core/blocs/notification/notification_state.dart';
 import '../../core/blocs/notification/notification_event.dart';
@@ -96,7 +98,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           builder: (context, state) {
             if (state is NotificationLoading && state is! NotificationLoaded) {
               return ListView.builder(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 itemCount: 5,
                 itemBuilder: (context, index) => const NotificationItemSkeleton(),
               );
@@ -106,7 +108,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(),
-                    SizedBox(height: 16),
+                    AppSpacing.verticalMd,
                     Text('Action en cours...'),
                   ],
                 ),
@@ -132,7 +134,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     if (index == state.notifications.length) {
                       return const Center(
                         child: Padding(
-                          padding: EdgeInsets.all(16.0),
+                          padding: AppSpacing.cardPadding,
                           child: CircularProgressIndicator(),
                         ),
                       );
@@ -159,7 +161,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       background: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20.0),
+        padding: EdgeInsets.only(right: AppSpacing.lg20), // 20px pour espacement spécifique
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       direction: DismissDirection.endToStart,
@@ -177,12 +179,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             _handleNotificationNavigation(context, notification);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildNotificationIcon(notification.type),
-                const SizedBox(width: 16),
+                SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,9 +194,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Expanded(
                             child: Text(
                               notification.title,
-                              style: TextStyle(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                                fontSize: 16,
                               ),
                             ),
                           ),
@@ -209,22 +210,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: AppSpacing.xs),
                       Text(
                         notification.message,
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[700],
-                          fontSize: 14,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: AppSpacing.xs),
                       Text(
                         _formatTimestamp(notification.timestamp),
-                        style: TextStyle(
+                        style: AppTextStyles.caption.copyWith(
                           color: Colors.grey[600],
-                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -272,7 +271,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
     
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: iconColor.withOpacity(0.1),
         shape: BoxShape.circle,

@@ -9,6 +9,8 @@ import 'package:chapechape_client/core/blocs/user/user_event.dart';
 import 'package:chapechape_client/core/blocs/user/user_state.dart';
 import 'package:chapechape_client/core/constants/app_assets.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/presentation/widgets/phone_verification_widget.dart';
 import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
@@ -288,7 +290,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           // En-tête du profil avec photo
           Container(
-            padding: const EdgeInsets.only(top: 50.0, bottom: 20.0),
+            padding: EdgeInsets.only(top: AppSpacing.xxl40 + AppSpacing.xxs, bottom: AppSpacing.lg),
             decoration: const BoxDecoration(
               color: AppTheme.secondaryColor,
               borderRadius: BorderRadius.only(
@@ -321,63 +323,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 15),
+                SizedBox(height: AppSpacing.md15), // 15px pour espacement spécifique
                 // Nom complet
                 Text(
                   '${user.firstName} ${user.lastName}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 5),
+                SizedBox(height: AppSpacing.xs5), // 5px pour espacement spécifique
                 // Email
                 Text(
                   user.email,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 20),
+                AppSpacing.verticalLg,
               ],
             ),
           ),
 
           // Formulaire des informations
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: AppSpacing.cardPadding,
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_isVerifyingPhone) ...[  
-                    const SizedBox(height: 16),
-                    const Text(
+                    AppSpacing.verticalMd,
+                    Text(
                       'Vérification du numéro de téléphone',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: AppTextStyles.subtitle,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    AppSpacing.verticalSm,
+                    Text(
                       'Pour garantir la sécurité de votre compte et recevoir des notifications, veuillez vérifier votre numéro de téléphone.',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.verticalMd,
                     PhoneVerificationWidget(
                       initialPhoneNumber: _selectedPhoneNumber?.phoneNumber ?? '',
                       onVerificationSuccess: _onPhoneVerified,
                     ),
                   ] else ...[  
-                    const SizedBox(height: 16),
-                    const Text(
+                    AppSpacing.verticalMd,
+                    Text(
                       'Informations personnelles',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.subtitle,
                     ),
-                  const SizedBox(height: 20),
+                  AppSpacing.verticalLg,
                   
                   // Prénom
                   TextFormField(
@@ -385,7 +382,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: InputDecoration(
                       labelText: 'Prénom',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd - AppSpacing.xs),
                       ),
                       prefixIcon: const Icon(Icons.person),
                     ),
@@ -397,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 15),
+                  SizedBox(height: AppSpacing.md15), // 15px pour espacement spécifique
                   
                   // Nom
                   TextFormField(
@@ -405,7 +402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: InputDecoration(
                       labelText: 'Nom',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd - AppSpacing.xs),
                       ),
                       prefixIcon: const Icon(Icons.person),
                     ),
@@ -417,7 +414,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 15),
+                  SizedBox(height: AppSpacing.md15), // 15px pour espacement spécifique
                   
                   // Email
                   TextFormField(
@@ -425,13 +422,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd - AppSpacing.xs),
                       ),
                       prefixIcon: const Icon(Icons.email),
                     ),
                     enabled: false, // L'email ne peut pas être modifié
                   ),
-                  const SizedBox(height: 15),
+                  SizedBox(height: AppSpacing.md15), // 15px pour espacement spécifique
                   
                   // Téléphone avec widget avancé
                   if (_isEditing) ...[
@@ -454,13 +451,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       themeColor: Theme.of(context).primaryColor,
                     ),
                     if (!_phoneVerified) ...[
-                      const SizedBox(height: 8),
+                      AppSpacing.verticalSm,
                       ElevatedButton(
                         onPressed: _isPhoneValid ? _startPhoneVerification : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: AppSpacing.sm),
                         ),
                         child: const Text('Vérifier le numéro'),
                       ),
@@ -468,19 +465,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ] else ...[
                     // Affichage en lecture seule
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: AppSpacing.cardPadding,
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                       ),
                       child: Row(
                         children: [
                           const Icon(Icons.phone, color: Colors.grey),
-                          const SizedBox(width: 12),
+                          SizedBox(width: AppSpacing.smd),
                           Expanded(
                             child: Text(
                               _selectedPhoneNumber?.phoneNumber ?? 'Non renseigné',
-                              style: const TextStyle(fontSize: 16),
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
                           if (_phoneVerified)
@@ -489,7 +486,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 30),
+                  SizedBox(height: AppSpacing.xl30), // 30px pour espacement spécifique
                   
                   // Boutons d'action
                   Row(
@@ -501,22 +498,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: _saveProfile,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.secondaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                               ),
                             ),
-                            child: const Text('Enregistrer', style: TextStyle(color: Colors.black)),
+                            child: Text(
+                              'Enregistrer',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.black,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: AppSpacing.sm10), // 10px pour espacement spécifique
                         Expanded(
                           child: OutlinedButton(
                             onPressed: _toggleEdit,
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                               ),
                             ),
                             child: const Text('Annuler'),
@@ -528,19 +530,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: _toggleEdit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.secondaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                               ),
                             ),
-                            child: const Text('Modifier le profil', style: TextStyle(color: Colors.black)),
+                            child: Text(
+                              'Modifier le profil',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.black,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ],
                   ),
                   
-                  const SizedBox(height: 20),
+                  AppSpacing.verticalLg,
                   
                   // Autres options
                   _buildOptionTile(
@@ -624,7 +631,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: _logout,
                   ),
                   
-                  const SizedBox(height: 30),
+                  SizedBox(height: AppSpacing.xl30), // 30px pour espacement spécifique
                 ],
               ]),
             ),
@@ -651,7 +658,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(
         title,
-        style: TextStyle(
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: isDestructive ? Colors.red : Colors.black87,
           fontWeight: FontWeight.w500,
         ),

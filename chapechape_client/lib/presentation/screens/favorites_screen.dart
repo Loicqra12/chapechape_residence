@@ -7,6 +7,8 @@ import '../../core/blocs/favorite/favorite_event.dart';
 import '../../core/blocs/favorite/favorite_state.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../widgets/skeletons/residence_card_skeleton.dart';
 import 'residence_details_screen.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
@@ -36,7 +38,7 @@ class FavoritesScreen extends StatelessWidget {
           builder: (context, state) {
             if (state is FavoriteLoading) {
               return ListView.builder(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 itemCount: 3,
                 itemBuilder: (context, index) => const ResidenceCardSkeleton(),
               );
@@ -55,25 +57,26 @@ class FavoritesScreen extends StatelessWidget {
                       size: 64,
                       color: Colors.red[400],
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.verticalMd,
                     Text(
                       'Erreur',
-                      style: TextStyle(
-                        fontSize: 20,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.red[600],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                       child: Text(
                         state.message,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[700]),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[700],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    AppSpacing.verticalMd,
                     ElevatedButton(
                       onPressed: () {
                         context.read<FavoriteBloc>().add(const LoadFavorites());
@@ -102,9 +105,9 @@ class FavoritesScreen extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: goldColor,
           foregroundColor: blackColor,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: AppSpacing.buttonPadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
         ),
         onPressed: () => context.go('/home'),
@@ -119,7 +122,7 @@ class FavoritesScreen extends StatelessWidget {
         context.read<FavoriteBloc>().add(const LoadFavorites());
       },
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         itemCount: favorites.length,
         itemBuilder: (context, index) {
           final residence = favorites[index];
@@ -135,7 +138,7 @@ class FavoritesScreen extends StatelessWidget {
       background: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
+        padding: EdgeInsets.only(right: AppSpacing.md + AppSpacing.xs),
         child: const Icon(
           Icons.delete,
           color: Colors.white,
@@ -178,10 +181,10 @@ class FavoritesScreen extends StatelessWidget {
         );
       },
       child: Card(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: EdgeInsets.only(bottom: AppSpacing.md),
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: InkWell(
           onTap: () {
@@ -193,7 +196,7 @@ class FavoritesScreen extends StatelessWidget {
               ),
             );
           },
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -214,7 +217,7 @@ class FavoritesScreen extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.cardPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -224,8 +227,7 @@ class FavoritesScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             residence.name,
-                            style: const TextStyle(
-                              fontSize: 18,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                             maxLines: 1,
@@ -233,42 +235,42 @@ class FavoritesScreen extends StatelessWidget {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
                             color: residence.status == 'available' ? Colors.green : Colors.red,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           ),
                           child: Text(
                             residence.status == 'available' ? 'Disponible' : 'Indisponible',
-                            style: const TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.white,
-                              fontSize: 12,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     if (residence.location != null)
                       Row(
                         children: [
                           const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                          const SizedBox(width: 4),
+                          SizedBox(width: AppSpacing.xs),
                           Expanded(
                             child: Text(
                               residence.location!.displayAddress,
-                              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     Text(
                       '${residence.pricePerNight} FCFA / nuit',
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: goldColor,
                       ),

@@ -10,6 +10,8 @@ import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_ph
 import 'package:chapechape_client/core/models/phone_number.dart';
 
 import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 
 class PaymentScreen extends StatefulWidget {
   // Accepter soit reservationId (pour créer un paiement) soit paymentId (pour consulter un paiement)
@@ -408,7 +410,7 @@ class _PaymentScreenState extends State<PaymentScreen>
 
   Widget _buildPaymentForm() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: AppSpacing.cardPadding,
       child: Form(
         key: _formKey,
         child: Column(
@@ -416,11 +418,11 @@ class _PaymentScreenState extends State<PaymentScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildPaymentSummary(),
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             _buildPaymentMethodSelector(),
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             _buildPaymentDetailsForm(),
-            const SizedBox(height: 24),
+            AppSpacing.verticalLg,
             _buildConfirmButton(),
           ],
         ),
@@ -432,7 +434,7 @@ class _PaymentScreenState extends State<PaymentScreen>
     if (_paymentIntent == null && _payment == null) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Center(
             child: CircularProgressIndicator(),
           ),
@@ -448,7 +450,7 @@ class _PaymentScreenState extends State<PaymentScreen>
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -462,26 +464,26 @@ class _PaymentScreenState extends State<PaymentScreen>
               '${amount.toStringAsFixed(0)} FCFA',
               isTotal: true,
             ),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             const Divider(height: 1),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             _buildDetailRow(
               'Frais de service ChapeChape (10%)',
               '${commissionAmount.toStringAsFixed(0)} FCFA',
               isNegative: true,
             ),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             const Divider(
               indent: 16,
               endIndent: 16,
               color: Colors.grey,
             ),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             // Montant partenaire masqué pour l'utilisateur final
             if (_payment?.status != null)
               Column(
                 children: [
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   _buildDetailRow(
                     'Statut',
                     _payment!.status.displayName,
@@ -512,7 +514,7 @@ class _PaymentScreenState extends State<PaymentScreen>
             flex: 2,
             child: Text(
               label,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: isTotal || isSubtotal ? 16 : 14,
                 fontWeight:
                     isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
@@ -526,7 +528,7 @@ class _PaymentScreenState extends State<PaymentScreen>
             flex: 1,
             child: Text(
               value,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: isTotal || isSubtotal ? 16 : 14,
                 fontWeight:
                     isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
@@ -546,7 +548,7 @@ class _PaymentScreenState extends State<PaymentScreen>
     if (_acceptedMethods.isEmpty) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Center(
             child: Text(
               'Chargement des méthodes de paiement...',
@@ -559,7 +561,7 @@ class _PaymentScreenState extends State<PaymentScreen>
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -568,7 +570,7 @@ class _PaymentScreenState extends State<PaymentScreen>
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            AppSpacing.verticalSm,
             // Options de paiement Mobile Money
             if (_acceptedMethods.contains(PaymentMethod.orangeMoney))
               _buildPaymentMethodOption(
@@ -674,7 +676,7 @@ class _PaymentScreenState extends State<PaymentScreen>
 
       return Card(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,7 +686,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const Divider(),
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               AdvancedPhoneInputWidget(
                 label: 'Numéro de téléphone',
                 hint: 'Ex: +225 07 12 34 56 78',
@@ -701,7 +703,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                 },
                 themeColor: Theme.of(context).primaryColor,
               ),
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               Text(
                 'Vous recevrez une notification sur votre téléphone $providerName pour confirmer le paiement.',
                 style: const TextStyle(
@@ -717,7 +719,7 @@ class _PaymentScreenState extends State<PaymentScreen>
       // Pour les cartes bancaires, on utiliserait idéalement un widget spécifique pour saisir les informations de carte
       return Card(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,7 +729,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const Divider(),
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               Text(
                 'Vous serez redirigé vers une page sécurisée pour saisir les informations de votre carte bancaire.',
                 style: const TextStyle(
@@ -758,13 +760,12 @@ class _PaymentScreenState extends State<PaymentScreen>
     return ElevatedButton(
       onPressed: isDisabled ? null : _confirmPayment,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
         backgroundColor: isDisabled ? Colors.grey : AppTheme.primaryColor,
       ),
       child: Text(
         isDisabled ? 'Numéro de téléphone requis' : 'Confirmer le paiement',
-        style: TextStyle(
-          fontSize: 16,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.bold,
           color: isDisabled ? Colors.grey[600] : Colors.white,
         ),

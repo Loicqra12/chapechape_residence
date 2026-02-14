@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -67,21 +68,20 @@ class _WalletScreenState extends State<WalletScreen> {
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Solde disponible',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.verticalSm,
                   Row(
                     children: [
                       const Text(
@@ -99,7 +99,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                         ),
                         child: const Text('Recharger'),
@@ -111,7 +111,7 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Transactions récentes
           const Text(
@@ -121,7 +121,7 @@ class _WalletScreenState extends State<WalletScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.smd),
           
           // Message si aucune transaction
           Center(
@@ -168,30 +168,28 @@ class _WalletScreenState extends State<WalletScreen> {
           Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             color: AppTheme.secondaryColor,
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Points de fidélité',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.verticalSm,
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         '0 points',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           color: Colors.black,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Spacer(),
@@ -202,11 +200,10 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  SizedBox(height: AppSpacing.smd),
+                  Text(
                     '1 point = 10 FCFA de réduction',
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.black54,
                     ),
                   ),
@@ -215,17 +212,16 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Comment gagner des points
-          const Text(
+          Text(
             'Comment gagner des points',
-            style: TextStyle(
-              fontSize: 18,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.smd),
           
           _buildRewardMethod(
             icon: Icons.house,
@@ -257,7 +253,7 @@ class _WalletScreenState extends State<WalletScreen> {
     required String description,
   }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: AppSpacing.sm10), // 10px pour espacement spécifique
       elevation: 1,
       child: ListTile(
         leading: Icon(icon, color: AppTheme.primaryColor),

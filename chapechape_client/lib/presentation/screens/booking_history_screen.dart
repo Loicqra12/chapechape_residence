@@ -8,6 +8,8 @@ import 'package:chapechape_client/core/blocs/booking/booking_state.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
 
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -81,7 +83,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           _loadBookings();
         },
         child: ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.pagePadding,
           itemCount: bookings.length,
           itemBuilder: (context, index) {
             return _buildBookingCard(bookings[index]);
@@ -98,13 +100,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               size: 60,
               color: Colors.red,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Text(
               state.message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             ElevatedButton(
               onPressed: _loadBookings,
               style: ElevatedButton.styleFrom(
@@ -181,16 +183,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
             size: 80,
             color: Colors.grey[400],
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           ElevatedButton(
             onPressed: () {
               context.go('/home');
@@ -236,19 +237,19 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     }
     
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
       elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: InkWell(
         onTap: () {
           context.read<BookingBloc>().add(LoadBookingDetails(bookingId: booking.id));
           context.go('/bookings/${booking.id}');
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -258,36 +259,34 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                 children: [
                   Text(
                     'Réservation #${booking.id.substring(0, 8)}',
-                    style: const TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     ),
                     child: Text(
                       statusText,
-                      style: TextStyle(
+                      style: AppTextStyles.tag.copyWith(
                         color: statusColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
                     ),
                   ),
                 ],
               ),
               
-              const SizedBox(height: 12),
+              SizedBox(height: AppSpacing.smd),
               
               // Dates de séjour
               Row(
                 children: [
                   const Icon(Icons.date_range, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
+                  SizedBox(width: AppSpacing.sm),
                   Text(
                     '${DateFormat('dd MMM yyyy').format(booking.checkIn)} - ${DateFormat('dd MMM yyyy').format(booking.checkOut)}',
                     style: const TextStyle(
@@ -297,13 +296,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                 ],
               ),
               
-              const SizedBox(height: 8),
+              AppSpacing.verticalSm,
               
               // Nombre de personnes
               Row(
                 children: [
                   const Icon(Icons.people, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
+                  SizedBox(width: AppSpacing.sm),
                   Text(
                     '${booking.numberOfGuests} ${booking.numberOfGuests > 1 ? 'personnes' : 'personne'}',
                     style: const TextStyle(
@@ -313,20 +312,20 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                 ],
               ),
               
-              const SizedBox(height: 8),
+              AppSpacing.verticalSm,
               
               // Prix total
               Row(
                 children: [
                   const Icon(Icons.payment, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
+                  SizedBox(width: AppSpacing.sm),
                   Text(
                     NumberFormat.currency(
                       symbol: 'FCFA ',
                       decimalDigits: 0,
                       locale: 'fr_FR',
                     ).format(booking.totalPrice),
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryColor,
                     ),
@@ -336,13 +335,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               
               // Afficher la raison d'annulation si applicable
               if (isCancelled && booking.cancellationReason != null) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: AppSpacing.smd),
                 const Divider(),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(Icons.info, size: 16, color: Colors.red),
-                    const SizedBox(width: 8),
+                    SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         'Raison d\'annulation: ${booking.cancellationReason}',
@@ -358,7 +357,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               
               // Actions selon le statut
               if (isUpcoming && !isCancelled) ...[
-                const SizedBox(height: 16),
+                AppSpacing.verticalMd,
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -372,7 +371,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                       ),
                       child: const Text('Annuler'),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: AppSpacing.sm),
                     FilledButton(
                       onPressed: () {
                         context.go('/bookings/${booking.id}');
@@ -405,7 +404,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Êtes-vous sûr de vouloir annuler cette réservation ?'),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             TextField(
               controller: reasonController,
               decoration: const InputDecoration(

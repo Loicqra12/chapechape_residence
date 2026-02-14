@@ -9,6 +9,8 @@ import '../../core/services/onesignal_service.dart';
 import '../widgets/loading_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 
 class ChatScreen extends StatelessWidget {
   final ChatService chatService;
@@ -74,7 +76,7 @@ class ChatScreen extends StatelessWidget {
                       ),
                       title: Text(
                         _getConversationTitle(conversation),
-                        style: const TextStyle(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -86,7 +88,7 @@ class ChatScreen extends StatelessWidget {
                               lastMessage.content,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: !lastMessage.isRead
                                     ? Colors.black87
                                     : Colors.grey[600],
@@ -104,8 +106,7 @@ class ChatScreen extends StatelessWidget {
                           if (lastMessage != null)
                             Text(
                               _formatLastMessageTime(lastMessage.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
+                              style: AppTextStyles.caption.copyWith(
                                 color: !lastMessage.isRead
                                     ? Theme.of(context).primaryColor
                                     : Colors.grey[600],

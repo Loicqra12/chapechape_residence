@@ -28,7 +28,7 @@ class HealthCheckService {
     try {
       _lastServerCheck = DateTime.now();
       
-      // 🚀 Utiliser l'endpoint ping dédié depuis AppConfigManager
+      // Utiliser l'endpoint ping depuis AppConfigManager (production)
       final pingUrl = '${AppConfigManager.apiUrl}/ping';
       final response = await http.get(
         Uri.parse(pingUrl),

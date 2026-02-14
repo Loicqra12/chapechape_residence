@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 
 /// Écran générique pour afficher les états de réservation (rejetée, expirée, approuvée)
 class BookingStatusScreen extends StatelessWidget {
@@ -137,7 +138,7 @@ class BookingStatusScreen extends StatelessWidget {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -160,7 +161,7 @@ class BookingStatusScreen extends StatelessWidget {
                 ),
               ),
               
-              const SizedBox(height: 32),
+              AppSpacing.verticalXl,
               
               // Titre
               Text(
@@ -172,7 +173,7 @@ class BookingStatusScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               
               // Message explicatif
               Text(
@@ -183,17 +184,17 @@ class BookingStatusScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               
-              const SizedBox(height: 40),
+              AppSpacing.verticalXl,
               
               // Actions
               if (actions != null && actions!.isNotEmpty) ...[
                 ...actions!.map((action) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
+                  padding: EdgeInsets.only(bottom: AppSpacing.smd),
                   child: action,
                 )),
               ],
               
-              const SizedBox(height: 24),
+              AppSpacing.verticalLg,
               
               // Bouton retour à l'accueil (toujours présent)
               TextButton.icon(
@@ -238,9 +239,9 @@ class _ActionButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryColor,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
           ),
         ),
@@ -254,9 +255,9 @@ class _ActionButton extends StatelessWidget {
           label: Text(label),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
             side: BorderSide(color: AppTheme.primaryColor),
           ),

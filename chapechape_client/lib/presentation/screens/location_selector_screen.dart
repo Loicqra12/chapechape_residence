@@ -8,6 +8,8 @@ import '../../core/models/location_suggestion_model.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../widgets/multilevel_location_selector.dart';
 import '../widgets/common/empty_state_widget.dart';
@@ -139,7 +141,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
               },
               child: Text(
                 'Appliquer',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.primaryColor,
                   fontWeight: FontWeight.bold,
                 ),
@@ -149,7 +151,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -162,20 +164,19 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                 required: true,
               ),
               
-              const SizedBox(height: 24),
+              AppSpacing.verticalLg,
               
               // Localisations populaires
               Text(
                 'Localisations populaires',
                 semanticsLabel: 'Section des localisations les plus recherchées',
-                style: TextStyle(
-                  fontSize: context.responsiveFontSize(18),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
               
-              const SizedBox(height: 12),
+              AppSpacing.verticalSmd,
               
               // Affichage des localisations populaires
               Expanded(
@@ -191,7 +192,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                                 title: 'Aucune localisation trouvée',
                                 subtitle: 'Vérifiez votre connexion ou utilisez la recherche ci-dessus',
                                 fallbackIcon: Icons.location_off_outlined,
-                                padding: const EdgeInsets.all(24.0),
+                                padding: EdgeInsets.all(AppSpacing.lg),
                                 imageHeight: 150,
                               ),
                             ),
@@ -222,25 +223,23 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
             color: Colors.red,
             size: 48,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Text(
             'Impossible de charger les localisations',
-            style: TextStyle(
-              fontSize: context.responsiveFontSize(16),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           Text(
             'Vérifiez votre connexion et réessayez',
-            style: TextStyle(
-              fontSize: context.responsiveFontSize(14),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           ElevatedButton(
             onPressed: () {
               _logger.debug('Tentative de rechargement des localisations populaires');
@@ -249,7 +248,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
             ),
             child: const Text('Réessayer'),
           ),
@@ -265,9 +264,9 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
     
     return Card(
       elevation: 1,
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppSpacing.smd),
         side: BorderSide(
           color: isSelected ? AppTheme.primaryColor : Colors.transparent,
           width: 2,
@@ -276,9 +275,9 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
       color: isDarkMode ? Colors.grey[850] : Colors.white,
       child: InkWell(
         onTap: () => _selectPopularLocation(location),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppSpacing.smd),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.all(AppSpacing.smd),
           child: Row(
             children: [
               Icon(
@@ -286,15 +285,14 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                 color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
                 size: 24,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.smd),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       location.name,
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(16),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         color: isSelected ? AppTheme.primaryColor : isDarkMode ? Colors.white : Colors.black,
                       ),
@@ -302,8 +300,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                     ),
                     Text(
                       location.fullAddress,
-                      style: TextStyle(
-                        fontSize: context.responsiveFontSize(14),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
                       maxLines: 1,
@@ -314,15 +311,14 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: isDarkMode ? Colors.grey[700] : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppSpacing.smd),
                 ),
                 child: Text(
                   '${location.searchCount}+',
-                  style: TextStyle(
-                    fontSize: context.responsiveFontSize(12),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? Colors.white : Colors.grey[700],
                   ),

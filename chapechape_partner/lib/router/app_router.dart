@@ -253,8 +253,8 @@ class AppRouter {
       final prefs = await SharedPreferences.getInstance();
       final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
-      // Si authentifié, rediriger vers main sauf si déjà sur main
-      if (isAuthenticated && !state.matchedLocation.startsWith('/main')) {
+      // Si authentifié, quitter uniquement auth et onboarding (pas /residences/add, etc.)
+      if (isAuthenticated && (state.matchedLocation.startsWith('/auth') || state.matchedLocation == '/onboarding')) {
         return '/main';
       }
 

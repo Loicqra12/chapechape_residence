@@ -90,6 +90,14 @@ class _ResidencesViewState extends State<_ResidencesView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => EditResidenceScreen()),
+        ).then((_) => _loadResidences()),
+        tooltip: 'Ajouter une résidence',
+        child: const Icon(Icons.add),
+      ),
       body: CustomScrollView(
         slivers: [
           ScreenAppBars.getResidencesAppBar(context),

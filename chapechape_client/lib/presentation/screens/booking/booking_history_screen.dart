@@ -10,6 +10,7 @@ import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
@@ -114,9 +115,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                   icon: const Icon(Icons.search),
                   label: const Text('Trouver une résidence'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: AppSpacing.buttonPadding,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     ),
                   ),
                   onPressed: () => context.go('/residences'),
@@ -175,7 +176,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                 size: 64,
                 color: Colors.grey,
               ),
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               Text(
                 'Aucune réservation ${_getFilterText(filter)}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -183,7 +184,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              AppSpacing.verticalLg,
               ElevatedButton.icon(
                 onPressed: () {
                   context.go('/residences');
@@ -201,7 +202,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           _loadBookings();
         },
         child: ListView.builder(
-          padding: const EdgeInsets.all(8.0),
+          padding: EdgeInsets.all(AppSpacing.sm),
           itemCount: bookings.length,
           physics: const AlwaysScrollableScrollPhysics(),
           itemBuilder: (context, index) {
@@ -221,20 +222,20 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     final statusColor = _getStatusColor(booking.status);
     
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      margin: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.xs),
       child: Card(
         elevation: 2,
         child: InkWell(
           onTap: () {
             context.go('/booking-details/${booking.id}');
           },
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // En-tête coloré selon le statut
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: AppSpacing.buttonPadding,
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.2),
                   borderRadius: const BorderRadius.only(
@@ -250,26 +251,24 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                           flex: 3,
                           child: Text(
                             booking.residenceName ?? 'Résidence non spécifiée',
-                            style: const TextStyle(
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
                             ),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: AppSpacing.sm),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
                             color: statusColor,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd + AppSpacing.sm),
                           ),
                           child: Text(
                             _getStatusText(booking.status),
-                            style: const TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.white,
-                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -278,7 +277,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                     ),
                     // Timer compact pour les réservations avec timers actifs
                     if (BookingHelpers.hasActiveTimer(booking)) ...[
-                      const SizedBox(height: 8),
+                      AppSpacing.verticalSm,
                       Align(
                         alignment: Alignment.centerRight,
                         child: ReservationTimerWidget(
@@ -293,7 +292,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               
               // Détails de la réservation
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.cardPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -301,17 +300,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                       Icons.calendar_today,
                       '${dateFormat.format(booking.checkIn)} - ${dateFormat.format(booking.checkOut)}',
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     _buildInfoRow(
                       Icons.people,
                       '${booking.numberOfGuests} personnes',
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     _buildInfoRow(
                       Icons.nights_stay,
                       '${booking.nights} nuits',
                     ),
-                    const Divider(height: 24),
+                    Divider(height: AppSpacing.lg),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -328,7 +327,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -337,16 +336,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
                             color: booking.isPaid ? AppTheme.successColor : Colors.orange,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd + AppSpacing.sm),
                           ),
                           child: Text(
                             booking.isPaid ? 'Payé' : 'En attente',
-                            style: const TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.white,
-                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -359,10 +357,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               
               // Actions
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
                 child: Wrap(
                   alignment: WrapAlignment.end,
-                  spacing: 8,
+                  spacing: AppSpacing.sm,
                   children: [
                     TextButton(
                       onPressed: () {
@@ -409,7 +407,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     return Row(
       children: [
         Icon(icon, size: 16, color: Colors.grey),
-        const SizedBox(width: 8),
+        SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             text,
@@ -509,7 +507,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -517,7 +515,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
             width: 140,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(

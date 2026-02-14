@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/utils/responsive_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -121,20 +123,19 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
         children: [
           Text(
             'Questions fréquentes',
-            style: TextStyle(
+            style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(22),
-              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           Text(
             'Trouvez rapidement des réponses aux questions les plus courantes',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: context.responsiveFontSize(16),
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Liste des catégories de FAQ
           ...List.generate(_faqCategories.length, (index) {
@@ -146,35 +147,34 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             );
           }),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Pas trouvé votre réponse ?
           Card(
             elevation: 2,
             color: Colors.grey[100],
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Vous n\'avez pas trouvé votre réponse ?',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  AppSpacing.verticalSmd,
                   ElevatedButton(
                     onPressed: () {
                       _tabController.animateTo(1); // Aller à l'onglet Contact
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.smd, horizontal: AppSpacing.md),
                     ),
                     child: const Text('Contactez-nous'),
                   ),
@@ -198,24 +198,23 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
         Row(
           children: [
             Icon(icon, color: AppTheme.primaryColor),
-            const SizedBox(width: 8),
+            SizedBox(width: AppSpacing.sm),
             Text(
               title,
-              style: TextStyle(
+              style: AppTextStyles.subtitle.copyWith(
                 fontSize: context.responsiveFontSize(18),
-                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        AppSpacing.verticalSmd,
         ...List.generate(questions.length, (index) {
           return _buildFaqItem(
             question: questions[index]['question'],
             answer: questions[index]['answer'],
           );
         }),
-        const SizedBox(height: 24),
+        AppSpacing.verticalLg,
       ],
     );
   }
@@ -225,21 +224,21 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
     required String answer,
   }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: AppSpacing.smd),
       elevation: 1,
       child: ExpansionTile(
         title: Text(
           question,
-          style: const TextStyle(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: AppSpacing.cardPadding,
             child: Text(
               answer,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.grey[700],
               ),
             ),
@@ -257,38 +256,34 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
         children: [
           Text(
             'Contactez-nous',
-            style: TextStyle(
+            style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(22),
-              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           Text(
             'Notre équipe est à votre disposition pour vous aider',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: context.responsiveFontSize(16),
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Moyens de contact directs
           Card(
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: EdgeInsets.only(bottom: AppSpacing.md),
             elevation: 2,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Contact direct',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: AppTextStyles.subtitle,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   _buildContactMethod(
                     icon: Icons.phone,
                     title: 'Par téléphone',
@@ -317,20 +312,17 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
           // Formulaire de contact
           Card(
             elevation: 2,
-            margin: const EdgeInsets.only(bottom: 24),
+            margin: EdgeInsets.only(bottom: AppSpacing.lg),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Formulaire de contact',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: AppTextStyles.subtitle,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Catégorie
                   DropdownButtonFormField<String>(
@@ -358,7 +350,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Sujet
                   TextFormField(
@@ -368,7 +360,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Message
                   TextFormField(
@@ -380,7 +372,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                     ),
                     maxLines: 5,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Bouton d'envoi
                   SizedBox(
@@ -395,7 +387,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                       ),
                       child: const Text('Envoyer'),
                     ),
@@ -417,37 +409,33 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
         children: [
           Text(
             'Résolution des litiges',
-            style: TextStyle(
+            style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(22),
-              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          AppSpacing.verticalSm,
           Text(
             'Signalez un problème avec une réservation ou un paiement',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: context.responsiveFontSize(16),
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Formulaire de litige
           Card(
             elevation: 2,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Nouveau litige',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: AppTextStyles.subtitle,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Type de litige
                   DropdownButtonFormField<String>(
@@ -475,7 +463,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Sujet
                   TextFormField(
@@ -485,7 +473,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Détails
                   TextFormField(
@@ -497,7 +485,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                     ),
                     maxLines: 5,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   
                   // Bouton d'envoi
                   SizedBox(
@@ -512,7 +500,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                       ),
                       child: const Text('Soumettre'),
                     ),
@@ -522,31 +510,30 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             ),
           ),
           
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           
           // Informations sur le processus
           Card(
             elevation: 1,
             color: Colors.grey[100],
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Processus de résolution',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  AppSpacing.verticalSmd,
+                  Text(
                     '1. Soumettez votre litige via ce formulaire\n'
                     '2. Notre équipe examinera votre cas sous 48h\n'
                     '3. Vous recevrez une réponse par email\n'
                     '4. Si nécessaire, une médiation sera proposée',
-                    style: TextStyle(height: 1.5),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
                   ),
                 ],
               ),
@@ -566,25 +553,24 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
     return InkWell(
       onTap: action,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Row(
           children: [
             Icon(icon, color: AppTheme.primaryColor, size: 28),
-            const SizedBox(width: 16),
+            SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey[700],
                     ),
                   ),

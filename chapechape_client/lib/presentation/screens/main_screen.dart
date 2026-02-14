@@ -16,6 +16,7 @@ import '../widgets/connectivity_banner.dart';
 import 'offline_screen.dart';
 import '../../core/models/city.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/optimized_connectivity_service.dart';
 import '../../core/blocs/notification/notification_bloc.dart';
@@ -125,7 +126,7 @@ class _MainScreenState extends State<MainScreen> {
           color: isHomeScreen ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
         ),
         leading: Container(
-          margin: const EdgeInsets.all(8),
+          margin: EdgeInsets.all(AppSpacing.sm),
           decoration: isHomeScreen ? BoxDecoration(
             color: Colors.black.withOpacity(0.2),
             shape: BoxShape.circle,
@@ -174,12 +175,11 @@ class _MainScreenState extends State<MainScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.location_on, size: 16, color: isHomeScreen ? Colors.white : AppTheme.primaryColor),
-                  const SizedBox(width: 4),
+                  SizedBox(width: AppSpacing.xs),
                   Flexible(
                     child: Text(
                       _selectedCity!.name,
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: isHomeScreen ? Colors.white : Colors.grey[800],
                         fontWeight: FontWeight.w600,
                       ),
@@ -208,9 +208,9 @@ class _MainScreenState extends State<MainScreen> {
           duration: const Duration(milliseconds: 200),
           opacity: _isNavBarVisible ? 1.0 : 0.0,
           child: Container(
-            margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
+            margin: EdgeInsets.only(bottom: AppSpacing.lg, left: AppSpacing.lg, right: AppSpacing.lg),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.smd),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.15),
@@ -220,7 +220,7 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.smd),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: NavigationBar(
@@ -306,7 +306,7 @@ class _MainScreenState extends State<MainScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.cardPadding,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(
@@ -327,24 +327,23 @@ class _MainScreenState extends State<MainScreen> {
             Container(
               width: 40,
               height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
+              margin: EdgeInsets.only(bottom: AppSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(AppSpacing.xs / 2),
               ),
             ),
             // Sélecteur de langue
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 children: [
                   Icon(Icons.language, color: Colors.grey[700]),
-                  const SizedBox(width: 16),
+                  SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
                       'Langue',
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.grey[800],
                       ),
                     ),
@@ -356,24 +355,23 @@ class _MainScreenState extends State<MainScreen> {
             const Divider(),
             // Sélecteur de localisation
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.location_on, color: Colors.grey[700]),
-                  const SizedBox(width: 16),
+                  SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Localisation',
-                          style: TextStyle(
-                            fontSize: 16,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: Colors.grey[800],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        AppSpacing.verticalSm,
                         LocationSelectorWidget(
                           // À implémenter: support pour le sélecteur hiérarchique multiniveau
                           // (pays, région, ville, quartier) selon les spécifications du projet
@@ -394,7 +392,7 @@ class _MainScreenState extends State<MainScreen> {
                                 duration: const Duration(seconds: 2),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                 ),
                               ),
                             );

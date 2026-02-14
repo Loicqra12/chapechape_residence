@@ -61,6 +61,7 @@ class AppTheme {
     fontWeight: FontWeight.bold,
     color: textPrimary,
     letterSpacing: -0.5,
+    height: 1.2, // Line-height 120% pour les grands titres
   );
 
   static TextStyle get headingMedium => TextStyle(
@@ -69,6 +70,7 @@ class AppTheme {
     fontWeight: FontWeight.bold,
     color: textPrimary,
     letterSpacing: -0.3,
+    height: 1.3, // Line-height 130% pour les titres moyens
   );
 
   static TextStyle get headingSmall => TextStyle(
@@ -76,6 +78,7 @@ class AppTheme {
     fontSize: 20,
     fontWeight: FontWeight.bold,
     color: textPrimary,
+    height: 1.3, // Line-height 130% pour les petits titres
   );
 
   static TextStyle get bodyLarge => TextStyle(
@@ -83,6 +86,7 @@ class AppTheme {
     fontSize: 18,
     color: textPrimary,
     letterSpacing: 0.2,
+    height: 1.5, // Line-height 150% pour le texte principal
   );
 
   static TextStyle get bodyMedium => TextStyle(
@@ -90,18 +94,21 @@ class AppTheme {
     fontSize: 16,
     color: textPrimary,
     letterSpacing: 0.1,
+    height: 1.5, // Line-height 150% pour le texte standard
   );
 
   static TextStyle get bodySmall => TextStyle(
     fontFamily: 'Poppins',
     fontSize: 14,
     color: textPrimary,
+    height: 1.4, // Line-height 140% pour les petits textes
   );
 
   static TextStyle get labelSmall => TextStyle(
     fontFamily: 'Poppins',
     fontSize: 12,
     color: textSecondary,
+    height: 1.4, // Line-height 140% pour les labels
   );
 
   static TextStyle get button => TextStyle(
@@ -109,6 +116,7 @@ class AppTheme {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: textLight,
+    height: 1.5, // Line-height 150% pour les boutons
   );
 
   static TextStyle get errorTextStyle => TextStyle(
@@ -116,6 +124,7 @@ class AppTheme {
     fontSize: 14,
     color: errorColor,
     fontWeight: FontWeight.w500,
+    height: 1.5, // Line-height 150% pour les messages d'erreur
   );
 
   // Styles de boutons
@@ -207,14 +216,45 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: backgroundColor,
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(fontFamily: 'Poppins'),
-        headlineMedium: TextStyle(fontFamily: 'Poppins'),
-        headlineSmall: TextStyle(fontFamily: 'Poppins'),
-        bodyLarge: TextStyle(fontFamily: 'Poppins'),
-        bodyMedium: TextStyle(fontFamily: 'Poppins'),
-        bodySmall: TextStyle(fontFamily: 'Poppins'),
-        labelSmall: TextStyle(fontFamily: 'Poppins'),
+      textTheme: TextTheme(
+        headlineLarge: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          height: 1.2,
+        ),
+        headlineMedium: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          height: 1.3,
+        ),
+        headlineSmall: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          height: 1.3,
+        ),
+        bodyLarge: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 18,
+          height: 1.5,
+        ),
+        bodyMedium: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 16,
+          height: 1.5,
+        ),
+        bodySmall: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 14,
+          height: 1.4,
+        ),
+        labelSmall: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          height: 1.4,
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
@@ -373,14 +413,52 @@ class AppTheme {
         brightness: Brightness.dark,
       ),
       scaffoldBackgroundColor: const Color(0xFF1A1A1A),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(fontFamily: 'Poppins'),
-        headlineMedium: TextStyle(fontFamily: 'Poppins'),
-        headlineSmall: TextStyle(fontFamily: 'Poppins'),
-        bodyLarge: TextStyle(fontFamily: 'Poppins'),
-        bodyMedium: TextStyle(fontFamily: 'Poppins'),
-        bodySmall: TextStyle(fontFamily: 'Poppins'),
-        labelSmall: TextStyle(fontFamily: 'Poppins'),
+      textTheme: TextTheme(
+        headlineLarge: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          height: 1.2,
+          color: textLight,
+        ),
+        headlineMedium: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          height: 1.3,
+          color: textLight,
+        ),
+        headlineSmall: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          height: 1.3,
+          color: textLight,
+        ),
+        bodyLarge: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 18,
+          height: 1.5,
+          color: textLight,
+        ),
+        bodyMedium: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 16,
+          height: 1.5,
+          color: textLight,
+        ),
+        bodySmall: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 14,
+          height: 1.4,
+          color: textLight,
+        ),
+        labelSmall: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          height: 1.4,
+          color: textLight,
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: const Color(0xFF2C2C2C),

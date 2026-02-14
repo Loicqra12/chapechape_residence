@@ -9,6 +9,7 @@ import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/presentation/widgets/date_range_picker_widget.dart';
 import 'package:chapechape_client/presentation/widgets/booking_modification_dialog.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
 
 class BookingModifyScreen extends StatefulWidget {
   final String bookingId;
@@ -206,7 +207,7 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.cardPadding,
             child: Form(
               key: _formKey,
               child: Column(
@@ -226,7 +227,7 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
                       }
                     },
                   ),
-                  const SizedBox(height: 24),
+                  AppSpacing.verticalLg,
                   ListTile(
                     title: const Text('Nombre de voyageurs'),
                     trailing: DropdownButton<int>(
@@ -244,14 +245,14 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  AppSpacing.verticalXl,
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleSubmit,
                     child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
+                        ? SizedBox(
+                            height: AppSpacing.md + AppSpacing.xs,
+                            width: AppSpacing.md + AppSpacing.xs,
+                            child: const CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),

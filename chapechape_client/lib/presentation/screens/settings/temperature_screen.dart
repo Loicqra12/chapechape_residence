@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
 
 class TemperatureScreen extends StatefulWidget {
@@ -63,14 +65,14 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.pagePadding,
               children: [
                 // En-tête explicatif
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16.0),
+                Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Choisissez votre unité de température préférée. Cette unité sera utilisée partout dans l\'application.',
-                    style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ),
                 
@@ -83,7 +85,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                   icon: Icons.thermostat,
                 ),
                 
-                const SizedBox(height: 12.0),
+                AppSpacing.verticalSmd,
                 
                 // Carte pour l'unité Fahrenheit
                 _buildUnitCard(
@@ -94,46 +96,42 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                   icon: Icons.thermostat_outlined,
                 ),
                 
-                const SizedBox(height: 24.0),
+                AppSpacing.verticalLg,
                 
                 // Exemple de conversion
                 Card(
                   color: greyColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: AppSpacing.cardPadding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Formule de conversion',
-                          style: TextStyle(
-                            fontSize: 18.0,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: AppTextStyles.subtitle,
                         ),
-                        const SizedBox(height: 8.0),
-                        const Text(
+                        AppSpacing.verticalSm,
+                        Text(
                           '• Celsius à Fahrenheit: °F = (°C × 9/5) + 32\n'
                           '• Fahrenheit à Celsius: °C = (°F - 32) × 5/9',
-                          style: TextStyle(fontSize: 14.0),
+                          style: AppTextStyles.body,
                         ),
-                        const SizedBox(height: 16.0),
-                        const Text(
+                        AppSpacing.verticalMd,
+                        Text(
                           'Exemples:',
-                          style: TextStyle(
-                            fontSize: 16.0,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8.0),
+                        AppSpacing.verticalSm,
                         Text(
                           '• 0°C = 32°F (Point de congélation de l\'eau)\n'
                           '• 20°C = 68°F (Température ambiante confortable)\n'
                           '• 37°C = 98.6°F (Température corporelle normale)',
-                          style: TextStyle(fontSize: 14.0, color: Colors.grey[700]),
+                          style: AppTextStyles.body.copyWith(color: Colors.grey[700]),
                         ),
                       ],
                     ),
@@ -157,20 +155,20 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
       elevation: isSelected ? 2 : 0,
       color: isSelected ? goldColor.withOpacity(0.2) : greyColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         side: isSelected
             ? const BorderSide(color: goldColor, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         onTap: () => _saveTemperatureUnit(unit),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.cardPadding,
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8.0),
+                padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: isSelected ? goldColor : Colors.white,
                   shape: BoxShape.circle,
@@ -181,37 +179,31 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                   size: 28,
                 ),
               ),
-              const SizedBox(width: 16.0),
+              SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16.0,
                       ),
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14.0,
-                      ),
+                      style: AppTextStyles.body.copyWith(color: Colors.grey[700]),
                     ),
                   ],
                 ),
               ),
               Text(
                 example,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
+                style: AppTextStyles.subtitle.copyWith(
                   color: isSelected ? orangeColor : Colors.grey[700],
                 ),
               ),
-              const SizedBox(width: 8.0),
+              SizedBox(width: AppSpacing.sm),
               if (isSelected)
                 const Icon(
                   Icons.check_circle,

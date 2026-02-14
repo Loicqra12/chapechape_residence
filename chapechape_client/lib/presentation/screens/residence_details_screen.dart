@@ -17,6 +17,8 @@ import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../screens/booking_screen.dart';
 import '../../core/blocs/booking/booking_bloc.dart';
 import '../../core/services/booking_service.dart';
@@ -146,12 +148,12 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: Colors.black.withOpacity(0.6),
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                       ),
-                                      padding: const EdgeInsets.all(4),
+                                      padding: EdgeInsets.all(AppSpacing.xs),
                                       child: Text(
                                         "+${residence.images.length - 1}",
-                                        style: const TextStyle(
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -183,7 +185,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                                       color: Colors.black26,
                                                       shape: BoxShape.circle,
                                                     ),
-                                                    padding: const EdgeInsets.all(8),
+                                                    padding: EdgeInsets.all(AppSpacing.sm),
                                                     child: const Icon(
                                                       Icons.arrow_back_ios,
                                                       color: Colors.white,
@@ -216,7 +218,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                                       color: Colors.black26,
                                                       shape: BoxShape.circle,
                                                     ),
-                                                    padding: const EdgeInsets.all(8),
+                                                    padding: EdgeInsets.all(AppSpacing.sm),
                                                     child: const Icon(
                                                       Icons.arrow_forward_ios,
                                                       color: Colors.white,
@@ -243,16 +245,16 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                                   decoration: BoxDecoration(
                                     color: Colors.black.withOpacity(0.6),
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                                   ),
                                   child: SmoothPageIndicator(
                                     controller: _pageController,
                                     count: residence.images.length,
-                                    effect: const ExpandingDotsEffect(
-                                      spacing: 8.0,
+                                    effect: ExpandingDotsEffect(
+                                      spacing: AppSpacing.sm,
                                       radius: 4.0,
                                       dotWidth: 8.0,
                                       dotHeight: 8.0,
@@ -286,7 +288,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                       ],
                     ),
                     leading: Container(
-                      margin: const EdgeInsets.all(8),
+                      margin: EdgeInsets.all(AppSpacing.sm),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.8),
                         shape: BoxShape.circle,
@@ -305,7 +307,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         builder: (context, authState) {
                           final bool isUserAuthenticated = _isUserAuthenticated(context);
                           return Container(
-                            margin: const EdgeInsets.all(8),
+                            margin: EdgeInsets.all(AppSpacing.sm),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.8),
                               shape: BoxShape.circle,
@@ -331,7 +333,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         },
                       ),
                       Container(
-                        margin: const EdgeInsets.all(8),
+                        margin: EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.8),
                           shape: BoxShape.circle,
@@ -349,7 +351,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                   
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: AppSpacing.cardPadding,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -362,12 +364,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                   children: [
                                     Text(
                                       residence.name,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: Theme.of(context).textTheme.headlineMedium,
                                     ),
-                                    const SizedBox(height: 5),
+                                    SizedBox(height: AppSpacing.xs5), // 5px pour espacement spécifique
                                     FittedBox(
                                       fit: BoxFit.scaleDown,
                                       alignment: Alignment.centerLeft,
@@ -383,12 +382,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                             itemCount: 5,
                                             itemSize: 16.0,
                                           ),
-                                          const SizedBox(width: 4),
+                                          SizedBox(width: AppSpacing.xs),
                                           Text(
                                             "(${residence.reviewCount} avis)",
-                                            style: TextStyle(
+                                            style: AppTextStyles.caption.copyWith(
                                               color: Colors.grey[600],
-                                              fontSize: 12,
                                             ),
                                           ),
                                         ],
@@ -404,17 +402,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     children: [
                                       Text(
                                         _formatCurrency(residence.price, currency: residence.currency),
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
+                                        style: AppTextStyles.title.copyWith(
                                           color: Colors.blueAccent,
                                         ),
                                       ),
-                                      const SizedBox(width: 5),
+                                      SizedBox(width: AppSpacing.xs5), // 5px pour espacement spécifique
                                       Text(
                                         _formatPeriod(residence.pricePeriod),
-                                        style: TextStyle(
-                                          fontSize: 14,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: Colors.grey[700],
                                         ),
                                       ),
@@ -426,17 +421,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                       children: [
                                         Text(
                                           residence.formattedDiscountPrice,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
+                                          style: AppTextStyles.subtitle.copyWith(
                                             color: Colors.green,
                                           ),
                                         ),
-                                        const SizedBox(width: 4),
+                                        SizedBox(width: AppSpacing.xs),
                                         Text(
                                           residence.formattedPrice,
-                                          style: const TextStyle(
-                                            fontSize: 14,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                             decoration: TextDecoration.lineThrough,
                                             color: Colors.grey,
                                           ),
@@ -446,21 +438,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     
                                   if (residence.hasDiscount)
                                     Container(
-                                      margin: const EdgeInsets.only(top: 4),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
+                                      margin: EdgeInsets.only(top: AppSpacing.xs),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: AppSpacing.xs6,
+                                        vertical: AppSpacing.xxs,
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.red,
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(AppSpacing.xs),
                                       ),
                                       child: Text(
                                         residence.discountBadge,
-                                        style: const TextStyle(
+                                        style: AppTextStyles.tag.copyWith(
                                           color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ),
@@ -469,23 +459,22 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ],
                           ),
                           
-                          const SizedBox(height: 16),
+                          AppSpacing.verticalMd,
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: EdgeInsets.all(AppSpacing.smd),
                             decoration: BoxDecoration(
                               color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                             ),
                             child: Row(
                               children: [
                                 const Icon(Icons.location_on, color: Colors.grey, size: 20),
-                                const SizedBox(width: 8),
+                                SizedBox(width: AppSpacing.sm),
                                 Expanded(
                                   child: Text(
                                     residence.location['displayAddress'] ?? residence.address,
-                                    style: const TextStyle(
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: Colors.black87,
-                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
@@ -493,14 +482,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ),
                           ),
                           
-                          const SizedBox(height: 16),
+                          AppSpacing.verticalMd,
                           Card(
                             elevation: 2,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.all(16),
+                              padding: AppSpacing.cardPadding,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 children: [
@@ -536,14 +525,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ),
                           ),
                           
-                          const SizedBox(height: 16),
+                          AppSpacing.verticalMd,
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: residence.isAvailable ? Colors.green[100] : Colors.red[100],
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd + AppSpacing.sm),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -553,10 +542,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                       size: 16,
                                       color: residence.isAvailable ? Colors.green[800] : Colors.red[800],
                                     ),
-                                    const SizedBox(width: 4),
+                                    SizedBox(width: AppSpacing.xs),
                                     Text(
                                       residence.isAvailable ? 'Disponible' : 'Non disponible',
-                                      style: TextStyle(
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: residence.isAvailable ? Colors.green[800] : Colors.red[800],
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -567,37 +556,28 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ],
                           ),
                           
-                          const SizedBox(height: 24),
-                          const Text(
+                          AppSpacing.verticalLg,
+                          Text(
                             'Description',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall,
                           ),
-                          const SizedBox(height: 8),
+                          AppSpacing.verticalSm,
                           ExpandableText(
                             residence.description,
                             expandText: 'Voir plus',
                             collapseText: 'Voir moins',
                             maxLines: 4,
                             linkColor: Theme.of(context).primaryColor,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           
-                          const SizedBox(height: 32),
+                          AppSpacing.verticalXl,
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Équipements',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.headlineSmall,
                               ),
                               SizedBox(
                                 width: 100, 
@@ -610,7 +590,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          AppSpacing.verticalSm,
                           _buildSimpleAmenitiesGrid(residence.amenities),
                            
                            if (residence.priceDetails != null && 
@@ -622,7 +602,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                residence.priceDetails!.containsKey('stars') &&
                                residence.priceDetails!['stars'] is int)
                              Padding(
-                               padding: const EdgeInsets.only(top: 8.0),
+                               padding: EdgeInsets.only(top: AppSpacing.sm),
                                child: _buildStarsRating(residence.priceDetails!['stars']),
                              ),
                            
@@ -649,13 +629,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                                   child: Text(
                                     'Points d\'intérêt à proximité',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: AppTextStyles.subtitle,
                                   ),
                                 ),
                                 SizedBox(
@@ -697,13 +674,13 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                       
                                       return Card(
                                         elevation: 2,
-                                        margin: const EdgeInsets.only(right: 12, bottom: 4),
+                                        margin: EdgeInsets.only(right: AppSpacing.smd, bottom: AppSpacing.xs),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                         ),
                                         child: Container(
                                           width: 200,
-                                          padding: const EdgeInsets.all(12),
+                                          padding: EdgeInsets.all(AppSpacing.smd),
                                           child: Column(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
@@ -712,12 +689,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                                 color: Colors.blue[700],
                                                 size: 32,
                                               ),
-                                              const SizedBox(height: 8),
+                                              AppSpacing.verticalSm,
                                               Text(
                                                 attraction,
                                                 textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                                 maxLines: 2,
@@ -737,22 +713,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const SizedBox(height: 32),
-                                const Text(
+                                AppSpacing.verticalXl,
+                                Text(
                                   'Règles de la résidence',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context).textTheme.headlineSmall,
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: AppSpacing.smd),
                                 ListView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   itemCount: residence.rules!.length,
                                   itemBuilder: (context, index) {
                                     return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      padding: EdgeInsets.only(bottom: AppSpacing.sm),
                                       child: Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -761,11 +734,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                             color: Colors.green,
                                             size: 20,
                                           ),
-                                          const SizedBox(width: 12),
+                                          SizedBox(width: AppSpacing.smd),
                                           Expanded(
                                             child: Text(
                                               residence.rules![index],
-                                              style: const TextStyle(fontSize: 16),
+                                              style: Theme.of(context).textTheme.bodyMedium,
                                             ),
                                           ),
                                         ],
@@ -776,23 +749,20 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                               ],
                             ),
                           
-                          const SizedBox(height: 24),
+                          AppSpacing.verticalLg,
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Commentaires et avis',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTextStyles.subtitle,
                               ),
-                              const SizedBox(height: 16),
+                              AppSpacing.verticalMd,
                               Container(
-                                padding: const EdgeInsets.all(16),
+                                padding: AppSpacing.cardPadding,
                                 decoration: BoxDecoration(
                                   color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                   border: Border.all(color: Colors.grey[300]!),
                                 ),
                                 child: _isUserAuthenticated(context) 
@@ -810,13 +780,13 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                               size: 20,
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
+                                          SizedBox(width: AppSpacing.smd),
                                           Expanded(
                                             child: TextButton(
                                               onPressed: () => _navigateToLogin(context),
-                                              child: const Text(
+                                              child: Text(
                                                 'Connectez-vous pour laisser un commentaire',
-                                                style: TextStyle(fontSize: 14),
+                                                style: Theme.of(context).textTheme.bodySmall,
                                               ),
                                             ),
                                           ),
@@ -826,7 +796,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                   ),
                               ),
                               
-                              const SizedBox(height: 16),
+                              AppSpacing.verticalMd,
                               FutureBuilder<Map<String, dynamic>>(
                                 key: ValueKey(_reviewsRefreshKey),
                                 future: _loadRealReviews(residence.id),
@@ -868,29 +838,27 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                     return Column(
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.all(20),
+                                          padding: EdgeInsets.all(AppSpacing.lg),
                                           decoration: BoxDecoration(
                                             border: Border.all(color: Colors.grey[300]!),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                           ),
                                           child: Column(
                                             children: [
                                               Icon(Icons.rate_review_outlined, 
                                                    size: 48, color: Colors.grey[400]),
-                                              const SizedBox(height: 8),
+                                              AppSpacing.verticalSm,
                                               Text(
                                                 'Aucun avis pour cette résidence',
-                                                style: TextStyle(
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                   color: Colors.grey[600],
-                                                  fontSize: 16,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
+                                              AppSpacing.verticalXs,
                                               Text(
                                                 'Soyez le premier à laisser un avis !',
-                                                style: TextStyle(
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   color: Colors.grey[500],
-                                                  fontSize: 14,
                                                 ),
                                               ),
                                             ],
@@ -907,7 +875,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                       ...displayReviews.map((review) => _buildRealReviewComment(review)).toList(),
                                       if (reviews.length > 3)
                                         Padding(
-                                          padding: const EdgeInsets.only(top: 16),
+                                          padding: EdgeInsets.only(top: AppSpacing.md),
                                           child: TextButton(
                                             onPressed: () {
                                               // Navigation vers l'écran des avis complet
@@ -918,8 +886,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                                             },
                                             child: Text(
                                               'Voir tous les ${reviews.length} avis',
-                                              style: TextStyle(
-                                                color: Theme.of(context).primaryColor,
+                                              style: AppTextStyles.link.copyWith(
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -932,10 +899,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             ],
                           ),
                           
-                          const SizedBox(height: 32),
+                          AppSpacing.verticalXl,
                           _buildLocationSection(context, residence),
                           
-                          const SizedBox(height: 80),
+                          SizedBox(height: AppSpacing.huge), // 80px pour espacement spécifique
                         ],
                       ),
                     ),
@@ -1003,7 +970,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                     foregroundColor: Colors.black,
                     label: Text(
                       isAuthenticated ? 'Réserver maintenant' : 'Se connecter pour réserver',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     icon: const Icon(Icons.calendar_today),
                   );
@@ -1044,11 +1013,13 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // En-tête du formulaire
-        const Text(
+        Text(
           'Laissez votre avis',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
         
         // Étoiles pour la note
         Row(
@@ -1074,7 +1045,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
             ),
           ],
         ),
-        const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
         
         // Champ de commentaire
         TextField(
@@ -1083,11 +1054,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
           decoration: InputDecoration(
             hintText: 'Partagez votre expérience...',
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
         
         // Bouton pour soumettre
         Align(
@@ -1259,24 +1230,21 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
         children: [
           Text(
             locationLabel,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.cardPadding,
             decoration: BoxDecoration(
               color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               border: Border.all(color: Colors.grey[300]!),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
                 'Les coordonnées de localisation ne sont pas disponibles pour cette résidence',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
               ),
             ),
           ),
@@ -1309,23 +1277,20 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       children: [
         Text(
           locationLabel,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
-        const SizedBox(height: 16),
+        AppSpacing.verticalMd,
         // Carte Google Maps avec marqueur et bouton pour carte plein écran
         Stack(
           children: [
             Container(
               height: 220,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 border: Border.all(color: Colors.grey[300]!),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 child: GoogleMap(
                   initialCameraPosition: CameraPosition(
                     target: LatLng(lat, lng),
@@ -1356,7 +1321,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppSpacing.xs),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -1376,13 +1341,13 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        AppSpacing.verticalMd,
         // Adresse et distance
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.cardPadding,
           decoration: BoxDecoration(
             color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             border: Border.all(color: Colors.grey[300]!),
           ),
           child: Column(
@@ -1391,13 +1356,12 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               Row(
                 children: [
                   Icon(Icons.location_on, color: Theme.of(context).primaryColor),
-                  const SizedBox(width: 8),
+                                          SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       displayAddress,
-                      style: const TextStyle(
-                        fontSize: 14, // Taille de police réduite pour éviter les overflow
-                        height: 1.2, // Interligne réduit
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        height: 1.2, // Interligne réduit pour éviter les overflow
                         fontWeight: FontWeight.w500,
                       ),
                       overflow: TextOverflow.ellipsis, // Ajoute des points de suspension si l'adresse est trop longue
@@ -1407,16 +1371,15 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                 ],
               ),
               if (distanceText.isNotEmpty) ...[  
-                const SizedBox(height: 8),
+                                              AppSpacing.verticalSm,
                 Row(
                   children: [
                     Icon(Icons.near_me, color: Theme.of(context).primaryColor),
-                    const SizedBox(width: 8),
+                                          SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         distanceText,
-                        style: const TextStyle(
-                          fontSize: 13, // Police légèrement plus petite
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),
                         overflow: TextOverflow.ellipsis, // Ajoute des points de suspension si le texte est trop long
@@ -1426,7 +1389,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                   ],
                 ),
               ],
-              const SizedBox(height: 16),
+              AppSpacing.verticalMd,
               // Bouton pour voir l'itinéraire dans Google Maps
               SizedBox(
                 width: double.infinity,
@@ -1499,10 +1462,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     return Column(
       children: [
         Icon(icon, color: Colors.grey[600], size: 24),
-        const SizedBox(height: 8),
+                                              AppSpacing.verticalSm,
         Text(
           value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: AppTextStyles.subtitle,
         ),
         Text(
           label,
@@ -1663,10 +1626,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               color: Colors.blueAccent,
               size: 24,
             ),
-            const SizedBox(height: 8),
+                                              AppSpacing.verticalSm,
             Text(
               displayText,
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1686,13 +1649,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Text(
             'Questions fréquentes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.subtitle,
           ),
         ),
         ListView.builder(
@@ -1704,17 +1664,16 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
             return ExpansionTile(
               title: Text(
                 faq['question'],
-                style: const TextStyle(
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
               ),
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: AppSpacing.cardPadding,
                   child: Text(
                     faq['answer'],
-                    style: const TextStyle(fontSize: 14),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
               ],
@@ -1755,24 +1714,21 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Text(
             'Méthodes de paiement acceptées',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.subtitle,
           ),
         ),
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: AppSpacing.smd,
+          runSpacing: AppSpacing.smd,
           children: paymentMethods.map((method) {
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd + AppSpacing.sm),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1782,11 +1738,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                     size: 18,
                     color: Colors.blue[700],
                   ),
-                  const SizedBox(width: 8),
+                                          SizedBox(width: AppSpacing.sm),
                   Text(
                     paymentLabels[method] ?? method,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey[800],
                     ),
                   ),
@@ -1806,7 +1761,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     }
     
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         children: [
           ...List.generate(
@@ -1817,11 +1772,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               size: 20,
             ),
           ),
-          const SizedBox(width: 8),
+                                          SizedBox(width: AppSpacing.sm),
           Text(
             '$stars étoiles',
-            style: const TextStyle(
-              fontSize: 14,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1840,13 +1794,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Text(
             'Équipements spécifiques',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.subtitle,
           ),
         ),  
         
@@ -1916,11 +1867,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       if (availableItems[key] == true) {
         availableFeatures.add(
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Row(
               children: [
                 Icon(config['icon'] as IconData, size: 20, color: Colors.green),
-                const SizedBox(width: 8),
+                                          SizedBox(width: AppSpacing.sm),
                 Text(config['label'] as String),
               ],
             ),
@@ -1934,16 +1885,15 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     }
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
+            padding: EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1963,22 +1913,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
           child: Text(
             'Commentaires et avis',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTextStyles.subtitle,
           ),
         ),
         
         // Champ pour ajouter un commentaire (uniquement pour les utilisateurs connectés)
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(AppSpacing.smd),
           decoration: BoxDecoration(
             color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1993,7 +1940,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                                          SizedBox(width: AppSpacing.smd),
                   Expanded(
                     child: Text(
                       isLoggedIn ? 'Ajoutez votre commentaire' : 'Connectez-vous pour commenter',
@@ -2005,7 +1952,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
               
               if (isLoggedIn)
                 Column(
@@ -2015,7 +1962,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                       decoration: InputDecoration(
                         hintText: 'Partagez votre expérience...',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
                         filled: true,
@@ -2023,7 +1970,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                       ),
                       maxLines: 3,
                     ),
-                    const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
                     
                     // Barre d'évaluation
                     Row(
@@ -2046,7 +1993,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
                     
                     // Bouton d'envoi
                     Align(
@@ -2058,7 +2005,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue[700],
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 10),
                         ),
                         child: const Text('Publier'),
                       ),
@@ -2084,7 +2031,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
         ),
         
         // Liste des commentaires existants
-        const SizedBox(height: 16),
+        AppSpacing.verticalMd,
         // Simulation de commentaires (à remplacer par des données réelles)
         _buildCommentItem(
           author: 'Marie S.',
@@ -2113,11 +2060,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     String? photoUrl,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.smd),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[200]!),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2132,7 +2079,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                     : const AssetImage('assets/images/avatar_placeholder.png'),
                 backgroundColor: Colors.grey[200],
               ),
-              const SizedBox(width: 12),
+                                          SizedBox(width: AppSpacing.smd),
               // Informations sur l'auteur
               Expanded(
                 child: Column(
@@ -2140,15 +2087,16 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                   children: [
                     Text(
                       author,
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: AppSpacing.xs / 2), // 2px pour espacement spécifique
                     Text(
                       date,
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                     ),
                   ],
                 ),
@@ -2158,12 +2106,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                 children: [
                   Text(
                     rating.toString(),
-                    style: const TextStyle(
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                                        SizedBox(width: AppSpacing.xs),
                   const Icon(
                     Icons.star,
                     color: Colors.amber,
@@ -2173,11 +2120,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               ),
             ],
           ),
-          const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
           // Commentaire
           Text(
             comment,
-            style: const TextStyle(fontSize: 14),
+                    style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
@@ -2192,11 +2139,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     required String comment,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2218,7 +2165,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                                          SizedBox(width: AppSpacing.sm),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2230,8 +2177,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         ),
                         Text(
                           date,
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: AppTextStyles.caption.copyWith(
                             color: Colors.grey[600],
                           ),
                         ),
@@ -2243,21 +2189,21 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               
               // Note
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: Colors.amber,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppSpacing.xs),
                 ),
                 child: Row(
                   children: [
                     Text(
                       rating.toString(),
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                                        SizedBox(width: AppSpacing.xs),
                     const Icon(
                       Icons.star,
                       color: Colors.white,
@@ -2268,7 +2214,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
               ),
             ],
           ),
-          const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
           
           // Contenu du commentaire
           Text(comment),
@@ -2325,11 +2271,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2351,7 +2297,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                                          SizedBox(width: AppSpacing.smd),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2360,14 +2306,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                             userName.isNotEmpty ? userName : 'Utilisateur anonyme',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              // Utilise Theme.of(context).textTheme.bodySmall
                             ),
                           ),
                           Text(
                             formattedDate,
                             style: TextStyle(
                               color: Colors.grey[600],
-                              fontSize: 12,
+                              // Utilise AppTextStyles.caption
                             ),
                           ),
                         ],
@@ -2387,12 +2333,12 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
                       size: 16,
                     );
                   }),
-                  const SizedBox(width: 4),
+                                        SizedBox(width: AppSpacing.xs),
                   Text(
                     overallRating.toStringAsFixed(1),
                     style: TextStyle(
                       color: Colors.grey[600],
-                      fontSize: 12,
+                      // Utilise AppTextStyles.caption
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2401,11 +2347,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> with Si
             ],
           ),
           if (comment.isNotEmpty) ...[
-            const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
             Text(
               comment,
-              style: const TextStyle(
-                fontSize: 14,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 height: 1.4,
               ),
             ),
@@ -2482,7 +2427,7 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
             const Text('Détails de la résidence'),
             Text(
               'Photo ${_currentIndex + 1} sur ${widget.images.length}',
-              style: const TextStyle(fontSize: 14),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -2558,13 +2503,13 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
                   },
                   child: Container(
                     width: 80,
-                    margin: const EdgeInsets.all(4),
+                    margin: EdgeInsets.all(AppSpacing.xs),
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: _currentIndex == index ? AppTheme.primaryColor : Colors.transparent,
                         width: 3,
                       ),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppSpacing.xs),
                     ),
                     child: CachedNetworkImage(
                       imageUrl: widget.images[index],
@@ -2589,7 +2534,7 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
           // Bouton d'action pour réserver (en bas)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.cardPadding,
             color: AppTheme.primaryColor,
             child: TextButton(
               onPressed: () {
@@ -2597,14 +2542,13 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
               },
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
               ),
               child: Text(
                 'Choisir cette chambre',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.accentColor,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
               ),
             ),
@@ -2662,11 +2606,11 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2688,7 +2632,7 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                                          SizedBox(width: AppSpacing.smd),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2697,14 +2641,14 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
                             userName.isNotEmpty ? userName : 'Utilisateur anonyme',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              // Utilise Theme.of(context).textTheme.bodySmall
                             ),
                           ),
                           Text(
                             formattedDate,
                             style: TextStyle(
                               color: Colors.grey[600],
-                              fontSize: 12,
+                              // Utilise AppTextStyles.caption
                             ),
                           ),
                         ],
@@ -2724,12 +2668,12 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
                       size: 16,
                     );
                   }),
-                  const SizedBox(width: 4),
+                                        SizedBox(width: AppSpacing.xs),
                   Text(
                     overallRating.toStringAsFixed(1),
                     style: TextStyle(
                       color: Colors.grey[600],
-                      fontSize: 12,
+                      // Utilise AppTextStyles.caption
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2738,11 +2682,10 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> with SingleTi
             ],
           ),
           if (comment.isNotEmpty) ...[
-            const SizedBox(height: 12),
+                          SizedBox(height: AppSpacing.smd),
             Text(
               comment,
-              style: const TextStyle(
-                fontSize: 14,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 height: 1.4,
               ),
             ),

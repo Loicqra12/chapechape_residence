@@ -15,7 +15,7 @@ class OneSignalService {
   late AuthService _authService;
   String? _userId;
   bool _isInitialized = false;
-  // 🚀 Utiliser l'URL de l'API depuis AppConfigManager (production ou dev)
+  // Utiliser l'URL de l'API depuis AppConfigManager (production)
   String get _baseUrl => AppConfigManager.apiUrl;
 
   // Singleton pattern

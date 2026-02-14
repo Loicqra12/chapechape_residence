@@ -11,6 +11,8 @@ import 'package:chapechape_client/core/models/residence_model.dart';
 import 'package:chapechape_client/core/extensions/model_extensions.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/presentation/widgets/booking/flexible_date_selector.dart';
 import 'package:chapechape_client/presentation/widgets/booking/reservation_mode_banner.dart';
 
@@ -114,14 +116,14 @@ class _BookingScreenState extends State<BookingScreen> {
       body: LoadingOverlay(
         isLoading: _isLoadingState(context),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Informations sur la résidence
               _buildResidenceInfo(),
               
-              const SizedBox(height: 24),
+              AppSpacing.verticalLg,
               
               // Formulaire de réservation
               Form(
@@ -130,13 +132,13 @@ class _BookingScreenState extends State<BookingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _buildDateSelectionSection(),
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                     _buildReservationModeSection(),
-                    const SizedBox(height: 16),
+                    AppSpacing.verticalMd,
                     _buildGuestsField(),
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                     _buildPriceSection(),
-                    const SizedBox(height: 24),
+                    AppSpacing.verticalLg,
                     _buildBookingButton(),
                   ],
                 ),
@@ -172,7 +174,7 @@ class _BookingScreenState extends State<BookingScreen> {
           
           return Card(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.pagePadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -180,12 +182,12 @@ class _BookingScreenState extends State<BookingScreen> {
                     _residence!.name,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.verticalSm,
                   Text(
                     _residence!.address,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.verticalMd,
                   Text(
                     _residence!.shortDescription,
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -199,7 +201,7 @@ class _BookingScreenState extends State<BookingScreen> {
         // État de chargement ou d'erreur
         return const Card(
           child: Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: AppSpacing.cardPadding,
             child: Center(
               child: Text('Chargement des informations...'),
             ),
@@ -218,7 +220,7 @@ class _BookingScreenState extends State<BookingScreen> {
           'Dates de séjour',
           style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 8),
+        AppSpacing.verticalSm,
         
         // Utiliser FlexibleBookingDateSelector si la résidence est chargée
         if (_residence != null) ...[
@@ -256,7 +258,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _buildDateField(
                   label: 'Départ',
@@ -276,7 +278,7 @@ class _BookingScreenState extends State<BookingScreen> {
         
         // Bouton de vérification de disponibilité
         if (_checkInDate != null && _checkOutDate != null) ...[
-          const SizedBox(height: 16),
+          AppSpacing.verticalMd,
           ElevatedButton(
             onPressed: () {
               HapticFeedback.lightImpact();
@@ -302,17 +304,17 @@ class _BookingScreenState extends State<BookingScreen> {
           },
           child: _isAvailabilityChecked
               ? Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: EdgeInsets.only(top: AppSpacing.sm),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12.0),
+                        padding: EdgeInsets.all(AppSpacing.smd),
                         decoration: BoxDecoration(
                           color: _isAvailable 
                               ? AppTheme.successColor.withOpacity(0.1) 
                               : AppTheme.errorColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8.0),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           border: Border.all(
                             color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
                           ),
@@ -326,13 +328,13 @@ class _BookingScreenState extends State<BookingScreen> {
                                   _isAvailable ? Icons.check_circle : Icons.error,
                                   color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: AppSpacing.sm),
                                 Expanded(
                                   child: Text(
                                     _isAvailable
                                         ? 'Résidence disponible pour les dates sélectionnées!'
                                         : 'Cette résidence n\'est pas disponible pour ces dates',
-                                    style: TextStyle(
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: _isAvailable ? AppTheme.successColor : AppTheme.errorColor,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -341,12 +343,12 @@ class _BookingScreenState extends State<BookingScreen> {
                               ],
                             ),
                             if (!_isAvailable) ...[  
-                              const SizedBox(height: 8),
-                              const Text(
+                              AppSpacing.verticalSm,
+                              Text(
                                 'Essayez de sélectionner d\'autres dates ou une autre résidence.',
-                                style: TextStyle(fontSize: 14),
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: AppSpacing.smd),
                               OutlinedButton(
                                 onPressed: () async {
                                   // Proposer de nouvelles dates (date d'aujourd'hui + 7 jours)
@@ -426,14 +428,14 @@ class _BookingScreenState extends State<BookingScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 8),
+        AppSpacing.verticalSm,
         Text(
           'Mode de réservation défini par le partenaire',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Colors.grey[600],
           ),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.verticalMd,
         // ✅ CORRECTION CRITIQUE : Bannière informative au lieu du sélecteur
         if (_residence != null)
           ReservationModeBanner(
@@ -478,7 +480,7 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget _buildPriceSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -486,20 +488,22 @@ class _BookingScreenState extends State<BookingScreen> {
               'Détails du prix',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 16),
+            AppSpacing.verticalMd,
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Prix total'),
+                Text('Prix total', style: Theme.of(context).textTheme.bodyMedium),
                 Text(
                   '${_estimatedPrice.toStringAsFixed(0)} FCFA',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             if (_checkInDate != null && _checkOutDate != null)
               Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
                   'Pour ${_checkOutDate!.difference(_checkInDate!).inDays} nuits',
                   style: Theme.of(context).textTheme.bodySmall,
@@ -554,7 +558,7 @@ class _BookingScreenState extends State<BookingScreen> {
           _handleSubmit();
         } : null,
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
         ),
         child: const Text('Réserver maintenant'),
       ),

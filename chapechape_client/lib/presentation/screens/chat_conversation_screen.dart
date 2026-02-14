@@ -9,6 +9,8 @@ import '../../core/services/socket_service.dart';
 import '../widgets/chat/message_bubble.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 
 class ChatConversationScreen extends StatefulWidget {
   final ChatConversation conversation;
@@ -203,15 +205,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.smd),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'Procéder au paiement',
-                style: TextStyle(
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.white,
                 ),
               ),
@@ -292,12 +293,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 if (conversation.residenceName != null && conversation.residenceName!.isNotEmpty)
                   Text(
                     '🏠 ${conversation.residenceName}',
-                    style: const TextStyle(fontSize: 12),
+                    style: AppTextStyles.caption,
                   )
                 else if (conversation.residenceId != null || conversation.reservationId != null)
                   Text(
                     conversation.reservationId != null ? '🏠 Réservation associée' : '🏠 Résidence associée',
-                    style: const TextStyle(fontSize: 12),
+                    style: AppTextStyles.caption,
                   ),
               ],
             ),
@@ -327,7 +328,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                                   return const Align(
                                     alignment: Alignment.centerRight,
                                     child: Padding(
-                                      padding: EdgeInsets.all(8.0),
+                                      padding: EdgeInsets.all(AppSpacing.sm),
                                       child: CircularProgressIndicator(),
                                     ),
                                   );
@@ -347,11 +348,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ),
                     if (_isSending)
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                         child: Text('Envoi en cours...', style: TextStyle(fontStyle: FontStyle.italic)),
                       ),
                     Container(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: EdgeInsets.all(AppSpacing.sm),
                       child: Row(
                         children: [
                           IconButton(
@@ -370,7 +371,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           ),
                           IconButton(
                             icon: _isSending 
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? SizedBox(width: AppSpacing.lg, height: AppSpacing.lg, child: const CircularProgressIndicator(strokeWidth: 2))
                               : const Icon(Icons.send),
                             onPressed: _isSending
                                 ? null

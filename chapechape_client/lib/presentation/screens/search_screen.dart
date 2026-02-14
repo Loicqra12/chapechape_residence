@@ -8,6 +8,8 @@ import '../widgets/skeletons/search_result_skeleton.dart';
 import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
 
@@ -107,7 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
             height: _showAdvancedFilters ? null : 0,
             child: _showAdvancedFilters
                 ? Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.only(bottom: AppSpacing.sm),
                     child: LocationFilterWidget(
                       onApplyFilters: _applyLocationFilters,
                       currentFilters: _filters,
@@ -146,11 +148,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'Utilisez les filtres pour rechercher une résidence',
-                        style: TextStyle(fontSize: 16),
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                       if (!_showAdvancedFilters)
                         ElevatedButton.icon(
                           onPressed: () {
@@ -188,9 +190,9 @@ class _SearchScreenState extends State<SearchScreen> {
         icon: const Icon(Icons.home),
         label: const Text('Retour à l\'accueil'),
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.smd),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
         ),
       ),
@@ -199,7 +201,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildResidencesList(List<Residence> residences) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.cardPadding,
       itemCount: residences.length,
       itemBuilder: (context, index) {
         final residence = residences[index];
@@ -212,10 +214,10 @@ class _SearchScreenState extends State<SearchScreen> {
     final imageUrl = residence.imageUrl ?? 'assets/images/placeholders/residence_standard.jpg';
     
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       elevation: 2,
       child: InkWell(
@@ -252,7 +254,7 @@ class _SearchScreenState extends State<SearchScreen> {
             
             // Contenu
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.cardPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -261,10 +263,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         ),
                         child: Row(
                           children: [
@@ -273,12 +275,10 @@ class _SearchScreenState extends State<SearchScreen> {
                               size: 16,
                               color: AppTheme.primaryColor,
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: AppSpacing.xs),
                             Text(
                               _formatResidenceType(residence.type.toString()),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                              style: AppTextStyles.tag.copyWith(
                                 color: AppTheme.primaryColor,
                               ),
                             ),
@@ -287,38 +287,34 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       Text(
                         '${residence.price.toStringAsFixed(0)} FCFA',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                        style: AppTextStyles.price,
                       ),
                     ],
                   ),
                   
-                  const SizedBox(height: 8),
+                  AppSpacing.verticalSm,
                   
                   // Titre
                   Text(
                     residence.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: AppTextStyles.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   
-                  const SizedBox(height: 4),
+                  AppSpacing.verticalXs,
                   
                   // Localisation
                   Row(
                     children: [
                       const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
+                      SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
                           residence.address,
-                          style: const TextStyle(color: Colors.grey),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -326,15 +322,15 @@ class _SearchScreenState extends State<SearchScreen> {
                     ],
                   ),
                   
-                  const SizedBox(height: 8),
+                  AppSpacing.verticalSm,
                   
                   // Détails (chambres, salles de bain, surface)
                   Row(
                     children: [
                       _buildFeatureChip(Icons.king_bed, '${residence.bedrooms} Ch'),
-                      const SizedBox(width: 8),
+                      SizedBox(width: AppSpacing.sm),
                       _buildFeatureChip(Icons.bathtub, '${residence.bathrooms} SdB'),
-                      const SizedBox(width: 8),
+                      SizedBox(width: AppSpacing.sm),
                       _buildFeatureChip(Icons.square_foot, '${residence.surface.toInt()} m²'),
                     ],
                   ),
@@ -349,19 +345,18 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildFeatureChip(IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
         color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       child: Row(
         children: [
           Icon(icon, size: 14, color: Colors.grey[700]),
-          const SizedBox(width: 4),
+          SizedBox(width: AppSpacing.xs),
           Text(
             text,
-            style: TextStyle(
-              fontSize: 12,
+            style: AppTextStyles.caption.copyWith(
               color: Colors.grey[700],
             ),
           ),

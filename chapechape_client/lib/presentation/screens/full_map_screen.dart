@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/theme/spacing.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/extensions/residence_marker_extension.dart';
 import '../../core/models/residence_type_enum.dart';
 import '../../core/utils/map_cluster_manager.dart';
@@ -606,26 +608,26 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 left: 0,
                 right: 0,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                   child: Card(
                     elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.smd),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _buildFilterChip(ResidenceMarkerExtension.categoryMeubles, '🏠 Meublés'),
-                          const SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           _buildFilterChip(ResidenceMarkerExtension.categoryHotels, '🏨 Hôtels'),
-                          const SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           _buildFilterChip(ResidenceMarkerExtension.categoryInsolites, '🌴 Insolites'),
-                          const SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           _buildFilterChip(ResidenceMarkerExtension.categoryColocations, '👥 Colocations'),
-                          const SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           _buildFilterChip(ResidenceMarkerExtension.categoryLongueDuree, '📅 Long terme'),
-                          const SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           _buildFilterChip(ResidenceMarkerExtension.categoryEconomiques, '💸 Économique'),
                         ],
                       ),
@@ -685,7 +687,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                         // Afficher les options de couches
                       },
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.verticalSm,
                     FloatingActionButton(
                       heroTag: 'target',
                       mini: true,
@@ -723,10 +725,10 @@ class _FullMapScreenState extends State<FullMapScreen> {
     return GestureDetector(
       onTap: () => context.push('/residence/${residence.id}'),
       child: Container(
-        margin: const EdgeInsets.all(16),
+        margin: AppSpacing.pagePadding,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -736,7 +738,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           child: SizedBox(
             height: 160,
             child: Row(
@@ -770,16 +772,15 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           top: 8,
                           left: 8,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd / 2, vertical: AppSpacing.xs),
                             decoration: BoxDecoration(
                               color: residence.isVip ? Colors.orange : Colors.green,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                             ),
                             child: Text(
                               residence.isVip ? 'VIP' : 'Populaire',
-                              style: const TextStyle(
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.white,
-                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -791,17 +792,16 @@ class _FullMapScreenState extends State<FullMapScreen> {
                         bottom: 8,
                         left: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
                             color: Colors.blue[700],
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           ),
                           child: Text(
                             '$priceText$periodText',
-                            style: const TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -813,7 +813,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 // Détails de la résidence
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(AppSpacing.smd),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -823,9 +823,8 @@ class _FullMapScreenState extends State<FullMapScreen> {
                             Expanded(
                               child: Text(
                                 residence.title.isNotEmpty ? residence.title : 'Résidence sans nom',
-                                style: const TextStyle(
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -834,23 +833,22 @@ class _FullMapScreenState extends State<FullMapScreen> {
                             // Badge rating
                             if (residence.rating > 0)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd / 2, vertical: AppSpacing.xs / 2),
                                 decoration: BoxDecoration(
                                   color: Colors.blue[800],
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(AppSpacing.xs),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       residence.rating.toStringAsFixed(1),
-                                      style: const TextStyle(
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 11,
                                       ),
                                     ),
-                                    const SizedBox(width: 2),
+                                    SizedBox(width: AppSpacing.xs / 2),
                                     const Icon(Icons.star, color: Colors.white, size: 12),
                                   ],
                                 ),
@@ -858,35 +856,33 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           ],
                         ),
                         
-                        const SizedBox(height: 4),
+                        AppSpacing.verticalXs,
                         
                         // Adresse
                         Text(
                           residence.location.displayAddress.isNotEmpty 
                               ? residence.location.displayAddress 
                               : 'Adresse non disponible',
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.grey[600],
-                            fontSize: 13,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         
-                        const SizedBox(height: 8),
+                        AppSpacing.verticalSm,
                         
                         // Type de résidence
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                           child: Text(
                             residence.type.displayName,
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.grey[700],
-                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -897,24 +893,23 @@ class _FullMapScreenState extends State<FullMapScreen> {
                         // Amenities principales (max 3)
                         if (residence.amenities.isNotEmpty)
                           Wrap(
-                            spacing: 4,
+                            spacing: AppSpacing.xs,
                             children: residence.amenities.take(3).map((amenity) {
                               final amenityIcon = _getAmenityIcon(amenity);
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd / 2, vertical: AppSpacing.xs / 2),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(amenityIcon, size: 12, color: Colors.grey[600]),
-                                    const SizedBox(width: 2),
+                                    SizedBox(width: AppSpacing.xs / 2),
                                     Text(
                                       _getAmenityLabel(amenity),
-                                      style: TextStyle(
-                                        fontSize: 10,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: Colors.grey[600],
                                       ),
                                     ),
@@ -924,7 +919,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                             }).toList(),
                           ),
                         
-                        const SizedBox(height: 8),
+                        AppSpacing.verticalSm,
                         
                         // Bouton "Voir plus"
                         Row(
@@ -932,8 +927,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           children: [
                             Text(
                               'Taxes et frais compris',
-                              style: TextStyle(
-                                fontSize: 10,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.grey[500],
                               ),
                             ),
@@ -1077,10 +1071,10 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   context.push('/residence/${residence.id}');
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade900, // Bleu foncé comme dans Booking
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.3),
@@ -1099,10 +1093,9 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           RegExp(r'\B(?=(\d{3})+(?!\d))'), 
                           (Match match) => ' '
                         )}',
-                        style: const TextStyle(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -1134,10 +1127,9 @@ class _FullMapScreenState extends State<FullMapScreen> {
       checkmarkColor: Colors.white,
       selectedColor: Theme.of(context).primaryColor,
       backgroundColor: Colors.grey[200],
-      labelStyle: TextStyle(
+      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
         color: isSelected ? Colors.white : Colors.black87,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        fontSize: 13,
       ),
       onSelected: (bool selected) {
         setState(() {

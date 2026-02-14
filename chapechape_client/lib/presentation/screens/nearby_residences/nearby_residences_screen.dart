@@ -5,6 +5,8 @@ import '../../../core/services/nearby_residences_service.dart';
 import '../../../core/models/residence_model.dart';
 import '../../../core/services/map_provider/google_maps_service.dart';
 import '../../../core/extensions/residence_marker_extension.dart';
+import '../../../core/theme/spacing.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../widgets/common/empty_state_widget.dart';
 
 class NearbyResidencesScreen extends StatefulWidget {
@@ -276,7 +278,7 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
   // Construire la barre de filtre
   Widget _buildFilterBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -294,7 +296,7 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
           Row(
             children: [
               const Icon(Icons.social_distance, size: 20),
-              const SizedBox(width: 8),
+              SizedBox(width: AppSpacing.sm),
               const Text('Rayon:'),
               Expanded(
                 child: Slider(
@@ -370,16 +372,16 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
                       icon: const Icon(Icons.map),
                       label: const Text('Élargir la zone (10 km)'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: AppSpacing.buttonPadding,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                         ),
                       ),
                     ),
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
                   itemCount: _residences.length,
                   separatorBuilder: (context, index) => const Divider(),
                   itemBuilder: (context, index) {
@@ -417,7 +419,9 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
       ),
       title: Text(
         residence.name ?? 'Sans nom',
-        style: const TextStyle(fontWeight: FontWeight.bold),
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +430,7 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
           if (distanceText.isNotEmpty)
             Text(
               'Distance: $distanceText',
-              style: const TextStyle(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.blue,
                 fontWeight: FontWeight.bold,
               ),
@@ -445,18 +449,22 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.location_disabled, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
+          AppSpacing.verticalMd,
+          Text(
             'Localisation désactivée',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          AppSpacing.verticalSm,
+          Text(
             'Veuillez autoriser l\'accès à votre localisation pour voir les résidences à proximité',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey,
+            ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.verticalLg,
           ElevatedButton.icon(
             icon: const Icon(Icons.location_on),
             label: const Text('Activer la localisation'),

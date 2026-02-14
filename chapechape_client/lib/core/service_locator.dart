@@ -58,7 +58,7 @@ Future<void> setupServiceLocator() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(sharedPreferences);
   
-  // 🚀 Utiliser l'URL de l'API depuis AppConfigManager (production ou dev)
+  // Utiliser l'URL de l'API depuis AppConfigManager (production)
   final dio = Dio(BaseOptions(
     baseUrl: AppConfigManager.apiUrl,
     connectTimeout: const Duration(milliseconds: 15000),

@@ -6,6 +6,8 @@ import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
+import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
 import 'package:chapechape_client/core/services/error_message_service.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
@@ -81,13 +83,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       type: MaterialType.transparency,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
           width: 60,
           height: 60,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -98,10 +100,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: EdgeInsets.all(AppSpacing.smd),
                 child: Icon(
                   icon == 'logos/google_logo.png' ? Icons.g_mobiledata : 
                   icon == 'logos/facebook_logo.png' ? Icons.facebook : 
@@ -154,14 +156,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       Center(
                         child: SizedBox(
                           width: 200,
@@ -172,25 +177,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 30),
-                      const Text(
+                      AppSpacing.verticalLg,
+                      Text(
                         'Créer un compte',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: AppTextStyles.title,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      AppSpacing.verticalSm,
+                      Text(
                         'Rejoignez ChapeChape Résidences pour trouver votre logement idéal',
-                        style: TextStyle(
-                          fontSize: 16,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 30),
+                      AppSpacing.verticalLg,
                       LayoutBuilder(
                         builder: (context, constraints) {
                           if (constraints.maxWidth > 600) {
@@ -207,7 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     validator: FormValidators.validateName,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: AppSpacing.md),
                                 Expanded(
                                   child: CustomTextField(
                                     controller: _lastNameController,
@@ -230,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   prefixIcon: Icons.person_outline,
                                   validator: FormValidators.validateName,
                                 ),
-                                const SizedBox(height: 20),
+                                AppSpacing.verticalMd,
                                 CustomTextField(
                                   controller: _lastNameController,
                                   labelText: 'Nom',
@@ -243,7 +244,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           }
                         },
                       ),
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       CustomTextField(
                         controller: _emailController,
                         labelText: 'Email',
@@ -252,7 +253,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         keyboardType: TextInputType.emailAddress,
                         validator: FormValidators.validateEmail,
                       ),
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       AdvancedPhoneInputWidget(
                         label: 'Téléphone',
                         hint: 'Entrez votre numéro de téléphone',
@@ -269,7 +270,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         },
                         themeColor: Theme.of(context).primaryColor,
                       ),
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       CustomTextField(
                         controller: _passwordController,
                         labelText: 'Mot de passe',
@@ -287,7 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         validator: FormValidators.validatePassword,
                       ),
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       CustomTextField(
                         controller: _confirmPasswordController,
                         labelText: 'Confirmer le mot de passe',
@@ -308,13 +309,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _passwordController.text,
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      AppSpacing.verticalMd,
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            height: 24,
-                            width: 24,
+                            height: AppSpacing.lg,
+                            width: AppSpacing.lg,
                             child: Checkbox(
                               value: _acceptTerms,
                               onChanged: (value) {
@@ -325,13 +326,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               activeColor: AppTheme.primaryColor,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: RichText(
                               overflow: TextOverflow.visible,
                               text: TextSpan(
                                 text: 'J\'accepte les ',
-                                style: const TextStyle(color: Colors.black),
+                                style: Theme.of(context).textTheme.bodyMedium,
                                 children: [
                                   WidgetSpan(
                                     child: GestureDetector(
@@ -341,15 +342,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                       child: Text(
                                         'conditions d\'utilisation',
-                                        style: TextStyle(
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: AppTheme.primaryColor,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const TextSpan(
+                                  TextSpan(
                                     text: ' et la ',
+                                    style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                   WidgetSpan(
                                     child: GestureDetector(
@@ -359,7 +361,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                       child: Text(
                                         'politique de confidentialité',
-                                        style: TextStyle(
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: AppTheme.primaryColor,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -372,7 +374,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
+                      AppSpacing.verticalLg,
                       SizedBox(
                         width: double.infinity,
                         child: CustomButton(
@@ -381,22 +383,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onPressed: state is AuthLoading ? null : _submitForm,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      AppSpacing.verticalMd,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Text('Vous avez déjà un compte?'),
+                          Text(
+                            'Vous avez déjà un compte?',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           TextButton(
                             onPressed: () {
                               context.go('/login');
                             },
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                               minimumSize: const Size(0, 36),
                             ),
                             child: Text(
                               'Se connecter',
-                              style: TextStyle(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -404,7 +410,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 30),
+                      AppSpacing.verticalLg,
                       Row(
                         children: [
                           Expanded(
@@ -414,12 +420,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                             child: Text(
                               'Ou inscrivez-vous avec',
-                              style: TextStyle(
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.grey.shade600,
-                                fontSize: 14,
                               ),
                             ),
                           ),
@@ -431,7 +436,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
+                      AppSpacing.verticalLg,
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -443,7 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                             },
                           ),
-                          const SizedBox(width: 20),
+                          SizedBox(width: AppSpacing.md),
                           _socialLoginButton(
                             icon: 'logos/facebook_logo.png',
                             onPressed: () {
@@ -452,7 +457,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                             },
                           ),
-                          const SizedBox(width: 20),
+                          SizedBox(width: AppSpacing.md),
                           _socialLoginButton(
                             icon: 'logos/apple_logo.png',
                             onPressed: () {
@@ -461,7 +466,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      AppSpacing.verticalMd,
                     ],
                   ),
                 ),
