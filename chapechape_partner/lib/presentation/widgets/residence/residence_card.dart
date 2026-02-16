@@ -130,7 +130,7 @@ class ResidenceCard extends StatelessWidget {
                               loadingBuilder: (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
                                 return Container(
-                                  color: Colors.grey[200],
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                   child: Center(
                                     child: CircularProgressIndicator(
                                       value: loadingProgress.expectedTotalBytes != null
@@ -155,7 +155,7 @@ class ResidenceCard extends StatelessWidget {
                     children: [
                       // Titre
                       Text(
-                        residence.title,
+                        residence.displayName,
                         style: Theme.of(context).textTheme.titleMedium,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -167,7 +167,7 @@ class ResidenceCard extends StatelessWidget {
                           SvgPicture.asset(
                             AppIcons.location,
                             height: 16,
-                            color: Colors.grey[600],
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -191,7 +191,7 @@ class ResidenceCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -200,7 +200,7 @@ class ResidenceCard extends StatelessWidget {
                                 SvgPicture.asset(
                                   AppIcons.bedroom,
                                   height: 16,
-                                  color: Colors.grey[700],
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -214,7 +214,7 @@ class ResidenceCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -223,7 +223,7 @@ class ResidenceCard extends StatelessWidget {
                                 SvgPicture.asset(
                                   AppIcons.bathroom,
                                   height: 16,
-                                  color: Colors.grey[700],
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -237,7 +237,7 @@ class ResidenceCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -246,7 +246,7 @@ class ResidenceCard extends StatelessWidget {
                                 SvgPicture.asset(
                                   AppIcons.area,
                                   height: 16,
-                                  color: Colors.grey[700],
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -276,7 +276,7 @@ class ResidenceCard extends StatelessWidget {
                                   child: SvgPicture.asset(
                                     AppIcons.price,
                                     height: 14, // Réduire légèrement la taille
-                                    color: Theme.of(context).primaryColor,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                 ),
                                 const SizedBox(width: 2), // Réduire l'espacement
@@ -285,7 +285,7 @@ class ResidenceCard extends StatelessWidget {
                                   child: Text(
                                     residence.priceDisplay,
                                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      color: Theme.of(context).primaryColor,
+                                      color: Theme.of(context).colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12, // Réduire la taille du texte
                                     ),
@@ -307,8 +307,8 @@ class ResidenceCard extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: residence.isAvailable
-                                    ? Colors.green[100]
-                                    : Colors.red[100],
+                                    ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5)
+                                    : Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
                                 borderRadius: BorderRadius.circular(8), // Réduire le rayon
                               ),
                               child: Row(
@@ -322,8 +322,8 @@ class ResidenceCard extends StatelessWidget {
                                           : AppIcons.unavailable,
                                       height: 12, // Réduire la taille
                                       color: residence.isAvailable
-                                          ? Colors.green[700]
-                                          : Colors.red[700],
+                                          ? Theme.of(context).colorScheme.primary
+                                          : Theme.of(context).colorScheme.error,
                                     ),
                                   if (MediaQuery.of(context).size.width > 320)
                                     const SizedBox(width: 2), // Réduire l'espacement
@@ -332,8 +332,8 @@ class ResidenceCard extends StatelessWidget {
                                       residence.statusText,
                                       style: TextStyle(
                                         color: residence.isAvailable
-                                            ? Colors.green[700]
-                                            : Colors.red[700],
+                                            ? Theme.of(context).colorScheme.primary
+                                            : Theme.of(context).colorScheme.error,
                                         fontSize: 10, // Réduire la taille du texte
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -359,7 +359,7 @@ class ResidenceCard extends StatelessWidget {
               top: 8,
               right: 8,
               child: Material(
-                color: Colors.white.withOpacity(0.9),
+                color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
                 elevation: 4,
                 child: InkWell(
@@ -370,7 +370,7 @@ class ResidenceCard extends StatelessWidget {
                     child: SvgPicture.asset(
                       AppIcons.delete,
                       height: 20,
-                      color: Colors.red[700],
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ),

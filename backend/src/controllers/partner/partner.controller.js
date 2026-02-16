@@ -8,6 +8,10 @@ const statsService = require('../../services/stats.service');
 const dashboardService = require('../../services/dashboard.service');
 const ApiError = require('../../utils/apiError');
 const asyncHandler = require('../../middlewares/async.middleware');
+const axios = require('axios');
+
+// Clé API Google Maps pour le géocodage inverse
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
 // Obtenir le profil du partenaire
 exports.getPartnerProfile = asyncHandler(async (req, res) => {
@@ -322,6 +326,278 @@ exports.getDashboardRealtime = asyncHandler(async (req, res) => {
         success: true,
         data: realtimeStats
     });
+});
+
+/**
+ * Helper function pour obtenir le nom réel de la ville via géocodage inverse
+ * @param {number} latitude - Latitude GPS
+ * @param {number} longitude - Longitude GPS
+ * @returns {Promise<string|null>} - Nom de la ville ou null si erreur
+ */
+async function _reverseGeocodeCity(latitude, longitude) {
+    if (!latitude || !longitude || latitude === 0 || longitude === 0) {
+        return null;
+    }
+    
+    try {
+        const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+            params: {
+                latlng: `${latitude},${longitude}`,
+                key: GOOGLE_MAPS_API_KEY,
+                language: 'fr' // Langue française pour les résultats
+            }
+        });
+        
+        if (response.data.status !== 'OK' || !response.data.results || response.data.results.length === 0) {
+            console.warn(`Géocodage inverse échoué pour ${latitude},${longitude}: ${response.data.status}`);
+            return null;
+        }
+        
+        // Extraire le nom de la ville depuis les composants d'adresse
+        const result = response.data.results[0];
+        const addressComponents = result.address_components || [];
+        
+        // Chercher le composant "locality" (ville) ou "administrative_area_level_2" (département/région)
+        for (const component of addressComponents) {
+            if (component.types.includes('locality')) {
+                return component.long_name; // Ex: "Cocody", "Yamoussoukro"
+            }
+            // Fallback sur le niveau administratif si pas de locality
+            if (component.types.includes('administrative_area_level_2')) {
+                return component.long_name;
+            }
+        }
+        
+        // Si aucun composant de ville trouvé, essayer d'extraire depuis formatted_address
+        if (result.formatted_address) {
+            const parts = result.formatted_address.split(',');
+            if (parts.length > 0) {
+                return parts[parts.length - 2]?.trim() || null; // Avant-dernier élément (généralement la ville)
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error(`Erreur lors du géocodage inverse pour ${latitude},${longitude}:`, error.message);
+        return null;
+    }
+}
+
+/**
+ * Helper function pour déterminer si une valeur est un code de ville (court, 2-3 caractères)
+ * @param {string} cityValue - Valeur à vérifier
+ * @returns {boolean} - True si c'est probablement un code
+ */
+function _isCityCode(cityValue) {
+    if (!cityValue || typeof cityValue !== 'string') {
+        return false;
+    }
+    // Codes de ville typiques en Côte d'Ivoire : CO, YM, AB, etc. (2-3 caractères, majuscules)
+    return cityValue.length <= 3 && cityValue === cityValue.toUpperCase() && /^[A-Z]+$/.test(cityValue);
+}
+
+// Statistiques par ville (mes villes)
+exports.getMyCitiesStats = asyncHandler(async (req, res) => {
+    const partnerId = req.user.id;
+    const { startDate, endDate } = req.query;
+    
+    try {
+        // Récupérer toutes les résidences du partenaire avec les coordonnées GPS
+        const residences = await Residence.find({ 
+            partner: partnerId,
+            deleted: { $ne: true }
+        }).select('location locationData city address images isAvailable latitude longitude');
+        
+        if (residences.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: {
+                    myCities: [],
+                    opportunities: []
+                }
+            });
+        }
+        
+        // Grouper par ville et calculer les stats
+        const cityMap = new Map();
+        
+        // Cache pour éviter les appels API répétés pour les mêmes coordonnées
+        const geocodeCache = new Map();
+        
+        for (const residence of residences) {
+            // Extraire la ville depuis location.city ou city ou address
+            let city = 'Non spécifiée';
+            let needsGeocoding = false;
+            
+            // Priorité 1: location.city (peut être un code)
+            if (residence.location?.city) {
+                city = residence.location.city;
+                needsGeocoding = _isCityCode(city);
+            }
+            // Priorité 2: city (peut être un code)
+            else if (residence.city) {
+                city = residence.city;
+                needsGeocoding = _isCityCode(city);
+            }
+            // Priorité 3: address (parsing texte)
+            else if (residence.address) {
+                const addressParts = residence.address.split(',');
+                if (addressParts.length > 0) {
+                    city = addressParts[addressParts.length - 1].trim();
+                }
+            }
+            
+            // Si c'est un code ou vide, utiliser le géocodage inverse si coordonnées GPS disponibles
+            if (needsGeocoding || city === 'Non spécifiée' || !city) {
+                // Récupérer les coordonnées GPS
+                let lat = null;
+                let lng = null;
+                
+                if (residence.locationData?.coordinates) {
+                    lat = residence.locationData.coordinates.latitude;
+                    lng = residence.locationData.coordinates.longitude;
+                } else if (residence.latitude && residence.longitude) {
+                    lat = residence.latitude;
+                    lng = residence.longitude;
+                }
+                
+                // Utiliser le géocodage inverse si coordonnées disponibles
+                if (lat && lng && lat !== 0 && lng !== 0) {
+                    const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+                    
+                    // Vérifier le cache
+                    if (geocodeCache.has(cacheKey)) {
+                        const cachedCity = geocodeCache.get(cacheKey);
+                        if (cachedCity) {
+                            city = cachedCity;
+                        }
+                    } else {
+                        // Appel API pour géocodage inverse
+                        const geocodedCity = await _reverseGeocodeCity(lat, lng);
+                        geocodeCache.set(cacheKey, geocodedCity);
+                        
+                        if (geocodedCity) {
+                            city = geocodedCity;
+                        }
+                    }
+                }
+            }
+            
+            if (!cityMap.has(city)) {
+                cityMap.set(city, {
+                    city: city,
+                    residences: [],
+                    totalRevenue: 0,
+                    totalBookings: 0,
+                    availableResidences: 0
+                });
+            }
+            
+            const cityData = cityMap.get(city);
+            cityData.residences.push(residence._id);
+            if (residence.isAvailable) {
+                cityData.availableResidences++;
+            }
+        }
+        
+        // Calculer les stats détaillées pour chaque ville
+        const myCities = await Promise.all(Array.from(cityMap.entries()).map(async ([city, cityData]) => {
+            const residenceIds = cityData.residences;
+            
+            // Calculer les revenus depuis les paiements
+            const revenueMatch = {
+                partner: partnerId,
+                status: 'completed',
+                residence: { $in: residenceIds }
+            };
+            
+            if (startDate || endDate) {
+                revenueMatch.createdAt = {};
+                if (startDate) revenueMatch.createdAt.$gte = new Date(startDate);
+                if (endDate) revenueMatch.createdAt.$lte = new Date(endDate);
+            }
+            
+            const revenueStats = await Payment.aggregate([
+                { $match: revenueMatch },
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: { $sum: '$amount' },
+                        totalBookings: { $sum: 1 }
+                    }
+                }
+            ]);
+            
+            const totalRevenue = revenueStats.length > 0 ? revenueStats[0].totalRevenue : 0;
+            const totalBookings = revenueStats.length > 0 ? revenueStats[0].totalBookings : 0;
+            
+            // Calculer le taux d'occupation moyen
+            let avgOccupancyRate = 0;
+            if (residenceIds.length > 0) {
+                const occupancyStats = await Promise.all(residenceIds.map(async (resId) => {
+                    const stats = await statsService.getResidenceStats(resId, startDate, endDate);
+                    return stats.occupancyRate || 0;
+                }));
+                avgOccupancyRate = occupancyStats.reduce((sum, rate) => sum + rate, 0) / occupancyStats.length;
+            }
+            
+            // Trouver la meilleure résidence de la ville
+            let bestResidence = null;
+            if (residenceIds.length > 0) {
+                const bestResidenceStats = await Promise.all(residenceIds.map(async (resId) => {
+                    const stats = await statsService.getResidenceStats(resId, startDate, endDate);
+                    return {
+                        id: resId.toString(),
+                        revenue: stats.revenue || 0
+                    };
+                }));
+                
+                bestResidence = bestResidenceStats.reduce((best, current) => 
+                    current.revenue > best.revenue ? current : best
+                , bestResidenceStats[0] || { id: '', revenue: 0 });
+            }
+            
+            // Récupérer une image représentative (première résidence avec image)
+            const sampleResidence = residences.find(r => 
+                cityData.residences.some(id => id.equals(r._id)) && 
+                r.images && r.images.length > 0
+            );
+            const imageUrl = sampleResidence?.images?.[0] || null;
+            
+            return {
+                city: city,
+                totalResidences: cityData.residences.length,
+                availableResidences: cityData.availableResidences,
+                totalRevenue: totalRevenue,
+                averageOccupancyRate: avgOccupancyRate,
+                totalBookings: totalBookings,
+                bestPerformingResidence: bestResidence,
+                imageUrl: imageUrl
+            };
+        }));
+        
+        // Trier par revenu décroissant
+        myCities.sort((a, b) => b.totalRevenue - a.totalRevenue);
+        
+        // TODO: Opportunités d'expansion (peut être ajouté plus tard)
+        // Pour l'instant, on retourne juste les villes du partenaire
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                myCities: myCities,
+                opportunities: [] // À implémenter plus tard
+            }
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors du calcul des stats par ville:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors du calcul des statistiques par ville',
+            error: error.message
+        });
+    }
 });
 
 // Obtenir les avis des résidences du partenaire

@@ -286,17 +286,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_off, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
+          // Illustration des notifications
+          Image.asset(
+            'assets/images/illustrations/empty_notification.png',
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.width * 0.85,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback vers l'icône si l'image ne charge pas
+              return Icon(
+                Icons.notifications_off,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
           Text(
             'Aucune notification',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.grey,
-            ),
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Vous n\'avez pas encore de notifications. Les alertes et mises à jour importantes apparaîtront ici.',
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
           ),
         ],
       ),

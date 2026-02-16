@@ -655,14 +655,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               final conversations = state.conversations;
               if (conversations.isEmpty) {
                 return SliverFillRemaining(
-                  child: Center(
-                    child: Text(
-                      'Aucune conversation',
-                      style: AppTextStyles.medium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
+                  child: _buildEmptyMessagesState(context),
                 );
               }
 
@@ -928,14 +921,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 if (state is MessagesLoaded) {
                   final messages = state.messages;
                   if (messages.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'Aucun message',
-                        style: AppTextStyles.medium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    );
+                    return _buildEmptyChatState(context);
                   }
 
                   return ListView.builder(
@@ -1072,5 +1058,83 @@ class _MessagesScreenState extends State<MessagesScreen> {
       ),
     );
     return client.isActive;
+  }
+
+  Widget _buildEmptyMessagesState(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Illustration des messages
+          Image.asset(
+            'assets/images/illustrations/empty_message.png',
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.width * 0.85,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback vers l'icône si l'image ne charge pas
+              return Icon(
+                Icons.chat_bubble_outline,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Aucune conversation',
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Vous n\'avez pas encore de messages. Les conversations avec vos clients apparaîtront ici.',
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyChatState(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Illustration des messages
+          Image.asset(
+            'assets/images/illustrations/empty_message.png',
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.width * 0.85,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback vers l'icône si l'image ne charge pas
+              return Icon(
+                Icons.chat_bubble_outline,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Aucun message',
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Commencez la conversation en envoyant un message.',
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -106,6 +106,7 @@ flutter:
     - assets/images/backgrounds/
     - assets/images/placeholders/
     - assets/images/payment/
+    - assets/images/illustrations/
     - assets/icons/
     - assets/icons/navigation/
     - assets/icons/actions/
