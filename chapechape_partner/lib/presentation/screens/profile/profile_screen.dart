@@ -23,6 +23,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
 import '../../../core/config/app_config_manager.dart';
+import '../../../core/utils/string_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -411,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          partner?.fullName ?? '',
+                          StringUtils.toTitleCase(partner?.fullName ?? ''),
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -527,14 +528,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       count: availableResidences,
                                       label: 'Disponibles',
                                       icon: Icons.check_circle_outline,
-                                      color: Colors.green,
+                                      color: theme.colorScheme.primary,
                                     ),
                                     _buildResidenceIndicator(
                                       context,
                                       count: totalResidences - availableResidences,
                                       label: 'Occupées',
                                       icon: Icons.timer,
-                                      color: Colors.orange,
+                                      color: theme.colorScheme.primary,
                                     ),
                                   ],
                                 );
@@ -589,13 +590,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               subtitle: partner?.phoneNumber ?? '',
                               theme: theme,
                             ),
-                            const Divider(),
-                            _buildInfoTile(
-                              icon: Icons.business_outlined,
-                              title: 'Rôle',
-                              subtitle: partner?.role ?? '',
-                              theme: theme,
-                            ),
                           ],
                         ),
                       ),
@@ -645,13 +639,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             theme: theme,
                           ),
                         ),
-                        // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+                        // 🚫 MASQUÉ POUR GOOGLE PLAY SUBMISSION
                         // const SizedBox(width: 16),
                         // Expanded(
                         //   child: _buildStatCard(
                         //     icon: Icons.monetization_on_outlined,
                         //     value: dashboardState is DashboardLoaded 
-                        //         ? '${dashboardState.dashboardData.revenue.totalRevenue} FCFA'
+                        //         ? _formatRevenueFcfa(dashboardState.dashboardData.revenue.totalRevenue)
                         //         : '-',
                         //     label: 'Revenus',
                         //     theme: theme,
@@ -797,6 +791,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ],
     ));
   } // Fin de la méthode build
+
+  /// Affiche un montant en FCFA sans décimale inutile pour zéro (ex. "0 FCFA" au lieu de "0.0 FCFA").
+  static String _formatRevenueFcfa(double value) {
+    if (value == 0) return '0 FCFA';
+    return '${value.round()} FCFA';
+  }
    
    Widget _buildInfoTile({
     required IconData icon,

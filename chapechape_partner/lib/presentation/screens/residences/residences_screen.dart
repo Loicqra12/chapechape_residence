@@ -121,8 +121,8 @@ class _ResidencesViewState extends State<_ResidencesView> {
                                   : Icons.error_outline,
                           size: 48,
                           color: state.isNetworkError || state.isAuthError
-                              ? Colors.orange
-                              : Colors.red,
+                              ? Theme.of(context).colorScheme.tertiary
+                              : Theme.of(context).colorScheme.error,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -450,10 +450,20 @@ class _ResidencesViewState extends State<_ResidencesView> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.home_work_outlined,
-            size: 80,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+          // Illustration de la maison
+          Image.asset(
+            'assets/images/illustrations/empty_residence.png',
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.width * 0.85,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback vers l'icône si l'image ne charge pas
+              return Icon(
+                Icons.home_work_outlined,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              );
+            },
           ),
           const SizedBox(height: 24),
           Text(
@@ -533,7 +543,8 @@ class _ResidencesViewState extends State<_ResidencesView> {
   Widget _buildEnhancedResidenceCard(BuildContext context, Residence residence) {
     // Statut de la résidence
     final bool isAvailable = residence.isAvailable;
-    final Color statusColor = isAvailable ? Colors.green : Colors.orange;
+    final theme = Theme.of(context);
+    final Color statusColor = isAvailable ? theme.colorScheme.primary : theme.colorScheme.secondary;
     final String statusText = isAvailable ? 'Disponible' : 'Non disponible';
     
     // Récupérer l'URL de l'image directement
@@ -624,9 +635,9 @@ class _ResidencesViewState extends State<_ResidencesView> {
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Cette résidence n\'existe plus'),
-                        backgroundColor: Colors.red,
+                      SnackBar(
+                        content: const Text('Cette résidence n\'existe plus'),
+                        backgroundColor: Theme.of(context).colorScheme.error,
                       ),
                     );
                   }
@@ -635,7 +646,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Erreur: $errorMessage'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
                 }
@@ -667,11 +678,11 @@ class _ResidencesViewState extends State<_ResidencesView> {
                             return Container(
                               height: 180,
                               width: double.infinity,
-                              color: Colors.grey[300],
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                                  Icon(Icons.image_not_supported, size: 50, color: Theme.of(context).colorScheme.outline),
                                   const SizedBox(height: 8),
                                   Text('Erreur: $error', textAlign: TextAlign.center),
                                 ],
@@ -682,8 +693,8 @@ class _ResidencesViewState extends State<_ResidencesView> {
                       : Container(
                           height: 180,
                           width: double.infinity,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.home, size: 50, color: Colors.grey),
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          child: Icon(Icons.home, size: 50, color: Theme.of(context).colorScheme.outline),
                         ),
                 ),
                 // Badge de statut
@@ -719,7 +730,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
                     children: [
                       Expanded(
                         child: Text(
-                          residence.name,
+                          residence.displayName,
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -731,7 +742,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
                         '$formattedPrice FCFA$pricePeriod',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -779,9 +790,9 @@ class _ResidencesViewState extends State<_ResidencesView> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildStatItem(context, '0', 'Réservations'),
-                        // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
+                        // 🚫 MASQUÉ POUR GOOGLE PLAY SUBMISSION
                         // _buildStatItem(context, '0 FCFA', 'Revenus'),
-                        _buildStatItem(context, '${residence.reviewCount} avis', '${residence.rating} ★'),
+                        _buildStatItem(context, '${residence.reviewCount} avis', '${residence.rating == residence.rating.truncate() ? residence.rating.toInt() : residence.rating} ★'),
                       ],
                     ),
                   ),
@@ -867,7 +878,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
       builder: (context) => AlertDialog(
         title: const Text('Supprimer la résidence'),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer la résidence "${residence.name}" ?',
+          'Êtes-vous sûr de vouloir supprimer la résidence "${residence.displayName}" ?',
         ),
         actions: [
           TextButton(

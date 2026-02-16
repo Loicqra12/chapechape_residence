@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../../../core/models/dashboard/dashboard_data.dart';
 import '../../../core/models/payment/payout_model.dart';
 import '../../../core/services/api/payment_service.dart';
 import '../../../core/services/api/residence_service.dart';
 import '../../../core/config/app_config_manager.dart';
-import 'package:intl/intl.dart';
-import 'package:dio/dio.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import '../pricing/pricing_stats_screen.dart';
 import '../../widgets/skeletons/skeletons.dart';
@@ -16,6 +16,25 @@ import 'analytics_tab.dart'; // Import du nouvel onglet Analytics
 import '../main/main_screen.dart'; // Pour MainScreenNavigator
 import '../residences/edit_residence_screen.dart';
 import '../residences/residence_details_screen.dart';
+
+// Helper class pour les stats par ville
+class _CityStats {
+  final String city;
+  final int totalResidences;
+  final int availableResidences;
+  final double totalRevenue;
+  final double averageOccupancyRate;
+  final int totalBookings;
+  
+  _CityStats({
+    required this.city,
+    required this.totalResidences,
+    required this.availableResidences,
+    required this.totalRevenue,
+    required this.averageOccupancyRate,
+    required this.totalBookings,
+  });
+}
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -109,11 +128,11 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 24),
             
             // Ajouter la section Réservations à venir
-            _buildUpcomingReservationsSection(context),
+            _buildUpcomingReservationsSection(context, state),
             const SizedBox(height: 24),
             
-            // Ajouter la section Localisation
-            _buildLocationAnalyticsSection(context),
+            // Section Mes villes (basée sur les vraies données)
+            _buildMyCitiesSection(context, state),
             const SizedBox(height: 24),
             
             // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
@@ -1417,15 +1436,34 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpcomingReservationsSection(BuildContext context) {
+  Widget _buildUpcomingReservationsSection(BuildContext context, DashboardLoaded state) {
+    final upcomingReservations = state.dashboardData.realtime.todayVisits;
+    final maxDisplay = 5; // Afficher maximum 5 réservations
+    final displayReservations = upcomingReservations.take(maxDisplay).toList();
+    final hasMore = upcomingReservations.length > maxDisplay;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Réservations à venir',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Réservations à venir',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            if (upcomingReservations.isNotEmpty)
+              Chip(
+                label: Text('${upcomingReservations.length}'),
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+          ],
         ),
         const SizedBox(height: 16),
         Card(
@@ -1438,82 +1476,68 @@ class DashboardScreen extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // En-tête des réservations
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        'Client',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+            child: displayReservations.isEmpty
+                ? _buildEmptyState(context)
+                : Column(
+                    children: [
+                      // En-tête des réservations (seulement si on a des données)
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Client',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        'Résidence',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Résidence',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Date',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Date',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                              textAlign: TextAlign.center,
                             ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Statut',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Statut',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                              textAlign: TextAlign.center,
                             ),
-                        textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                // Message quand aucune réservation
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 48,
-                          color: Colors.grey.shade400,
+                      const Divider(),
+                      // Liste des réservations
+                      ...displayReservations.map((visit) => _buildReservationRow(context, visit)),
+                      if (hasMore)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            '... et ${upcomingReservations.length - maxDisplay} autre(s)',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Aucune réservation à venir',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.grey.shade600,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Lorsque vous recevrez des réservations, elles apparaîtront ici',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey.shade500,
-                              ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -1530,176 +1554,525 @@ class DashboardScreen extends StatelessWidget {
       ],
     );
   }
-
-  Widget _buildLocationAnalyticsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Analyse par localisation',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          elevation: 0,
-          color: const Color(0xFFF5F7FF),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+  
+  Widget _buildEmptyState(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        children: [
+          Icon(
+            Icons.calendar_today_outlined,
+            size: 48,
+            color: Colors.grey.shade400,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 16),
+          Text(
+            'Aucune réservation à venir',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Lorsque vous recevrez des réservations, elles apparaîtront ici',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade500,
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildReservationRow(BuildContext context, TodayVisit visit) {
+    // Parser la date depuis le format ISO string
+    DateTime? checkInDate;
+    String formattedDate = visit.time;
+    try {
+      checkInDate = DateTime.parse(visit.time);
+      formattedDate = DateFormat('dd/MM/yyyy\nHH:mm').format(checkInDate);
+    } catch (e) {
+      // Si le parsing échoue, utiliser la valeur brute
+      formattedDate = visit.time;
+    }
+    
+    // Déterminer la couleur du statut
+    Color statusColor;
+    String statusLabel;
+    switch (visit.status.toLowerCase()) {
+      case 'confirmed':
+        statusColor = Colors.green;
+        statusLabel = 'Confirmé';
+        break;
+      case 'pending':
+        statusColor = Colors.orange;
+        statusLabel = 'En attente';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusLabel = visit.status;
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Row(
+        children: [
+          // Client
+          Expanded(
+            flex: 2,
+            child: Row(
               children: [
-                // Titre de la carte
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Résidences par région',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                // Avatar du client (si disponible)
+                if (visit.client.avatar != null && visit.client.avatar!.isNotEmpty)
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(visit.client.avatar!),
+                  )
+                else
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    child: Text(
+                      visit.client.name.isNotEmpty 
+                          ? visit.client.name[0].toUpperCase() 
+                          : '?',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        'Côte d\'Ivoire',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A237E),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                
-                // Régions en Côte d'Ivoire
-                Row(
-                  children: [
-                    _buildRegionCard(
-                      context, 
-                      'Abidjan', 
-                      '1', 
-                      const Color(0xFF1A237E),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildRegionCard(
-                      context, 
-                      'Yamoussoukro', 
-                      '0', 
-                      Colors.grey,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildRegionCard(
-                      context, 
-                      'San-Pédro', 
-                      '0', 
-                      Colors.grey,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A237E).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF1A237E).withOpacity(0.2),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Color(0xFF1A237E),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Élargissez votre offre en ajoutant des résidences dans d\'autres villes pour atteindre plus de clients',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFF1A237E),
-                                fontWeight: FontWeight.w500,
-                              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    visit.client.name.isNotEmpty ? visit.client.name : 'Client',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                    ],
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+          // Résidence
+          Expanded(
+            flex: 2,
+            child: Text(
+              visit.residence.name.isNotEmpty ? visit.residence.name : 'Résidence',
+              style: Theme.of(context).textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // Date
+          Expanded(
+            child: Text(
+              formattedDate,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // Statut
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: statusColor.withOpacity(0.3)),
+              ),
+              child: Text(
+                statusLabel,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRegionCard(BuildContext context, String region, String count, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.2),
-            width: 1,
+  /// Section "Mes villes" - Affiche les villes où le partenaire a des résidences avec leurs stats
+  Widget _buildMyCitiesSection(BuildContext context, DashboardLoaded state) {
+    // Utiliser les données backend si disponibles, sinon calculer depuis residenceStats
+    List<_CityStats> cityStats = [];
+    
+    if (state.myCitiesStats != null) {
+      // Utiliser les données du backend
+      final myCities = state.myCitiesStats!['myCities'] as List?;
+      if (myCities != null && myCities.isNotEmpty) {
+        cityStats = myCities.map((cityData) {
+          final data = cityData as Map<String, dynamic>;
+          return _CityStats(
+            city: data['city'] ?? 'Non spécifiée',
+            totalResidences: data['totalResidences'] ?? 0,
+            availableResidences: data['availableResidences'] ?? 0,
+            totalRevenue: (data['totalRevenue'] ?? 0).toDouble(),
+            averageOccupancyRate: (data['averageOccupancyRate'] ?? 0).toDouble(),
+            totalBookings: data['totalBookings'] ?? 0,
+          );
+        }).toList();
+      }
+    }
+    
+    // Fallback : calculer depuis residenceStats si pas de données backend
+    if (cityStats.isEmpty && state.residenceStats.isNotEmpty) {
+      debugPrint('📊 Calcul des villes depuis residenceStats (${state.residenceStats.length} résidences)');
+      
+      // Grouper les résidences par ville
+      final citiesMap = <String, List<ResidenceStats>>{};
+      for (var stat in state.residenceStats) {
+        // Extraire la ville depuis displayAddress (format: "address, city" ou "city")
+        String city = 'Non spécifiée';
+        
+        if (stat.displayAddress.isNotEmpty) {
+          // Si displayAddress contient une virgule, extraire la ville
+          if (stat.displayAddress.contains(',')) {
+            final addressParts = stat.displayAddress.split(',');
+            // Prendre le dernier élément non vide
+            for (int i = addressParts.length - 1; i >= 0; i--) {
+              final part = addressParts[i].trim();
+              if (part.isNotEmpty) {
+                city = part;
+                break;
+              }
+            }
+          } else {
+            // Pas de virgule, utiliser tout displayAddress comme ville
+            city = stat.displayAddress.trim();
+          }
+          
+          // Si toujours vide, utiliser "Non spécifiée"
+          if (city.isEmpty) {
+            city = 'Non spécifiée';
+          }
+        } else {
+          // displayAddress vide, utiliser "Non spécifiée"
+          city = 'Non spécifiée';
+        }
+        
+        debugPrint('   - Résidence "${stat.title}": ville="$city" (displayAddress="${stat.displayAddress}")');
+        citiesMap.putIfAbsent(city, () => []).add(stat);
+      }
+      
+      debugPrint('📊 Villes trouvées: ${citiesMap.keys.toList()}');
+      
+      // Calculer les stats par ville
+      cityStats = citiesMap.entries.map((entry) {
+        final city = entry.key;
+        final residences = entry.value;
+        final totalResidences = residences.length;
+        final totalRevenue = residences.fold(0.0, (sum, r) => sum + r.revenue);
+        final avgOccupancy = residences.length > 0 
+            ? residences.fold(0.0, (sum, r) => sum + r.occupancyRate) / residences.length 
+            : 0.0;
+        final totalBookings = residences.fold(0, (sum, r) => sum + r.totalBookings);
+        final availableResidences = residences.where((r) => r.status == 'available').length;
+        
+        return _CityStats(
+          city: city,
+          totalResidences: totalResidences,
+          availableResidences: availableResidences,
+          totalRevenue: totalRevenue,
+          averageOccupancyRate: avgOccupancy,
+          totalBookings: totalBookings,
+        );
+      }).toList();
+      
+      // Trier par revenu décroissant
+      cityStats.sort((a, b) => b.totalRevenue.compareTo(a.totalRevenue));
+    }
+    
+    // Si aucune ville trouvée, afficher un message informatif au lieu de masquer complètement
+    if (cityStats.isEmpty) {
+      debugPrint('⚠️ _buildMyCitiesSection: Aucune ville trouvée');
+      debugPrint('   - residenceStats.length: ${state.residenceStats.length}');
+      debugPrint('   - myCitiesStats: ${state.myCitiesStats != null ? "non null" : "null"}');
+      if (state.myCitiesStats != null) {
+        final myCities = state.myCitiesStats!['myCities'] as List?;
+        debugPrint('   - myCities.length: ${myCities?.length ?? 0}');
+      }
+      
+      // Afficher un message informatif si le partenaire n'a pas encore de résidences
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mes villes',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: Colors.grey.withOpacity(0.2),
               ),
-              child: Icon(Icons.location_on, color: color, size: 16),
             ),
-            const SizedBox(height: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.location_city_outlined,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Aucune résidence pour le moment',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Ajoutez votre première résidence pour voir vos statistiques par ville',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EditResidenceScreen()),
+                    ),
+                    icon: const Icon(Icons.add_business_rounded),
+                    label: const Text('Ajouter une résidence'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    
+    debugPrint('✅ _buildMyCitiesSection: ${cityStats.length} ville(s) trouvée(s)');
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
             Text(
-              count,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              'Mes villes',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: color,
                   ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              region,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade700,
-                  ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${cityStats.length} ${cityStats.length > 1 ? 'villes' : 'ville'}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        // Afficher les villes en grille ou liste selon le nombre
+        if (cityStats.length <= 3)
+          // Grille horizontale pour 3 villes ou moins
+          Row(
+            children: cityStats.asMap().entries.map((entry) {
+              final index = entry.key;
+              final stats = entry.value;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index < cityStats.length - 1 ? 12 : 0),
+                  child: _buildCityCard(context, stats),
+                ),
+              );
+            }).toList(),
+          )
+        else
+          // Liste scrollable horizontale pour plus de 3 villes
+          SizedBox(
+            height: 180,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: cityStats.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                return SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  child: _buildCityCard(context, cityStats[index]),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+  
+  Widget _buildCityCard(BuildContext context, _CityStats stats) {
+    final isTopPerformer = stats.totalRevenue > 0;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isTopPerformer 
+              ? primaryColor.withOpacity(0.2)
+              : Colors.grey.withOpacity(0.2),
+          width: isTopPerformer ? 2 : 1,
+        ),
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.location_city,
+                    color: primaryColor,
+                    size: 20,
+                  ),
+                ),
+                const Spacer(),
+                if (isTopPerformer)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Top',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              stats.city,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            _buildStatRow(
+              context,
+              Icons.home,
+              '${stats.totalResidences} résidence${stats.totalResidences > 1 ? 's' : ''}',
+              Colors.blue,
+            ),
+            const SizedBox(height: 4),
+            _buildStatRow(
+              context,
+              Icons.check_circle_outline,
+              '${stats.availableResidences} disponible${stats.availableResidences > 1 ? 's' : ''}',
+              Colors.green,
+            ),
+            const SizedBox(height: 8),
+            if (stats.totalRevenue > 0) ...[
+              Divider(height: 1, color: Colors.grey.withOpacity(0.2)),
+              const SizedBox(height: 8),
+              Text(
+                'Revenus',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey.shade600,
+                      fontSize: 11,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${NumberFormat('#,##0', 'fr_FR').format(stats.totalRevenue)} FCFA',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.trending_up, size: 14, color: Colors.green.shade700),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${stats.averageOccupancyRate.toStringAsFixed(1)}% occupation',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ] else
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Aucune réservation',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildStatRow(BuildContext context, IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 

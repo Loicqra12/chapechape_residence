@@ -189,6 +189,21 @@ Future<void> main() async {
   
   print('Services de devises initialisés avec succès');
   
+  // Configurer la barre de navigation système Android pour une meilleure visibilité
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      // Barre de statut (en haut)
+      statusBarColor: Colors.transparent, // Transparent pour s'adapter au thème
+      statusBarIconBrightness: Brightness.dark, // Icônes sombres (noires) sur fond clair
+      statusBarBrightness: Brightness.light, // Pour iOS
+      
+      // Barre de navigation système (en bas) - CRUCIAL pour la visibilité
+      systemNavigationBarColor: Colors.black, // Fond noir pour contraste
+      systemNavigationBarIconBrightness: Brightness.light, // Icônes blanches sur fond noir
+      systemNavigationBarDividerColor: Colors.transparent, // Pas de séparateur
+    ),
+  );
+  
   runApp(
     MultiProvider(
       providers: [

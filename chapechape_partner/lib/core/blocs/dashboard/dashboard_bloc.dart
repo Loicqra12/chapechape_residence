@@ -65,6 +65,7 @@ class DashboardLoaded extends DashboardState {
   final List<ResidenceStats> residenceStats;
   final TrendData trendData;
   final EarningsData earningsData;
+  final Map<String, dynamic>? myCitiesStats;
   final String period;
   final String? startDate;
   final String? endDate;
@@ -75,6 +76,7 @@ class DashboardLoaded extends DashboardState {
     required this.residenceStats,
     required this.trendData,
     required this.earningsData,
+    this.myCitiesStats,
     this.period = 'monthly',
     this.startDate,
     this.endDate,
@@ -87,6 +89,7 @@ class DashboardLoaded extends DashboardState {
     residenceStats, 
     trendData, 
     earningsData, 
+    myCitiesStats,
     period, 
     startDate, 
     endDate
@@ -98,6 +101,7 @@ class DashboardLoaded extends DashboardState {
     List<ResidenceStats>? residenceStats,
     TrendData? trendData,
     EarningsData? earningsData,
+    Map<String, dynamic>? myCitiesStats,
     String? period,
     String? startDate,
     String? endDate,
@@ -108,6 +112,7 @@ class DashboardLoaded extends DashboardState {
       residenceStats: residenceStats ?? this.residenceStats,
       trendData: trendData ?? this.trendData,
       earningsData: earningsData ?? this.earningsData,
+      myCitiesStats: myCitiesStats ?? this.myCitiesStats,
       period: period ?? this.period,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -224,6 +229,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       TrendData? trendData;
       List<ResidenceStats>? residenceStats;
       EarningsData? earningsData;
+      Map<String, dynamic>? myCitiesStats;
       
       try {
         // Charger toutes les données en parallèle avec retry automatique sur 429
@@ -284,6 +290,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             debugPrint('❌ Erreur lors de la récupération des revenus: $e');
             return EarningsData.empty();
           }),
+          
+          // 8. My Cities Stats avec retry
+          _retryOnRateLimit(() => _dashboardService.getMyCitiesStats()).catchError((e) {
+            debugPrint('❌ Erreur lors de la récupération des stats par ville: $e');
+            return <String, dynamic>{'myCities': [], 'opportunities': []};
+          }),
         ]);
         
         overview = futures[0] as DashboardOverview?;
@@ -293,6 +305,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         trendData = futures[4] as TrendData;
         residenceStats = futures[5] as List<ResidenceStats>;
         earningsData = futures[6] as EarningsData;
+        myCitiesStats = futures[7] as Map<String, dynamic>?;
         
         // Combiner les données des 3 premiers endpoints en DashboardData
         final dashboardData = DashboardData(
@@ -375,6 +388,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           residenceStats: residenceStats,
           trendData: trendData,
           earningsData: earningsData,
+          myCitiesStats: myCitiesStats,
           period: period,
         ));
       } catch (e) {
@@ -484,17 +498,25 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             startDate: startDate, 
             endDate: endDate
           ),
+          
+          // 4. My Cities Stats (Endpoint 5)
+          _dashboardService.getMyCitiesStats(
+            startDate: startDate,
+            endDate: endDate,
+          ),
         ]);
         
         final trendData = futures[0] as TrendData;
         final residenceStats = futures[1] as List<ResidenceStats>;
         final earningsData = futures[2] as EarningsData;
+        final myCitiesStats = futures[3] as Map<String, dynamic>;
         
         // Mettre à jour avec les nouvelles données
         emit(currentState.copyWith(
           trendData: trendData,
           residenceStats: residenceStats,
           earningsData: earningsData,
+          myCitiesStats: myCitiesStats,
           period: period,
           startDate: startDate,
           endDate: endDate,

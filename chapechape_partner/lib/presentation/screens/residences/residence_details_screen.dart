@@ -12,6 +12,7 @@ import '../../../core/blocs/favorite/favorite_event.dart';
 import '../../../core/blocs/promotion/promotion_bloc.dart';
 import '../../../core/blocs/promotion/promotion_event.dart';
 import '../../../core/models/residence/residence.dart';
+import '../../../core/models/residence/residence_extensions.dart';
 import '../../../core/models/residence/nearby_place.dart';
 import '../../../core/models/residence/faq.dart';
 import '../../../core/models/promotion/promotion_model.dart';
@@ -139,7 +140,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         builder: (context, state) {
           if (state is ResidenceLoading) {
             return Scaffold(
-              appBar: AppBar(title: Text(widget.residence.name)),
+              appBar: AppBar(title: Text(widget.residence.displayName)),
               body: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -159,7 +160,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                       elevation: 0,
                       backgroundColor: Theme.of(context).colorScheme.surface,
                       title: Text(
-                        widget.residence.name,
+                        widget.residence.displayName,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,
@@ -239,6 +240,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     SliverPersistentHeader(
                       delegate: _SliverTabBarDelegate(
                         TabBar(
+                          isScrollable: true,
                           labelColor: Theme.of(context).colorScheme.primary,
                           unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
                           indicatorSize: TabBarIndicatorSize.tab,
@@ -306,7 +308,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Supprimer la résidence'),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer la résidence "${widget.residence.name}" ? Cette action est irréversible.',
+          'Êtes-vous sûr de vouloir supprimer la résidence "${widget.residence.displayName}" ? Cette action est irréversible.',
         ),
         actions: [
           TextButton(
@@ -1102,7 +1104,7 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                _buildInfoRow(context, 'Type', _getTypeLabel(residence.type)),
+                _buildInfoRow(context, 'Type', residence.typeDisplay),
                 _buildInfoRow(context, 'Catégorie', _getCategoryLabel(residence.category)),
               ],
             ),
@@ -1270,14 +1272,19 @@ class _EnhancedOverviewTabState extends State<_EnhancedOverviewTab> {
   }
   
   String _getTypeLabel(String type) {
-    // Exemple simple, à compléter avec les vrais labels
-    switch (type) {
+    if (type.isEmpty) return type;
+    switch (type.toLowerCase()) {
       case 'studio_meuble':
         return 'Studio meublé';
       case 'appartement':
+      case 'apartment':
         return 'Appartement';
       case 'villa':
         return 'Villa';
+      case 'house':
+        return 'Maison';
+      case 'studio':
+        return 'Studio';
       default:
         return type;
     }

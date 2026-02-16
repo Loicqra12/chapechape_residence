@@ -3,8 +3,25 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/config/app_config.dart';
 import '../../utils/formatters.dart';
+import '../../utils/string_utils.dart';
 
 extension ResidenceProperties on Residence {
+  /// Nom affiché avec majuscule à chaque mot (ex. "désir amina" → "Désir Amina").
+  String get displayName => StringUtils.toTitleCase(name);
+
+  /// Libellé français du type de bien (ex. "apartment" → "Appartement").
+  String get typeDisplay {
+    if (type.isEmpty) return type;
+    const Map<String, String> _labels = {
+      'apartment': 'Appartement',
+      'appartement': 'Appartement',
+      'studio_meuble': 'Studio meublé',
+      'villa': 'Villa',
+      'house': 'Maison',
+      'studio': 'Studio',
+    };
+    return _labels[type.toLowerCase()] ?? type;
+  }
   // Utiliser l'URL de base depuis la configuration
   static String get baseUrl => AppConfig.apiUrl;
   

@@ -426,6 +426,55 @@ class DashboardService extends ApiService {
 
   // Getter pour le stream d'événements liés aux résidences
   Stream<event_bus.ResidenceEventType> get residenceEventStream => _eventBus.stream;
+
+  /// Récupère les statistiques par ville du partenaire
+  Future<Map<String, dynamic>> getMyCitiesStats({
+    String? startDate,
+    String? endDate,
+  }) async {
+    final cacheKey = 'my_cities_stats_${startDate ?? ''}_${endDate ?? ''}';
+    try {
+      final headers = await _getAuthHeaders();
+      final queryParams = {
+        if (startDate != null) 'startDate': startDate,
+        if (endDate != null) 'endDate': endDate,
+      };
+      
+      final response = await dio.get(
+        _ep('partners/dashboard/my-cities-stats'),
+        queryParameters: queryParams,
+        options: Options(headers: headers),
+      );
+      
+      // Mettre à jour le cache
+      _responseCache[cacheKey] = response.data['data'];
+      
+      return response.data['data'];
+    } catch (e) {
+      debugPrint('❌ Erreur getMyCitiesStats: $e');
+      
+      // Si c'est une erreur 404 (route non trouvée), retourner un objet vide au lieu de throw
+      // Cela permet au dashboard de fonctionner même si l'endpoint n'existe pas encore
+      if (e.toString().contains('404') || e.toString().contains('Ressource non trouvée') || e.toString().contains('not found')) {
+        debugPrint('⚠️ Endpoint my-cities-stats non disponible (404), utilisation de fallback');
+        return {'myCities': [], 'opportunities': []};
+      }
+      
+      final error = _handleCacheError(e, cacheKey);
+      
+      // Si c'est une réponse 304, utiliser le cache
+      if (error.toString().contains('NOT_MODIFIED')) {
+        if (_responseCache.containsKey(cacheKey)) {
+          _log('Utilisation des données en cache pour: $cacheKey');
+          return _responseCache[cacheKey];
+        }
+      }
+      
+      // Pour les autres erreurs, retourner un objet vide au lieu de throw pour ne pas bloquer le dashboard
+      debugPrint('⚠️ Erreur getMyCitiesStats, utilisation de fallback vide');
+      return {'myCities': [], 'opportunities': []};
+    }
+  }
 }
 
 class DashboardOverview {

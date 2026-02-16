@@ -1,7 +1,7 @@
 name: chapechape_partner
 description: "Application de gestion pour les partenaires ChapeChape Residence"
 publish_to: "none"
-version: 1.5.0+11
+version: 1.5.1+12
 
 environment:
   sdk: ^3.5.4
@@ -106,6 +106,7 @@ flutter:
     - assets/images/backgrounds/
     - assets/images/placeholders/
     - assets/images/payment/
+    - assets/images/illustrations/
     - assets/icons/
     - assets/icons/navigation/
     - assets/icons/actions/

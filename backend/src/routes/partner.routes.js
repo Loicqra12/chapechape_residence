@@ -12,6 +12,7 @@ router.use(protect, isPartner);
 router.get('/dashboard/overview', partnerController.getDashboardOverview);
 router.get('/dashboard/finances', partnerController.getDashboardFinances);
 router.get('/dashboard/realtime', partnerController.getDashboardRealtime);
+router.get('/dashboard/my-cities-stats', partnerController.getMyCitiesStats);
 
 // Profil du partenaire
 router.get('/profile', partnerController.getPartnerProfile);

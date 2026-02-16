@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -112,6 +113,21 @@ void main() async {
   await AppRouter.initialize(
     chatServiceInstance: chatService,
     apiServiceInstance: apiService,
+  );
+
+  // Configurer la barre de navigation système Android pour une meilleure visibilité
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      // Barre de statut (en haut)
+      statusBarColor: Colors.transparent, // Transparent pour s'adapter au thème
+      statusBarIconBrightness: Brightness.dark, // Icônes sombres (noires) sur fond clair
+      statusBarBrightness: Brightness.light, // Pour iOS
+      
+      // Barre de navigation système (en bas) - CRUCIAL pour la visibilité
+      systemNavigationBarColor: Colors.black, // Fond noir pour contraste
+      systemNavigationBarIconBrightness: Brightness.light, // Icônes blanches sur fond noir
+      systemNavigationBarDividerColor: Colors.transparent, // Pas de séparateur
+    ),
   );
 
   runApp(
