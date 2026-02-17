@@ -112,18 +112,11 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
   Widget _buildHeader() {
     return Row(
       children: [
-        // Icône décorative
-        Container(
-          padding: EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          ),
-          child: Icon(
-            Icons.local_offer,
-            color: AppTheme.primaryColor,
-            size: 24,
-          ),
+        // Icône grise (approche luxe)
+        Icon(
+          Icons.local_offer_outlined,
+          size: 20,
+          color: const Color(0xFF1A1A1A),
         ),
         
         SizedBox(width: AppSpacing.smd),
@@ -135,9 +128,9 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             children: [
               Text(
                 widget.title,
-                style: AppTextStyles.title.copyWith(
-                  fontSize: context.responsiveFontSize(20),
-                ),
+                style: AppTextStyles.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               if (widget.subtitle != null) ...[
                 SizedBox(height: AppSpacing.xs),

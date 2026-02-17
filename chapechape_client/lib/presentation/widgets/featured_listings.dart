@@ -10,6 +10,7 @@ import '../../core/models/listing_model.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/config/app_config_manager.dart'; // Import AppConfigManager
@@ -79,9 +80,9 @@ class _FeaturedListingsState extends State<FeaturedListings> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             _buildSubtitle(context),
-            const SizedBox(height: 8), 
+            const SizedBox(height: 4), 
             Expanded(
               child: widget.isLoading
                   ? _buildLoadingSkeleton()
@@ -100,35 +101,42 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
-              widget.title,
-              style: TextStyle(
-                fontSize: context.responsiveFontSize(22),
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.home_outlined,
+                  size: 20,
+                  color: const Color(0xFF1A1A1A),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: AppTextStyles.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-          Container(
-            width: 120,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+          TextButton(
+            onPressed: widget.onSeeAllPressed ?? () {
+              context.push(widget.routePath);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF1A1A1A),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: TextButton(
-              onPressed: widget.onSeeAllPressed ?? () {
-                context.push(widget.routePath);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child: const Text('Voir tout'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text('Voir tout'),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_forward_ios, size: 12),
+              ],
             ),
           ),
         ],
@@ -160,7 +168,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
 
     _logger.debug('_buildListingsList - ${widget.listings.length} résidences trouvées');
     return SizedBox(
-      height: 330, // Augmenter la hauteur du conteneur de liste
+      height: 280, // Compact height for Airbnb-style cards
       child: Stack(
         children: [
           ListView.builder(
@@ -317,8 +325,8 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         context.push(detailRoute);
       },
       child: Container(
-        width: 280,
-      margin: const EdgeInsets.only(right: 16, bottom: 8),
+        width: 230,
+      margin: const EdgeInsets.only(right: 12, bottom: 8),
       child: PremiumCard(
         borderRadius: 20,
         elevation: isHovered ? 8 : 4,
@@ -344,17 +352,17 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                           Stack(
                             children: [
                               SizedBox(
-                                height: 160,
+                                height: 140,
                                 width: double.infinity,
                                 child: _buildImage(item),
                               ),
                               if (isPromoted)
                                 Positioned(
                                   top: 12,
-                                  right: 12,
+                                  left: 12,
                                   child: _buildPromotedBadge(),
                                 ),
-                              _buildStatusBadge(status),
+                              // Status badge removed for Airbnb-style minimalism
                               Positioned(
                                 bottom: 0,
                                 left: 0,
@@ -388,12 +396,12 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  title,
+                                  StringUtils.toTitleCase(title),
                                   style: const TextStyle(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
@@ -464,8 +472,8 @@ class _FeaturedListingsState extends State<FeaturedListings> {
 
   // Méthodes d'adaptation pour récupérer les propriétés des différents types d'éléments
   String _getItemTitle(dynamic item) {
-    if (item is Listing) return item.title;
-    if (item is Residence) return item.title;
+    if (item is Listing) return StringUtils.toTitleCase(item.title);
+    if (item is Residence) return StringUtils.toTitleCase(item.title);
     return 'Titre non disponible';
   }
 
@@ -567,18 +575,12 @@ class _FeaturedListingsState extends State<FeaturedListings> {
   }
 
   Widget _buildPromotedBadge() {
+    // Airbnb-style subtle badge
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.amber,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -586,16 +588,16 @@ class _FeaturedListingsState extends State<FeaturedListings> {
           Icon(
             Icons.star,
             color: Colors.white,
-            size: 12,
+            size: 10,
           ),
-          SizedBox(width: 4),
+          SizedBox(width: 3),
           Text(
             'Premium',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -604,26 +606,20 @@ class _FeaturedListingsState extends State<FeaturedListings> {
   }
 
   Widget _buildPriceBadge(double? price) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 4,
+    // Texte blanc avec ombre légère sous l'image (approche luxe)
+    return Text(
+      _formatPrice(price ?? 0),
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        shadows: [
+          Shadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-      ),
-      child: Text(
-        _formatPrice(price ?? 0), // Utiliser 0 par défaut si price est null
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
@@ -633,33 +629,25 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     required String value,
     required String label,
   }) {
-    return SizedBox(
-      width: 78, // Réduire légèrement la largeur
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 18, // Réduire légèrement la taille de l'icône
-            color: AppTheme.primaryColor,
+    // Icônes grises fines avec texte à côté (approche luxe)
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.grey[600], // Gris foncé
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$value $label',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF1A1A1A),
           ),
-          const SizedBox(height: 4), // Réduire l'espace
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13, // Réduire légèrement la taille de la police
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 2), // Réduire l'espace
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11, // Réduire légèrement la taille de la police
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

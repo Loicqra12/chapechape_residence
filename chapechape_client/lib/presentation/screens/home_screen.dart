@@ -14,19 +14,14 @@ import '../../core/models/residence_type_enum.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/services/logger_service.dart';
 import '../widgets/featured_listings.dart';
-import '../widgets/categories_menu_widget.dart';
 import '../widgets/advanced_search_widget.dart';
-import '../widgets/testimonials_widget.dart';
-import '../widgets/blog_and_tips_widget.dart';
 import '../widgets/footer_widget.dart';
 import '../widgets/special_residences_widget.dart';
-import '../widgets/residence_type_widget.dart';
 import '../widgets/exclusive_promotions_widget.dart';
 import '../screens/promotion_detail_screen.dart';
 import '../widgets/home_banner_carousel.dart';
 import '../widgets/popular_categories_widget.dart';
 import '../widgets/around_me_widget.dart';
-import '../widgets/promo_banner_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -91,15 +86,12 @@ class _HomeScreenState extends State<HomeScreen> {
               // Bannière d'accueil avec carousel dynamique
               HomeBannerCarousel(constraints: constraints),
               
+              const SizedBox(height: AppSpacing.lg),
+              
               // Section de recherche (commune à tous)
               const AdvancedSearchWidget(),
               
-              // Section des catégories (commune à tous)
-              _buildSectionHeader(
-                constraints, 
-                'Catégories', 
-                'Explorez nos différents types d\'hébergements'
-              ),
+              const SizedBox(height: AppSpacing.lg),
               
               // Nouveau widget de catégories populaires avec animations
               const PopularCategoriesWidget(
@@ -107,22 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: 'Découvrez nos types d\'hébergements les plus demandés',
                 itemsPerRow: 2,
                 viewStyle: 'grid',
-              ),
-              
-              const PromoBannerWidget(),
-              AppSpacing.verticalSm,
-              
-              // Widget de catégories existant (modes d'affichage alternatifs)
-              CategoriesMenuWidget(
-                title: "Explorez par catégories",
-                filterType: ResidenceType.other,
-              ),
-              
-              // Section des offres spéciales (commune à tous)
-              _buildSectionHeader(
-                constraints, 
-                'Offres spéciales', 
-                'Résidences avec piscines et aménités exclusives'
               ),
               
               // Widget des promotions exclusives
@@ -182,18 +158,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
-              // Section Autour de moi (géolocalisation)
-              _buildSectionHeader(
-                constraints, 
-                'Autour de moi', 
-                'Découvrez les résidences à proximité de votre position'
-              ),
+              const SizedBox(height: AppSpacing.lg),
               
+              // Section À proximité (géolocalisation)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: AroundMeWidget(
                   title: 'À proximité',
-                  subtitle: 'Explorez les quartiers autour de vous',
+                  subtitle: 'Découvrez les résidences à proximité de votre position',
                   itemCount: 5,
                   radiusKm: 5.0,
                   showMap: true,
@@ -201,12 +173,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               
               // Section des résidences recommandées (commune à tous)
-              _buildSectionHeader(
-                constraints, 
-                'Résidences recommandées', 
-                'Nos meilleures sélections pour vous'
-              ),
-              
               SizedBox(
                 // Augmenter la hauteur pour éviter le débordement
                 height: 420,
@@ -225,6 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     final isLoading = data['isLoading'] as bool;
                             
                     return FeaturedListings(
+                      title: 'Résidences recommandées',
+                      subtitle: 'Nos meilleures sélections pour vous',
                       isLoading: isLoading,
                       listings: residences,
                       onSeeAllPressed: () {
@@ -239,22 +207,6 @@ class _HomeScreenState extends State<HomeScreen> {
               // Section pour encourager l'inscription (uniquement pour les non-connectés)
               _buildSignUpPrompt(context, constraints),
               
-              // Témoignages clients (commun à tous)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: TestimonialsWidget(
-                  key: const Key('home_testimonials'),
-                ),
-              ),
-              
-              // Section blog et conseils (commune à tous)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: BlogAndTipsWidget(
-                  key: const Key('home_blog_tips'),
-                ),
-              ),
-              
               // Footer (commun à tous)
               FooterWidget(),
             ],
@@ -264,37 +216,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
-  Widget _buildSectionHeader(BoxConstraints constraints, String title, String subtitle) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      width: constraints.maxWidth,
-      margin: EdgeInsets.only(top: AppSpacing.lg, bottom: AppSpacing.sm),
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.title.copyWith(
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-            semanticsLabel: 'Section: $title',
-          ),
-          AppSpacing.verticalXs,
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-            ),
-            semanticsLabel: subtitle,
-          ),
-        ],
-      ),
-    );
-  }
-  
   // Section d'incitation à l'inscription (visible uniquement pour les non-connectés)
   Widget _buildSignUpPrompt(BuildContext context, BoxConstraints constraints) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -332,11 +253,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 'Rejoignez ChapeChape Résidences',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
+                style: AppTextStyles.title,
                 textAlign: TextAlign.center,
                 semanticsLabel: 'Invitation à rejoindre ChapeChape Résidences',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               AppSpacing.verticalMd,
               Text(

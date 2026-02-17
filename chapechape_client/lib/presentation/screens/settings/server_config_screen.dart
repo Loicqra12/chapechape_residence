@@ -228,7 +228,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     controller: _ipController,
                     decoration: InputDecoration(
                       labelText: 'Adresse IP du serveur',
-                      hintText: '192.168.1.68',
+                      hintText: '192.168.1.74',
                       border: OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.computer),
                     ),

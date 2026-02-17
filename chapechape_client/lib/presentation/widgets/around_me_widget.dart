@@ -12,6 +12,7 @@ import '../../core/services/nearby_residences_service.dart';
 import '../../core/extensions/residence_extensions.dart';
 import '../../core/extensions/residence_marker_extension.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import 'advanced_search_widget.dart';
 
 /// Widget qui affiche les résidences à proximité de l'utilisateur
@@ -497,9 +498,23 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 20,
+                            color: const Color(0xFF1A1A1A),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              style: AppTextStyles.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                       if (widget.subtitle != null) ...[                  
                         const SizedBox(height: 4),
@@ -518,8 +533,8 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   icon: const Icon(Icons.tune),
                   tooltip: 'Recherche avancée',
                   style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                    foregroundColor: AppTheme.primaryColor,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: const Color(0xFF1A1A1A),
                   ),
                 ),
               ],
@@ -909,9 +924,23 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 20,
+                            color: const Color(0xFF1A1A1A),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              style: AppTextStyles.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                       if (widget.subtitle != null) ...[                  
                         const SizedBox(height: 4),
@@ -930,8 +959,8 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   icon: const Icon(Icons.tune),
                   tooltip: 'Recherche avancée',
                   style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                    foregroundColor: AppTheme.primaryColor,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: const Color(0xFF1A1A1A),
                   ),
                 ),
               ],

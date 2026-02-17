@@ -9,7 +9,9 @@ import '../../core/models/residence_model.dart';
 import '../../core/models/listing_model.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/utils/residence_adapters.dart';
+import '../../core/utils/string_utils.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/constants/app_assets.dart';
 import 'common/premium_card.dart';
 
@@ -59,9 +61,9 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             _buildSubtitle(context),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Expanded(
               child: widget.isLoading
                 ? _buildLoadingSkeleton()
@@ -80,35 +82,42 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
-              widget.title,
-              style: TextStyle(
-                fontSize: context.responsiveFontSize(22),
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.star_outline,
+                  size: 20,
+                  color: const Color(0xFF1A1A1A),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: AppTextStyles.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-          Container(
-            width: 120,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+          TextButton(
+            onPressed: widget.onSeeAllPressed ?? () {
+              context.push('/residences');
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF1A1A1A),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: TextButton(
-              onPressed: widget.onSeeAllPressed ?? () {
-                context.push('/residences');
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child: const Text('Voir tout'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text('Voir tout'),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_forward_ios, size: 12),
+              ],
             ),
           ),
         ],
@@ -138,7 +147,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
     }
 
     return SizedBox(
-      height: 350,
+      height: 300,
       child: Stack(
         children: [
           ListView.builder(
@@ -293,8 +302,8 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
         context.push(detailRoute);
       },
       child: PremiumCard(
-        width: 280,
-        margin: const EdgeInsets.only(right: 16, bottom: 8),
+        width: 230,
+        margin: const EdgeInsets.only(right: 12, bottom: 8),
         borderRadius: 20,
         elevation: isHovered ? 8 : 4,
         backgroundColor: Theme.of(context).cardColor,
@@ -310,7 +319,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
               Stack(
                 children: [
                   SizedBox(
-                    height: 180,
+                    height: 150,
                     width: double.infinity,
                     child: _buildImage(item),
                   ),
@@ -353,12 +362,12 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
+                      StringUtils.toTitleCase(title),
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
@@ -417,47 +426,35 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
     required IconData icon,
     required String text,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: AppTheme.primaryColor,
+    // Icônes grises fines avec texte à côté, sans fond coloré (approche luxe)
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: Colors.grey[600], // Gris foncé
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF1A1A1A),
           ),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryColor,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildSpecialBadge() {
+    // Airbnb-style subtle badge with semi-transparent black background
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.purple,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -465,16 +462,16 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
           Icon(
             Icons.star,
             color: Colors.white,
-            size: 12,
+            size: 10,
           ),
-          SizedBox(width: 4),
+          SizedBox(width: 3),
           Text(
             'Spécial',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -483,26 +480,20 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
   }
 
   Widget _buildPriceBadge(double? price) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor,
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 4,
+    // Texte blanc avec ombre légère sous l'image (approche luxe)
+    return Text(
+      _formatPrice(price),
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        shadows: [
+          Shadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-      ),
-      child: Text(
-        _formatPrice(price),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
@@ -615,8 +606,8 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
         itemCount: 3,
         itemBuilder: (context, index) {
           return Container(
-            width: 280,
-            margin: const EdgeInsets.only(right: 16),
+            width: 230,
+            margin: const EdgeInsets.only(right: 12),
             child: Shimmer.fromColors(
               baseColor: Colors.grey[300]!,
               highlightColor: Colors.grey[100]!,
@@ -629,7 +620,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
                   children: [
                     // Image placeholder
                     Container(
-                      height: 180,
+                      height: 150,
                       color: Colors.white,
                     ),
                     Padding(

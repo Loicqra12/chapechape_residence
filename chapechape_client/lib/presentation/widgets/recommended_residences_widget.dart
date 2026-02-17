@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/services/recommendation_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/services/logger_service.dart';
@@ -110,12 +111,23 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.thumb_up_outlined,
+                      size: 20,
+                      color: const Color(0xFF1A1A1A),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: AppTextStyles.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -291,11 +303,11 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        residence.title,
-                        maxLines: 1,
+                        StringUtils.toTitleCase(residence.title),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -352,7 +364,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
         Icon(
           icon,
           size: 16,
-          color: AppTheme.primaryColor,
+          color: Colors.grey[600], // Icône grise fine
         ),
         const SizedBox(width: 4),
         Text(

@@ -8,6 +8,7 @@ import '../../core/models/residence_type_enum.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import 'common/premium_card.dart';
 
 /// Widget amélioré affichant les catégories populaires avec des visuels attractifs,
@@ -194,7 +195,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(isDarkMode),
-        const SizedBox(height: 16),
+        const SizedBox(height: 4), // Ultra-compact spacing for maximum density
         // Afficher un widget de chargement ou les catégories
         _isLoading 
           ? _buildLoadingState(isDarkMode) 
@@ -239,17 +240,27 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.title,
-            semanticsLabel: 'Titre de section: ${widget.title}',
-            style: TextStyle(
-              fontSize: context.responsiveFontSize(20),
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.category_outlined,
+                size: 20,
+                color: const Color(0xFF1A1A1A),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.title,
+                  semanticsLabel: 'Titre de section: ${widget.title}',
+                  style: AppTextStyles.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
           if (widget.subtitle != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 4), // Minimal spacing between title and subtitle
             Text(
               widget.subtitle!,
               semanticsLabel: 'Description: ${widget.subtitle}',
