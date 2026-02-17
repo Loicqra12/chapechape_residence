@@ -14,19 +14,14 @@ import '../../core/models/residence_type_enum.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/services/logger_service.dart';
 import '../widgets/featured_listings.dart';
-import '../widgets/categories_menu_widget.dart';
 import '../widgets/advanced_search_widget.dart';
-import '../widgets/testimonials_widget.dart';
-import '../widgets/blog_and_tips_widget.dart';
 import '../widgets/footer_widget.dart';
 import '../widgets/special_residences_widget.dart';
-import '../widgets/residence_type_widget.dart';
 import '../widgets/exclusive_promotions_widget.dart';
 import '../screens/promotion_detail_screen.dart';
 import '../widgets/home_banner_carousel.dart';
 import '../widgets/popular_categories_widget.dart';
 import '../widgets/around_me_widget.dart';
-import '../widgets/promo_banner_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -107,15 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: 'Découvrez nos types d\'hébergements les plus demandés',
                 itemsPerRow: 2,
                 viewStyle: 'grid',
-              ),
-              
-              const PromoBannerWidget(),
-              AppSpacing.verticalSm,
-              
-              // Widget de catégories existant (modes d'affichage alternatifs)
-              CategoriesMenuWidget(
-                title: "Explorez par catégories",
-                filterType: ResidenceType.other,
               ),
               
               // Section des offres spéciales (commune à tous)
@@ -238,22 +224,6 @@ class _HomeScreenState extends State<HomeScreen> {
               
               // Section pour encourager l'inscription (uniquement pour les non-connectés)
               _buildSignUpPrompt(context, constraints),
-              
-              // Témoignages clients (commun à tous)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: TestimonialsWidget(
-                  key: const Key('home_testimonials'),
-                ),
-              ),
-              
-              // Section blog et conseils (commune à tous)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: BlogAndTipsWidget(
-                  key: const Key('home_blog_tips'),
-                ),
-              ),
               
               // Footer (commun à tous)
               FooterWidget(),
