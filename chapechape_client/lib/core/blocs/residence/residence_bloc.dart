@@ -123,6 +123,34 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     }
   }
 
+  // Mapping des catégories vers les types de résidences correspondants
+  static const Map<String, List<String>> _categoryToTypes = {
+    'meublee': [
+      'room', 'studioMeuble', 'appartementMeuble', 'villaMeublee', 'loft', 'penthouse',
+    ],
+    'hotel': [
+      'hotelRoom', 'hotel', 'motel', 'boutiqueHotel', 'hotelDePassage',
+      'hotelDeLuxe', 'aubergeEtMaisonDHotes', 'residenceHoteliere', 'hostel',
+      'guesthouse',
+    ],
+    'insolite': [
+      'bungalow', 'chalet', 'cabin', 'cottage', 'luxury', 'resort',
+      'lodgeEtEcolodge', 'caseTraditionnelle', 'maisonFlottante', 'campementTouristique',
+    ],
+    'colocation': [
+      'chambreEnColocation', 'cohabitation', 'residenceUniversitaire', 'citeDortoir',
+      'coworking', 'student',
+    ],
+    'longue_duree': [
+      'apartment', 'house', 'villa', 'studio', 'appartementNonMeuble',
+      'villaNonMeublee', 'immeuble', 'courCommune',
+    ],
+    'economique': [
+      'maisonDHotesEconomique', 'residenceFamilialeEnLocation',
+      'chambresDePassage', 'grenier', 'other',
+    ],
+  };
+
   Future<void> _onSearchResidences(
     SearchResidencesEvent event,
     Emitter<ResidenceState> emit,
@@ -130,24 +158,119 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     try {
       emit(const ResidenceLoading());
       
-      // Extraire les paramètres pertinents pour la recherche
-      final query = event.filters['query'] as String? ?? '';
-      final city = event.filters['city'] as String?;
-      final minPrice = event.filters['minPrice'] is num ? (event.filters['minPrice'] as num).toDouble() : null;
-      final maxPrice = event.filters['maxPrice'] is num ? (event.filters['maxPrice'] as num).toDouble() : null;
-      final bedrooms = event.filters['bedrooms'] is int ? event.filters['bedrooms'] as int : null;
-      final bathrooms = event.filters['bathrooms'] is int ? event.filters['bathrooms'] as int : null;
+      final f = event.filters;
+
+      final query            = f['query'] as String?;
+      final city             = f['city'] as String?;
+      final minPrice         = f['minPrice'] is num ? (f['minPrice'] as num).toDouble() : null;
+      final maxPrice         = f['maxPrice'] is num ? (f['maxPrice'] as num).toDouble() : null;
+      final residenceType    = f['residenceType'] as String?;
+      final period           = f['period'] as String?;
+      final neighborhood     = f['neighborhood'] as String?;
+      final region           = f['region'] as String?;
+
+      // Nouveaux filtres du panneau de filtres (SearchFilters)
+      final residenceCategory = f['residenceCategory'] as String?;
+      final minBedrooms      = f['minBedrooms'] is int ? f['minBedrooms'] as int : null;
+      final minBathrooms     = f['minBathrooms'] is int ? f['minBathrooms'] as int : null;
+      final amenitiesFilter  = f['amenities'] is List ? List<String>.from(f['amenities'] as List) : <String>[];
+      final allowsPets       = f['allowsPets'] as bool?;
+      final allowsSmoking    = f['allowsSmoking'] as bool?;
+      final allowsParties    = f['allowsParties'] as bool?;
+      final reservationMode  = f['reservationMode'] as String?;
+      final minRating        = f['minRating'] is num ? (f['minRating'] as num).toDouble() : null;
       
-      // Convertir les filtres en paramètres spécifiques acceptés par le service
-      final residences = await _residenceService.searchResidences(
+      var residences = await _residenceService.searchResidences(
         query: query,
         city: city,
         minPrice: minPrice,
         maxPrice: maxPrice,
-        bedrooms: bedrooms,
-        bathrooms: bathrooms,
         forceRefresh: true,
       );
+
+      // ── Filtrage client-side ──────────────────────────────────────────
+
+      // Filtre par type exact (depuis la recherche avancée)
+      if (residenceType != null && residenceType.isNotEmpty) {
+        residences = residences.where((r) {
+          final typeStr = r.type.toString().split('.').last.toLowerCase();
+          return typeStr == residenceType.toLowerCase();
+        }).toList();
+      }
+
+      // Filtre par catégorie (depuis le panneau de filtres)
+      if (residenceCategory != null && residenceCategory.isNotEmpty) {
+        final typesInCategory = _categoryToTypes[residenceCategory] ?? [];
+        if (typesInCategory.isNotEmpty) {
+          residences = residences.where((r) {
+            final typeStr = r.type.toString().split('.').last;
+            return typesInCategory.contains(typeStr);
+          }).toList();
+        }
+      }
+
+      // Filtre par période
+      if (period != null && period.isNotEmpty) {
+        residences = residences.where((r) {
+          return r.pricePeriod.toLowerCase() == period.toLowerCase();
+        }).toList();
+      }
+
+      // Filtre par quartier
+      if (neighborhood != null && neighborhood.isNotEmpty) {
+        residences = residences.where((r) {
+          final addr = r.address.toLowerCase();
+          return addr.contains(neighborhood.toLowerCase());
+        }).toList();
+      }
+
+      // Filtre par région
+      if (region != null && region.isNotEmpty) {
+        residences = residences.where((r) {
+          final addr = r.address.toLowerCase();
+          return addr.contains(region.toLowerCase());
+        }).toList();
+      }
+
+      // Filtre par nombre minimum de chambres
+      if (minBedrooms != null && minBedrooms > 0) {
+        residences = residences.where((r) => r.bedrooms >= minBedrooms).toList();
+      }
+
+      // Filtre par nombre minimum de salles de bain
+      if (minBathrooms != null && minBathrooms > 0) {
+        residences = residences.where((r) => r.bathrooms >= minBathrooms).toList();
+      }
+
+      // Filtre par équipements
+      if (amenitiesFilter.isNotEmpty) {
+        residences = residences.where((r) {
+          return amenitiesFilter.every((a) => r.amenities.contains(a));
+        }).toList();
+      }
+
+      // Filtre règles
+      if (allowsPets == true) {
+        residences = residences.where((r) => r.allowsPets).toList();
+      }
+      if (allowsSmoking == true) {
+        residences = residences.where((r) => r.allowsSmoking).toList();
+      }
+      if (allowsParties == true) {
+        residences = residences.where((r) => r.allowsParties).toList();
+      }
+
+      // Filtre mode de réservation
+      if (reservationMode != null && reservationMode.isNotEmpty) {
+        residences = residences.where((r) {
+          return r.reservationMode.toLowerCase() == reservationMode.toLowerCase();
+        }).toList();
+      }
+
+      // Filtre note minimale
+      if (minRating != null && minRating > 0) {
+        residences = residences.where((r) => r.rating >= minRating).toList();
+      }
       
       emit(ResidencesLoaded(residences));
     } catch (e) {

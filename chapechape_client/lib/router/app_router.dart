@@ -39,6 +39,7 @@ import 'package:chapechape_client/presentation/screens/settings_screen.dart';
 import 'package:chapechape_client/presentation/screens/full_map_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_waiting_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_failed_screen.dart';
+import 'package:chapechape_client/presentation/screens/search_criteria_screen.dart';
 
 class AppRouter {
   static late final ApiService _apiService;
@@ -400,7 +401,16 @@ class AppRouter {
       GoRoute(
         path: '/search',
         name: 'search',
-        builder: (context, state) => const SearchScreen(), // Accessible à tous
+        builder: (context, state) {
+          final extra = state.extra;
+          final searchParams = extra is Map<String, dynamic> ? extra : null;
+          return SearchScreen(initialSearchParams: searchParams);
+        },
+      ),
+      GoRoute(
+        path: '/search-criteria',
+        name: 'search_criteria',
+        builder: (context, state) => const SearchCriteriaScreen(),
       ),
       GoRoute(
         path: '/make-reservation/:id',

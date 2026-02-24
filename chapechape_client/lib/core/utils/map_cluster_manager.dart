@@ -9,49 +9,47 @@ import '../extensions/residence_marker_extension.dart';
 
 /// Utilitaire pour faciliter le clustering des résidences sur la carte
 class SimpleClusterUtility {
-  /// Regroupe les résidences qui sont trop proches les unes des autres à un zoom donné
-  /// et génère un marqueur de cluster pour chaque groupe
+  /// Regroupe les résidences et génère les marqueurs (avec état sélectionné).
   static Future<Set<Marker>> createClusteredMarkers({
     required List<Residence> residences,
     required double zoom,
     required Function(Residence) onMarkerTap,
+    String? selectedResidenceId,
   }) async {
-    // Si le zoom est suffisamment grand, on n'applique pas de clustering
     if (zoom >= 15.0) {
-      return _createIndividualMarkers(residences, onMarkerTap);
+      return _createIndividualMarkers(residences, onMarkerTap, selectedResidenceId);
     }
-    
-    // Sinon, on applique un clustering simple basé sur la distance
-    return _createClusteredMarkers(residences, zoom, onMarkerTap);
+    return _createClusteredMarkers(residences, zoom, onMarkerTap, selectedResidenceId);
   }
-  
+
   /// Crée des marqueurs individuels pour chaque résidence
   static Future<Set<Marker>> _createIndividualMarkers(
     List<Residence> residences,
     Function(Residence) onMarkerTap,
+    String? selectedResidenceId,
   ) async {
     final Set<Marker> markers = <Marker>{};
-    
+
     for (final residence in residences) {
       final lat = residence.latitude;
       final lng = residence.longitude;
-      
       if (lat == null || lng == null) continue;
-      
-      // Générer le marqueur avec prix
-      final icon = await ResidenceMarkerExtension.generateMarkerForResidence(residence);
-      
-      markers.add(
-        Marker(
-          markerId: MarkerId('residence_${residence.id}'),
-          position: LatLng(lat, lng),
-          icon: icon,
-          consumeTapEvents: true,
-          onTap: () => onMarkerTap(residence),
-        ),
+
+      final bool isSelected = residence.id == selectedResidenceId;
+      final icon = await ResidenceMarkerExtension.generateMarkerForResidence(
+        residence,
+        isSelected: isSelected,
       );
+
+      markers.add(Marker(
+        markerId: MarkerId('residence_${residence.id}'),
+        position: LatLng(lat, lng),
+        icon: icon,
+        consumeTapEvents: true,
+        onTap: () => onMarkerTap(residence),
+      ));
     }
-    
+
     return markers;
   }
 
@@ -60,6 +58,7 @@ class SimpleClusterUtility {
     List<Residence> residences,
     double zoom,
     Function(Residence) onMarkerTap,
+    String? selectedResidenceId,
   ) async {
     final Set<Marker> markers = <Marker>{};
     final Map<String, List<Residence>> clusters = {};
@@ -100,7 +99,11 @@ class SimpleClusterUtility {
       // Si le cluster ne contient qu'une seule résidence, afficher un marqueur normal
       if (clusterResidences.length == 1) {
         final residence = clusterResidences.first;
-        final icon = await ResidenceMarkerExtension.generateMarkerForResidence(residence);
+        final bool isSelected = residence.id == selectedResidenceId;
+        final icon = await ResidenceMarkerExtension.generateMarkerForResidence(
+          residence,
+          isSelected: isSelected,
+        );
         
         markers.add(
           Marker(

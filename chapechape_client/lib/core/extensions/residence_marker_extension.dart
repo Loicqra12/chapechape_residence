@@ -105,46 +105,45 @@ extension ResidenceMarkerExtension on Residence {
     }
   }
 
-  /// Map statique pour stocker les icônes de prix par ID de résidence
+  /// Cache : clé = "${id}_norm" ou "${id}_sel"
   static final Map<String, BitmapDescriptor> _residenceMarkers = {};
-  
-  /// Vide le cache des marqueurs pour forcer leur regénération
+
+  /// Vide le cache pour forcer la regénération (ex: changement de thème)
   static void clearMarkerCache() {
     _residenceMarkers.clear();
     debugPrint('Cache des marqueurs vidé.');
   }
-  
-  /// Génère une icône de marqueur pour une résidence spécifique
-  /// avec son prix exact au format Booking.com - BLEU FONCÉ UNIFORME
-  static Future<BitmapDescriptor> generateMarkerForResidence(Residence residence) async {
-    // Toujours forcer la regénération pour prendre en compte les modifications de design
-    // Ne plus utiliser le cache pour l'instant pour voir les changements immédiatement
-    // if (_residenceMarkers.containsKey(residence.id)) {
-    //  return _residenceMarkers[residence.id]!;
-    // }
-    
-    // Utiliser ROSE comme dans la capture d'écran
-    const Color uniformPinkColor = Color(0xFFE91E63);
-    
-    // Obtenir l'icône emoji selon le type de résidence
-    final String iconEmoji = residence.getResidenceTypeEmoji();
-    
-    // Créer un nouveau marqueur avec le prix exact et l'icône
+
+  /// Génère un marqueur prix style Google Hotels pour une résidence.
+  /// [isSelected] : fond blanc + bordure or (marqueur actif sur la carte)
+  static Future<BitmapDescriptor> generateMarkerForResidence(
+    Residence residence, {
+    bool isSelected = false,
+  }) async {
+    final String cacheKey = '${residence.id}_${isSelected ? 'sel' : 'norm'}';
+
+    if (_residenceMarkers.containsKey(cacheKey)) {
+      return _residenceMarkers[cacheKey]!;
+    }
+
     final BitmapDescriptor marker = await CustomMarkerGenerator.createPriceMarker(
       price: residence.price,
-      backgroundColor: uniformPinkColor,
-      iconEmoji: iconEmoji,
+      isSelected: isSelected,
     );
-    
-    // Stocker dans le cache
-    _residenceMarkers[residence.id] = marker;
-    
+
+    _residenceMarkers[cacheKey] = marker;
     return marker;
   }
-  
+
+  /// Invalide uniquement les entrées d'une résidence (normal + sélectionné)
+  static void invalidateMarker(String residenceId) {
+    _residenceMarkers.remove('${residenceId}_norm');
+    _residenceMarkers.remove('${residenceId}_sel');
+  }
+
   /// Vérifie si un marqueur a déjà été généré pour cette résidence
-  static bool hasGeneratedMarker(String residenceId) {
-    return _residenceMarkers.containsKey(residenceId);
+  static bool hasGeneratedMarker(String residenceId, {bool isSelected = false}) {
+    return _residenceMarkers.containsKey('${residenceId}_${isSelected ? 'sel' : 'norm'}');
   }
   
   /// Obtient l'icône du marqueur selon la catégorie

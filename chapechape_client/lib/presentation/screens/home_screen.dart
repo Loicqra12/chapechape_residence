@@ -14,7 +14,7 @@ import '../../core/models/residence_type_enum.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/services/logger_service.dart';
 import '../widgets/featured_listings.dart';
-import '../widgets/advanced_search_widget.dart';
+import '../widgets/home_search_bar.dart';
 import '../widgets/footer_widget.dart';
 import '../widgets/special_residences_widget.dart';
 import '../widgets/exclusive_promotions_widget.dart';
@@ -88,8 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
               
               const SizedBox(height: AppSpacing.lg),
               
-              // Section de recherche (commune à tous)
-              const AdvancedSearchWidget(),
+              const HomeSearchBar(),
               
               const SizedBox(height: AppSpacing.lg),
               

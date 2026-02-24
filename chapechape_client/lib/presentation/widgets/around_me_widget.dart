@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/residence_model.dart';
+import '../../core/models/residence_type_enum.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/nearby_residences_service.dart';
 import '../../core/extensions/residence_extensions.dart';
@@ -56,15 +57,16 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
-  
+
   // Contrôleurs
   late AnimationController _animationController;
   final Completer<GoogleMapController> _mapControllerCompleter = Completer<GoogleMapController>();
-  
+
   // Données
   List<Residence> _nearbyResidences = [];
   Set<Marker> _markers = {};
   int _hoveredIndex = -1;
+  Residence? _selectedMarkerResidence;
   
   // Filtres
   String? _selectedCategory;
@@ -439,7 +441,6 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         markerId: const MarkerId('user_location'),
         position: _userLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Ma position'),
       ),
     );
     
@@ -450,7 +451,6 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
       final double? lng = residence.longitude;
       
       if (lat != null && lng != null) {
-        // Utiliser le nouveau système de marqueurs unifié avec icônes et prix
         final BitmapDescriptor markerIcon = await ResidenceMarkerExtension.generateMarkerForResidence(residence);
         
         markers.add(
@@ -458,18 +458,13 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
             markerId: MarkerId('residence_${residence.id}'),
             position: LatLng(lat, lng),
             icon: markerIcon,
-            infoWindow: InfoWindow(
-              title: residence.title,
-              snippet: '${residence.bedrooms} ch, ${residence.bathrooms} sdb - ${residence.location['displayAddress'] ?? ''}',
-            ),
+            consumeTapEvents: true,
             onTap: () {
-              // Trouver l'index de la résidence dans la liste
               final index = _nearbyResidences.indexWhere((r) => r.id == residence.id);
-              if (index != -1) {
-                setState(() {
-                  _hoveredIndex = index;
-                });
-              }
+              setState(() {
+                _selectedMarkerResidence = residence;
+                if (index != -1) _hoveredIndex = index;
+              });
             },
           ),
         );
@@ -865,7 +860,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         
         const SizedBox(height: 16),
         
-        // Liste des emplacements à proximité
+        // Liste des résidences — pas de second titre "À proximité", uniquement la liste
         _buildLocationsList(),
       ],
     );
@@ -873,7 +868,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
   
   Widget _buildMap() {
     return Container(
-      height: 200, // Augmentation de la hauteur pour une meilleure visibilité
+      height: 220,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -885,91 +880,122 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias, // Assure que la carte respecte le borderRadius
-      child: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: LatLng(_userLocation?.latitude ?? 0.0, _userLocation?.longitude ?? 0.0),
-          zoom: 14.0,
-        ),
-        markers: _markers,
-        onMapCreated: (controller) {
-          if (!_mapControllerCompleter.isCompleted) {
-            _mapControllerCompleter.complete(controller);
-          }
-          debugPrint('🗺️ Google Maps initialisée avec succès');
-        },
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: LatLng(_userLocation?.latitude ?? 0.0, _userLocation?.longitude ?? 0.0),
+              zoom: 14.0,
+            ),
+            markers: _markers,
+            onMapCreated: (controller) {
+              if (!_mapControllerCompleter.isCompleted) {
+                _mapControllerCompleter.complete(controller);
+              }
+            },
+            onTap: (_) => setState(() => _selectedMarkerResidence = null),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+          ),
+          // Carte flottante au tap d'un marqueur
+          if (_selectedMarkerResidence != null)
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 8,
+              child: _buildMapOverlayCard(_selectedMarkerResidence!),
+            ),
+        ],
       ),
     )
     .animate(controller: _animationController)
     .fadeIn(duration: 300.ms, curve: Curves.easeOutQuad)
     .moveY(begin: 20, end: 0, duration: 400.ms, curve: Curves.easeOutQuad);
   }
+
+  /// Carte compacte affichée en superposition sur la mini-carte au tap d'un marqueur
+  Widget _buildMapOverlayCard(Residence residence) {
+    return GestureDetector(
+      onTap: () => context.pushNamed('residence_details', pathParameters: {'id': residence.id}),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3))],
+        ),
+        child: Row(
+          children: [
+            // Miniature image
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
+              child: SizedBox(
+                width: 80,
+                height: 72,
+                child: residence.photos != null && residence.photos!.isNotEmpty
+                    ? Image.network(residence.photos!.first,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            Container(color: Colors.grey[200], child: const Icon(Icons.home, color: Colors.grey)))
+                    : Container(color: Colors.grey[200], child: const Icon(Icons.home, color: Colors.grey)),
+              ),
+            ),
+            // Infos
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      residence.title,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      residence.type.displayName,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      residence.formattedPrice,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD4AF37)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Bouton fermer
+            GestureDetector(
+              onTap: () => setState(() => _selectedMarkerResidence = null),
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.close, size: 16, color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   
+  /// Liste horizontale des résidences. Un seul titre "À proximité" en haut du widget (build), pas ici.
   Widget _buildLocationsList() {
     return Container(
-      height: 400,  // Augmenté encore pour accommoder les cartes plus hautes
+      height: 320,
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // En-tête du widget
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                // Titre et sous-titre
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 20,
-                            color: const Color(0xFF1A1A1A),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              widget.title,
-                              style: AppTextStyles.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (widget.subtitle != null) ...[                  
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.subtitle!,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                
-                // Bouton de recherche avancée
-                IconButton(
-                  onPressed: _showAdvancedSearch,
-                  icon: const Icon(Icons.tune),
-                  tooltip: 'Recherche avancée',
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: const Color(0xFF1A1A1A),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Liste des emplacements à proximité
           SizedBox(
             height: 280,
             child: ListView.builder(

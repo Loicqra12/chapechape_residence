@@ -106,7 +106,29 @@ const residenceSchema = mongoose.Schema({
   type: {
     type: String,
     required: [true, 'Le type de propriété est requis'],
-    enum: ['apartment', 'house', 'villa', 'studio']
+    enum: [
+      // Types de base (ancien format)
+      'apartment', 'house', 'villa', 'studio', 'room',
+      // Résidences meublées (format partner)
+      'appartement_meuble', 'studio_meuble', 'villa_meublee',
+      'penthouse', 'loft', 'grenier',
+      // Hôtels & hébergements
+      'hotel', 'hotel_passage', 'motel', 'boutique_hotel',
+      'hotel_luxe', 'guest_house', 'residence_hoteliere',
+      // Hébergements insolites
+      'bungalow', 'lodge', 'case_traditionnelle',
+      'maison_flottante', 'campement_touristique',
+      // Colocations
+      'chambre_colocation', 'coliving', 'maison_hotes',
+      'residence_universitaire', 'cite_dortoir',
+      // Longue durée
+      'appartement_vide', 'villa_vide', 'immeuble', 'cour_commune',
+      // Économiques
+      'maison_hotes_economique', 'residence_familiale',
+      'chambres_passage',
+      // Autres
+      'other'
+    ]
   },
   status: {
     type: String,

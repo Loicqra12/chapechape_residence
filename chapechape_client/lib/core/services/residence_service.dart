@@ -357,7 +357,8 @@ class ResidenceService {
           '/residences/search',
           queryParameters: {
             if (query != null) 'query': query,
-            if (city != null) 'city': city,
+            // Le backend utilise "location" pour filtrer par ville (location.city)
+            if (city != null) 'location': city,
             if (minPrice != null) 'minPrice': minPrice,
             if (maxPrice != null) 'maxPrice': maxPrice,
             if (bedrooms != null) 'bedrooms': bedrooms,

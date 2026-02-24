@@ -63,6 +63,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
   // Filtres
   final Set<String> _activeFilters = <String>{}; // Catégories actives
   List<Residence> _filteredResidences = [];
+  MapType _mapType = MapType.normal;
   
   // Désactivé - nous utilisons maintenant des marqueurs avec prix intégré style Booking.com
   bool _showPricesAboveMarkers = false;
@@ -196,42 +197,23 @@ class _FullMapScreenState extends State<FullMapScreen> {
     _preGenerateMarkers();
   }
   
-  /// Pré-génère les marqueurs de prix personnalisés pour toutes les résidences visibles
+  /// Pré-génère les marqueurs prix (avec état sélectionné si besoin)
   Future<void> _preGenerateMarkers() async {
-    // Choisir les résidences à afficher selon les filtres actifs
     final residencesToShow = _activeFilters.isEmpty ? _nearbyResidences : _filteredResidences;
-    
-    if (residencesToShow.isEmpty) {
-      debugPrint('DEBUG: Aucune résidence à afficher');
-      return;
-    }
-    
-    debugPrint('DEBUG: Génération de ${residencesToShow.length} marqueurs avec clustering');
-    
-    // Utiliser SimpleClusterUtility pour générer des marqueurs clusterés en fonction du zoom
+    if (residencesToShow.isEmpty) return;
+
     final Set<Marker> markers = await SimpleClusterUtility.createClusteredMarkers(
       residences: residencesToShow,
       zoom: _currentZoom,
+      selectedResidenceId: _selectedResidence?.id,
       onMarkerTap: (residence) {
-        // Utiliser le mécanisme existant de sélection de résidence
-        setState(() {
-          _selectedResidence = residence;
-        });
-        
-        // Afficher InfoWindow automatiquement
-        final markerId = MarkerId('residence_${residence.id}');
-        if (_mapController != null) {
-          _mapController!.showMarkerInfoWindow(markerId);
-        }
+        setState(() => _selectedResidence = residence);
+        // Regénère pour mettre à jour l'état visuel du marqueur sélectionné
+        Future.microtask(_preGenerateMarkers);
       },
     );
-    
-    // Mettre à jour les marqueurs sur la carte
-    setState(() {
-      _markers = markers;
-    });
-    
-    debugPrint('DEBUG: ${markers.length} marqueurs générés et affichés');
+
+    setState(() => _markers = markers);
   }
 
   /// Met à jour les marqueurs sur la carte
@@ -531,27 +513,23 @@ class _FullMapScreenState extends State<FullMapScreen> {
       appBar: AppBar(
         title: Text(widget.title ?? 'Carte des résidences'),
         actions: [
-          // Note: Bouton d'affichage des prix supprimé car les prix sont maintenant intégrés aux marqueurs
           if (_userLocation != null)
             IconButton(
               icon: const Icon(Icons.my_location),
-              onPressed: () {
-                _mapController?.animateCamera(
-                  CameraUpdate.newLatLng(_userLocation!),
-                );
-              },
+              tooltip: 'Ma position',
+              onPressed: () => _mapController?.animateCamera(
+                CameraUpdate.newLatLngZoom(_userLocation!, 15),
+              ),
             ),
           IconButton(
-            icon: const Icon(Icons.filter_alt),
-            onPressed: () {
-              // Afficher les options de filtre (à implémenter)
-            },
+            icon: const Icon(Icons.filter_alt_outlined),
+            tooltip: 'Filtrer',
+            onPressed: _showFilterSheet,
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // Afficher plus d'options (à implémenter)
-            },
+            tooltip: 'Plus d\'options',
+            onPressed: _showMoreOptions,
           ),
         ],
       ),
@@ -564,6 +542,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   target: LatLng(widget.centerLat, widget.centerLng),
                   zoom: 14.0,
                 ),
+                mapType: _mapType,
                 markers: _markers,
                 circles: _createPriceCircles(),
                 myLocationEnabled: true,
@@ -618,17 +597,17 @@ class _FullMapScreenState extends State<FullMapScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildFilterChip(ResidenceMarkerExtension.categoryMeubles, '🏠 Meublés'),
+                          _buildFilterChip(ResidenceMarkerExtension.categoryMeubles, 'Meublés', Icons.home_outlined),
                           SizedBox(width: AppSpacing.sm),
-                          _buildFilterChip(ResidenceMarkerExtension.categoryHotels, '🏨 Hôtels'),
+                          _buildFilterChip(ResidenceMarkerExtension.categoryHotels, 'Hôtels', Icons.hotel_outlined),
                           SizedBox(width: AppSpacing.sm),
-                          _buildFilterChip(ResidenceMarkerExtension.categoryInsolites, '🌴 Insolites'),
+                          _buildFilterChip(ResidenceMarkerExtension.categoryInsolites, 'Insolites', Icons.forest_outlined),
                           SizedBox(width: AppSpacing.sm),
-                          _buildFilterChip(ResidenceMarkerExtension.categoryColocations, '👥 Colocations'),
+                          _buildFilterChip(ResidenceMarkerExtension.categoryColocations, 'Colocation', Icons.people_outlined),
                           SizedBox(width: AppSpacing.sm),
-                          _buildFilterChip(ResidenceMarkerExtension.categoryLongueDuree, '📅 Long terme'),
+                          _buildFilterChip(ResidenceMarkerExtension.categoryLongueDuree, 'Long terme', Icons.calendar_month_outlined),
                           SizedBox(width: AppSpacing.sm),
-                          _buildFilterChip(ResidenceMarkerExtension.categoryEconomiques, '💸 Économique'),
+                          _buildFilterChip(ResidenceMarkerExtension.categoryEconomiques, 'Économique', Icons.savings_outlined),
                         ],
                       ),
                     ),
@@ -683,9 +662,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black54,
                       child: const Icon(Icons.layers),
-                      onPressed: () {
-                        // Afficher les options de couches
-                      },
+                      onPressed: _showLayersPopup,
                     ),
                     AppSpacing.verticalSm,
                     FloatingActionButton(
@@ -710,6 +687,180 @@ class _FullMapScreenState extends State<FullMapScreen> {
     );
   }
   
+  // ── Popup filtres ────────────────────────────────────────────────────────
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        final categories = [
+          (ResidenceMarkerExtension.categoryMeubles,    'Meublés',    Icons.home_outlined),
+          (ResidenceMarkerExtension.categoryHotels,     'Hôtels',     Icons.hotel_outlined),
+          (ResidenceMarkerExtension.categoryInsolites,  'Insolites',  Icons.forest_outlined),
+          (ResidenceMarkerExtension.categoryColocations,'Colocation', Icons.people_outlined),
+          (ResidenceMarkerExtension.categoryLongueDuree,'Long terme', Icons.calendar_month_outlined),
+          (ResidenceMarkerExtension.categoryEconomiques,'Économique', Icons.savings_outlined),
+        ];
+        return StatefulBuilder(builder: (ctx, setSt) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Filtrer par catégorie',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: categories.map((c) {
+                    final isOn = _activeFilters.contains(c.$1);
+                    return FilterChip(
+                      avatar: Icon(c.$3,
+                          size: 16,
+                          color: isOn ? Colors.white : const Color(0xFF555555)),
+                      label: Text(c.$2),
+                      selected: isOn,
+                      selectedColor: const Color(0xFFD4AF37),
+                      checkmarkColor: Colors.white,
+                      backgroundColor: Colors.grey[100],
+                      labelStyle: TextStyle(
+                          color: isOn ? Colors.white : const Color(0xFF333333),
+                          fontWeight: isOn ? FontWeight.w600 : FontWeight.normal),
+                      onSelected: (v) {
+                        setSt(() {
+                          v ? _activeFilters.add(c.$1) : _activeFilters.remove(c.$1);
+                        });
+                        setState(() {
+                          _updateFilteredResidences();
+                          _preGenerateMarkers();
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD4AF37),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Appliquer'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  // ── Popup type de carte (couches) ─────────────────────────────────────────
+  void _showLayersPopup() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Type de carte',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.map_outlined, color: Color(0xFF1A1A1A)),
+                title: const Text('Standard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _mapType = MapType.normal);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.satellite_alt_outlined, color: Color(0xFF1A1A1A)),
+                title: const Text('Satellite'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _mapType = MapType.satellite);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.terrain_outlined, color: Color(0xFF1A1A1A)),
+                title: const Text('Hybride'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _mapType = MapType.hybrid);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Popup plus d'options ─────────────────────────────────────────────────
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.list_alt_outlined),
+            title: const Text('Voir la liste'),
+            onTap: () { Navigator.pop(context); context.pop(); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.gps_fixed_outlined),
+            title: const Text('Centrer sur ma position'),
+            onTap: () {
+              Navigator.pop(context);
+              if (_userLocation != null) {
+                _mapController?.animateCamera(
+                  CameraUpdate.newLatLngZoom(_userLocation!, 14),
+                );
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.filter_list_off_outlined),
+            title: const Text('Effacer les filtres'),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() { _activeFilters.clear(); });
+              _updateFilteredResidences();
+              _preGenerateMarkers();
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
   // Méthode pour construire la carte de détail d'une résidence sélectionnée
   Widget _buildResidenceDetailCard(Residence residence) {
     // Formatage du prix avec la devise
@@ -740,13 +891,13 @@ class _FullMapScreenState extends State<FullMapScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           child: SizedBox(
-            height: 160,
+            height: 175,
             child: Row(
               children: [
                 // Image de la résidence
                 SizedBox(
                   width: 140,
-                  height: 160,
+                  height: 175,
                   child: Stack(
                     children: [
                       // Image principale
@@ -810,10 +961,10 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   ),
                 ),
                 
-                // Détails de la résidence
+                // Détails de la résidence (padding réduit pour éviter overflow)
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.smd),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -870,7 +1021,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         
-                        AppSpacing.verticalSm,
+                        const SizedBox(height: 4),
                         
                         // Type de résidence
                         Container(
@@ -888,53 +1039,52 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           ),
                         ),
                         
-                        const Spacer(),
+                        const SizedBox(height: 2),
                         
-                        // Amenities principales (max 3)
+                        // Amenities (max 3, une ligne)
                         if (residence.amenities.isNotEmpty)
-                          Wrap(
-                            spacing: AppSpacing.xs,
-                            children: residence.amenities.take(3).map((amenity) {
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: residence.amenities.take(3).map((amenity) {
                               final amenityIcon = _getAmenityIcon(amenity);
-                              return Container(
-                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd / 2, vertical: AppSpacing.xs / 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
-                                ),
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(amenityIcon, size: 12, color: Colors.grey[600]),
-                                    SizedBox(width: AppSpacing.xs / 2),
+                                    const SizedBox(width: 2),
                                     Text(
                                       _getAmenityLabel(amenity),
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         color: Colors.grey[600],
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ],
                                 ),
                               );
                             }).toList(),
+                            ),
                           ),
-                        
-                        AppSpacing.verticalSm,
-                        
-                        // Bouton "Voir plus"
+                        const SizedBox(height: 4),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Taxes et frais compris',
+                              'Afficher les détails',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[500],
+                                color: const Color(0xFFD4AF37),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
                               ),
                             ),
                             const Icon(
                               Icons.arrow_forward_ios,
-                              size: 14,
-                              color: Colors.blue,
+                              size: 12,
+                              color: Color(0xFFD4AF37),
                             ),
                           ],
                         ),
@@ -1117,31 +1267,32 @@ class _FullMapScreenState extends State<FullMapScreen> {
     return overlays;
   }
 
-  // Méthode pour construire les chips de filtrage par catégorie
-  Widget _buildFilterChip(String category, String label) {
+  // Chip de filtre uniforme — icône Material + couleur or
+  Widget _buildFilterChip(String category, String label, IconData icon) {
     final bool isSelected = _activeFilters.contains(category);
-    
     return FilterChip(
+      avatar: Icon(icon,
+          size: 15,
+          color: isSelected ? Colors.white : const Color(0xFF555555)),
       label: Text(label),
       selected: isSelected,
       checkmarkColor: Colors.white,
-      selectedColor: Theme.of(context).primaryColor,
-      backgroundColor: Colors.grey[200],
-      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: isSelected ? Colors.white : Colors.black87,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      selectedColor: const Color(0xFFD4AF37),
+      backgroundColor: Colors.white,
+      side: BorderSide(
+        color: isSelected ? const Color(0xFFD4AF37) : Colors.grey[300]!,
+      ),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: isSelected ? Colors.white : const Color(0xFF333333),
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       onSelected: (bool selected) {
         setState(() {
-          if (selected) {
-            _activeFilters.add(category);
-          } else {
-            _activeFilters.remove(category);
-          }
+          selected ? _activeFilters.add(category) : _activeFilters.remove(category);
           _updateFilteredResidences();
-          _updateMarkersOnMap();
-          _calculateScreenCoordinates(); // Pour mettre à jour les overlays
         });
+        _preGenerateMarkers();
       },
     );
   }

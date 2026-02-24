@@ -2659,28 +2659,55 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     }
 
     // Facturation à la journée pour les séjours courts
-    if ([
-      'studio_meuble',
-      'guest_house',
-      'lodge',
-      'case_traditionnelle',
-      'campement_touristique',
-      'maison_flottante',
-      'boutiqueHotel',
-      'aubergeEtMaisonDHotes'
-    ].contains(type)) {
+  if ([
+    'studio_meuble',
+    'guest_house',
+    'boutique_hotel',
+    'hotel_luxe',
+    'lodge',
+    'bungalow',
+    'case_traditionnelle',
+    'campement_touristique',
+    'maison_flottante',
+    'maison_hotes',
+  ].contains(type)) {
       return 'day';
     }
 
     // Facturation à la semaine pour certains types spécifiques
-    if ([
-      'maison_hotes_economique',
-      'residence_familiale',
-    ].contains(type)) {
+  if ([
+    'maison_hotes_economique',
+    'residence_familiale',
+    'residence_hoteliere',
+  ].contains(type)) {
       return 'week';
     }
 
-    // Par défaut, facturation au mois pour les locations longue durée
+    // Facturation au mois pour les locations longue durée et colocations
+  if ([
+    // Résidences meublées longue durée
+    'appartement_meuble',
+    'villa_meublee',
+    'penthouse',
+    'loft',
+    'grenier',
+    
+    // Colocation
+    'chambre_colocation',
+    'coliving',
+    'residence_universitaire',
+    'cite_dortoir',
+    
+    // Non meublé
+    'appartement_vide',
+    'villa_vide',
+    'immeuble',
+    'cour_commune',
+  ].contains(type)) {
+    return 'month';
+  }
+
+  // Par défaut, facturation au mois pour les locations longue durée
     return 'month';
   }
 
@@ -2717,16 +2744,36 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         return 'Les hébergements de passage sont généralement facturés à l\'heure';
 
       case 'studio_meuble':
-      case 'guest_house':
-      case 'lodge':
-      case 'campement_touristique':
-      case 'case_traditionnelle':
-      case 'maison_flottante':
-        return 'Les séjours courts sont généralement facturés à la journée';
+    case 'guest_house':
+    case 'boutique_hotel':
+    case 'hotel_luxe':
+    case 'lodge':
+    case 'bungalow':
+    case 'campement_touristique':
+    case 'case_traditionnelle':
+    case 'maison_flottante':
+    case 'maison_hotes':
+      return 'Les séjours courts sont généralement facturés à la journée';
 
       case 'maison_hotes_economique':
-      case 'residence_familiale':
-        return 'Ce type d\'hébergement est souvent facturé à la semaine';
+    case 'residence_familiale':
+    case 'residence_hoteliere':
+      return 'Ce type d\'hébergement est souvent facturé à la semaine';
+
+      case 'appartement_meuble':
+    case 'villa_meublee':
+    case 'penthouse':
+    case 'loft':
+    case 'grenier':
+    case 'chambre_colocation':
+    case 'coliving':
+    case 'residence_universitaire':
+    case 'cite_dortoir':
+    case 'appartement_vide':
+    case 'villa_vide':
+    case 'immeuble':
+    case 'cour_commune':
+      return 'Les locations longue durée sont généralement facturées au mois';
 
       default:
         return 'Sélectionnez la période de tarification appropriée';

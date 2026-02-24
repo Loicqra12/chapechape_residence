@@ -24,11 +24,13 @@ const {
 } = residenceController;
 const Residence = require('../models/residence.model');
 
-// Routes publiques
+// Routes publiques (accessibles sans authentification)
 router.get('/', getResidences);
 router.get('/search', searchResidences);
 router.get('/all', getAllResidences);
-router.get('/popular', getPopularResidences); // Nouveau: résidences populaires pour app client
+router.get('/popular', getPopularResidences);
+router.get('/:id/availability', checkResidenceAvailability);
+router.get('/:id', getResidence); // Détail résidence — public (visiteurs non connectés)
 
 // Routes protégées (partenaires uniquement)
 router.use(protect);
@@ -95,12 +97,6 @@ router.get('/:id/reviews', (req, res) => {
     // Redirection vers l'endpoint existant des avis
     res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
 });
-
-// Routes spécifiques avec paramètre id - doivent être après les routes générales mais avant la route générique /:id
-router.get('/:id/availability', checkResidenceAvailability); // Nouveau: vérification disponibilité pour app client
-
-// Route publique avec paramètre id - doit être après les routes spécifiques
-router.get('/:id', getResidence);
 
 // Routes qui nécessitent des droits de partenaire ou d'administrateur
 router.use(authorize('partner', 'admin'));
