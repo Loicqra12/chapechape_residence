@@ -1,4 +1,5 @@
 const Residence = require('../../models/residence.model');
+const Reservation = require('../../models/reservation.model');
 const apiError = require('../../utils/apiError');
 const asyncHandler = require('../../middlewares/async');
 const fs = require('fs');
@@ -97,7 +98,10 @@ exports.createResidence = asyncHandler(async (req, res) => {
                 formattedAddress: residenceData.location.formattedAddress || residenceData.location.address || '',
                 address: residenceData.location.address || '',
                 city: residenceData.location.city || '',
-                country: residenceData.location.country || 'CI'
+                country: residenceData.location.country || 'CI',
+                commune: residenceData.location.commune || '',
+                quartier: residenceData.location.quartier || '',
+                sousZone: residenceData.location.sousZone || ''
             };
 
             // Également définir les champs racine pour compatibilité avec le modèle actuel
@@ -116,7 +120,10 @@ exports.createResidence = asyncHandler(async (req, res) => {
                 formattedAddress: residenceData.formattedAddress || '',
                 address: residenceData.address || '',
                 city: residenceData.city || '',
-                country: residenceData.country || 'CI'
+                country: residenceData.country || 'CI',
+                commune: residenceData.commune || residenceData.location?.commune || '',
+                quartier: residenceData.quartier || residenceData.location?.quartier || '',
+                sousZone: residenceData.sousZone || residenceData.location?.sousZone || ''
             };
         }
 
@@ -185,6 +192,81 @@ exports.getResidences = asyncHandler(async (req, res) => {
             limit
         }
     });
+});
+
+// @desc    Obtenir le nombre de résidences par type (pour les catégories populaires)
+// @route   GET /api/residences/stats/count-by-type
+// @access  Public
+exports.getResidenceCountByType = asyncHandler(async (req, res) => {
+    const counts = await Residence.aggregate([
+        { $match: { deleted: { $ne: true } } },
+        { $group: { _id: '$type', count: { $sum: 1 } } }
+    ]);
+    const byType = {};
+    counts.forEach((c) => { byType[c._id] = c.count; });
+    res.json({ success: true, data: byType });
+});
+
+// @desc    Tendances : résidences les plus réservées (7 derniers jours), optionnel par ville/commune/quartier
+// @route   GET /api/residences/trending?city=&commune=&quartier=&limit=8
+// @access  Public
+exports.getTrendingResidences = asyncHandler(async (req, res) => {
+    const { city, commune, quartier, limit = 8 } = req.query;
+    const limitNum = Math.min(parseInt(limit, 10) || 8, 20);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const matchReservation = {
+        createdAt: { $gte: sevenDaysAgo },
+        status: { $in: ['confirmed', 'completed', 'in_stay'] }
+    };
+
+    const pipeline = [
+        { $match: matchReservation },
+        { $group: { _id: '$residence', bookingCount: { $sum: 1 } } },
+        { $sort: { bookingCount: -1 } },
+        { $limit: 30 },
+        {
+            $lookup: {
+                from: 'residences',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'residenceDoc'
+            }
+        },
+        { $unwind: '$residenceDoc' },
+        { $match: { 'residenceDoc.deleted': { $ne: true } } }
+    ];
+
+    if (city) {
+        pipeline.push({ $match: { $or: [{ 'residenceDoc.city': new RegExp(city, 'i') }, { 'residenceDoc.locationData.city': new RegExp(city, 'i') }] } });
+    }
+    if (commune) {
+        pipeline.push({ $match: { 'residenceDoc.locationData.commune': new RegExp(commune, 'i') } });
+    }
+    if (quartier) {
+        pipeline.push({ $match: { 'residenceDoc.locationData.quartier': new RegExp(quartier, 'i') } });
+    }
+
+    pipeline.push({ $sort: { bookingCount: -1 } });
+    pipeline.push({ $limit: limitNum });
+    pipeline.push({
+        $project: {
+            residence: '$residenceDoc',
+            bookingCount: 1,
+            _id: 0
+        }
+    });
+
+    const results = await Reservation.aggregate(pipeline);
+
+    const data = results.map((r) => ({
+        residence: r.residence,
+        bookingCount: r.bookingCount
+    }));
+
+    res.json({ success: true, data });
 });
 
 // @desc    Obtenir toutes les résidences (format liste)
@@ -271,7 +353,10 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             formattedAddress: updateData.location.formattedAddress || updateData.location.address || '',
             address: updateData.location.address || '',
             city: updateData.location.city || '',
-            country: updateData.location.country || 'CI'
+            country: updateData.location.country || 'CI',
+            commune: updateData.location.commune || '',
+            quartier: updateData.location.quartier || '',
+            sousZone: updateData.location.sousZone || ''
         };
 
         // Également définir les champs racine pour compatibilité avec le modèle actuel
@@ -295,7 +380,10 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             formattedAddress: updateData.formattedAddress || residence.locationData?.formattedAddress,
             address: updateData.address || residence.address,
             city: updateData.city || residence.city,
-            country: updateData.country || residence.locationData?.country || 'CI'
+            country: updateData.country || residence.locationData?.country || 'CI',
+            commune: updateData.commune ?? residence.locationData?.commune ?? '',
+            quartier: updateData.quartier ?? residence.locationData?.quartier ?? '',
+            sousZone: updateData.sousZone ?? residence.locationData?.sousZone ?? ''
         };
 
         console.log('Structure locationData mise à jour (legacy):', updateData.locationData);

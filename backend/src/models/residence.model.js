@@ -68,7 +68,11 @@ const residenceSchema = mongoose.Schema({
     country: {
       type: String,
       default: 'CI' // Côte d'Ivoire par défaut
-    }
+    },
+    // Abidjan : commune + quartier (ex. Cocody, Marcory, Yopougon / Angré, Riviera, Zone 4)
+    commune: { type: String, trim: true },
+    quartier: { type: String, trim: true },
+    sousZone: { type: String, trim: true }
   },
   // Maintenir les champs précédents pour compatibilité descendante
   latitude: {
@@ -336,7 +340,10 @@ residenceSchema.virtual('location').get(function () {
       address: this.locationData.address || this.address,
       city: this.locationData.city || this.city,
       formattedAddress: this.locationData.formattedAddress,
-      coordinates: [this.locationData.coordinates.longitude, this.locationData.coordinates.latitude]
+      coordinates: [this.locationData.coordinates.longitude, this.locationData.coordinates.latitude],
+      commune: this.locationData.commune,
+      quartier: this.locationData.quartier,
+      neighborhood: this.locationData.quartier || this.locationData.commune
     };
   }
   // Sinon utiliser les anciennes données

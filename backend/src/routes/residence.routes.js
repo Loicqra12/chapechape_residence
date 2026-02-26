@@ -17,6 +17,8 @@ const {
     deleteImage,
     getAllResidences,
     getPopularResidences,
+    getResidenceCountByType,
+    getTrendingResidences,
     checkResidenceAvailability,
     getFavoriteResidences,
     addToFavorites,
@@ -29,6 +31,8 @@ router.get('/', getResidences);
 router.get('/search', searchResidences);
 router.get('/all', getAllResidences);
 router.get('/popular', getPopularResidences);
+router.get('/stats/count-by-type', getResidenceCountByType);
+router.get('/trending', getTrendingResidences);
 router.get('/:id/availability', checkResidenceAvailability);
 router.get('/:id', getResidence); // Détail résidence — public (visiteurs non connectés)
 

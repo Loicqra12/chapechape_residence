@@ -38,7 +38,10 @@ const createResidence = {
             coordinates: Joi.object().keys({
                 latitude: Joi.number().required().min(-90).max(90),
                 longitude: Joi.number().required().min(-180).max(180)
-            })
+            }),
+            commune: Joi.string().allow('').optional(),
+            quartier: Joi.string().allow('').optional(),
+            sousZone: Joi.string().allow('').optional()
         }).required(),
         features: Joi.array().items(Joi.string()).min(1),
         type: Joi.string().required().valid(...VALID_TYPES),
@@ -96,7 +99,10 @@ const updateResidence = {
             coordinates: Joi.object().keys({
                 latitude: Joi.number().min(-90).max(90),
                 longitude: Joi.number().min(-180).max(180)
-            })
+            }),
+            commune: Joi.string().allow('').optional(),
+            quartier: Joi.string().allow('').optional(),
+            sousZone: Joi.string().allow('').optional()
         }),
         features: Joi.array().items(Joi.string()),
         type: Joi.string().valid(...VALID_TYPES),
