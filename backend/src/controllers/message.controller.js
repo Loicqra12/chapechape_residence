@@ -7,6 +7,7 @@ const Reservation = require('../models/reservation.model');
 const notificationService = require('../services/notification.service');
 const socketService = require('../services/socket.service');
 const User = require('../models/user.model');
+const { COMMON } = require('../utils/notification-types');
 
 // Création du dossier uploads/messages s'il n'existe pas
 const ensureUploadDirExists = async () => {
@@ -249,9 +250,10 @@ exports.sendMessage = asyncHandler(async (req, res) => {
                 const isOnline = socketService.isUserOnline(participantIdStr);
                 if (!isOnline) {
                     // Envoyer notification push via le service de notification
+                    // COMMON.NEW_MESSAGE = 'new_message' — type valide défini dans notification-types.js
                     await notificationService.createNotification(
                         participantIdStr,
-                        'message',
+                        COMMON.NEW_MESSAGE,
                         notificationMessage,
                         notificationData
                     );

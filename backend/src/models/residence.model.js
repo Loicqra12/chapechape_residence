@@ -302,13 +302,6 @@ const residenceSchema = mongoose.Schema({
     type: String,
     enum: ['cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer']
   }],
-  // Mode de réservation configuré par le partenaire
-  reservationMode: {
-    type: String,
-    enum: ['instant', 'approval_required'],
-    default: 'instant',
-    required: [true, 'Le mode de réservation est requis']
-  },
   // Champs pour la suppression douce
   deleted: {
     type: Boolean,

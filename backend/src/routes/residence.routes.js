@@ -7,38 +7,65 @@ const upload = require('../middlewares/upload.middleware');
 const { uploadResidenceImages } = require('../config/cloudinary');
 const residenceController = require('../controllers/residence/residence.controller');
 const {
-    createResidence,
-    getResidences,
-    getResidence,
-    updateResidence,
-    deleteResidence,
-    searchResidences,
-    uploadImages,
-    deleteImage,
-    getAllResidences,
-    getPopularResidences,
-    getResidenceCountByType,
-    getTrendingResidences,
-    checkResidenceAvailability,
-    getFavoriteResidences,
-    addToFavorites,
-    removeFromFavorites
+  createResidence,
+  getResidences,
+  getResidence,
+  updateResidence,
+  deleteResidence,
+  searchResidences,
+  uploadImages,
+  deleteImage,
+  getAllResidences,
+  getPopularResidences,
+  getResidenceCountByType,
+  getTrendingResidences,
+  checkResidenceAvailability,
+  getFavoriteResidences,
+  addToFavorites,
+  removeFromFavorites
 } = residenceController;
 const Residence = require('../models/residence.model');
 
 // Routes publiques (accessibles sans authentification)
+// ⚠️ IMPORTANT: Les routes statiques DOIVENT être définies avant /:id pour éviter la capture
 router.get('/', getResidences);
 router.get('/search', searchResidences);
 router.get('/all', getAllResidences);
 router.get('/popular', getPopularResidences);
 router.get('/stats/count-by-type', getResidenceCountByType);
 router.get('/trending', getTrendingResidences);
+
+// Route pour récupérer les résidences d'un partenaire spécifique (par son ID)
+// Doit être avant /:id pour ne pas être capturée par la route générique
+router.get('/partner/:partnerId', async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+    // Validation basique de l'ObjectId
+    if (!partnerId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: 'ID partenaire invalide' });
+    }
+    const residences = await Residence.find({
+      partner: partnerId,
+      deleted: { $ne: true }
+    }).lean();
+    if (!residences || residences.length === 0) {
+      return res.status(404).json({ success: false, message: 'Aucune résidence trouvée pour ce partenaire' });
+    }
+    return res.json({ success: true, count: residences.length, data: residences });
+  } catch (error) {
+    console.error('Erreur GET /partner/:partnerId:', error.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+  }
+});
+
 router.get('/:id/availability', checkResidenceAvailability);
 router.get('/:id', getResidence); // Détail résidence — public (visiteurs non connectés)
 
 // Routes protégées (partenaires uniquement)
 router.use(protect);
 
+// ⚠️ IMPORTANT : /my-residences doit être défini IMMÉDIATEMENT après router.use(protect)
+// et avant toute route avec paramètre dynamique (/:id) pour éviter la capture par Express.
 // Récupérer les résidences du partenaire connecté
 router.get('/my-residences', authorize('partner'), async (req, res) => {
   console.log('DEBUG /my-residences - route atteinte');
@@ -78,8 +105,8 @@ router.delete('/favorites/:id', protect, removeFromFavorites);
 
 // Route de redirection pour les avis (compatibilité app client)
 router.get('/:id/reviews', (req, res) => {
-    // Redirection vers l'endpoint existant des avis
-    res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
+  // Redirection vers l'endpoint existant des avis
+  res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
 });
 
 // Routes qui nécessitent des droits de partenaire ou d'administrateur
