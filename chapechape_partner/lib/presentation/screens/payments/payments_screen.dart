@@ -364,6 +364,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> with SingleTickerProvid
         ),
         actions: [
               IconButton(
+                style: IconButton.styleFrom(
+                  shape: const CircleBorder(),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  backgroundColor: Colors.transparent,
+                ),
                 icon: const Icon(Icons.refresh),
                 onPressed: () {
                   context.read<PaymentBloc>().add(const RefreshPayments());

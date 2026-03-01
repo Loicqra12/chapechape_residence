@@ -17,10 +17,13 @@ import 'package:chapechape_client/presentation/widgets/common/empty_state_widget
 const _defaultCenter = LatLng(5.3599517, -4.0082563);
 
 // ---------------------------------------------------------------------------
-// Bouton favori avec animation — style Airbnb
+// Bouton favori avec animation — style Airbnb (état piloté par le BLoC)
 // ---------------------------------------------------------------------------
 class _FavoriteIcon extends StatefulWidget {
-  const _FavoriteIcon();
+  const _FavoriteIcon({required this.residenceId, required this.isFavorite});
+
+  final String residenceId;
+  final bool isFavorite;
 
   @override
   State<_FavoriteIcon> createState() => _FavoriteIconState();
@@ -28,7 +31,6 @@ class _FavoriteIcon extends StatefulWidget {
 
 class _FavoriteIconState extends State<_FavoriteIcon>
     with SingleTickerProviderStateMixin {
-  bool _isFaved = false;
   late final AnimationController _anim;
   late final Animation<double> _scale;
 
@@ -52,7 +54,7 @@ class _FavoriteIconState extends State<_FavoriteIcon>
 
   void _toggle() {
     HapticFeedback.lightImpact();
-    setState(() => _isFaved = !_isFaved);
+    context.read<ResidenceBloc>().add(ToggleFavorite(residenceId: widget.residenceId));
     _anim.forward().then((_) => _anim.reverse());
   }
 
@@ -71,9 +73,9 @@ class _FavoriteIconState extends State<_FavoriteIcon>
               boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
             ),
             child: Icon(
-              _isFaved ? Icons.favorite : Icons.favorite_border,
+              widget.isFavorite ? Icons.favorite : Icons.favorite_border,
               size: 18,
-              color: _isFaved ? const Color(0xFFFF385C) : const Color(0xFF222222),
+              color: widget.isFavorite ? const Color(0xFFFF385C) : const Color(0xFF222222),
             ),
           ),
         ),
@@ -231,7 +233,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void _init() {
     if (widget.initialSearchParams != null &&
         widget.initialSearchParams!.isNotEmpty) {
-      setState(() => _filters = widget.initialSearchParams!);
+      setState(() {
+        _filters = widget.initialSearchParams!;
+        _activeFilters = SearchFilters.fromMap(widget.initialSearchParams);
+      });
       context.read<ResidenceBloc>().add(
             SearchResidencesEvent(filters: widget.initialSearchParams!),
           );
@@ -754,10 +759,13 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Stack(
               children: [
                 _PhotoCarousel(images: photos),
-                const Positioned(
+                Positioned(
                   top: 12,
                   right: 12,
-                  child: _FavoriteIcon(),
+                  child: _FavoriteIcon(
+                    residenceId: residence.id,
+                    isFavorite: residence.isFavorite,
+                  ),
                 ),
               ],
             ),

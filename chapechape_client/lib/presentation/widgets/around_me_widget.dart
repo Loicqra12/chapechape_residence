@@ -1077,7 +1077,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         },
         child: Container(
           width: 220,
-          height: 380, // Augmenté pour accommoder les adresses particulièrement longues et éviter l'overflow sur toutes les résidences
+          constraints: const BoxConstraints(minHeight: 260, maxHeight: 380),
           margin: const EdgeInsets.only(right: 16, bottom: 8),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1092,7 +1092,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Empêche la colonne d'exiger plus d'espace que nécessaire
+            mainAxisSize: MainAxisSize.max,
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.only(
@@ -1188,81 +1188,72 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 8, right: 8, top: 6, bottom: 4), // Padding réduit encore plus
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Empêche le flex de prendre trop d'espace
-                  children: [
-                    // Titre de la résidence
-                    Text(
-                      residence.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8, top: 4, bottom: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        residence.title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    
-                    // Prix avec mise en avant
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        residence.formattedPrice,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryColor,
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          residence.formattedPrice,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                    
-                    // Caractéristiques basiques
-                    Row(
-                      children: [
-                        Icon(Icons.king_bed_outlined, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${residence.bedrooms}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                        const SizedBox(width: 10),
-                        Icon(Icons.bathtub_outlined, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${residence.bathrooms}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                        const SizedBox(width: 10),
-                        Icon(Icons.square_foot, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${residence.squareMeters.toStringAsFixed(0)}m²', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 2),
-                    
-                    // Adresse avec contrainte de hauteur
-                    // Limiter l'adresse à une seule ligne avec ellipsis pour les adresses longues
-                    Text(
-                      residence.location['displayAddress'] ?? residence.location['address'] ?? 'Adresse non disponible',
-                      style: TextStyle(
-                        fontSize: 11, // Police plus petite pour les adresses longues
-                        height: 1.1, // Interligne très réduit
-                        color: Colors.grey[600],
+                      Row(
+                        children: [
+                          Icon(Icons.king_bed_outlined, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
+                          Text('${residence.bedrooms}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          const SizedBox(width: 6),
+                          Icon(Icons.bathtub_outlined, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
+                          Text('${residence.bathrooms}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          const SizedBox(width: 6),
+                          Icon(Icons.square_foot, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
+                          Text('${residence.squareMeters.toStringAsFixed(0)}m²', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                        ],
                       ),
-                      maxLines: 1, // Limite à une seule ligne pour éviter les débordements
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    
-                    const SizedBox(height: 2),
-                    
-                    // Bouton Explorer avec contraintes réduites
-                    SizedBox(
-                      width: double.infinity,
-                      height: 30, // Hauteur réduite pour le bouton
-                      child: ElevatedButton(
+                      const SizedBox(height: 1),
+                      Text(
+                        residence.location['displayAddress'] ?? residence.location['address'] ?? 'Adresse non disponible',
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.1,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: ElevatedButton(
                         onPressed: () {
                           // Navigation directe vers la page de détail de la résidence
                           try {
@@ -1297,6 +1288,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                     ),
                   ],
                 ),
+              ),
               ),
             ],
           ),

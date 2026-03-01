@@ -311,17 +311,32 @@ class _TransactionsScreenState extends State<TransactionsScreen> with SingleTick
         elevation: 0,
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.date_range),
             onPressed: _showDateFilter,
             tooltip: 'Filtrer par date',
           ),
           if (_fromDate != null || _toDate != null || _searchQuery != null)
             IconButton(
+              style: IconButton.styleFrom(
+                shape: const CircleBorder(),
+                side: const BorderSide(color: Colors.white54),
+                backgroundColor: Colors.transparent,
+              ),
               icon: const Icon(Icons.clear),
               onPressed: _clearFilters,
               tooltip: 'Effacer les filtres',
             ),
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.refresh),
             onPressed: _refreshData,
             tooltip: 'Actualiser',

@@ -203,6 +203,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         actions: [
           // Bouton de filtres
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: Stack(
               children: [
                 const Icon(Icons.filter_list),
@@ -229,6 +234,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ),
           // Bouton de tri
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.sort),
             onPressed: _showSortOptions,
             tooltip: 'Trier',

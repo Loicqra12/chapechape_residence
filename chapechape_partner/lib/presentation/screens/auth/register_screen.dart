@@ -24,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _scrollController = ScrollController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _companyNameController = TextEditingController();
   final _emailController = TextEditingController();
   // Variables pour le widget de téléphone avancé
   PhoneNumber? _selectedPhoneNumber;
@@ -40,7 +39,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _companyNameController.dispose();
     _emailController.dispose();
     // _phoneController supprimé car remplacé par AdvancedPhoneInputWidget
     _passwordController.dispose();
@@ -118,31 +116,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
-                  // Logo
+                  const SizedBox(height: 8),
+                  // Illustration (hauteur réduite pour tenir sur une page)
                   Center(
                     child: Image.asset(
-                      AppImages.logoPrimary,
-                      height: 80,
-                      semanticLabel: 'Logo ChapeChape Partner',
+                      AppImages.emptyRegister,
+                      height: 100,
+                      fit: BoxFit.contain,
+                      semanticLabel: 'Illustration inscription',
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  // Titre
+                  const SizedBox(height: 10),
                   Text(
                     'Inscription Partenaire',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
-                    'Créez votre compte partenaire pour commencer',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    'Inscrivez-vous pour commencer à gérer vos résidences et à développer votre activité.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 14),
                   // Champs du formulaire
                   TextInput(
                     label: 'Prénom',
@@ -154,7 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fieldName: 'Le prénom',
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   TextInput(
                     label: 'Nom',
                     hint: 'Entrez votre nom',
@@ -165,15 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fieldName: 'Le nom',
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  TextInput(
-                    label: 'Nom de l\'entreprise (optionnel)',
-                    hint: 'Entrez le nom de votre entreprise',
-                    controller: _companyNameController,
-                    enabled: !_isLoading,
-                    validator: null, // Optionnel, pas de validation requise
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   TextInput(
                     label: 'Email',
                     hint: 'Entrez votre email professionnel',
@@ -182,7 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     enabled: !_isLoading,
                     validator: FormValidators.validateEmail,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   AdvancedPhoneInputWidget(
                     label: 'Téléphone',
                     hint: 'Entrez votre numéro de téléphone',
@@ -201,7 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       });
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   TextInput(
                     label: 'Mot de passe',
                     hint: 'Créez votre mot de passe',
@@ -218,7 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _isLoading ? () {} : _togglePasswordVisibility,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   TextInput(
                     label: 'Confirmer le mot de passe',
                     hint: 'Confirmez votre mot de passe',
@@ -238,15 +228,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _isLoading ? () {} : _toggleConfirmPasswordVisibility,
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  // Bouton d'inscription
+                  const SizedBox(height: 14),
                   PrimaryButton(
                     text: 'S\'inscrire',
                     onPressed: _isLoading ? () {} : _onRegisterPressed,
                     isLoading: _isLoading,
+                    filled: true,
                   ),
-                  const SizedBox(height: 20),
-                  // Lien connexion
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -257,11 +246,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  // Message légal
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text.rich(
+                  const SizedBox(height: 10),
+                  Text.rich(
                       TextSpan(
                         text: 'En vous inscrivant, vous acceptez nos ',
                         style: TextStyle(
@@ -317,10 +303,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ],
                       ),
-                      textAlign: TextAlign.center,
-                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),

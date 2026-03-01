@@ -37,6 +37,7 @@ class HomeSearchBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: Container(
+        constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28),
@@ -48,22 +49,23 @@ class HomeSearchBar extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+              vertical: 18,
             ),
             child: Row(
               children: [
-                const Icon(Icons.search, color: Color(0xFF1A1A1A), size: 22),
+                const Icon(Icons.search, color: Color(0xFF1A1A1A), size: 24),
                 const SizedBox(width: AppSpacing.smd),
                 Expanded(
                   child: Text(
                     'Commencer ma recherche',
                     style: AppTextStyles.body.copyWith(
                       color: Colors.grey[600],
-                      fontSize: 16,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Icon(Icons.tune, color: Colors.grey[400], size: 20),
+                Icon(Icons.tune, color: Colors.grey[400], size: 22),
               ],
             ),
           ),

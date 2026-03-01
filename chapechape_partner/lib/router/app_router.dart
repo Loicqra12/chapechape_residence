@@ -18,7 +18,7 @@ import '../presentation/screens/reservations/reservation_details_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
 import '../presentation/screens/settings/settings_screen.dart';
 import '../presentation/screens/notifications/notification_settings_screen.dart';
-import '../presentation/screens/notifications/notification_list_screen.dart';
+import '../presentation/screens/notifications/notifications_screen.dart';
 import '../presentation/screens/payments/payouts/payouts.dart';
 import '../presentation/screens/payments/payouts/payout_details_screen.dart';
 import '../presentation/screens/payments/transactions/transactions.dart';
@@ -205,7 +205,7 @@ class AppRouter {
         pageBuilder: (context, state) => buildPageWithTransition(
           context: context,
           state: state,
-          child: const NotificationListScreen(),
+          child: const NotificationsScreen(),
         ),
       ),
       GoRoute(

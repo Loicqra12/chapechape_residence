@@ -21,6 +21,9 @@ class SearchFilters {
   final int minBedrooms;
   final int minBathrooms;
 
+  // Nombre de personnes minimum (0 = Tout, 2 = "2 ou plus", etc.)
+  final int minGuests;
+
   // Équipements sélectionnés
   final List<String> amenities;
 
@@ -42,6 +45,7 @@ class SearchFilters {
     this.maxPrice = 5000000,
     this.minBedrooms = 0,
     this.minBathrooms = 0,
+    this.minGuests = 0,
     this.amenities = const [],
     this.allowsPets,
     this.allowsSmoking,
@@ -50,6 +54,28 @@ class SearchFilters {
     this.minRating = 0,
   });
 
+  /// Construit un SearchFilters depuis une Map (ex. initialSearchParams).
+  static SearchFilters fromMap(Map<String, dynamic>? map) {
+    if (map == null || map.isEmpty) return const SearchFilters();
+    return SearchFilters(
+      period: map['period'] as String?,
+      residenceCategory: map['residenceCategory'] as String?,
+      minPrice: (map['minPrice'] as num?)?.toDouble() ?? 5000,
+      maxPrice: (map['maxPrice'] as num?)?.toDouble() ?? 5000000,
+      minBedrooms: map['minBedrooms'] as int? ?? 0,
+      minBathrooms: map['minBathrooms'] as int? ?? 0,
+      minGuests: map['minGuests'] as int? ?? 0,
+      amenities: map['amenities'] is List
+          ? List<String>.from(map['amenities'] as List)
+          : const [],
+      allowsPets: map['allowsPets'] as bool?,
+      allowsSmoking: map['allowsSmoking'] as bool?,
+      allowsParties: map['allowsParties'] as bool?,
+      instantOnly: map['reservationMode'] == 'instant',
+      minRating: (map['minRating'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
   bool get isEmpty =>
       period == null &&
       residenceCategory == null &&
@@ -57,6 +83,7 @@ class SearchFilters {
       maxPrice == 5000000 &&
       minBedrooms == 0 &&
       minBathrooms == 0 &&
+      minGuests == 0 &&
       amenities.isEmpty &&
       allowsPets == null &&
       allowsSmoking == null &&
@@ -71,6 +98,7 @@ class SearchFilters {
     if (minPrice != 5000 || maxPrice != 5000000) c++;
     if (minBedrooms > 0) c++;
     if (minBathrooms > 0) c++;
+    if (minGuests > 0) c++;
     if (amenities.isNotEmpty) c += amenities.length;
     if (allowsPets == true) c++;
     if (allowsSmoking == true) c++;
@@ -89,6 +117,7 @@ class SearchFilters {
       if (maxPrice != 5000000) 'maxPrice': maxPrice,
       if (minBedrooms > 0) 'minBedrooms': minBedrooms,
       if (minBathrooms > 0) 'minBathrooms': minBathrooms,
+      if (minGuests > 0) 'minGuests': minGuests,
       if (amenities.isNotEmpty) 'amenities': amenities,
       if (allowsPets != null) 'allowsPets': allowsPets,
       if (allowsSmoking != null) 'allowsSmoking': allowsSmoking,
@@ -98,27 +127,36 @@ class SearchFilters {
     };
   }
 
-  // Copie avec nouveaux champs non-nullables uniquement.
+  static const Object _omit = Object();
+
+  /// Copie avec tous les champs ; passer null pour remettre à null les nullables.
   SearchFilters copyWith({
+    Object? period = _omit,
+    Object? residenceCategory = _omit,
     double? minPrice,
     double? maxPrice,
     int? minBedrooms,
     int? minBathrooms,
+    int? minGuests,
     List<String>? amenities,
+    Object? allowsPets = _omit,
+    Object? allowsSmoking = _omit,
+    Object? allowsParties = _omit,
     bool? instantOnly,
     double? minRating,
   }) {
     return SearchFilters(
-      period: period,
-      residenceCategory: residenceCategory,
+      period: period == _omit ? this.period : period as String?,
+      residenceCategory: residenceCategory == _omit ? this.residenceCategory : residenceCategory as String?,
       minPrice: minPrice ?? this.minPrice,
       maxPrice: maxPrice ?? this.maxPrice,
       minBedrooms: minBedrooms ?? this.minBedrooms,
       minBathrooms: minBathrooms ?? this.minBathrooms,
+      minGuests: minGuests ?? this.minGuests,
       amenities: amenities ?? this.amenities,
-      allowsPets: allowsPets,
-      allowsSmoking: allowsSmoking,
-      allowsParties: allowsParties,
+      allowsPets: allowsPets == _omit ? this.allowsPets : allowsPets as bool?,
+      allowsSmoking: allowsSmoking == _omit ? this.allowsSmoking : allowsSmoking as bool?,
+      allowsParties: allowsParties == _omit ? this.allowsParties : allowsParties as bool?,
       instantOnly: instantOnly ?? this.instantOnly,
       minRating: minRating ?? this.minRating,
     );
@@ -132,6 +170,7 @@ class SearchFilters {
         maxPrice: maxPrice,
         minBedrooms: minBedrooms,
         minBathrooms: minBathrooms,
+        minGuests: minGuests,
         amenities: amenities,
         allowsPets: allowsPets,
         allowsSmoking: allowsSmoking,
@@ -147,6 +186,7 @@ class SearchFilters {
         maxPrice: maxPrice,
         minBedrooms: minBedrooms,
         minBathrooms: minBathrooms,
+        minGuests: minGuests,
         amenities: amenities,
         allowsPets: allowsPets,
         allowsSmoking: allowsSmoking,
@@ -162,6 +202,7 @@ class SearchFilters {
         maxPrice: maxPrice,
         minBedrooms: minBedrooms,
         minBathrooms: minBathrooms,
+        minGuests: minGuests,
         amenities: amenities,
         allowsPets: v,
         allowsSmoking: allowsSmoking,
@@ -177,6 +218,7 @@ class SearchFilters {
         maxPrice: maxPrice,
         minBedrooms: minBedrooms,
         minBathrooms: minBathrooms,
+        minGuests: minGuests,
         amenities: amenities,
         allowsPets: allowsPets,
         allowsSmoking: v,
@@ -192,6 +234,7 @@ class SearchFilters {
         maxPrice: maxPrice,
         minBedrooms: minBedrooms,
         minBathrooms: minBathrooms,
+        minGuests: minGuests,
         amenities: amenities,
         allowsPets: allowsPets,
         allowsSmoking: allowsSmoking,
@@ -265,9 +308,8 @@ class _AmenityOption {
 // ---------------------------------------------------------------------------
 
 /// Ouvrir le panneau de filtres.
-/// Utilise PageRouteBuilder(opaque: false) pour éviter le bug Flutter
-/// '_RenderBottomSheetLayoutWithSizeListener' / '!_debugDoingThisLayout'
-/// qui survient avec showModalBottomSheet dans un contexte go_router/ShellRoute.
+/// Route opaque pour garantir des contraintes bornées (évite RenderBox not laid out
+/// avec opaque: false dans certains contextes Navigator).
 Future<SearchFilters?> showSearchFiltersSheet(
   BuildContext context, {
   required SearchFilters currentFilters,
@@ -275,7 +317,7 @@ Future<SearchFilters?> showSearchFiltersSheet(
 }) {
   return Navigator.of(context, rootNavigator: true).push<SearchFilters>(
     PageRouteBuilder(
-      opaque: false,
+      opaque: true,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 280),
       reverseTransitionDuration: const Duration(milliseconds: 220),
@@ -328,85 +370,101 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    // SizedBox.expand() force le Stack à occuper tout l'écran,
-    // ce qui garantit des contraintes bornées pour Positioned(left:0,right:0).
-    // Sans ça, PageRouteBuilder(opaque:false) peut passer des contraintes
-    // non-bornées → Column/Row sans largeur → RenderBox not laid out.
-    return Material(
-      type: MaterialType.transparency,
-      child: SizedBox.expand(
-        child: Stack(
-          children: [
-            // Zone de dismiss en appuyant à l'extérieur
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox.expand(),
-            ),
+    // FIX: utiliser LayoutBuilder pour garantir des contraintes finies.
+    // Pendant la phase offstage de SlideTransition, MediaQuery.size peut retourner
+    // Size.zero OU le moteur layout avec des contraintes non bornées (w=Infinity).
+    // LayoutBuilder fournit toujours les contraintes réelles du parent.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mq = MediaQuery.of(context);
+        final w = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+            ? constraints.maxWidth
+            : (mq.size.width > 0 ? mq.size.width : 400.0);
+        final h = constraints.maxHeight.isFinite && constraints.maxHeight > 0
+            ? constraints.maxHeight
+            : (mq.size.height > 0 ? mq.size.height : 700.0);
+        final panelHeight = h * 0.92;
 
-            // Panneau de filtres ancré en bas
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: mq.size.height * 0.92,
-              child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                children: [
-                  // ── Handle ──────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10, bottom: 2),
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
+        return Material(
+          color: Colors.black54,
+          child: SizedBox(
+            width: w,
+            height: h,
+            child: Stack(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  behavior: HitTestBehavior.opaque,
+                  child: const SizedBox.expand(),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SizedBox(
+                    width: w,
+                    height: panelHeight,
+                    child: SafeArea(
+                      top: false,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10, bottom: 2),
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                            _buildHeader(),
+                            Expanded(
+                              child: ListView(
+                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                                children: [
+                                  _section('Période de location', _buildPeriods()),
+                                  _divider(),
+                                  _section('Type de résidence', _buildCategories()),
+                                  _divider(),
+                                  _section(
+                                    'Nombre de personnes (${_filters.minGuests > 0 ? _filters.minGuests : "Tout"}) ou plus',
+                                    _buildGuestsCounter(),
+                                  ),
+                                  _divider(),
+                                  _section('Fourchette de prix', _buildPriceSlider()),
+                                  _divider(),
+                                  _section('Chambres & Salles de bain', _buildCounters()),
+                                  _divider(),
+                                  _section('Équipements', _buildAmenities()),
+                                  _divider(),
+                                  _section('Règles', _buildRules()),
+                                  _divider(),
+                                  _section('Mode de réservation', _buildReservationMode()),
+                                  _divider(),
+                                  _section('Note minimale', _buildRating()),
+                                ],
+                              ),
+                            ),
+                            _buildFooter(mq.padding.bottom),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-
-                  // ── Header ──────────────────────────────────────
-                  _buildHeader(),
-
-                  // ── Contenu scrollable ───────────────────────────
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      children: [
-                        _section('Période de location', _buildPeriods()),
-                        _divider(),
-                        _section('Type de résidence', _buildCategories()),
-                        _divider(),
-                        _section('Fourchette de prix', _buildPriceSlider()),
-                        _divider(),
-                        _section('Chambres & Salles de bain', _buildCounters()),
-                        _divider(),
-                        _section('Équipements', _buildAmenities()),
-                        _divider(),
-                        _section('Règles', _buildRules()),
-                        _divider(),
-                        _section('Mode de réservation', _buildReservationMode()),
-                        _divider(),
-                        _section('Note minimale', _buildRating()),
-                      ],
-                    ),
-                  ),
-
-                  // ── Footer fixe ──────────────────────────────────
-                  _buildFooter(mq.padding.bottom),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      ),  // SizedBox.expand
+        );
+      },
     );
   }
 
@@ -449,6 +507,19 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
           }),
         );
       }).toList(),
+    );
+  }
+
+  // ── Nombre de personnes ───────────────────────────────────────────────────
+
+  Widget _buildGuestsCounter() {
+    return _CounterRow(
+      label: 'Personnes minimum',
+      value: _filters.minGuests,
+      displayValueAs: (v) => '$v ou plus',
+      maxValue: 10,
+      onChanged: (v) =>
+          setState(() => _filters = _filters.copyWith(minGuests: v)),
     );
   }
 
@@ -517,6 +588,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
         _CounterRow(
           label: 'Chambres',
           value: _filters.minBedrooms,
+          displayValueAs: (v) => '$v+',
           onChanged: (v) =>
               setState(() => _filters = _filters.copyWith(minBedrooms: v)),
         ),
@@ -524,6 +596,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
         _CounterRow(
           label: 'Salles de bain',
           value: _filters.minBathrooms,
+          displayValueAs: (v) => '$v+',
           onChanged: (v) =>
               setState(() => _filters = _filters.copyWith(minBathrooms: v)),
         ),
@@ -635,33 +708,32 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
   // ── Note minimale ─────────────────────────────────────────────────────────
 
   Widget _buildRating() {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [0.0, 3.0, 3.5, 4.0, 4.5].map((r) {
         final selected = _filters.minRating == r;
-        return Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: GestureDetector(
-            onTap: () => setState(() =>
-                _filters = _filters.copyWith(minRating: r)),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFF1A1A1A) : Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xFF1A1A1A)
-                      : Colors.grey[300]!,
-                ),
+        return GestureDetector(
+          onTap: () => setState(() =>
+              _filters = _filters.copyWith(minRating: r)),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFF1A1A1A) : Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFF1A1A1A)
+                    : Colors.grey[300]!,
               ),
-              child: Text(
-                r == 0 ? 'Tout' : '${r.toString()} ★',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color:
-                      selected ? Colors.white : const Color(0xFF1A1A1A),
-                ),
+            ),
+            child: Text(
+              r == 0 ? 'Tout' : '${r.toString()} ★',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color:
+                    selected ? Colors.white : const Color(0xFF1A1A1A),
               ),
             ),
           ),
@@ -673,30 +745,39 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
   // ── Footer ────────────────────────────────────────────────────────────────
 
   Widget _buildFooter(double bottomPadding) {
+    final safeBottom = bottomPadding > 0 ? bottomPadding : 16;
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, bottomPadding + 12),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, 12, 20, safeBottom + 12),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey[200]!)),
       ),
       child: Row(
         children: [
-          // Tout effacer
-          TextButton(
-            onPressed: () => setState(() =>
-                _filters = const SearchFilters()),
-            child: const Text(
-              'Tout effacer',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
-                decoration: TextDecoration.underline,
+          // FIX: SizedBox borne la largeur du TextButton pour éviter le crash
+          // w=Infinity lors du layout offstage (SlideTransition).
+          SizedBox(
+            width: 110,
+            child: TextButton(
+              onPressed: () => setState(() =>
+                  _filters = const SearchFilters()),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+              ),
+              child: const Text(
+                'Tout effacer',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A1A),
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ),
           const Spacer(),
-          // Appliquer
           Expanded(
             flex: 3,
             child: ElevatedButton(
@@ -805,11 +886,17 @@ class _CounterRow extends StatelessWidget {
   final String label;
   final int value;
   final ValueChanged<int> onChanged;
+  final String displayZeroAs;
+  final String Function(int) displayValueAs;
+  final int maxValue;
 
   const _CounterRow({
     required this.label,
     required this.value,
     required this.onChanged,
+    this.displayZeroAs = 'Tout',
+    required this.displayValueAs,
+    this.maxValue = 10,
   });
 
   @override
@@ -829,7 +916,7 @@ class _CounterRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            value == 0 ? 'Tout' : '$value+',
+            value == 0 ? displayZeroAs : displayValueAs(value),
             style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -838,7 +925,7 @@ class _CounterRow extends StatelessWidget {
         ),
         _CountBtn(
           icon: Icons.add,
-          enabled: value < 10,
+          enabled: value < maxValue,
           onTap: () => onChanged(value + 1),
         ),
       ],

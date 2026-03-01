@@ -17,6 +17,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _textFadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _slideAnimation;
   
@@ -28,29 +29,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
   
   void _initializeAnimations() {
+    // Phase 1: logo (0–50%), Phase 2: texte (40–90%) — courbes fluides
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
     
-    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
       ),
     );
     
-    _slideAnimation = Tween<double>(begin: 50, end: 0).animate(
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: const Interval(0.3, 0.8, curve: Curves.easeOutCubic),
+        curve: const Interval(0.4, 0.85, curve: Curves.easeOut),
+      ),
+    );
+    
+    _slideAnimation = Tween<double>(begin: 24, end: 0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.4, 0.9, curve: Curves.easeOutCubic),
       ),
     );
     
@@ -58,8 +67,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
   
   Future<void> _navigateAfterDelay() async {
-    // Réduire à 3 secondes comme pour l'app client
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(milliseconds: 2200));
     if (mounted) {
       context.go('/onboarding');
     }
@@ -133,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 Transform.translate(
                   offset: Offset(0, _slideAnimation.value),
                   child: FadeTransition(
-                    opacity: _fadeAnimation,
+                    opacity: _textFadeAnimation,
                     child: Text(
                       "Gérez vos résidences avec excellence",
                       style: TextStyle(

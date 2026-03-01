@@ -6,7 +6,6 @@ import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../settings/settings_screen.dart';
 import '../payments/payments_screen.dart' hide PaymentBloc;
-import '../notifications/notifications_screen.dart';
 import '../help/help_screen.dart' hide HelpBloc;
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
@@ -751,14 +750,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildMenuTile(
                             icon: Icons.notifications_outlined,
                             title: 'Notifications',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const NotificationsScreen(),
-                                ),
-                              );
-                            },
+                            onTap: () => context.push('/notifications'),
                             theme: theme,
                           ),
                           const Divider(height: 1),

@@ -195,6 +195,11 @@ class _OfflineOperationsScreenState extends State<OfflineOperationsScreen> {
         actions: [
           if (_operations.isNotEmpty)
             IconButton(
+              style: IconButton.styleFrom(
+                shape: const CircleBorder(),
+                side: BorderSide(color: Colors.grey.shade300),
+                backgroundColor: Colors.transparent,
+              ),
               icon: const Icon(Icons.delete_outline),
               onPressed: _clearQueue,
               tooltip: 'Vider la file',

@@ -158,15 +158,14 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Libellé
+        // Libellé (même style que TextInput : noir, sans astérisque)
         if (widget.label.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
-              widget.label + (widget.isRequired ? ' *' : ''),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: widget.themeColor ?? theme.primaryColor,
+              widget.label,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -180,10 +179,8 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
               return Container(
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: isValid 
-                        ? (widget.themeColor ?? theme.primaryColor)
-                        : theme.colorScheme.error,
-                    width: isValid ? 1.0 : 2.0,
+                    color: theme.colorScheme.outline,
+                    width: 1.0,
                   ),
                   borderRadius: BorderRadius.circular(8.0),
                 ),
@@ -253,14 +250,12 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
                   ),
                 ),
                 
-                // Indicateur de validation
+                // Indicateur de validation (discret, pas de rouge)
                 Padding(
                   padding: const EdgeInsets.only(right: 12.0),
                   child: Icon(
-                    isValid ? Icons.check_circle : Icons.error,
-                    color: isValid 
-                        ? Colors.green 
-                        : theme.colorScheme.error,
+                    isValid ? Icons.check_circle : Icons.phone_android,
+                    color: isValid ? Colors.green : theme.colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                 ),
@@ -284,7 +279,7 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
                     phoneNumber: _phoneController.text,
                   ).formattedNumber}',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isValid ? Colors.green : theme.colorScheme.error,
+                    color: isValid ? Colors.green : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               );

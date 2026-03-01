@@ -7,8 +7,10 @@ import 'package:shimmer/shimmer.dart';
 import '../../core/models/residence_type_enum.dart';
 import '../../core/utils/responsive_utils.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/services/residence_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/text_styles.dart';
+import '../../core/service_locator.dart';
 import 'common/premium_card.dart';
 
 /// Widget amélioré affichant les catégories populaires avec des visuels attractifs,
@@ -52,13 +54,15 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
   int _currentPage = 0;
   late AnimationController _animationController;
   bool _isLoading = true;
-  
-  // Liste des catégories populaires avec leurs types associés, images et icônes
+  /// Totaux réels par index de catégorie (chargés depuis l'API)
+  final Map<int, String> _categoryCounts = {};
+
+  // Liste des catégories populaires avec icône + couleur unique (sans images)
   final List<Map<String, dynamic>> _popularCategories = [
     {
-      'title': 'Résidences meublées',
+      'title': 'Résidences',
       'description': 'Confort et élégance',
-      'icon': Icons.apartment,
+      'icon': Icons.apartment_outlined,
       'image': 'assets/images/residences/premium1.png',
       'gradient': [Colors.orange, Colors.amber],
       'count': '243',
@@ -72,12 +76,12 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       ],
     },
     {
-      'title': 'Hôtels & Hébergements',
+      'title': 'Hébergements',
       'description': 'Services hôteliers',
-      'icon': Icons.hotel,
+      'icon': Icons.hotel_outlined,
       'image': 'assets/images/residences/premium2.png',
       'gradient': [Colors.red, Colors.redAccent],
-      'count': '78',
+      'count': '89',
       'categoryTypes': [
         ResidenceType.hotelDePassage,
         ResidenceType.motel,
@@ -88,24 +92,22 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       ],
     },
     {
-      'title': 'Hébergements insolites',
+      'title': 'Colocations',
       'description': 'Expériences uniques',
-      'icon': Icons.landscape,
+      'icon': Icons.bed_outlined,
       'image': 'assets/images/residences/luxury/images (3).jpg',
       'gradient': [Colors.blueAccent, Colors.lightBlueAccent],
       'count': '89',
       'categoryTypes': [
         ResidenceType.bungalow,
         ResidenceType.lodgeEtEcolodge,
-        ResidenceType.caseTraditionnelle,
-        ResidenceType.maisonFlottante,
-        ResidenceType.campementTouristique,
+        ResidenceType.chambreEnColocation,
       ],
     },
     {
-      'title': 'Colocation & partage',
+      'title': 'Colocations',
       'description': 'Vivre ensemble',
-      'icon': Icons.people,
+      'icon': Icons.handshake_outlined,
       'image': 'assets/images/residences/promo1.png',
       'gradient': [Colors.teal, Colors.tealAccent],
       'count': '189',
@@ -117,26 +119,25 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       ],
     },
     {
-      'title': 'Résidences longue durée',
+      'title': 'Budget',
       'description': 'Pour s\'installer',
-      'icon': Icons.home,
+      'icon': Icons.savings_outlined,
       'image': 'assets/images/backgrounds/city_skyline.png',
       'gradient': [Colors.green, Colors.lightGreen],
-      'count': '122',
+      'count': '95',
       'categoryTypes': [
         ResidenceType.appartementNonMeuble,
         ResidenceType.villaNonMeublee,
-        ResidenceType.immeuble,
-        ResidenceType.courCommune,
+        ResidenceType.maisonDHotesEconomique,
       ],
     },
     {
-      'title': 'Hébergements économiques',
+      'title': 'Hébergements',
       'description': 'Budget raisonnable',
-      'icon': Icons.monetization_on,
+      'icon': Icons.home_outlined,
       'image': 'assets/images/residences/promo2.png',
       'gradient': [Colors.purple, Colors.deepPurple],
-      'count': '95',
+      'count': '122',
       'categoryTypes': [
         ResidenceType.maisonDHotesEconomique,
         ResidenceType.residenceFamilialeEnLocation,
@@ -168,15 +169,78 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       });
     }
     
-    // Simuler un chargement pour les animations d'entrée
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _animationController.forward();
-      }
+    // Simuler un chargement pour les animations d'entrée + charger les vrais totaux
+    Future.delayed(const Duration(milliseconds: 300), () async {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      _animationController.forward();
+      await _loadCategoryCounts();
     });
+  }
+
+  /// Retourne le code type attendu par le backend (enum DB) pour un [ResidenceType].
+  static String _backendTypeCode(ResidenceType t) {
+    switch (t) {
+      case ResidenceType.hotelDePassage:
+        return 'hotel_passage';
+      case ResidenceType.hotelDeLuxe:
+        return 'hotel_luxe';
+      case ResidenceType.aubergeEtMaisonDHotes:
+        return 'guest_house';
+      case ResidenceType.residenceHoteliere:
+        return 'residence_hoteliere';
+      case ResidenceType.lodgeEtEcolodge:
+        return 'lodge';
+      case ResidenceType.chambreEnColocation:
+        return 'chambre_colocation';
+      case ResidenceType.cohabitation:
+        return 'coliving';
+      case ResidenceType.residenceUniversitaire:
+        return 'residence_universitaire';
+      case ResidenceType.maisonDHotesEconomique:
+        return 'maison_hotes_economique';
+      case ResidenceType.residenceFamilialeEnLocation:
+        return 'residence_familiale';
+      case ResidenceType.chambresDePassage:
+        return 'chambres_passage';
+      case ResidenceType.appartementNonMeuble:
+        return 'appartement_vide';
+      case ResidenceType.villaNonMeublee:
+        return 'villa_vide';
+      default:
+        return t.typeCode;
+    }
+  }
+
+  /// Charge les totaux réels par type depuis l'API et met à jour les comptes par catégorie.
+  Future<void> _loadCategoryCounts() async {
+    try {
+      final residenceService = sl<ResidenceService>();
+      final byType = await residenceService.getResidenceCountByType();
+      if (!mounted) return;
+      final Map<int, String> newCounts = {};
+      for (var i = 0; i < _popularCategories.length; i++) {
+        final category = _popularCategories[i];
+        final types = category['categoryTypes'] as List<ResidenceType>? ?? [];
+        int total = 0;
+        for (final t in types) {
+          total += byType[_backendTypeCode(t)] ?? 0;
+        }
+        newCounts[i] = total.toString();
+      }
+      setState(() {
+        _categoryCounts.clear();
+        _categoryCounts.addAll(newCounts);
+      });
+    } catch (e) {
+      _logger.warning('PopularCategoriesWidget: impossible de charger les totaux par catégorie: $e');
+    }
+  }
+
+  String _getCountForCategory(int index, Map<String, dynamic> category) {
+    return _categoryCounts[index] ?? category['count'] as String;
   }
   
   @override
@@ -280,6 +344,8 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
   
   Widget _buildCategoriesSection(bool isDarkMode) {
     switch (widget.viewStyle) {
+      case 'compact':
+        return _buildCompactView(isDarkMode);
       case 'carousel':
         return _buildCarouselView(isDarkMode);
       case 'list':
@@ -288,6 +354,80 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       default:
         return _buildGridView(isDarkMode);
     }
+  }
+
+  /// Vue compacte horizontale : icône dans cercle coloré + titre + nombre (style capture).
+  Widget _buildCompactView(bool isDarkMode) {
+    return SizedBox(
+      height: 108,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: _popularCategories.length,
+        itemBuilder: (context, index) {
+          final category = _popularCategories[index];
+          final color = AppTheme.lightGold;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Material(
+              color: isDarkMode
+                  ? Colors.grey[850]
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              elevation: 1,
+              shadowColor: Colors.black.withOpacity(0.06),
+              child: InkWell(
+                onTap: () => _navigateToCategory(category),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 100,
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          category['icon'] as IconData,
+                          size: 20,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        category['title'] as String,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                          color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _getCountForCategory(index, category),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
   
   // Affichage en grille (par défaut)
@@ -482,7 +622,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${category['count']}',
+                              _getCountForCategory(index, category),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -605,7 +745,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            '${category['count']} résidences',
+                            '${_getCountForCategory(index, category)} résidences',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -719,7 +859,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${category['count']}',
+                              _getCountForCategory(index, category),
                               style: TextStyle(
                                 color: category['gradient'][0],
                                 fontSize: 12,

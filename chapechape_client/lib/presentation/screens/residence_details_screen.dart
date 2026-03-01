@@ -16,6 +16,7 @@ import '../../core/blocs/booking/booking_bloc.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/services/booking_service.dart';
 import '../../core/services/residence_service.dart';
+import '../../core/services/recently_viewed_service.dart';
 import '../screens/booking_screen.dart';
 import '../widgets/skeletons/residence_details_skeleton.dart';
 
@@ -65,6 +66,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     super.initState();
     _locationService = LocationService();
     _fetchLocation();
+    RecentlyViewedService.getInstance().then((s) => s.add(widget.residenceId));
     context.read<ResidenceBloc>().add(
       LoadResidenceDetails(residenceId: widget.residenceId),
     );

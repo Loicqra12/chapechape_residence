@@ -148,6 +148,11 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
         title: const Text('Configuration du serveur'),
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _checkServerStatus,
             tooltip: 'Vérifier la connexion',

@@ -211,6 +211,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             actions: [
               // Bouton pour toggle groupement
               IconButton(
+                style: IconButton.styleFrom(
+                  shape: const CircleBorder(),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  backgroundColor: Colors.transparent,
+                ),
                 icon: Icon(
                   _groupByType ? Icons.view_list : Icons.view_module,
                   color: Theme.of(context).colorScheme.primary,
@@ -224,6 +229,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               // Bouton de filtre
               IconButton(
+                style: IconButton.styleFrom(
+                  shape: const CircleBorder(),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  backgroundColor: Colors.transparent,
+                ),
                 icon: Icon(
                   Icons.filter_list,
                   color: state is NotificationLoaded && state.activeFilters 

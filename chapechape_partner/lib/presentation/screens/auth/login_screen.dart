@@ -73,16 +73,17 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
-                  // Logo
+                  const SizedBox(height: 16),
+                  // Illustration empty_connexion
                   Center(
                     child: Image.asset(
-                      AppImages.logoPrimary,
-                      height: 80,
-                      semanticLabel: 'Logo ChapeChape Partner',
+                      AppImages.emptyConnexion,
+                      height: 120,
+                      fit: BoxFit.contain,
+                      semanticLabel: 'Illustration connexion',
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
                   // Titre
                   Text(
                     'Connexion Partenaire',
@@ -97,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Colors.grey[600],
                         ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
                   // Champ email
                   TextInput(
                     label: 'Email ou téléphone',
@@ -119,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   // Champ mot de passe
                   TextInput(
                     label: 'Mot de passe',
@@ -155,14 +156,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Mot de passe oublié ?'),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
                   // Bouton de connexion
                   PrimaryButton(
                     text: 'Se connecter',
                     onPressed: _onLoginPressed,
                     isLoading: _isLoading,
+                    filled: true,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   // Lien inscription
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -176,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   // Message légal
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -255,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

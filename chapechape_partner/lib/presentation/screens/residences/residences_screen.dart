@@ -13,6 +13,7 @@ import '../../../core/constants/app_images.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/app_error_state_widget.dart';
 import '../../widgets/common/shimmer_loading.dart';
 import '../../widgets/common/optimized_image.dart';
 import '../../../core/utils/string_utils.dart';
@@ -109,46 +110,17 @@ class _ResidencesViewState extends State<_ResidencesView> {
                 }
 
                 if (state is ResidenceError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          state.isNetworkError 
-                              ? Icons.signal_wifi_off
-                              : state.isAuthError
-                                  ? Icons.lock
-                                  : Icons.error_outline,
-                          size: 48,
-                          color: state.isNetworkError || state.isAuthError
-                              ? Theme.of(context).colorScheme.tertiary
-                              : Theme.of(context).colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          state.message,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: _loadResidences,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Réessayer'),
-                        ),
-                        if (state.isAuthError)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: TextButton(
-                              onPressed: () {
-                                // Rediriger vers la page de connexion
-                                Navigator.of(context).pushReplacementNamed('/login');
-                              },
-                              child: const Text('Se reconnecter'),
-                            ),
-                          ),
-                      ],
-                    ),
+                  return AppErrorStateWidget(
+                    message: 'Oups... impossible de charger vos résidences pour le moment. Vérifiez votre connexion ou réessayez.',
+                    subtitle: 'Nous travaillons à résoudre le problème.',
+                    onRetry: _loadResidences,
+                    isNetworkError: state.isNetworkError,
+                    isAuthError: state.isAuthError,
+                    onReconnect: state.isAuthError
+                        ? () => context.go('/auth/login')
+                        : null,
+                    onBackToDashboard: () => context.go('/main'),
+                    imagePath: AppImages.emptyError,
                   );
                 }
 
@@ -172,7 +144,8 @@ class _ResidencesViewState extends State<_ResidencesView> {
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        // Padding bas pour éviter que le FAB chevauche les boutons Modifier/Supprimer
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,

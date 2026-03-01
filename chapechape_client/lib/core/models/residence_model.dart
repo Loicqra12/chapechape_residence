@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'residence_type_enum.dart';
 import '../utils/formatters.dart';
 import '../constants/app_assets.dart' as assets;
@@ -49,7 +50,8 @@ class Residence {
   final bool isVip;
   final String reservationMode;
   final List<String> paymentMethods;
-  
+  final bool isFavorite;
+
   bool get hasDiscount => discountPrice != null && discountPrice! < price;
   double? get discountPrice => priceDetails != null && priceDetails!.containsKey('discountPrice') ? priceDetails!['discountPrice'] as double : null;
   double get discountPercentage => hasDiscount ? ((price - discountPrice!) / price) * 100 : 0;
@@ -64,7 +66,7 @@ class Residence {
       }
       return null;
     } catch (e) {
-      print('Erreur lors de l\'accès à latitude: $e');
+      if (kDebugMode) debugPrint('Erreur lors de l\'accès à latitude: $e');
       return null;
     }
   }
@@ -77,7 +79,7 @@ class Residence {
       }
       return null;
     } catch (e) {
-      print('Erreur lors de l\'accès à longitude: $e');
+      if (kDebugMode) debugPrint('Erreur lors de l\'accès à longitude: $e');
       return null;
     }
   }
@@ -115,7 +117,6 @@ class Residence {
   String get neighborhood => location.containsKey('neighborhood') ? location['neighborhood'] as String : '';
   String get address => location.containsKey('address') ? location['address'] as String : '';
   String get formattedAddress => location.displayAddress;
-  bool get isFavorite => priceDetails != null && priceDetails!.containsKey('isFavorite') ? priceDetails!['isFavorite'] as bool : false;
   List<double> get coordinates {
     // Cas 1: Format ancien (liste [longitude, latitude])
     if (location.containsKey('coordinates')) {
@@ -219,6 +220,7 @@ class Residence {
     this.isVip = false,
     this.reservationMode = 'instant',
     this.paymentMethods = const [],
+    this.isFavorite = false,
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -228,7 +230,7 @@ class Residence {
       try {
         createdAt = DateTime.parse(json['createdAt'] as String);
       } catch (e) {
-        print('Erreur de parsing de la date de création: $e');
+        if (kDebugMode) debugPrint('Erreur de parsing de la date de création: $e');
       }
     }
     
@@ -237,7 +239,7 @@ class Residence {
       try {
         updatedAt = DateTime.parse(json['updatedAt'] as String);
       } catch (e) {
-        print('Erreur de parsing de la date de mise à jour: $e');
+        if (kDebugMode) debugPrint('Erreur de parsing de la date de mise à jour: $e');
       }
     }
     
@@ -257,7 +259,7 @@ class Residence {
         residenceType = ResidenceType.other;
       }
     } catch (e) {
-      print('Erreur lors du parsing du type de résidence: $e');
+      if (kDebugMode) debugPrint('Erreur lors du parsing du type de résidence: $e');
       residenceType = ResidenceType.other;
     }
     
@@ -386,6 +388,10 @@ class Residence {
       paymentMethods: json['paymentMethods'] != null
           ? List<String>.from(json['paymentMethods'] as List)
           : [],
+      isFavorite: json['isFavorite'] as bool? ??
+          (json['priceDetails'] is Map && (json['priceDetails'] as Map).containsKey('isFavorite')
+              ? (json['priceDetails'] as Map)['isFavorite'] as bool? ?? false
+              : false),
     );
   }
 
@@ -438,6 +444,7 @@ class Residence {
         'weekend': weekendRate,
       },
       'reservationMode': reservationMode,
+      'isFavorite': isFavorite,
     };
   }
 
@@ -487,6 +494,7 @@ class Residence {
     double? weekendRate,
     String? reservationMode,
     List<String>? paymentMethods,
+    bool? isFavorite,
   }) {
     return Residence(
       id: id ?? this.id,
@@ -533,6 +541,7 @@ class Residence {
       weekendRate: weekendRate ?? this.weekendRate,
       reservationMode: reservationMode ?? this.reservationMode,
       paymentMethods: paymentMethods ?? this.paymentMethods,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 

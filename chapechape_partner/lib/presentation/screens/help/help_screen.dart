@@ -345,6 +345,11 @@ class _HelpScreenState extends State<HelpScreen> {
         title: const Text('Aide'),
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.report_problem),
             onPressed: _showReportProblemDialog,
             tooltip: 'Signaler un problème',

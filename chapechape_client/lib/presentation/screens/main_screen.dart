@@ -11,7 +11,6 @@ import 'home_screen.dart';
 import '../widgets/notification_button.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/location_selector_widget.dart';
-import '../widgets/auth_button_widget.dart';
 import '../widgets/connectivity_banner.dart';
 import 'offline_screen.dart';
 import '../../core/models/city.dart';
@@ -116,89 +115,104 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       extendBody: true,
-      extendBodyBehindAppBar: isHomeScreen,
-      appBar: AppBar(
-        backgroundColor: isHomeScreen 
-            ? Colors.transparent 
-            : (Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white),
-        elevation: 0,
-        iconTheme: IconThemeData(
-          color: isHomeScreen ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-        ),
-        leading: Container(
-          margin: EdgeInsets.all(AppSpacing.sm),
-          decoration: isHomeScreen ? BoxDecoration(
-            color: Colors.black.withOpacity(0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-          ) : null,
-          child: IconButton(
-            icon: const Icon(Icons.menu),
-            color: isHomeScreen ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-            onPressed: () => _showLocationMenu(context),
-            tooltip: 'Menu',
-            padding: EdgeInsets.zero,
-          ),
-        ),
-        actions: [
-          // Bouton mode offline
-          StreamBuilder<bool>(
-            stream: _connectivityService.connectivityStream,
-            builder: (context, snapshot) {
-              final isConnected = snapshot.data ?? true;
-              if (!isConnected) {
-                return IconButton(
-                  icon: const Icon(Icons.cloud_off),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const OfflineScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: 'Mode Hors Ligne',
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-          // Icône notifications avec badge
-          const NotificationButton(),
-          // Avatar utilisateur en haut à droite
-          const AuthButtonWidget(),
-        ],
-        title: _selectedCity != null 
-          ? InkWell(
-              onTap: () => _showLocationMenu(context),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.location_on, size: 16, color: isHomeScreen ? Colors.white : AppTheme.primaryColor),
-                  SizedBox(width: AppSpacing.xs),
-                  Flexible(
-                    child: Text(
-                      _selectedCity!.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isHomeScreen ? Colors.white : Colors.grey[800],
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      semanticsLabel: 'Localisation actuelle: ${_selectedCity!.name}',
-                    ),
-                  ),
-                  Icon(Icons.arrow_drop_down, size: 16, color: isHomeScreen ? Colors.white70 : Colors.grey[600]),
-                ],
+      extendBodyBehindAppBar: false,
+      appBar: isHomeScreen
+          ? null
+          : AppBar(
+              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white,
+              elevation: 0,
+              iconTheme: IconThemeData(
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
               ),
-            )
-          : null,
-        centerTitle: false,
-      ),
-      body: NotificationListener<ScrollNotification>(
-        onNotification: _handleScrollNotification,
-        child: ConnectivityBanner(
-          child: widget.child,
-        ),
+              leading: Container(
+                margin: EdgeInsets.all(AppSpacing.sm),
+                child: IconButton(
+                  icon: const Icon(Icons.menu),
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                  onPressed: () => _showLocationMenu(context),
+                  tooltip: 'Menu',
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              actions: [
+                StreamBuilder<bool>(
+                  stream: _connectivityService.connectivityStream,
+                  builder: (context, snapshot) {
+                    final isConnected = snapshot.data ?? true;
+                    if (!isConnected) {
+                      return IconButton(
+                        icon: const Icon(Icons.cloud_off),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const OfflineScreen(),
+                            ),
+                          );
+                        },
+                        tooltip: 'Mode Hors Ligne',
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                const NotificationButton(),
+              ],
+              title: _selectedCity != null
+                  ? InkWell(
+                      onTap: () => _showLocationMenu(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on, size: 16, color: AppTheme.primaryColor),
+                          SizedBox(width: AppSpacing.xs),
+                          Flexible(
+                            child: Text(
+                              'À ${_selectedCity!.name}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[800],
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              semanticsLabel: 'Localisation: ${_selectedCity!.name}',
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
+                        ],
+                      ),
+                    )
+                  : null,
+              centerTitle: false,
+            ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: ConnectivityBanner(
+              child: widget.child,
+            ),
+          ),
+          // Sur home : header en overlay, animé au scroll comme la bottom nav bar
+          if (isHomeScreen)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOutCubic,
+                  offset: _isNavBarVisible ? Offset.zero : const Offset(0, -1.2),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _isNavBarVisible ? 1.0 : 0.0,
+                    child: _buildHomeOverlayAppBar(context),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       bottomNavigationBar: AnimatedSlide(
         duration: const Duration(milliseconds: 300),
@@ -233,7 +247,7 @@ class _MainScreenState extends State<MainScreen> {
                       ? AppTheme.primaryColor.withOpacity(0.2) 
                       : AppTheme.primaryColor.withOpacity(0.15),
                   labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  height: 70,
+                  height: 56,
                   elevation: 0,
                   destinations: [
                     NavigationDestination(
@@ -299,6 +313,91 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
   
+  /// Barre du haut en overlay sur l'écran d'accueil : même visuel que l'ancienne AppBar, animée au scroll.
+  Widget _buildHomeOverlayAppBar(BuildContext context) {
+    return IconTheme(
+      data: const IconThemeData(color: Colors.white),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+        padding: EdgeInsets.only(
+          left: AppSpacing.sm,
+          right: AppSpacing.sm,
+          top: AppSpacing.xs,
+          bottom: AppSpacing.xs,
+        ),
+        child: Row(
+          children: [
+            Container(
+              margin: EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.2),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.menu),
+                color: Colors.white,
+                onPressed: () => _showLocationMenu(context),
+                tooltip: 'Menu',
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            Expanded(
+              child: _selectedCity != null
+                  ? InkWell(
+                      onTap: () => _showLocationMenu(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on, size: 16, color: Colors.white),
+                          SizedBox(width: AppSpacing.xs),
+                          Flexible(
+                            child: Text(
+                              'À ${_selectedCity!.name}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              semanticsLabel: 'Localisation: ${_selectedCity!.name}',
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down, size: 16, color: Colors.white70),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            StreamBuilder<bool>(
+              stream: _connectivityService.connectivityStream,
+              builder: (context, snapshot) {
+                final isConnected = snapshot.data ?? true;
+                if (!isConnected) {
+                  return IconButton(
+                    icon: const Icon(Icons.cloud_off),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const OfflineScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Mode Hors Ligne',
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+            const NotificationButton(),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+
   // Méthode pour afficher le menu de localisation amélioré
   void _showLocationMenu(BuildContext context) {
     showModalBottomSheet(

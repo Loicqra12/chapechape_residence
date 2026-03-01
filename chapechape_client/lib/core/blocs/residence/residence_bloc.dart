@@ -1,7 +1,7 @@
+import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart'; // Pour debugPrint
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:chapechape_client/core/services/favorite_service.dart';
 import 'package:chapechape_client/core/services/type_sync_service.dart';
@@ -63,41 +63,36 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     on<RestorePreviousStateEvent>(_onRestorePreviousState);
   }
 
+  Future<List<Residence>> _hydrateFavorites(List<Residence> list) async {
+    try {
+      final ids = await _favoriteService.getFavorites();
+      if (ids.isEmpty) return list;
+      return list.map((r) => r.copyWith(isFavorite: ids.contains(r.id))).toList();
+    } catch (_) {
+      return list;
+    }
+  }
+
   Future<void> _onLoadResidences(
     LoadResidencesEvent event,
     Emitter<ResidenceState> emit,
   ) async {
     try {
-      print('🔍 DÉBUT _onLoadResidences');
+      if (kDebugMode) debugPrint('🔍 _onLoadResidences');
       emit(const ResidenceLoading());
-      // Toujours forcer le rafraîchissement pour s'assurer d'avoir les dernières données
-      print('🔍 Avant appel à getAllResidences avec forceRefresh=true');
       final residences = await _residenceService.getAllResidences(
-        forceRefresh: true, // Forcer le rafraîchissement indépendamment de la valeur event.forceRefresh
+        forceRefresh: true,
       );
-      
-      print('🔍 Résidences récupérées: ${residences.runtimeType}, longueur: ${residences is List ? residences.length : "non-list"}');
-      
-      // S'assurer que nous avons bien une liste concrète avant d'émettre l'état
-      if (residences is List<Residence>) {
-        print('🔍 Émission de ResidencesLoaded avec ${residences.length} résidences (List<Residence>)');
-        emit(ResidencesLoaded(residences));
-      } else if (residences is List) {
-        print('🔍 Émission de ResidencesLoaded avec ${residences.length} résidences (List générique)');
-        final typedResidences = residences.cast<Residence>();
-        emit(ResidencesLoaded(typedResidences));
-      } else if (residences is Future) {
-        print('🔍 Résidences est un Future, en attente de résolution...');
-        final List<Residence> resolvedResidences = await residences;
-        print('🔍 Future résolu avec ${resolvedResidences.length} résidences');
-        emit(ResidencesLoaded(resolvedResidences));
-      } else {
-        print('🔍 ERREUR: Type inattendu: ${residences.runtimeType}');
+      if (residences is! List) {
+        if (kDebugMode) debugPrint('🔍 Type inattendu: ${residences.runtimeType}');
         emit(ResidenceError("Type de résidence inattendu: ${residences.runtimeType}"));
+        return;
       }
-      print('🔍 FIN _onLoadResidences');
+      final typed = residences is List<Residence> ? residences : residences.cast<Residence>();
+      final hydrated = await _hydrateFavorites(typed);
+      emit(ResidencesLoaded(hydrated));
     } catch (e) {
-      print('🔍 ERREUR dans _onLoadResidences: $e');
+      if (kDebugMode) debugPrint('🔍 ERREUR _onLoadResidences: $e');
       emit(ResidenceError(e.toString()));
     }
   }
@@ -173,6 +168,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       final residenceCategory = f['residenceCategory'] as String?;
       final minBedrooms      = f['minBedrooms'] is int ? f['minBedrooms'] as int : null;
       final minBathrooms     = f['minBathrooms'] is int ? f['minBathrooms'] as int : null;
+      final minGuests        = f['minGuests'] is int ? f['minGuests'] as int : null;
       final amenitiesFilter  = f['amenities'] is List ? List<String>.from(f['amenities'] as List) : <String>[];
       final allowsPets       = f['allowsPets'] as bool?;
       final allowsSmoking    = f['allowsSmoking'] as bool?;
@@ -185,6 +181,11 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         city: city,
         minPrice: minPrice,
         maxPrice: maxPrice,
+        bedrooms: minBedrooms,
+        bathrooms: minBathrooms,
+        amenities: amenitiesFilter.isNotEmpty ? amenitiesFilter : null,
+        page: event.page,
+        limit: event.limit,
         forceRefresh: true,
       );
 
@@ -242,6 +243,11 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         residences = residences.where((r) => r.bathrooms >= minBathrooms).toList();
       }
 
+      // Filtre par nombre de personnes (2) ou plus : résidences avec maxOccupancy >= minGuests
+      if (minGuests != null && minGuests > 0) {
+        residences = residences.where((r) => r.maxOccupancy >= minGuests).toList();
+      }
+
       // Filtre par équipements
       if (amenitiesFilter.isNotEmpty) {
         residences = residences.where((r) {
@@ -271,8 +277,9 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       if (minRating != null && minRating > 0) {
         residences = residences.where((r) => r.rating >= minRating).toList();
       }
-      
-      emit(ResidencesLoaded(residences));
+
+      final hydrated = await _hydrateFavorites(residences);
+      emit(ResidencesLoaded(hydrated));
     } catch (e) {
       emit(ResidenceError(e.toString()));
     }
@@ -346,30 +353,18 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       if (success) {
         if (state is ResidenceDetailsLoaded) {
           final currentResidence = (state as ResidenceDetailsLoaded).residence;
-          
-          // Mettre à jour l'état de favori
-          Map<String, dynamic> priceDetails = currentResidence.priceDetails ?? {};
-          priceDetails['isFavorite'] = !isFavorite; // Inverser l'état actuel
-          
-          final updatedResidence = currentResidence.copyWith(
-            priceDetails: priceDetails,
-          );
-          
-          emit(ResidenceDetailsLoaded(updatedResidence));
+          if (currentResidence.id == event.residenceId) {
+            emit(ResidenceDetailsLoaded(
+                currentResidence.copyWith(isFavorite: !isFavorite)));
+          }
         } else if (state is ResidencesLoaded) {
           final residences = (state as ResidencesLoaded).residences;
           final updatedResidences = residences.map((residence) {
             if (residence.id == event.residenceId) {
-              Map<String, dynamic> priceDetails = residence.priceDetails ?? {};
-              priceDetails['isFavorite'] = !isFavorite; // Inverser l'état actuel
-              
-              return residence.copyWith(
-                priceDetails: priceDetails,
-              );
+              return residence.copyWith(isFavorite: !isFavorite);
             }
             return residence;
           }).toList();
-          
           emit(ResidencesLoaded(updatedResidences));
         }
       }
@@ -402,17 +397,11 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         try {
           final residence = await _residenceService.getResidenceById(id);
           if (residence != null) {
-            // Créer une copie des détails de prix avec sécurité null
-            final priceDetails = Map<String, dynamic>.from(residence.priceDetails ?? {});
-            priceDetails['isFavorite'] = true;
-            
-            favoriteResidences.add(residence.copyWith(
-              priceDetails: priceDetails,
-            ));
+            favoriteResidences.add(residence.copyWith(isFavorite: true));
           }
         } catch (e) {
           // Ignorer les erreurs pour les résidences individuelles
-          if (kDebugMode) print('Erreur lors du chargement du favori $id: ${e.toString()}');
+          if (kDebugMode) debugPrint('Erreur lors du chargement du favori $id: ${e.toString()}');
         }
       }
       

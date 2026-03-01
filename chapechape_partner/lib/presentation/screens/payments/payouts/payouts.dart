@@ -172,6 +172,11 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             icon: Icon(
               Icons.filter_list,
               color: _selectedStatus != null ? Colors.amber : Colors.white,
@@ -180,6 +185,11 @@ class _PayoutHistoryScreenState extends State<PayoutHistoryScreen> {
             tooltip: 'Filtrer',
           ),
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.refresh),
             onPressed: _refreshData,
             tooltip: 'Actualiser',

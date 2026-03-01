@@ -157,10 +157,11 @@ class _EditResidenceViewState extends State<_EditResidenceView>
   String _selectedRegion = 'AB'; // Abidjan par défaut
   String _selectedCity = 'CO'; // Cocody par défaut
   
-  // Variables pour la géolocalisation
+  // Variables pour la géolocalisation (quartier rempli par reverse geocode)
   double? _latitude;
   double? _longitude;
   String? _formattedAddress;
+  String? _quartierFromGeocode;
   
   // Variables pour le mode de réservation
   String _selectedReservationMode = 'instant'; // Par défaut: instantané
@@ -563,6 +564,9 @@ class _EditResidenceViewState extends State<_EditResidenceView>
       }
       if (widget.residence!.cityCode != null) {
         _selectedCity = widget.residence!.cityCode!;
+      }
+      if (widget.residence!.quartier != null && widget.residence!.quartier!.isNotEmpty) {
+        _quartierFromGeocode = widget.residence!.quartier;
       }
 
       // Initialiser les images existantes
@@ -1103,10 +1107,12 @@ class _EditResidenceViewState extends State<_EditResidenceView>
           'category': _selectedCategory,
           'status': _isAvailable ? 'available' : 'unavailable',
 
-          // Information sur la localisation (pays, région, ville, adresse)
+          // Information sur la localisation (pays, région, commune, quartier, adresse)
           'country': _selectedCountry,
           'region': _selectedRegion,
           'city': _selectedCity,
+          'commune': _getCityName(_selectedCity),
+          'quartier': _quartierFromGeocode ?? '',
           'address': _addressController.text,
           // Coordonnées GPS (si disponibles)
           'latitude': _latitude,
@@ -1342,6 +1348,11 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         title: Text(isEditing ? 'Modifier la résidence' : 'Nouvelle résidence'),
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: _isSubmitting
                 ? const SizedBox(
                     width: 20,
@@ -2361,6 +2372,29 @@ class _EditResidenceViewState extends State<_EditResidenceView>
               ),
               const SizedBox(height: 16),
 
+              DropdownButtonFormField<String>(
+                value: _getCitiesForRegion(_selectedRegion).any((c) => c.code == _selectedCity)
+                    ? _selectedCity
+                    : (_getCitiesForRegion(_selectedRegion).isNotEmpty
+                        ? _getCitiesForRegion(_selectedRegion).first.code
+                        : null),
+                decoration: InputDecoration(
+                  labelText: 'Commune',
+                  prefixIcon: Icon(Icons.place),
+                  border: OutlineInputBorder(),
+                ),
+                items: _getCitiesForRegion(_selectedRegion).map((city) {
+                  return DropdownMenuItem<String>(
+                    value: city.code,
+                    child: Text(city.name),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedCity = value);
+                  }
+                },
+              ),
               const SizedBox(height: 16),
 
               AddressAutocompleteField(
@@ -2380,12 +2414,12 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                       if (components['country'] != null) {
                         // Si nous avons un code pays dans les composantes,
                         // nous pourrions le mapper à nos codes pays internes
-                        // Pour l'instant, nous gardons simplement la vérification de base
                       }
-                      
                       if (components['city'] != null) {
                         _cityController.text = components['city'];
                       }
+                      // Quartier depuis le reverse geocode (neighborhood / sublocality)
+                      _quartierFromGeocode = components['neighborhood'] ?? components['sublocality'] ?? '';
                     }
                   });
                 },
@@ -3163,9 +3197,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     return '';
   }
 
-  // Méthode pour obtenir la ville par défaut pour une région
+  // Méthode pour obtenir la ville (commune) par défaut pour une région
   String _getDefaultCity(String regionCode) {
-    final cities = _citiesByRegion[regionCode];
+    final key = '${_selectedCountry}_$regionCode';
+    final cities = _citiesByRegion[key];
     if (cities != null && cities.isNotEmpty) {
       return cities.first.code;
     }
@@ -3177,9 +3212,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     return _regionsByCountry[countryCode] ?? [];
   }
 
-  // Méthode pour obtenir les villes d'une région
+  // Méthode pour obtenir les communes d'une région (clé pays_région ex. CI_AB)
   List<LocationItem> _getCitiesForRegion(String regionCode) {
-    return _citiesByRegion[regionCode] ?? [];
+    final key = '${_selectedCountry}_$regionCode';
+    return _citiesByRegion[key] ?? [];
   }
 
   // Méthode pour obtenir le nom du pays à partir du code
@@ -3203,9 +3239,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     return '';
   }
 
-  // Méthode pour obtenir le nom de la ville à partir du code
+  // Méthode pour obtenir le nom de la commune à partir du code
   String _getCityName(String cityCode) {
-    final cities = _citiesByRegion[_selectedRegion] ?? [];
+    final key = '${_selectedCountry}_$_selectedRegion';
+    final cities = _citiesByRegion[key] ?? [];
     for (var city in cities) {
       if (city.code == cityCode) {
         return city.name;

@@ -456,6 +456,8 @@ class ResidenceService {
         weekendRate: weekendRate,
         address: json['address']?.toString() ?? '',
         city: json['city']?.toString() ?? '',
+        commune: (json['locationData'] as Map?)?['commune']?.toString() ?? (json['location'] as Map?)?['commune']?.toString(),
+        quartier: (json['locationData'] as Map?)?['quartier']?.toString() ?? (json['location'] as Map?)?['quartier']?.toString(),
         bedrooms: (json['bedrooms'] is num) 
             ? (json['bedrooms'] as num).toInt() 
             : int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
@@ -547,13 +549,16 @@ class ResidenceService {
     
     backendData['location'] = {
       'address': data['formattedAddress']?.toString() ?? data['address']?.toString() ?? '',
-      'city': data['city']?.toString().isNotEmpty == true ? data['city'].toString() : 'Abidjan', // Valeur par défaut si vide
-      'state': data['region']?.toString() ?? 'AB', // Region -> State
+      'city': data['city']?.toString().isNotEmpty == true ? data['city'].toString() : 'Abidjan',
+      'state': data['region']?.toString() ?? 'AB',
       'country': data['country']?.toString() ?? 'CI',
       'coordinates': {
         'latitude': numLat,
         'longitude': numLng
-      }
+      },
+      if (data['commune'] != null && data['commune'].toString().isNotEmpty) 'commune': data['commune'].toString(),
+      if (data['quartier'] != null && data['quartier'].toString().isNotEmpty) 'quartier': data['quartier'].toString(),
+      if (data['sousZone'] != null && data['sousZone'].toString().isNotEmpty) 'sousZone': data['sousZone'].toString(),
     };
     
     // Note: formattedAddress supprimé car non autorisé par le schéma Joi backend

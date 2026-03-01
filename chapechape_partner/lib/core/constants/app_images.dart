@@ -8,6 +8,7 @@ class AppImages {
   static const String _onboardingPath = '$_basePath/onboarding';
   static const String _placeholdersPath = '$_basePath/placeholders';
   static const String _backgroundsPath = '$_basePath/backgrounds';
+  static const String _illustrationsPath = '$_basePath/illustrations';
 
   // Logo Images
   static const String logoPrimary = '$_logoPath/logo_primary.png';
@@ -27,6 +28,11 @@ class AppImages {
   static const String defaultResidence = '$_basePath/default_residence.jpg';
   static const String profilePlaceholder = '$_placeholdersPath/profile_placeholder.png';
   static const String errorPlaceholder = '$_placeholdersPath/error_placeholder.png';
+
+  // Illustrations
+  static const String emptyConnexion = '$_illustrationsPath/empty_connexion.png';
+  static const String emptyRegister = '$_illustrationsPath/empty_register.png';
+  static const String emptyError = '$_illustrationsPath/empty_error.png';
 
   // Background Images
   static const String patternLight = '$_backgroundsPath/pattern_light.svg';

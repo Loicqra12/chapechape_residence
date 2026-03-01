@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/onboarding_service.dart';
 import '../../../core/constants/app_images.dart';
+import '../../../core/theme/colors.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,18 +18,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      title: 'Bienvenue sur ChapeChape Partner',
-      description: 'Gérez vos résidences et disponibilités en toute simplicité',
+      title: 'Gère tes logements en toute simplicité',
+      description:
+          'Ajoute et gère tes logements facilement. Publie ton bien en quelques clics et commence à recevoir des réservations.',
       imagePath: AppImages.onboarding1,
     ),
     OnboardingPage(
-      title: 'Gestion des résidences',
-      description: 'Ajoutez, modifiez et supprimez vos résidences en quelques clics',
+      title: 'Choisis la durée qui t’arrange',
+      description:
+          'Choisis la durée de location. Adapte ton offre selon tes besoins : heure, jour ou mois.',
       imagePath: AppImages.onboarding2,
     ),
     OnboardingPage(
-      title: 'Disponibilités',
-      description: 'Mettez à jour les disponibilités de vos résidences en temps réel',
+      title: 'Fais travailler tes logements pour toi',
+      description:
+          'Gagne de l’argent facilement. Les clients proches trouvent ton logement grâce à la géolocalisation.',
       imagePath: AppImages.onboarding3,
     ),
   ];
@@ -62,6 +66,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       body: Stack(
         children: [
+          // Top bar légère (flèche retour + Passer)
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    color: AppColors.textPrimary,
+                    onPressed: _currentPage == 0
+                        ? null
+                        : () {
+                            _pageController.previousPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                  ),
+                  TextButton(
+                    onPressed: _onSkip,
+                    child: const Text('Passer'),
+                  ),
+                ],
+              ),
+            ),
+          ),
           PageView.builder(
             controller: _pageController,
             itemCount: _pages.length,
@@ -75,7 +106,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             left: 0,
             right: 0,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Indicateurs de page
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
@@ -84,43 +117,57 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: _currentPage == index ? 24 : 8,
+                      width: _currentPage == index ? 18 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(999),
                         color: _currentPage == index
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey.shade400,
+                            ? const Color(0xFF7C4DFF) // violet actif
+                            : const Color(0xFFE0D7FF), // violet très clair
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: _onSkip,
-                        child: const Text('Passer'),
+                const SizedBox(height: 24),
+                // Bouton rond central avec halo
+                GestureDetector(
+                  onTap: () {
+                    if (_currentPage == _pages.length - 1) {
+                      _onDone();
+                    } else {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF7C4DFF),
+                        width: 3,
                       ),
-                      if (_currentPage == _pages.length - 1)
-                        ElevatedButton(
-                          onPressed: _onDone,
-                          child: const Text('Commencer'),
-                        )
-                      else
-                        ElevatedButton(
-                          onPressed: () {
-                            _pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: const Text('Suivant'),
+                      color: Colors.transparent,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 62,
+                        height: 62,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
                         ),
-                    ],
+                        child: Icon(
+                          _currentPage == _pages.length - 1
+                              ? Icons.check
+                              : Icons.arrow_forward_ios_rounded,
+                          color: const Color(0xFF7C4DFF),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],

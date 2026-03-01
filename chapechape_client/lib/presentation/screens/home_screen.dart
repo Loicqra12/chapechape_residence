@@ -10,18 +10,18 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/models/residence_type_enum.dart';
-
+import '../../core/models/promotion_model.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/services/shared_preferences_service.dart';
 import '../widgets/featured_listings.dart';
 import '../widgets/home_search_bar.dart';
-import '../widgets/footer_widget.dart';
-import '../widgets/special_residences_widget.dart';
+import '../widgets/tendances_widget.dart';
 import '../widgets/exclusive_promotions_widget.dart';
 import '../screens/promotion_detail_screen.dart';
-import '../widgets/home_banner_carousel.dart';
-import '../widgets/popular_categories_widget.dart';
+import '../widgets/que_cherchez_vous_widget.dart';
 import '../widgets/around_me_widget.dart';
+import '../widgets/home_compact_sections.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -30,22 +30,50 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // Service de journalisation pour les logs structurés
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final LoggerService _logger = LoggerService();
-  
+
+  late final AnimationController _heroAnimController;
+  late final Animation<double> _heroFade;
+
+  /// Lieu pour la section Tendances (préférence ou dernier lieu connu)
+  String? _tendancesCity;
+  String? _tendancesCommune;
+  String? _tendancesQuartier;
+
   @override
   void initState() {
     super.initState();
     _logger.debug('HomeScreen initialisé');
-    // Initialiser le chargement des données dès la création du widget
+    _heroAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _heroFade = CurvedAnimation(
+      parent: _heroAnimController,
+      curve: Curves.easeOut,
+    );
+    _heroAnimController.forward();
     _initializeData();
+    _loadTendancesLocation();
   }
-  
+
+  Future<void> _loadTendancesLocation() async {
+    try {
+      final prefs = await SharedPreferencesService.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _tendancesCity = prefs.getString('tendances_city');
+        _tendancesCommune = prefs.getString('tendances_commune');
+        _tendancesQuartier = prefs.getString('tendances_quartier');
+      });
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
+    _heroAnimController.dispose();
     _logger.debug('HomeScreen détruit - nettoyage des ressources');
-    // Libération des ressources si nécessaire
     super.dispose();
   }
   
@@ -73,6 +101,18 @@ class _HomeScreenState extends State<HomeScreen> {
       // Continuer même en cas d'erreur pour ne pas bloquer l'UI
     }
   }
+
+  /// Charge les promotions actives pour décider d'afficher ou non la section.
+  /// Retourne une liste vide en cas d'erreur (section masquée).
+  Future<List<Promotion>> _loadPromotionsForSection() async {
+    try {
+      final service = await PromotionService.initialize();
+      return await service.getActivePromotions();
+    } catch (e) {
+      _logger.warning('Promotions section: chargement échoué, section masquée ($e)');
+      return [];
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -80,86 +120,75 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, constraints) {
         return Scaffold(
           body: ListView(
-            padding: EdgeInsets.zero,
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
             key: const Key('home_screen_list_view'),
             children: [
-              // Bannière d'accueil avec carousel dynamique
-              HomeBannerCarousel(constraints: constraints),
-              
-              const SizedBox(height: AppSpacing.lg),
-              
-              const HomeSearchBar(),
-              
-              const SizedBox(height: AppSpacing.lg),
-              
-              // Nouveau widget de catégories populaires avec animations
-              const PopularCategoriesWidget(
-                title: 'Catégories populaires',
-                subtitle: 'Découvrez nos types d\'hébergements les plus demandés',
-                itemsPerRow: 2,
-                viewStyle: 'grid',
-              ),
-              
-              // Widget des promotions exclusives
-              FutureBuilder<PromotionService>(
-                future: PromotionService.initialize(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: AppSpacing.lg),
-                      child: ExclusivePromotionsWidget(
-                        title: 'Offres & Promotions',
-                        subtitle: 'Nos meilleures offres du moment',
-                        maxItems: 5,
-                        exclusiveOnly: false,
-                        onPromotionSelected: (promotion) {
-                          HapticFeedback.selectionClick();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PromotionDetailScreen(
-                                promotionId: promotion.id,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
+              // Hero texte centré en haut (sans bannière) avec animation
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, authState) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+                    letterSpacing: -0.3,
+                  );
+                  final subtitleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    height: 1.35,
+                  );
+                  String title;
+                  String subtitle;
+                  if (authState is Authenticated) {
+                    final name = authState.user.firstName.isNotEmpty
+                        ? authState.user.firstName
+                        : 'là';
+                    title = 'Bonjour $name 👋';
+                    subtitle = 'Vous cherchez pour quand ?';
+                  } else {
+                    title = 'Trouvez votre résidence idéale en Côte d\'Ivoire';
+                    subtitle = 'À l\'heure, à la nuit ou au mois en fonction de votre zone';
                   }
-                  return AppSpacing.verticalLg;
+                  return FadeTransition(
+                    opacity: _heroFade,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            style: titleStyle,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            subtitle,
+                            style: subtitleStyle,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 },
               ),
               
-              SizedBox(
-                // Augmenter la hauteur pour éviter le débordement
-                height: 450,
-                width: constraints.maxWidth,
-                child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
-                  selector: (state) => {
-                    'residences': state is ResidencesLoaded 
-                        ? state.residences 
-                        : (state is ResidenceError && state.preservedResidences != null)
-                            ? state.preservedResidences!
-                            : [],
-                    'isLoading': state is ResidenceLoading || state is ResidenceRefreshing,
-                  },
-                  builder: (context, data) {
-                    final residences = data['residences'] as List;
-                    final isLoading = data['isLoading'] as bool;
-                            
-                    return SpecialResidencesWidget(
-                      title: "Résidences Spéciales",
-                      filterType: ResidenceType.luxury,
-                      isLoading: isLoading,
-                      items: residences,
-                    );
-                  },
-                ),
-              ),
+              const SizedBox(height: 12),
               
-              const SizedBox(height: AppSpacing.lg),
+              const HomeSearchBar(),
               
-              // Section À proximité (géolocalisation)
+              const SizedBox(height: 12),
+              
+              const QueCherchezVousWidget(),
+              
+              const SizedBox(height: 12),
+              
+              // Section À proximité (géolocalisation) — en 4e position après l’intention de recherche
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: AroundMeWidget(
@@ -171,11 +200,58 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
-              // Section des résidences recommandées (commune à tous)
-              SizedBox(
-                // Augmenter la hauteur pour éviter le débordement
-                height: 420,
-                width: constraints.maxWidth,
+              const SizedBox(height: 12),
+              
+              // Section promotions : affichée uniquement s'il y a des promotions
+              FutureBuilder<List<Promotion>>(
+                future: _loadPromotionsForSection(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SizedBox.shrink();
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  final promotions = snapshot.data!;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: AppSpacing.lg),
+                    child: ExclusivePromotionsWidget(
+                      title: 'Offres & Promotions',
+                      subtitle: 'Nos meilleures offres du moment',
+                      maxItems: 5,
+                      exclusiveOnly: false,
+                      initialPromotions: promotions,
+                      onPromotionSelected: (promotion) {
+                        HapticFeedback.selectionClick();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PromotionDetailScreen(
+                              promotionId: promotion.id,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+              
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 300, maxWidth: constraints.maxWidth),
+                child: TendancesWidget(
+                  city: (_tendancesCity != null && _tendancesCity!.isNotEmpty) ? _tendancesCity! : 'Abidjan',
+                  commune: (_tendancesCommune != null && _tendancesCommune!.isNotEmpty) ? _tendancesCommune : null,
+                  quartier: (_tendancesQuartier != null && _tendancesQuartier!.isNotEmpty) ? _tendancesQuartier : null,
+                  limit: 8,
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Section Résidences recommandées (style Airbnb : compact, sans espace vide)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 280, maxWidth: constraints.maxWidth),
                 child: BlocSelector<ResidenceBloc, ResidenceState, Map<String, dynamic>>(
                   selector: (state) => {
                     'residences': state is ResidencesLoaded 
@@ -202,130 +278,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-              
-              // Section pour encourager l'inscription (uniquement pour les non-connectés)
-              _buildSignUpPrompt(context, constraints),
-              
-              // Footer (commun à tous)
-              FooterWidget(),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
-  // Section d'incitation à l'inscription (visible uniquement pour les non-connectés)
-  Widget _buildSignUpPrompt(BuildContext context, BoxConstraints constraints) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        // Ne montrer que pour les utilisateurs non connectés
-        if (state is Authenticated) {
-          _logger.debug('Utilisateur authentifié, masquage du bloc d\'invitation à l\'inscription');
-          return const SizedBox.shrink();
-        }
+              const SizedBox(height: 12),
 
-        _logger.debug('Affichage du bloc d\'invitation à l\'inscription pour utilisateur non authentifié');
-        
-        return Container(
-          width: constraints.maxWidth,
-          margin: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
-          padding: EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[850] : Colors.white,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 240),
+                child: const TopRatedSectionWidget(limit: 6),
               ),
-            ],
-            border: Border.all(
-              color: AppTheme.primaryColor.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Text(
-                'Rejoignez ChapeChape Résidences',
-                style: AppTextStyles.title,
-                textAlign: TextAlign.center,
-                semanticsLabel: 'Invitation à rejoindre ChapeChape Résidences',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              AppSpacing.verticalMd,
-              Text(
-                'Créez un compte pour accéder à des fonctionnalités exclusives, enregistrer vos favoris et recevoir des offres personnalisées.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: isDarkMode ? Colors.grey[300] : Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-                semanticsLabel: 'Avantages à créer un compte sur ChapeChape Résidences',
-              ),
-              AppSpacing.verticalLg,
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
-                children: [
-                  SizedBox(
-                    width: 140,
-                    child: Tooltip(
-                      message: 'Créer un nouveau compte',
-                      child: ElevatedButton(
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          _logger.info('Navigation vers l\'écran d\'inscription depuis la section d\'invitation');
-                          context.push('/register');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.smd),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                          ),
-                        ),
-                        child: Text(
-                          'S\'inscrire',
-                          semanticsLabel: 'Bouton pour créer un nouveau compte',
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 140,
-                    child: Tooltip(
-                      message: 'Se connecter à votre compte existant',
-                      child: OutlinedButton(
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          _logger.info('Navigation vers l\'écran de connexion depuis la section d\'invitation');
-                          context.push('/login');
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Theme.of(context).primaryColor),
-                          foregroundColor: Theme.of(context).primaryColor,
-                          backgroundColor: isDarkMode ? Colors.transparent : Colors.white,
-                          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.smd),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                          ),
-                        ),
-                        child: Text(
-                          'Se connecter',
-                          semanticsLabel: 'Bouton pour se connecter avec un compte existant',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 240),
+                child: const RecentlyViewedSectionWidget(maxItems: 6),
               ),
             ],
           ),

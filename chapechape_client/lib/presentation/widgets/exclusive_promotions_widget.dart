@@ -29,6 +29,9 @@ class ExclusivePromotionsWidget extends StatefulWidget {
   /// Si true, affiche uniquement les promotions exclusives
   final bool exclusiveOnly;
   
+  /// Liste déjà chargée (évite un second chargement si la section est affichée conditionnellement)
+  final List<Promotion>? initialPromotions;
+  
   const ExclusivePromotionsWidget({
     Key? key,
     this.onPromotionSelected,
@@ -36,6 +39,7 @@ class ExclusivePromotionsWidget extends StatefulWidget {
     this.subtitle,
     this.maxItems = 5,
     this.exclusiveOnly = true,
+    this.initialPromotions,
   }) : super(key: key);
 
   @override
@@ -51,7 +55,11 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
   @override
   void initState() {
     super.initState();
-    _loadPromotions();
+    if (widget.initialPromotions != null) {
+      _promotionsFuture = Future.value(widget.initialPromotions!);
+    } else {
+      _loadPromotions();
+    }
   }
   
   @override
@@ -146,36 +154,11 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
           ),
         ),
         
-        // Bouton Voir tout
-        Container(
-          constraints: const BoxConstraints(maxWidth: 120), // Contrainte de largeur explicite
-          child: TextButton(
-            onPressed: () {
-              // Navigation vers la liste complète des promotions
-              context.push('/promotions');
-            },
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min, // Garantit que la Row prend la taille minimale
-              children: [
-                Text(
-                  'Voir tout',
-                  style: AppTextStyles.link.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(width: AppSpacing.xs),
-                Icon(
-                  Icons.arrow_forward,
-                  size: 16,
-                  color: AppTheme.primaryColor,
-                ),
-              ],
-            ),
-          ),
+        IconButton(
+          onPressed: () => context.push('/promotions'),
+          icon: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1A1A1A)),
+          style: IconButton.styleFrom(minimumSize: const Size(40, 40), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+          tooltip: 'Voir tout',
         ),
       ],
     );

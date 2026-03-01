@@ -455,7 +455,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Modifier le profil'),
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: const Text('Modifier le profil'),
+          ),
           actions: [
             TextButton(
               onPressed: _isLoading ? null : _saveProfile,
@@ -472,7 +476,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            16 + MediaQuery.of(context).padding.bottom,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -594,32 +603,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-
-                // Bouton d'enregistrement
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24.0),
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('Enregistrer les modifications'),
-                  ),
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // Informations personnelles
                 Text(
                   'Informations personnelles',
                   style: theme.textTheme.titleMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _firstNameController,
                   decoration: const InputDecoration(
@@ -630,8 +621,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   textCapitalization: TextCapitalization.words,
                   validator: (value) => FormValidators.validateName(value, fieldName: 'Le prénom'),
                 ),
-
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _lastNameController,
                   decoration: const InputDecoration(
@@ -642,15 +632,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   textCapitalization: TextCapitalization.words,
                   validator: (value) => FormValidators.validateName(value, fieldName: 'Le nom'),
                 ),
-
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // Contact
                 Text(
                   'Contact',
                   style: theme.textTheme.titleMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -663,8 +652,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   autocorrect: false,
                   validator: FormValidators.validateEmail,
                 ),
-
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 AdvancedPhoneInputWidget(
                   label: 'Téléphone',
                   hint: 'Entrez votre numéro de téléphone',
@@ -684,15 +672,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     });
                   },
                 ),
-
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // Documents
                 Text(
                   'Documents',
                   style: theme.textTheme.titleMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _DocumentUploadCard(
                   title: 'Carte d\'identité',
                   subtitle: 'Format JPG ou PDF, max 5MB',

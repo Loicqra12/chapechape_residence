@@ -288,135 +288,85 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
   }
 
   Widget _buildItemCard(BuildContext context, dynamic item, int index, bool isHovered) {
-    // Récupérer les propriétés de manière compatible avec Listing et Residence
     final String title = _getItemTitle(item);
     final String? location = _getItemLocation(item);
     final double? price = _getItemPrice(item);
-    final int? bedrooms = _getItemBedrooms(item);
-    final int? bathrooms = _getItemBathrooms(item);
     final bool isSpecial = _isItemSpecial(item);
     final String detailRoute = _getDetailRoute(item);
-    
+
     return GestureDetector(
-      onTap: () {
-        context.push(detailRoute);
-      },
-      child: PremiumCard(
-        width: 230,
-        margin: const EdgeInsets.only(right: 12, bottom: 8),
-        borderRadius: 20,
-        elevation: isHovered ? 8 : 4,
-        backgroundColor: Theme.of(context).cardColor,
-        border: isHovered 
-            ? Border.all(color: AppTheme.primaryColor.withOpacity(0.5), width: 1.5)
-            : null,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image
-              Stack(
+      onTap: () => context.push(detailRoute),
+      child: Container(
+        width: 176,
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
                 children: [
                   SizedBox(
-                    height: 150,
+                    height: 120,
                     width: double.infinity,
                     child: _buildImage(item),
                   ),
                   if (isSpecial)
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: _buildSpecialBadge(),
-                    ),
+                    Positioned(top: 6, right: 6, child: _buildSpecialBadge()),
                   Positioned(
                     bottom: 0,
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 40,
+                      height: 32,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withOpacity(0.7),
+                            Colors.black.withOpacity(0.5),
                           ],
                         ),
                       ),
                     ),
                   ),
                   Positioned(
-                    bottom: 8,
-                    left: 12,
+                    bottom: 5,
+                    left: 8,
                     child: _buildPriceBadge(price),
                   ),
                 ],
               ),
-              
-              // Contenu
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      StringUtils.toTitleCase(title),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            location ?? 'Emplacement non spécifié',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildFeatureChip(
-                          icon: Icons.hotel_outlined,
-                          text: bedrooms != null ? '$bedrooms Ch.' : '-',
-                        ),
-                        _buildFeatureChip(
-                          icon: Icons.bathtub_outlined,
-                          text: bathrooms != null ? '$bathrooms SdB' : '-',
-                        ),
-                        _buildFeatureChip(
-                          icon: bedrooms != null && bedrooms > 3
-                              ? Icons.villa_outlined
-                              : Icons.apartment_outlined,
-                          text: _getCategoryName(item),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              StringUtils.toTitleCase(title),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A1A1A),
               ),
-            ],
-          ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: Text(
+                    location ?? '—',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -480,18 +430,17 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
   }
 
   Widget _buildPriceBadge(double? price) {
-    // Texte blanc avec ombre légère sous l'image (approche luxe)
     return Text(
       _formatPrice(price),
       style: TextStyle(
         color: Colors.white,
-        fontSize: 16,
+        fontSize: 11,
         fontWeight: FontWeight.w600,
         shadows: [
           Shadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.6),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
