@@ -26,8 +26,19 @@ const {
 } = residenceController;
 const Residence = require('../models/residence.model');
 
-// Routes publiques (accessibles sans authentification)
-// ⚠️ IMPORTANT: Les routes statiques DOIVENT être définies avant /:id pour éviter la capture
+// =============================================================================
+// RÈGLE FONDAMENTALE EXPRESS :
+// Les routes sont matchées dans l'ORDRE DE DÉCLARATION.
+// Toutes les routes statiques nommées DOIVENT être déclarées AVANT /:id,
+// sinon /:id les capture en premier (ex: "my-residences" → findById("my-residences") → 500).
+// Les routes nécessitant protect/authorize avant router.use(protect)
+// doivent avoir ces middlewares appliqués INLINE sur le handler.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// BLOC 1 — Routes publiques statiques (sans authentification)
+// Toutes déclarées avant /:id pour éviter toute capture parasite
+// -----------------------------------------------------------------------------
 router.get('/', getResidences);
 router.get('/search', searchResidences);
 router.get('/all', getAllResidences);
@@ -35,12 +46,10 @@ router.get('/popular', getPopularResidences);
 router.get('/stats/count-by-type', getResidenceCountByType);
 router.get('/trending', getTrendingResidences);
 
-// Route pour récupérer les résidences d'un partenaire spécifique (par son ID)
-// Doit être avant /:id pour ne pas être capturée par la route générique
+// Résidences d'un partenaire par son ID (accès public — app client / site vitrine)
 router.get('/partner/:partnerId', async (req, res) => {
   try {
     const { partnerId } = req.params;
-    // Validation basique de l'ObjectId
     if (!partnerId.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ success: false, message: 'ID partenaire invalide' });
     }
@@ -58,19 +67,17 @@ router.get('/partner/:partnerId', async (req, res) => {
   }
 });
 
-router.get('/:id/availability', checkResidenceAvailability);
-router.get('/:id', getResidence); // Détail résidence — public (visiteurs non connectés)
+// -----------------------------------------------------------------------------
+// BLOC 2 — Routes protégées statiques avec protect/authorize INLINE
+// Déclarées ici (avant /:id) pour ne pas être capturées par la route générique.
+// protect et authorize sont appliqués directement sur chaque route.
+// -----------------------------------------------------------------------------
 
-// Routes protégées (partenaires uniquement)
-router.use(protect);
-
-// ⚠️ IMPORTANT : /my-residences doit être défini IMMÉDIATEMENT après router.use(protect)
-// et avant toute route avec paramètre dynamique (/:id) pour éviter la capture par Express.
-// Récupérer les résidences du partenaire connecté
-router.get('/my-residences', authorize('partner'), async (req, res) => {
+// Résidences du partenaire connecté
+router.get('/my-residences', protect, authorize('partner'), async (req, res) => {
   console.log('DEBUG /my-residences - route atteinte');
   try {
-    const partnerId = req.user?.id ?? req.user?._id ?? (req.user && req.user.id);
+    const partnerId = req.user?.id ?? req.user?._id;
     if (!partnerId) {
       console.error('DEBUG /my-residences - req.user manquant, keys:', req.user ? Object.keys(req.user) : 'null');
       return res.status(401).json({ success: false, message: 'Utilisateur non identifié' });
@@ -98,54 +105,62 @@ router.get('/my-residences', authorize('partner'), async (req, res) => {
   }
 });
 
-// Routes pour les favoris (compatibilité app client) - nécessitent une authentification
+// Favoris du client connecté (compatibilité app client)
 router.get('/favorites', protect, getFavoriteResidences);
 router.post('/favorites/:id', protect, addToFavorites);
 router.delete('/favorites/:id', protect, removeFromFavorites);
 
-// Route de redirection pour les avis (compatibilité app client)
+// -----------------------------------------------------------------------------
+// BLOC 3 — Routes publiques dynamiques (avec paramètre :id)
+// Déclarées EN DERNIER parmi les routes publiques, après toutes les routes
+// statiques, pour ne pas capturer /my-residences, /favorites, /partner, etc.
+// -----------------------------------------------------------------------------
+router.get('/:id/availability', checkResidenceAvailability);
+
+// Redirection vers l'endpoint des avis (compatibilité app client — accès public)
 router.get('/:id/reviews', (req, res) => {
-  // Redirection vers l'endpoint existant des avis
   res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
 });
 
-// Routes qui nécessitent des droits de partenaire ou d'administrateur
+// Route générique — DOIT RESTER EN DERNIÈRE position dans les routes GET publiques
+router.get('/:id', getResidence);
+
+// -----------------------------------------------------------------------------
+// BLOC 4 — Middleware global protect + authorize pour toutes les routes suivantes
+// Toutes les routes définies après ce bloc héritent de protect et authorize.
+// -----------------------------------------------------------------------------
+router.use(protect);
 router.use(authorize('partner', 'admin'));
 
-// Ajout de la validation Joi pour la création et la mise à jour
+// Création et modification (validation Joi incluse)
 router.post('/', validate(residenceValidation.createResidence), createResidence);
 router.put('/:id', validate(residenceValidation.updateResidence), updateResidence);
 router.delete('/:id', deleteResidence);
 
-// Routes pour la gestion des images
-// 1. Route traditionnelle avec upload de fichiers physiques
+// Gestion des images
 router.post('/:id/images/local', validate(residenceValidation.uploadImages), upload.residence.array('images', 5), uploadImages);
-
-// 2. Route avec upload direct vers Cloudinary (via multer-storage-cloudinary)
 router.post('/:id/images/cloudinary', validate(residenceValidation.uploadImages), uploadResidenceImages, uploadImages);
-
-// 3. Route pour recevoir directement des URLs Cloudinary (depuis l'app mobile/web)
 router.post('/:id/images', validate(residenceValidation.uploadImages), uploadImages);
-
-// 4. Route pour supprimer une image spécifique
 router.delete('/:id/images/:imageIndex', validate(residenceValidation.deleteImage), deleteImage);
 
-// Routes pour les nouvelles fonctionnalités
-router.post('/:id/nearby-places', protect, authorize('partner'), residenceController.addNearbyPlace);
-router.put('/:id/nearby-places', protect, authorize('partner'), residenceController.updateNearbyPlaces);
+// Points d'intérêt à proximité
+router.post('/:id/nearby-places', residenceController.addNearbyPlace);
+router.put('/:id/nearby-places', residenceController.updateNearbyPlaces);
 
-// Routes avec validation Joi pour les FAQs
-router.post('/:id/faqs', protect, authorize('partner'), residenceController.addFaq);
-router.put('/:id/faqs', protect, authorize('partner'), validate(residenceValidation.updateFaqs), residenceController.updateFaqs);
+// FAQs
+router.post('/:id/faqs', residenceController.addFaq);
+router.put('/:id/faqs', validate(residenceValidation.updateFaqs), residenceController.updateFaqs);
 
-// Routes avec validation Joi pour les méthodes de paiement
-router.put('/:id/payment-methods', protect, authorize('partner'), validate(residenceValidation.updatePaymentMethods), residenceController.updatePaymentMethods);
+// Méthodes de paiement
+router.put('/:id/payment-methods', validate(residenceValidation.updatePaymentMethods), residenceController.updatePaymentMethods);
 
-// Routes avec validation Joi pour les équipements améliorés
-router.put('/:id/enhanced-amenities', protect, authorize('partner'), validate(residenceValidation.updateEnhancedAmenities), residenceController.updateEnhancedAmenities);
+// Équipements améliorés
+router.put('/:id/enhanced-amenities', validate(residenceValidation.updateEnhancedAmenities), residenceController.updateEnhancedAmenities);
 
-// Autres routes
-router.put('/:id/stars', protect, authorize('admin'), residenceController.updateStars);
-router.put('/:id/ratings', protect, residenceController.updateRatings);
+// Étoiles (admin seulement — protect + authorize('admin') inline pour surcharger le authorize global)
+router.put('/:id/stars', authorize('admin'), residenceController.updateStars);
+
+// Notations (clients authentifiés — accessible via protect global)
+router.put('/:id/ratings', residenceController.updateRatings);
 
 module.exports = router;
