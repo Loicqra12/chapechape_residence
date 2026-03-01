@@ -1,4 +1,5 @@
 const Residence = require('../../models/residence.model');
+const Reservation = require('../../models/reservation.model');
 const apiError = require('../../utils/apiError');
 const asyncHandler = require('../../middlewares/async');
 const fs = require('fs');
@@ -12,7 +13,7 @@ const Review = require('../../models/review.model');
 // @access  Private (Partner only)
 exports.createResidence = asyncHandler(async (req, res) => {
     let residenceData;
-    
+
     console.log('==== CRÉATION DE RÉSIDENCE ====');
     console.log('Headers:', req.headers);
     console.log('Request body keys:', Object.keys(req.body));
@@ -24,11 +25,11 @@ exports.createResidence = asyncHandler(async (req, res) => {
         try {
             console.log('Données reçues (format JSON):');
             console.log('residenceData (raw):', req.body.residenceData);
-            
+
             residenceData = JSON.parse(req.body.residenceData);
             console.log('Données JSON parsées:', Object.keys(residenceData));
             console.log('Contenu complet:', residenceData);
-            
+
             // Assigner l'id du partenaire
             residenceData.partner = req.user.id;
             console.log(`Partenaire assigné: ${req.user.id}`);
@@ -43,32 +44,32 @@ exports.createResidence = asyncHandler(async (req, res) => {
         console.log('Données reçues (format direct):', Object.keys(residenceData));
         console.log('Contenu complet:', residenceData);
     }
-    
+
     // Validation manuelle des champs requis (NOUVEAU SCHÉMA)
     const requiredFields = ['title', 'description', 'price', 'type', 'bedrooms', 'bathrooms', 'maxOccupancy', 'location'];
     const missingFields = requiredFields.filter(field => {
         if (field === 'location') {
             // Vérifier la structure complète de location
-            return !residenceData.location || 
-                   !residenceData.location.coordinates || 
-                   typeof residenceData.location.coordinates.latitude !== 'number' ||
-                   typeof residenceData.location.coordinates.longitude !== 'number';
+            return !residenceData.location ||
+                !residenceData.location.coordinates ||
+                typeof residenceData.location.coordinates.latitude !== 'number' ||
+                typeof residenceData.location.coordinates.longitude !== 'number';
         }
         return residenceData[field] === undefined || residenceData[field] === null;
     });
-    
+
     if (missingFields.length > 0) {
         console.error('Champs manquants (nouveau schéma):', missingFields);
         throw new apiError(`Champs requis manquants: ${missingFields.join(', ')}`, 400);
     }
-    
+
     // MIGRATION AUTOMATIQUE : Extraire address/city/area depuis la nouvelle structure si nécessaire
     if (residenceData.location && !residenceData.address) {
         residenceData.address = residenceData.location.address || '';
         residenceData.city = residenceData.location.city || '';
         console.log('Migration automatique: address/city extraits de location');
     }
-    
+
     // Gérer area vs surface : mapping automatique depuis les nouvelles données
     if (!residenceData.area) {
         // Chercher dans les anciennes données ou utiliser une valeur par défaut
@@ -87,7 +88,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
         // Préparer la structure de géolocalisation (NOUVEAU SCHÉMA)
         if (residenceData.location && residenceData.location.coordinates) {
             console.log('Nouvelle structure de géolocalisation détectée:', residenceData.location);
-            
+
             // Construire la structure locationData pour MongoDB
             residenceData.locationData = {
                 coordinates: {
@@ -97,13 +98,16 @@ exports.createResidence = asyncHandler(async (req, res) => {
                 formattedAddress: residenceData.location.formattedAddress || residenceData.location.address || '',
                 address: residenceData.location.address || '',
                 city: residenceData.location.city || '',
-                country: residenceData.location.country || 'CI'
+                country: residenceData.location.country || 'CI',
+                commune: residenceData.location.commune || '',
+                quartier: residenceData.location.quartier || '',
+                sousZone: residenceData.location.sousZone || ''
             };
-            
+
             // Également définir les champs racine pour compatibilité avec le modèle actuel
             residenceData.latitude = parseFloat(residenceData.location.coordinates.latitude);
             residenceData.longitude = parseFloat(residenceData.location.coordinates.longitude);
-            
+
             console.log('Structure locationData construite depuis location:', residenceData.locationData);
         } else if (residenceData.latitude !== undefined && residenceData.longitude !== undefined) {
             // Fallback pour l'ancien format (rétrocompatibilité)
@@ -116,24 +120,27 @@ exports.createResidence = asyncHandler(async (req, res) => {
                 formattedAddress: residenceData.formattedAddress || '',
                 address: residenceData.address || '',
                 city: residenceData.city || '',
-                country: residenceData.country || 'CI'
+                country: residenceData.country || 'CI',
+                commune: residenceData.commune || residenceData.location?.commune || '',
+                quartier: residenceData.quartier || residenceData.location?.quartier || '',
+                sousZone: residenceData.sousZone || residenceData.location?.sousZone || ''
             };
         }
-        
+
         // Créer la résidence de base
         console.log('Création de la résidence avec les données:', residenceData);
         const residence = await Residence.create(residenceData);
         console.log(`Résidence créée avec succès: ${residence._id}`);
-        
+
         // Si des fichiers sont présents, traiter les images
         if (req.files && req.files.length > 0) {
             console.log(`Traitement de ${req.files.length} images`);
-            
+
             const images = req.files.map(file => `/uploads/residences/${file.filename}`);
-            
+
             console.log('Images avant sauvegarde:', images);
             console.log('Images existantes:', residence.images);
-            
+
             residence.images = [...residence.images, ...images];
             await residence.save();
 
@@ -187,20 +194,95 @@ exports.getResidences = asyncHandler(async (req, res) => {
     });
 });
 
+// @desc    Obtenir le nombre de résidences par type (pour les catégories populaires)
+// @route   GET /api/residences/stats/count-by-type
+// @access  Public
+exports.getResidenceCountByType = asyncHandler(async (req, res) => {
+    const counts = await Residence.aggregate([
+        { $match: { deleted: { $ne: true } } },
+        { $group: { _id: '$type', count: { $sum: 1 } } }
+    ]);
+    const byType = {};
+    counts.forEach((c) => { byType[c._id] = c.count; });
+    res.json({ success: true, data: byType });
+});
+
+// @desc    Tendances : résidences les plus réservées (7 derniers jours), optionnel par ville/commune/quartier
+// @route   GET /api/residences/trending?city=&commune=&quartier=&limit=8
+// @access  Public
+exports.getTrendingResidences = asyncHandler(async (req, res) => {
+    const { city, commune, quartier, limit = 8 } = req.query;
+    const limitNum = Math.min(parseInt(limit, 10) || 8, 20);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const matchReservation = {
+        createdAt: { $gte: sevenDaysAgo },
+        status: { $in: ['confirmed', 'completed', 'in_stay'] }
+    };
+
+    const pipeline = [
+        { $match: matchReservation },
+        { $group: { _id: '$residence', bookingCount: { $sum: 1 } } },
+        { $sort: { bookingCount: -1 } },
+        { $limit: 30 },
+        {
+            $lookup: {
+                from: 'residences',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'residenceDoc'
+            }
+        },
+        { $unwind: '$residenceDoc' },
+        { $match: { 'residenceDoc.deleted': { $ne: true } } }
+    ];
+
+    if (city) {
+        pipeline.push({ $match: { $or: [{ 'residenceDoc.city': new RegExp(city, 'i') }, { 'residenceDoc.locationData.city': new RegExp(city, 'i') }] } });
+    }
+    if (commune) {
+        pipeline.push({ $match: { 'residenceDoc.locationData.commune': new RegExp(commune, 'i') } });
+    }
+    if (quartier) {
+        pipeline.push({ $match: { 'residenceDoc.locationData.quartier': new RegExp(quartier, 'i') } });
+    }
+
+    pipeline.push({ $sort: { bookingCount: -1 } });
+    pipeline.push({ $limit: limitNum });
+    pipeline.push({
+        $project: {
+            residence: '$residenceDoc',
+            bookingCount: 1,
+            _id: 0
+        }
+    });
+
+    const results = await Reservation.aggregate(pipeline);
+
+    const data = results.map((r) => ({
+        residence: r.residence,
+        bookingCount: r.bookingCount
+    }));
+
+    res.json({ success: true, data });
+});
+
 // @desc    Obtenir toutes les résidences (format liste)
 // @route   GET /api/residences/all
 // @access  Public
 exports.getAllResidences = asyncHandler(async (req, res) => {
     try {
         console.log('Récupération de toutes les résidences (format liste sans wrapper)');
-        
+
         // Utiliser lean() pour des performances optimales
         const residences = await Residence.find()
             .populate('partner', 'firstName lastName email phoneNumber')
             .lean();
-        
+
         console.log(`${residences.length} résidences trouvées au total`);
-        
+
         // Renvoyer directement la liste sans wrapper success/data
         // Compatible avec les attentes du client mobile
         res.json(residences);
@@ -248,7 +330,7 @@ exports.updateResidence = asyncHandler(async (req, res) => {
 
     // Préparer les données de mise à jour
     const updateData = { ...req.body };
-    
+
     // Gérer la structure de géolocalisation
     console.log('Données de géolocalisation reçues:', {
         latitude: updateData.latitude,
@@ -261,7 +343,7 @@ exports.updateResidence = asyncHandler(async (req, res) => {
     // NOUVEAU : Support de la structure location moderne (comme dans createResidence)
     if (updateData.location && updateData.location.coordinates) {
         console.log('Nouvelle structure location détectée pour mise à jour:', updateData.location);
-        
+
         // Construire la structure locationData pour MongoDB
         updateData.locationData = {
             coordinates: {
@@ -271,21 +353,24 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             formattedAddress: updateData.location.formattedAddress || updateData.location.address || '',
             address: updateData.location.address || '',
             city: updateData.location.city || '',
-            country: updateData.location.country || 'CI'
+            country: updateData.location.country || 'CI',
+            commune: updateData.location.commune || '',
+            quartier: updateData.location.quartier || '',
+            sousZone: updateData.location.sousZone || ''
         };
-        
+
         // Également définir les champs racine pour compatibilité avec le modèle actuel
         updateData.latitude = parseFloat(updateData.location.coordinates.latitude);
         updateData.longitude = parseFloat(updateData.location.coordinates.longitude);
         updateData.address = updateData.location.address || '';
         updateData.city = updateData.location.city || '';
-        
+
         console.log('Structure locationData construite depuis location pour mise à jour:', updateData.locationData);
-    } 
+    }
     // LEGACY : Si nous avons reçu des coordonnées GPS au format ancien, mettre à jour la structure locationData
     else if (updateData.latitude !== undefined && updateData.longitude !== undefined) {
         console.log('Format legacy de géolocalisation détecté pour mise à jour (rétrocompatibilité)');
-        
+
         // Créer/mettre à jour la structure locationData complète
         updateData.locationData = {
             coordinates: {
@@ -295,9 +380,12 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             formattedAddress: updateData.formattedAddress || residence.locationData?.formattedAddress,
             address: updateData.address || residence.address,
             city: updateData.city || residence.city,
-            country: updateData.country || residence.locationData?.country || 'CI'
+            country: updateData.country || residence.locationData?.country || 'CI',
+            commune: updateData.commune ?? residence.locationData?.commune ?? '',
+            quartier: updateData.quartier ?? residence.locationData?.quartier ?? '',
+            sousZone: updateData.sousZone ?? residence.locationData?.sousZone ?? ''
         };
-        
+
         console.log('Structure locationData mise à jour (legacy):', updateData.locationData);
     }
 
@@ -309,7 +397,7 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             runValidators: true
         }
     ).populate('partner', 'firstName lastName email phoneNumber')
-     .lean();
+        .lean();
 
     res.status(200).json({
         success: true,
@@ -349,15 +437,19 @@ exports.deleteResidence = asyncHandler(async (req, res) => {
 // @route   GET /api/residences/search
 // @access  Public
 exports.searchResidences = asyncHandler(async (req, res) => {
-    const { 
-        query, 
-        location, 
-        minPrice, 
-        maxPrice, 
+    const {
+        query,
+        location,
+        city,         // alias de location (compatibilité client Flutter)
+        minPrice,
+        maxPrice,
         features,
         type,
+        residenceType, // alias de type (compatibilité client Flutter)
+        period,        // pricePeriod
         bedrooms,
         bathrooms,
+        duration, // NOUVEAU: Support recherche par durée
         page = 1,
         limit = 10,
         sortBy = 'createdAt',
@@ -371,12 +463,27 @@ exports.searchResidences = asyncHandler(async (req, res) => {
     if (query) {
         searchQuery.$or = [
             { title: { $regex: query, $options: 'i' } },
-            { description: { $regex: query, $options: 'i' } }
+            { description: { $regex: query, $options: 'i' } },
+            { 'location.city': { $regex: query, $options: 'i' } },
+            { 'location.address': { $regex: query, $options: 'i' } }
         ];
     }
 
-    if (location) {
-        searchQuery['location.city'] = { $regex: location, $options: 'i' };
+    // Accepte "location" ou "city" (envoyé par le client Flutter)
+    const cityFilter = location || city;
+    if (cityFilter) {
+        searchQuery['location.city'] = { $regex: cityFilter, $options: 'i' };
+    }
+
+    // Accepte "type" ou "residenceType" (envoyé par le client Flutter)
+    const typeFilter = type || residenceType;
+    if (typeFilter) {
+        searchQuery.type = typeFilter;
+    }
+
+    // Filtrer par pricePeriod si fourni directement
+    if (period) {
+        searchQuery.pricePeriod = period;
     }
 
     if (minPrice || maxPrice) {
@@ -390,16 +497,30 @@ exports.searchResidences = asyncHandler(async (req, res) => {
         searchQuery.features = { $all: featuresList };
     }
 
-    if (type) {
-        searchQuery.type = type;
-    }
-
     if (bedrooms) {
         searchQuery.bedrooms = Number(bedrooms);
     }
 
     if (bathrooms) {
         searchQuery.bathrooms = Number(bathrooms);
+    }
+
+    // NOUVEAU: Filtrage par durée (période de tarification compatible)
+    let durationData = null;
+    if (duration) {
+        try {
+            // Supporter format JSON string ou objet
+            durationData = typeof duration === 'string' ? JSON.parse(duration) : duration;
+
+            // Filtrer par pricePeriod compatible
+            if (durationData.periods && Array.isArray(durationData.periods)) {
+                searchQuery.pricePeriod = { $in: durationData.periods };
+                console.log(`[Search] Filtrage par durée: ${durationData.label}, périodes compatibles: ${durationData.periods.join(', ')}`);
+            }
+        } catch (error) {
+            console.error('[Search] Erreur parsing duration:', error);
+            // Continuer sans filtrage durée en cas d'erreur
+        }
     }
 
     const skip = (page - 1) * limit;
@@ -414,11 +535,54 @@ exports.searchResidences = asyncHandler(async (req, res) => {
         Residence.countDocuments(searchQuery)
     ]);
 
+    // NOUVEAU: Calculer prix estimé si durée fournie
+    let resultsWithPricing = residences;
+
+    if (durationData) {
+        console.log(`[Search] Calcul des prix pour ${residences.length} résidences`);
+
+        resultsWithPricing = await Promise.all(
+            residences.map(async (residence) => {
+                try {
+                    // Calculer dates fictives basées sur la durée
+                    const start = new Date();
+                    let end = new Date();
+
+                    if (durationData.minHours) {
+                        end = new Date(start.getTime() + durationData.minHours * 60 * 60 * 1000);
+                    } else if (durationData.minDays) {
+                        end = new Date(start.getTime() + durationData.minDays * 24 * 60 * 60 * 1000);
+                    }
+
+                    // Utiliser la méthode existante calculateTotalPrice
+                    const residenceDoc = await Residence.findById(residence._id);
+                    const estimatedPrice = await residenceDoc.calculateTotalPrice(start, end);
+
+                    return {
+                        ...residence,
+                        estimatedPrice,
+                        priceBreakdown: {
+                            basePrice: residence.price,
+                            pricePeriod: residence.pricePeriod,
+                            duration: durationData.label,
+                            totalHours: durationData.minHours || (durationData.minDays * 24),
+                            totalDays: durationData.minDays || Math.ceil((durationData.minHours || 0) / 24)
+                        }
+                    };
+                } catch (error) {
+                    console.error(`[Search] Erreur calcul prix pour résidence ${residence._id}:`, error);
+                    // Retourner résidence sans estimatedPrice en cas d'erreur
+                    return residence;
+                }
+            })
+        );
+    }
+
     const response = {
         success: true,
-        count: residences.length,
+        count: resultsWithPricing.length,
         total,
-        data: residences,
+        data: resultsWithPricing,
         pagination: {
             currentPage: page,
             totalPages: Math.ceil(total / limit),
@@ -437,7 +601,7 @@ exports.uploadImages = asyncHandler(async (req, res) => {
     console.log('Content-Type:', req.headers['content-type']);
     console.log('Body:', req.body);
     console.log('Files:', req.files ? req.files.length : 'Aucun');
-    
+
     const residence = await Residence.findById(req.params.id);
 
     if (!residence) {
@@ -467,13 +631,13 @@ exports.uploadImages = asyncHandler(async (req, res) => {
     // Deux modes de fonctionnement :
     // 1. Upload de fichiers traditionnels (multipart/form-data)
     // 2. Envoi d'URLs Cloudinary (application/json)
-    
+
     let newImages = [];
-    
+
     // Mode 1: Upload de fichiers (multipart/form-data)
     if (req.files && req.files.length > 0) {
         console.log(`Traitement de ${req.files.length} fichiers uploadés`);
-        
+
         // Si nous utilisons le stockage Cloudinary via multer, les fichiers ont déjà une URL Cloudinary
         if (req.files[0].path && req.files[0].path.startsWith('http')) {
             // Images déjà sur Cloudinary via multer-storage-cloudinary
@@ -495,7 +659,7 @@ exports.uploadImages = asyncHandler(async (req, res) => {
     else {
         throw new apiError('Veuillez fournir des images (fichiers ou URLs)', 400);
     }
-    
+
     if (newImages.length === 0) {
         throw new apiError('Aucune image valide reçue', 400);
     }
@@ -503,7 +667,7 @@ exports.uploadImages = asyncHandler(async (req, res) => {
     // Ajouter les nouvelles images au tableau existant
     residence.images = [...residence.images, ...newImages];
     await residence.save();
-    
+
     console.log(`${newImages.length} images ajoutées à la résidence ${residence._id}`);
     console.log('Total images dans la résidence:', residence.images.length);
 
@@ -518,60 +682,60 @@ exports.uploadImages = asyncHandler(async (req, res) => {
 // @access  Private (Partner only)
 exports.deleteImage = asyncHandler(async (req, res) => {
     const { id, imageIndex } = req.params;
-    
+
     // Validation des données
     if (isNaN(imageIndex) || parseInt(imageIndex) < 0) {
         throw new apiError('Index d\'image invalide', 400);
     }
-    
+
     const index = parseInt(imageIndex);
-    
+
     // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
         throw new apiError('Résidence non trouvée', 404);
     }
-    
+
     // Vérifier l'autorisation
     if (residence.partner.toString() !== req.user.id && req.user.role !== 'admin') {
         throw new apiError('Non autorisé à modifier cette résidence', 403);
     }
-    
+
     // Vérifier que l'index existe
     if (index >= residence.images.length) {
         throw new apiError('Image non trouvée à cet index', 404);
     }
-    
+
     // Récupérer l'URL de l'image
     const imageUrl = residence.images[index];
-    
+
     try {
         // Si c'est une URL Cloudinary, supprimer l'image du cloud
         if (imageUrl.includes('cloudinary.com')) {
             console.log(`Suppression de l'image Cloudinary: ${imageUrl}`);
             const publicId = CloudinaryService.getPublicIdFromUrl(imageUrl);
-            
+
             if (publicId) {
                 console.log(`PublicId extrait: ${publicId}`);
                 await CloudinaryService.deleteImage(publicId);
                 console.log('Image supprimée de Cloudinary avec succès');
             }
-        } 
+        }
         // Si c'est un fichier local, supprimer le fichier du serveur
         else if (imageUrl.startsWith('/uploads/')) {
             const filePath = path.join(__dirname, '../../../', imageUrl);
             console.log(`Suppression du fichier local: ${filePath}`);
-            
+
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
                 console.log('Fichier local supprimé avec succès');
             }
         }
-        
+
         // Supprimer l'URL de l'image du tableau
         residence.images.splice(index, 1);
         await residence.save();
-        
+
         res.status(200).json({
             success: true,
             message: 'Image supprimée avec succès',
@@ -676,12 +840,12 @@ exports.addFaq = asyncHandler(async (req, res) => {
 // @access  Private (Partner only)
 exports.updateEnhancedAmenities = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { 
-        water, 
-        electricity, 
-        internet, 
-        kitchen, 
-        cooling, 
+    const {
+        water,
+        electricity,
+        internet,
+        kitchen,
+        cooling,
         security,
         extras
     } = req.body;
@@ -775,7 +939,7 @@ exports.updateNearbyPlaces = asyncHandler(async (req, res) => {
         if (!place.name || !place.type || place.distance === undefined) {
             throw new apiError('Chaque point d\'intérêt doit avoir un nom, un type et une distance', 400);
         }
-        
+
         if (!validTypes.includes(place.type)) {
             throw new apiError(`Type de point d'intérêt invalide: ${place.type}. Les types valides sont: ${validTypes.join(', ')}`, 400);
         }
@@ -881,15 +1045,15 @@ exports.updateRatings = asyncHandler(async (req, res) => {
 
     // Mettre à jour chaque note
     residence.rating.overall = ((residence.rating.overall * currentCount) + overall) / newCount;
-    
+
     if (cleanliness !== undefined) {
         residence.rating.cleanliness = ((residence.rating.cleanliness * currentCount) + cleanliness) / newCount;
     }
-    
+
     if (comfort !== undefined) {
         residence.rating.comfort = ((residence.rating.comfort * currentCount) + comfort) / newCount;
     }
-    
+
     if (facilities !== undefined) {
         residence.rating.facilities = ((residence.rating.facilities * currentCount) + facilities) / newCount;
     }
@@ -955,7 +1119,7 @@ exports.getPopularResidences = asyncHandler(async (req, res) => {
 
     try {
         console.log('Récupération des résidences populaires...');
-        
+
         // Critères pour les résidences populaires : 
         // - Bien notées (rating > 3)
         // - Récentes (créées dans les 3 derniers mois)
@@ -974,15 +1138,15 @@ exports.getPopularResidences = asyncHandler(async (req, res) => {
                 { isFeatured: true }
             ]
         })
-        .populate('partner', 'firstName lastName email phoneNumber')
-        .sort({ 
-            'rating.overall': -1, 
-            'rating.reviewCount': -1,
-            createdAt: -1 
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean();
+            .populate('partner', 'firstName lastName email phoneNumber')
+            .sort({
+                'rating.overall': -1,
+                'rating.reviewCount': -1,
+                createdAt: -1
+            })
+            .skip(skip)
+            .limit(limit)
+            .lean();
 
         const total = await Residence.countDocuments({
             deleted: { $ne: true },
@@ -1065,7 +1229,7 @@ exports.checkResidenceAvailability = asyncHandler(async (req, res) => {
 exports.getFavoriteResidences = asyncHandler(async (req, res) => {
     try {
         console.log('Récupération des favoris pour l\'utilisateur:', req.user.id);
-        
+
         const favorites = await Favorite.find({ user: req.user.id })
             .populate({
                 path: 'residence',

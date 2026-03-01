@@ -8,7 +8,7 @@ class AppTheme {
   static const Color primaryColor = Color(0xFFD4AF37);  // Or royal
   static const Color secondaryColor = Color(0xFFFFD700); // Or plus vif
   static const Color accentColor = Color(0xFF1A1A1A);   // Noir
-  static const Color backgroundColor = Color(0xFFFFFAF0); // Crème pour les fonds
+  static const Color backgroundColor = Color(0xFFF7F7F7); // Gris très léger pour un look luxe et professionnel
   
   // Couleurs de texte
   static const Color textPrimary = Color(0xFF1A1A1A);   // Noir
@@ -37,20 +37,20 @@ class AppTheme {
     end: Alignment.bottomRight,
   );
 
-  // Ombres
+  // Ombres (quasi invisibles, très diffuses, opacité 5-8% max pour un look luxe)
   static List<BoxShadow> get softShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
+      color: Colors.black.withOpacity(0.05), // 5% opacité
+      blurRadius: 12,
+      offset: const Offset(0, 2),
     ),
   ];
 
   static List<BoxShadow> get mediumShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 20,
-      offset: const Offset(0, 6),
+      color: Colors.black.withOpacity(0.08), // 8% opacité max
+      blurRadius: 16,
+      offset: const Offset(0, 3),
     ),
   ];
 

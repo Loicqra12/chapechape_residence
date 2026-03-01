@@ -21,6 +21,6 @@ class AppConstants {
   static const String privacyPolicyUrl = 'https://chapechape.com/privacy-policy';
   static const String termsOfServiceUrl = 'https://chapechape.com/terms-of-service';
   
-  // Version de l'application
-  static const String appVersion = '1.5.0';
+  // Version de l'application (tenir à jour avec pubspec.yaml)
+  static const String appVersion = '1.6.0';
 } 

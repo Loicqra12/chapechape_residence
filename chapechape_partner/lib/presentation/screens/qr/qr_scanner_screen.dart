@@ -369,11 +369,21 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         elevation: 0,
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             onPressed: _toggleFlash,
             icon: const Icon(Icons.flash_on),
             tooltip: 'Lampe torche',
           ),
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             onPressed: _resetScanner,
             icon: const Icon(Icons.refresh),
             tooltip: 'Réinitialiser',

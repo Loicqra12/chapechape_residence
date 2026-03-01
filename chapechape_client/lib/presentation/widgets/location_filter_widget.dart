@@ -61,11 +61,12 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
       }
     }
     
-    // Charger la région sélectionnée
+    // Charger la région sélectionnée (uniquement si le pays est résolu)
     if (filters.containsKey('regionId')) {
       final regionId = filters['regionId'] as String?;
-      if (regionId != null && _selectedCountry != null) {
-        _selectedRegion = context.read<ResidenceBloc>().getRegionById(regionId, _selectedCountry!.code);
+      final country = _selectedCountry;
+      if (regionId != null && country != null && country.code.isNotEmpty) {
+        _selectedRegion = context.read<ResidenceBloc>().getRegionById(regionId, country.code);
       }
     }
     

@@ -28,6 +28,11 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.logout),
             onPressed: () {
               context.read<AuthBloc>().add(AuthLogoutRequested());

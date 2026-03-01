@@ -17,11 +17,18 @@ import 'package:chapechape_partner/presentation/widgets/messages/message_search_
 import 'custom_sliver_app_bar.dart';
 
 class ScreenAppBars {
+  static ButtonStyle get _appBarIconCircleStyle => IconButton.styleFrom(
+    shape: const CircleBorder(),
+    side: BorderSide(color: Colors.grey.shade300),
+    backgroundColor: Colors.transparent,
+  );
+
   static CustomSliverAppBar getSecurityHistoryAppBar(BuildContext context) {
     return CustomSliverAppBar(
       title: 'Historique de Sécurité',
       actions: [
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: const Icon(Icons.refresh, color: Color(0xFF1A1A1A)),
           onPressed: () {
             // Rafraîchir les données de sécurité
@@ -29,6 +36,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: const Icon(Icons.help_outline, color: Color(0xFF1A1A1A)),
           onPressed: () {
             // Afficher l'aide sur la sécurité
@@ -67,6 +75,7 @@ class ScreenAppBars {
             return Stack(
               children: [
                 IconButton(
+                  style: _appBarIconCircleStyle,
                   icon: SvgPicture.asset(
                     AppIcons.notifications,
                     width: 24,
@@ -77,8 +86,7 @@ class ScreenAppBars {
                     ),
                   ),
                   onPressed: () {
-                    // Naviguer vers l'écran des notifications
-                    context.go('/notifications');
+                    context.push('/notifications');
                   },
                 ),
                 if (unreadCount > 0)
@@ -112,6 +120,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.refresh,
             width: 24,
@@ -126,6 +135,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.filter,
             width: 24,
@@ -171,6 +181,7 @@ class ScreenAppBars {
       title: 'Profil',
       actions: [
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.edit,
             width: 24,
@@ -185,6 +196,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.settings,
             width: 24,
@@ -199,6 +211,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.logout,
             width: 24,
@@ -221,6 +234,7 @@ class ScreenAppBars {
       title: 'Résidences',
       actions: [
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.search,
             width: 24,
@@ -260,6 +274,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.filter,
             width: 24,
@@ -409,6 +424,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.sort,
             width: 24,
@@ -480,6 +496,7 @@ class ScreenAppBars {
       title: 'Messages',
       actions: [
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.search,
             width: 24,
@@ -507,6 +524,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.unread,
             width: 24,
@@ -528,6 +546,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.support,
             width: 24,
@@ -554,6 +573,7 @@ class ScreenAppBars {
       title: 'Réservations',
       actions: [
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.calendar,
             width: 24,
@@ -574,6 +594,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.filter,
             width: 24,
@@ -602,6 +623,7 @@ class ScreenAppBars {
           },
         ),
         IconButton(
+          style: _appBarIconCircleStyle,
           icon: SvgPicture.asset(
             AppIcons.sort,
             width: 24,
@@ -876,6 +898,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(
+          style: ScreenAppBars._appBarIconCircleStyle,
           icon: const Icon(Icons.info_outline),
           onPressed: () {
             // TODO: Show thread details

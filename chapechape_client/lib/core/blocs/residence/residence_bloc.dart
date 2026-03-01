@@ -1,7 +1,7 @@
+import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart'; // Pour debugPrint
 import 'package:chapechape_client/core/services/residence_service.dart';
 import 'package:chapechape_client/core/services/favorite_service.dart';
 import 'package:chapechape_client/core/services/type_sync_service.dart';
@@ -63,41 +63,36 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     on<RestorePreviousStateEvent>(_onRestorePreviousState);
   }
 
+  Future<List<Residence>> _hydrateFavorites(List<Residence> list) async {
+    try {
+      final ids = await _favoriteService.getFavorites();
+      if (ids.isEmpty) return list;
+      return list.map((r) => r.copyWith(isFavorite: ids.contains(r.id))).toList();
+    } catch (_) {
+      return list;
+    }
+  }
+
   Future<void> _onLoadResidences(
     LoadResidencesEvent event,
     Emitter<ResidenceState> emit,
   ) async {
     try {
-      print('🔍 DÉBUT _onLoadResidences');
+      if (kDebugMode) debugPrint('🔍 _onLoadResidences');
       emit(const ResidenceLoading());
-      // Toujours forcer le rafraîchissement pour s'assurer d'avoir les dernières données
-      print('🔍 Avant appel à getAllResidences avec forceRefresh=true');
       final residences = await _residenceService.getAllResidences(
-        forceRefresh: true, // Forcer le rafraîchissement indépendamment de la valeur event.forceRefresh
+        forceRefresh: true,
       );
-      
-      print('🔍 Résidences récupérées: ${residences.runtimeType}, longueur: ${residences is List ? residences.length : "non-list"}');
-      
-      // S'assurer que nous avons bien une liste concrète avant d'émettre l'état
-      if (residences is List<Residence>) {
-        print('🔍 Émission de ResidencesLoaded avec ${residences.length} résidences (List<Residence>)');
-        emit(ResidencesLoaded(residences));
-      } else if (residences is List) {
-        print('🔍 Émission de ResidencesLoaded avec ${residences.length} résidences (List générique)');
-        final typedResidences = residences.cast<Residence>();
-        emit(ResidencesLoaded(typedResidences));
-      } else if (residences is Future) {
-        print('🔍 Résidences est un Future, en attente de résolution...');
-        final List<Residence> resolvedResidences = await residences;
-        print('🔍 Future résolu avec ${resolvedResidences.length} résidences');
-        emit(ResidencesLoaded(resolvedResidences));
-      } else {
-        print('🔍 ERREUR: Type inattendu: ${residences.runtimeType}');
+      if (residences is! List) {
+        if (kDebugMode) debugPrint('🔍 Type inattendu: ${residences.runtimeType}');
         emit(ResidenceError("Type de résidence inattendu: ${residences.runtimeType}"));
+        return;
       }
-      print('🔍 FIN _onLoadResidences');
+      final typed = residences is List<Residence> ? residences : residences.cast<Residence>();
+      final hydrated = await _hydrateFavorites(typed);
+      emit(ResidencesLoaded(hydrated));
     } catch (e) {
-      print('🔍 ERREUR dans _onLoadResidences: $e');
+      if (kDebugMode) debugPrint('🔍 ERREUR _onLoadResidences: $e');
       emit(ResidenceError(e.toString()));
     }
   }
@@ -123,6 +118,34 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     }
   }
 
+  // Mapping des catégories vers les types de résidences correspondants
+  static const Map<String, List<String>> _categoryToTypes = {
+    'meublee': [
+      'room', 'studioMeuble', 'appartementMeuble', 'villaMeublee', 'loft', 'penthouse',
+    ],
+    'hotel': [
+      'hotelRoom', 'hotel', 'motel', 'boutiqueHotel', 'hotelDePassage',
+      'hotelDeLuxe', 'aubergeEtMaisonDHotes', 'residenceHoteliere', 'hostel',
+      'guesthouse',
+    ],
+    'insolite': [
+      'bungalow', 'chalet', 'cabin', 'cottage', 'luxury', 'resort',
+      'lodgeEtEcolodge', 'caseTraditionnelle', 'maisonFlottante', 'campementTouristique',
+    ],
+    'colocation': [
+      'chambreEnColocation', 'cohabitation', 'residenceUniversitaire', 'citeDortoir',
+      'coworking', 'student',
+    ],
+    'longue_duree': [
+      'apartment', 'house', 'villa', 'studio', 'appartementNonMeuble',
+      'villaNonMeublee', 'immeuble', 'courCommune',
+    ],
+    'economique': [
+      'maisonDHotesEconomique', 'residenceFamilialeEnLocation',
+      'chambresDePassage', 'grenier', 'other',
+    ],
+  };
+
   Future<void> _onSearchResidences(
     SearchResidencesEvent event,
     Emitter<ResidenceState> emit,
@@ -130,26 +153,133 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     try {
       emit(const ResidenceLoading());
       
-      // Extraire les paramètres pertinents pour la recherche
-      final query = event.filters['query'] as String? ?? '';
-      final city = event.filters['city'] as String?;
-      final minPrice = event.filters['minPrice'] is num ? (event.filters['minPrice'] as num).toDouble() : null;
-      final maxPrice = event.filters['maxPrice'] is num ? (event.filters['maxPrice'] as num).toDouble() : null;
-      final bedrooms = event.filters['bedrooms'] is int ? event.filters['bedrooms'] as int : null;
-      final bathrooms = event.filters['bathrooms'] is int ? event.filters['bathrooms'] as int : null;
+      final f = event.filters;
+
+      final query            = f['query'] as String?;
+      final city             = f['city'] as String?;
+      final minPrice         = f['minPrice'] is num ? (f['minPrice'] as num).toDouble() : null;
+      final maxPrice         = f['maxPrice'] is num ? (f['maxPrice'] as num).toDouble() : null;
+      final residenceType    = f['residenceType'] as String?;
+      final period           = f['period'] as String?;
+      final neighborhood     = f['neighborhood'] as String?;
+      final region           = f['region'] as String?;
+
+      // Nouveaux filtres du panneau de filtres (SearchFilters)
+      final residenceCategory = f['residenceCategory'] as String?;
+      final minBedrooms      = f['minBedrooms'] is int ? f['minBedrooms'] as int : null;
+      final minBathrooms     = f['minBathrooms'] is int ? f['minBathrooms'] as int : null;
+      final minGuests        = f['minGuests'] is int ? f['minGuests'] as int : null;
+      final amenitiesFilter  = f['amenities'] is List ? List<String>.from(f['amenities'] as List) : <String>[];
+      final allowsPets       = f['allowsPets'] as bool?;
+      final allowsSmoking    = f['allowsSmoking'] as bool?;
+      final allowsParties    = f['allowsParties'] as bool?;
+      final reservationMode  = f['reservationMode'] as String?;
+      final minRating        = f['minRating'] is num ? (f['minRating'] as num).toDouble() : null;
       
-      // Convertir les filtres en paramètres spécifiques acceptés par le service
-      final residences = await _residenceService.searchResidences(
+      var residences = await _residenceService.searchResidences(
         query: query,
         city: city,
         minPrice: minPrice,
         maxPrice: maxPrice,
-        bedrooms: bedrooms,
-        bathrooms: bathrooms,
+        bedrooms: minBedrooms,
+        bathrooms: minBathrooms,
+        amenities: amenitiesFilter.isNotEmpty ? amenitiesFilter : null,
+        page: event.page,
+        limit: event.limit,
         forceRefresh: true,
       );
-      
-      emit(ResidencesLoaded(residences));
+
+      // ── Filtrage client-side ──────────────────────────────────────────
+
+      // Filtre par type exact (depuis la recherche avancée)
+      if (residenceType != null && residenceType.isNotEmpty) {
+        residences = residences.where((r) {
+          final typeStr = r.type.toString().split('.').last.toLowerCase();
+          return typeStr == residenceType.toLowerCase();
+        }).toList();
+      }
+
+      // Filtre par catégorie (depuis le panneau de filtres)
+      if (residenceCategory != null && residenceCategory.isNotEmpty) {
+        final typesInCategory = _categoryToTypes[residenceCategory] ?? [];
+        if (typesInCategory.isNotEmpty) {
+          residences = residences.where((r) {
+            final typeStr = r.type.toString().split('.').last;
+            return typesInCategory.contains(typeStr);
+          }).toList();
+        }
+      }
+
+      // Filtre par période
+      if (period != null && period.isNotEmpty) {
+        residences = residences.where((r) {
+          return r.pricePeriod.toLowerCase() == period.toLowerCase();
+        }).toList();
+      }
+
+      // Filtre par quartier
+      if (neighborhood != null && neighborhood.isNotEmpty) {
+        residences = residences.where((r) {
+          final addr = r.address.toLowerCase();
+          return addr.contains(neighborhood.toLowerCase());
+        }).toList();
+      }
+
+      // Filtre par région
+      if (region != null && region.isNotEmpty) {
+        residences = residences.where((r) {
+          final addr = r.address.toLowerCase();
+          return addr.contains(region.toLowerCase());
+        }).toList();
+      }
+
+      // Filtre par nombre minimum de chambres
+      if (minBedrooms != null && minBedrooms > 0) {
+        residences = residences.where((r) => r.bedrooms >= minBedrooms).toList();
+      }
+
+      // Filtre par nombre minimum de salles de bain
+      if (minBathrooms != null && minBathrooms > 0) {
+        residences = residences.where((r) => r.bathrooms >= minBathrooms).toList();
+      }
+
+      // Filtre par nombre de personnes (2) ou plus : résidences avec maxOccupancy >= minGuests
+      if (minGuests != null && minGuests > 0) {
+        residences = residences.where((r) => r.maxOccupancy >= minGuests).toList();
+      }
+
+      // Filtre par équipements
+      if (amenitiesFilter.isNotEmpty) {
+        residences = residences.where((r) {
+          return amenitiesFilter.every((a) => r.amenities.contains(a));
+        }).toList();
+      }
+
+      // Filtre règles
+      if (allowsPets == true) {
+        residences = residences.where((r) => r.allowsPets).toList();
+      }
+      if (allowsSmoking == true) {
+        residences = residences.where((r) => r.allowsSmoking).toList();
+      }
+      if (allowsParties == true) {
+        residences = residences.where((r) => r.allowsParties).toList();
+      }
+
+      // Filtre mode de réservation
+      if (reservationMode != null && reservationMode.isNotEmpty) {
+        residences = residences.where((r) {
+          return r.reservationMode.toLowerCase() == reservationMode.toLowerCase();
+        }).toList();
+      }
+
+      // Filtre note minimale
+      if (minRating != null && minRating > 0) {
+        residences = residences.where((r) => r.rating >= minRating).toList();
+      }
+
+      final hydrated = await _hydrateFavorites(residences);
+      emit(ResidencesLoaded(hydrated));
     } catch (e) {
       emit(ResidenceError(e.toString()));
     }
@@ -223,30 +353,18 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       if (success) {
         if (state is ResidenceDetailsLoaded) {
           final currentResidence = (state as ResidenceDetailsLoaded).residence;
-          
-          // Mettre à jour l'état de favori
-          Map<String, dynamic> priceDetails = currentResidence.priceDetails ?? {};
-          priceDetails['isFavorite'] = !isFavorite; // Inverser l'état actuel
-          
-          final updatedResidence = currentResidence.copyWith(
-            priceDetails: priceDetails,
-          );
-          
-          emit(ResidenceDetailsLoaded(updatedResidence));
+          if (currentResidence.id == event.residenceId) {
+            emit(ResidenceDetailsLoaded(
+                currentResidence.copyWith(isFavorite: !isFavorite)));
+          }
         } else if (state is ResidencesLoaded) {
           final residences = (state as ResidencesLoaded).residences;
           final updatedResidences = residences.map((residence) {
             if (residence.id == event.residenceId) {
-              Map<String, dynamic> priceDetails = residence.priceDetails ?? {};
-              priceDetails['isFavorite'] = !isFavorite; // Inverser l'état actuel
-              
-              return residence.copyWith(
-                priceDetails: priceDetails,
-              );
+              return residence.copyWith(isFavorite: !isFavorite);
             }
             return residence;
           }).toList();
-          
           emit(ResidencesLoaded(updatedResidences));
         }
       }
@@ -279,17 +397,11 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         try {
           final residence = await _residenceService.getResidenceById(id);
           if (residence != null) {
-            // Créer une copie des détails de prix avec sécurité null
-            final priceDetails = Map<String, dynamic>.from(residence.priceDetails ?? {});
-            priceDetails['isFavorite'] = true;
-            
-            favoriteResidences.add(residence.copyWith(
-              priceDetails: priceDetails,
-            ));
+            favoriteResidences.add(residence.copyWith(isFavorite: true));
           }
         } catch (e) {
           // Ignorer les erreurs pour les résidences individuelles
-          if (kDebugMode) print('Erreur lors du chargement du favori $id: ${e.toString()}');
+          if (kDebugMode) debugPrint('Erreur lors du chargement du favori $id: ${e.toString()}');
         }
       }
       

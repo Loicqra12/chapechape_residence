@@ -189,7 +189,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           PrimaryButton(
             text: 'Envoyer le lien',
             onPressed: _onResetPasswordPressed,
-            icon: Icons.send_rounded,
+            filled: true,
           ),
           const SizedBox(height: 16),
           Center(
@@ -389,7 +389,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   PrimaryButton(
                     text: 'Retour à la connexion',
                     onPressed: () => context.go('/auth/login'),
-                    icon: Icons.login_rounded,
+                    filled: true,
                   ),
                 ],
               ),
@@ -496,7 +496,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   PrimaryButton(
                     text: 'Réessayer',
                     onPressed: _retry,
-                    icon: Icons.refresh_rounded,
+                    filled: true,
                   ),
                   const SizedBox(height: 16),
                   TextButton.icon(

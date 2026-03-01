@@ -1,6 +1,30 @@
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
+// Liste complète des types de résidences (synchronisée avec partner + residence.model.js)
+const VALID_TYPES = [
+    // Types basiques (rétrocompatibilité données existantes)
+    'apartment', 'house', 'villa', 'studio', 'room',
+    // Résidences meublées
+    'appartement_meuble', 'studio_meuble', 'villa_meublee',
+    'penthouse', 'loft', 'grenier',
+    // Hôtels & hébergements classiques
+    'hotel', 'hotel_passage', 'motel', 'boutique_hotel',
+    'hotel_luxe', 'guest_house', 'residence_hoteliere',
+    // Hébergements insolites & nature
+    'bungalow', 'lodge', 'case_traditionnelle',
+    'maison_flottante', 'campement_touristique',
+    // Colocation & résidences partagées
+    'chambre_colocation', 'coliving', 'maison_hotes',
+    'residence_universitaire', 'cite_dortoir',
+    // Résidences longue durée
+    'appartement_vide', 'villa_vide', 'immeuble', 'cour_commune',
+    // Hébergements économiques
+    'maison_hotes_economique', 'residence_familiale', 'chambres_passage',
+    // Autre
+    'other'
+];
+
 const createResidence = {
     body: Joi.object().keys({
         title: Joi.string().required().min(3).max(100),
@@ -14,36 +38,43 @@ const createResidence = {
             coordinates: Joi.object().keys({
                 latitude: Joi.number().required().min(-90).max(90),
                 longitude: Joi.number().required().min(-180).max(180)
-            })
+            }),
+            commune: Joi.string().allow('').optional(),
+            quartier: Joi.string().allow('').optional(),
+            sousZone: Joi.string().allow('').optional()
         }).required(),
         features: Joi.array().items(Joi.string()).min(1),
-        type: Joi.string().required().valid('apartment', 'house', 'villa', 'studio'),
+        type: Joi.string().required().valid(...VALID_TYPES),
         bedrooms: Joi.number().required().min(0),
         bathrooms: Joi.number().required().min(0),
+        area: Joi.number().min(0),
         maxOccupancy: Joi.number().required().min(1),
         amenities: Joi.array().items(Joi.string()),
-        rules: Joi.array().items(Joi.string()),
+        rules: Joi.alternatives().try(
+            Joi.object().keys({
+                smoking: Joi.boolean(),
+                pets: Joi.boolean(),
+                parties: Joi.boolean(),
+                maxGuests: Joi.number().min(1)
+            }),
+            Joi.array().items(Joi.string())
+        ),
         availability: Joi.object().keys({
             startDate: Joi.date().iso(),
             endDate: Joi.date().iso().min(Joi.ref('startDate'))
         }),
         status: Joi.string().valid('available', 'unavailable', 'maintenance'),
-        // Nouveau: validation du mode de réservation
         reservationMode: Joi.string().valid('instant', 'approval_required'),
-        // Nouveau: validation de la période de prix
         pricePeriod: Joi.string().valid('hour', 'day', 'week', 'month'),
-        // Nouveau: validation des méthodes de paiement
         paymentMethods: Joi.array().items(
             Joi.string().valid('cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer')
         ),
-        // Nouveau: validation des tarifs horaires (aligné sur residence.model.js)
         hourlyRates: Joi.object().keys({
             oneHour: Joi.number().min(0),
             twoHours: Joi.number().min(0),
             threeHours: Joi.number().min(0),
             additionalHour: Joi.number().min(0)
         }),
-        // Nouveau: validation des tarifs journaliers
         dailyRates: Joi.object().keys({
             halfDay: Joi.number().min(0),
             fullDay: Joi.number().min(0),
@@ -68,36 +99,43 @@ const updateResidence = {
             coordinates: Joi.object().keys({
                 latitude: Joi.number().min(-90).max(90),
                 longitude: Joi.number().min(-180).max(180)
-            })
+            }),
+            commune: Joi.string().allow('').optional(),
+            quartier: Joi.string().allow('').optional(),
+            sousZone: Joi.string().allow('').optional()
         }),
         features: Joi.array().items(Joi.string()),
-        type: Joi.string().valid('apartment', 'house', 'villa', 'studio'),
+        type: Joi.string().valid(...VALID_TYPES),
         bedrooms: Joi.number().min(0),
         bathrooms: Joi.number().min(0),
+        area: Joi.number().min(0),
         maxOccupancy: Joi.number().min(1),
         amenities: Joi.array().items(Joi.string()),
-        rules: Joi.array().items(Joi.string()),
+        rules: Joi.alternatives().try(
+            Joi.object().keys({
+                smoking: Joi.boolean(),
+                pets: Joi.boolean(),
+                parties: Joi.boolean(),
+                maxGuests: Joi.number().min(1)
+            }),
+            Joi.array().items(Joi.string())
+        ),
         availability: Joi.object().keys({
             startDate: Joi.date().iso(),
             endDate: Joi.date().iso().min(Joi.ref('startDate'))
         }),
         status: Joi.string().valid('available', 'unavailable', 'maintenance'),
-        // Nouveau: validation du mode de réservation
         reservationMode: Joi.string().valid('instant', 'approval_required'),
-        // Nouveau: validation de la période de prix
         pricePeriod: Joi.string().valid('hour', 'day', 'week', 'month'),
-        // Nouveau: validation des méthodes de paiement
         paymentMethods: Joi.array().items(
             Joi.string().valid('cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer')
         ),
-        // Nouveau: validation des tarifs horaires (aligné sur residence.model.js)
         hourlyRates: Joi.object().keys({
             oneHour: Joi.number().min(0),
             twoHours: Joi.number().min(0),
             threeHours: Joi.number().min(0),
             additionalHour: Joi.number().min(0)
         }),
-        // Nouveau: validation des tarifs journaliers
         dailyRates: Joi.object().keys({
             halfDay: Joi.number().min(0),
             fullDay: Joi.number().min(0),
@@ -118,7 +156,7 @@ const searchResidences = {
         location: Joi.string(),
         minPrice: Joi.number().min(0),
         maxPrice: Joi.number().min(Joi.ref('minPrice')),
-        type: Joi.string().valid('apartment', 'house', 'villa', 'studio'),
+        type: Joi.string().valid(...VALID_TYPES),
         bedrooms: Joi.number().min(0),
         bathrooms: Joi.number().min(0),
         features: Joi.string(),
@@ -137,8 +175,6 @@ const uploadImages = {
             'string.empty': "L'identifiant de la résidence ne peut pas être vide"
         })
     }),
-    // La validation des fichiers eux-mêmes est gérée par multer et le middleware d'upload
-    // Ici nous validons seulement les paramètres de l'URL
 };
 
 // Validation pour la suppression d'une image
@@ -196,7 +232,7 @@ const updatePaymentMethods = {
     body: Joi.object().keys({
         paymentMethods: Joi.array().items(
             Joi.string().valid(
-                'credit_card', 'debit_card', 'bank_transfer', 
+                'credit_card', 'debit_card', 'bank_transfer',
                 'mobile_money', 'cash', 'om', 'momo', 'wave'
             )
         ).required().min(1).messages({

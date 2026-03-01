@@ -336,6 +336,8 @@ class ResidenceService {
     List<String>? amenities,
     DateTime? checkIn,
     DateTime? checkOut,
+    int page = 1,
+    int limit = 20,
     bool forceRefresh = false,
   }) async {
     // Construire une clé de cache basée sur les critères de recherche
@@ -357,7 +359,7 @@ class ResidenceService {
           '/residences/search',
           queryParameters: {
             if (query != null) 'query': query,
-            if (city != null) 'city': city,
+            if (city != null) 'location': city,
             if (minPrice != null) 'minPrice': minPrice,
             if (maxPrice != null) 'maxPrice': maxPrice,
             if (bedrooms != null) 'bedrooms': bedrooms,
@@ -365,6 +367,8 @@ class ResidenceService {
             if (amenities != null) 'amenities': amenities.join(','),
             if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
             if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
+            'page': page,
+            'limit': limit,
           },
         );
 
@@ -715,7 +719,10 @@ class ResidenceService {
         reviewCount: _safeParseInt(data['reviews']),
         currency: data['currency']?.toString() ?? 'XOF',
         type: residenceType,
-        maxOccupancy: _safeParseInt(data['maxOccupancy'], 2),
+        maxOccupancy: _safeParseInt(
+          data['maxOccupancy'] ?? data['maxGuests'] ?? data['rules']?['maxGuests'],
+          2,
+        ),
         owner: data['owner'] ?? data['ownerId'] ?? '',
         pricePeriod: data['pricePeriod']?.toString() ?? 'month',
         // Nouveaux champs ajoutés
@@ -988,6 +995,73 @@ class ResidenceService {
     } catch (e) {
       debugPrint('Erreur lors de la récupération des résidences par type: $e');
       return [];
+    }
+  }
+
+  /// Tendances : résidences les plus réservées (7 derniers jours).
+  /// Backend: GET /residences/trending?city=&commune=&quartier=&limit=8
+  /// Retourne une liste de { residence, bookingCount }.
+  Future<List<Map<String, dynamic>>> getTrendingResidences({
+    String? city,
+    String? commune,
+    String? quartier,
+    int limit = 8,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        if (city != null && city.isNotEmpty) 'city': city,
+        if (commune != null && commune.isNotEmpty) 'commune': commune,
+        if (quartier != null && quartier.isNotEmpty) 'quartier': quartier,
+        'limit': limit,
+      };
+      final response = await _apiService.get(
+        '/residences/trending',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final data = response.data;
+      if (data == null || data['data'] is! List) return [];
+      final list = data['data'] as List;
+      final result = <Map<String, dynamic>>[];
+      for (final e in list) {
+        if (e is! Map<String, dynamic>) continue;
+        final raw = e['residence'];
+        final count = e['bookingCount'] is int
+            ? e['bookingCount'] as int
+            : (e['bookingCount'] is num ? (e['bookingCount'] as num).toInt() : 0);
+        if (raw is Map<String, dynamic>) {
+          final residence = _adaptBackendResidenceToClient(raw);
+          result.add({'residence': residence, 'bookingCount': count});
+        }
+      }
+      return result;
+    } on DioException catch (e) {
+      if (kDebugMode) debugPrint('getTrendingResidences: ${e.message}');
+      return [];
+    } catch (e) {
+      if (kDebugMode) debugPrint('getTrendingResidences: $e');
+      return [];
+    }
+  }
+
+  /// Récupère le nombre de résidences par type (backend: GET /residences/stats/count-by-type).
+  /// Utilisé pour afficher les vrais totaux dans les catégories populaires.
+  Future<Map<String, int>> getResidenceCountByType() async {
+    try {
+      final response = await _apiService.get('/residences/stats/count-by-type');
+      final data = response.data;
+      if (data == null || data['data'] is! Map) return {};
+      final Map<String, int> result = {};
+      for (final entry in (data['data'] as Map<String, dynamic>).entries) {
+        final v = entry.value;
+        result[entry.key] = v is int ? v : (v is num ? v.toInt() : 0);
+      }
+      return result;
+    } on DioException catch (e) {
+      _logger.warning('getResidenceCountByType: ${e.message}');
+      return {};
+    } catch (e) {
+      _logger.warning('getResidenceCountByType: $e');
+      return {};
     }
   }
   

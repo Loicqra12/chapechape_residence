@@ -456,6 +456,8 @@ class ResidenceService {
         weekendRate: weekendRate,
         address: json['address']?.toString() ?? '',
         city: json['city']?.toString() ?? '',
+        commune: (json['locationData'] as Map?)?['commune']?.toString() ?? (json['location'] as Map?)?['commune']?.toString(),
+        quartier: (json['locationData'] as Map?)?['quartier']?.toString() ?? (json['location'] as Map?)?['quartier']?.toString(),
         bedrooms: (json['bedrooms'] is num) 
             ? (json['bedrooms'] as num).toInt() 
             : int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
@@ -547,25 +549,31 @@ class ResidenceService {
     
     backendData['location'] = {
       'address': data['formattedAddress']?.toString() ?? data['address']?.toString() ?? '',
-      'city': data['city']?.toString().isNotEmpty == true ? data['city'].toString() : 'Abidjan', // Valeur par défaut si vide
-      'state': data['region']?.toString() ?? 'AB', // Region -> State
+      'city': data['city']?.toString().isNotEmpty == true ? data['city'].toString() : 'Abidjan',
+      'state': data['region']?.toString() ?? 'AB',
       'country': data['country']?.toString() ?? 'CI',
       'coordinates': {
         'latitude': numLat,
         'longitude': numLng
-      }
+      },
+      if (data['commune'] != null && data['commune'].toString().isNotEmpty) 'commune': data['commune'].toString(),
+      if (data['quartier'] != null && data['quartier'].toString().isNotEmpty) 'quartier': data['quartier'].toString(),
+      if (data['sousZone'] != null && data['sousZone'].toString().isNotEmpty) 'sousZone': data['sousZone'].toString(),
     };
     
     // Note: formattedAddress supprimé car non autorisé par le schéma Joi backend
-    
-    // 5. TYPE (requis) - Mapper vers les valeurs autorisées
-    backendData['type'] = _mapFrontendTypeToBackendType(data['type']?.toString() ?? 'studio');
+
+    // 5. TYPE (requis) - Passer le type complet (ex: 'appartement_meuble', 'studio_meuble')
+    backendData['type'] = _mapFrontendTypeToBackendType(data['type']?.toString() ?? 'appartement_meuble');
     
     // 6. BEDROOMS (requis)
     backendData['bedrooms'] = _extractNumericValue(data['bedrooms'])?.toInt() ?? 0;
     
     // 7. BATHROOMS (requis)
     backendData['bathrooms'] = _extractNumericValue(data['bathrooms'])?.toInt() ?? 0;
+    
+    // 7b. AREA/SURFACE (requis) - Le partenaire envoie 'surface', le backend stocke 'area'
+    backendData['area'] = _extractNumericValue(data['surface'])?.toDouble() ?? 0.0;
     
     // 8. MAXOCCUPANCY (requis) - transformation maxGuests -> maxOccupancy
     backendData['maxOccupancy'] = _extractNumericValue(data['maxGuests'])?.toInt() ?? 2;
@@ -582,15 +590,14 @@ class ResidenceService {
       backendData['amenities'] = <String>[];
     }
     
-    // 11. RULES - DOIT être un array, PAS un objet !
-    final List<String> rulesArray = [];
-    if (data['rules'] != null && data['rules'] is Map) {
-      final rulesMap = data['rules'] as Map;
-      if (rulesMap['allowsSmoking'] == false) rulesArray.add('no_smoking');
-      if (rulesMap['allowsPets'] == false) rulesArray.add('no_pets');
-      if (rulesMap['allowsParties'] == false) rulesArray.add('no_parties');
-    }
-    backendData['rules'] = rulesArray;
+    // 11. RULES - Format objet correspondant au schéma Mongoose {smoking, pets, parties}
+    // Le partenaire envoie {allowsSmoking, allowsPets, allowsParties} → on mappe vers le format backend
+    final rulesSource = data['rules'] is Map ? data['rules'] as Map : {};
+    backendData['rules'] = {
+      'smoking': rulesSource['allowsSmoking'] as bool? ?? false,
+      'pets': rulesSource['allowsPets'] as bool? ?? false,
+      'parties': rulesSource['allowsParties'] as bool? ?? false,
+    };
     
     // 12. STATUS - Optionnel
     if (data.containsKey('status')) {
@@ -725,51 +732,14 @@ class ResidenceService {
     }
   }
 
+  // Le backend accepte désormais tous les types complets définis dans l'app partner.
+  // On retourne le type tel quel, sans conversion vers les types basiques.
   String _mapFrontendTypeToBackendType(String frontendType) {
-    final Map<String, String> typeMapping = {
-      // Résidences meublées
-      'studio_meuble': 'studio',
-      'appartement_meuble': 'apartment',
-      'villa_meublee': 'villa',
-      'penthouse': 'apartment',
-      'loft': 'apartment',
-      'grenier': 'apartment',
-      
-      // Hôtels & Hébergements classiques
-      'hotel_passage': 'hotel',
-      'motel': 'hotel',
-      'boutique_hotel': 'hotel',
-      'hotel_luxe': 'hotel',
-      'guest_house': 'house',
-      'residence_hoteliere': 'hotel',
-      
-      // Hébergements insolites & nature
-      'bungalow': 'house',
-      'lodge': 'house',
-      'case_traditionnelle': 'house',
-      'maison_flottante': 'house',
-      'campement_touristique': 'house',
-      
-      // Colocation & résidences partagées
-      'chambre_colocation': 'apartment',
-      'coliving': 'apartment',
-      'maison_hotes': 'house',
-      'residence_universitaire': 'apartment',
-      'cite_dortoir': 'apartment',
-      
-      // Résidences longue durée
-      'appartement_vide': 'apartment',
-      'villa_vide': 'villa',
-      'immeuble': 'apartment',
-      'cour_commune': 'house',
-      
-      // Hébergements économiques
-      'maison_hotes_economique': 'house',
-      'residence_familiale': 'house',
-      'chambres_passage': 'apartment',
-    };
-  
-    return typeMapping[frontendType] ?? 'apartment';
+    // Normaliser : retirer les espaces, mettre en minuscules
+    final normalized = frontendType.trim().toLowerCase();
+    // Si c'est vide ou inconnu, valeur de secours
+    if (normalized.isEmpty) return 'apartment';
+    return normalized;
   }
 
   Future<Residence> createResidence(Map<String, dynamic> data, List<ResidenceImage> images) async {

@@ -62,14 +62,14 @@ class ApiService {
     // 1. L'intercepteur de logging pour déboguer les requêtes/réponses
     _dio.interceptors.add(LoggingInterceptor.create(isProduction: AppConfig.isProduction));
     
-    // 2. Ajouter l'intercepteur de retry (doit être avant l'auth pour gérer les erreurs d'authentification)
+    // 2. Ajouter l'intercepteur de retry
+    // Le 401 est exclu car c'est une erreur d'auth définitive sans token — retry inutile et coûteux
     _dio.interceptors.add(RetryInterceptor(
       dio: _dio,
       maxRetries: 3,
       initialDelay: const Duration(milliseconds: 500),
       maxDelay: const Duration(seconds: 30),
-      // Inclure le 401 pour réessayer avec un token rafraîchi
-      retryStatusCodes: [401, 408, 429, 500, 502, 503, 504],
+      retryStatusCodes: [408, 429, 500, 502, 503, 504],
     ));
     
     // 3. Ajouter l'intercepteur d'authentification
@@ -299,13 +299,16 @@ class ApiService {
     
     while (true) {
       try {
-        // Tentative d'exécution de la requête
         return await requestFunction();
       } catch (e) {
+        // Ne jamais retenter sur 401 (non autorisé) — c'est définitif
+        if (e is DioException && e.response?.statusCode == 401) {
+          rethrow;
+        }
+
         attempts++;
         
         if (attempts >= maxRetries) {
-          // Si le nombre maximum de tentatives est atteint, propager l'erreur
           rethrow;
         }
         

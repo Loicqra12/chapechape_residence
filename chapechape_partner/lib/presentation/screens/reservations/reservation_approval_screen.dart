@@ -246,6 +246,11 @@ class _ReservationApprovalScreenState extends State<ReservationApprovalScreen>
         elevation: 0,
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             onPressed: _loadReservations,
             icon: const Icon(Icons.refresh),
             tooltip: 'Actualiser',

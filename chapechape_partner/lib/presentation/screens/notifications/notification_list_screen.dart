@@ -72,6 +72,11 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
         title: const Text('Notifications'),
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.pushNamed(context, '/notifications/preferences');

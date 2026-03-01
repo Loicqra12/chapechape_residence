@@ -138,6 +138,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           title: const Text('Mes Documents'),
           actions: [
             IconButton(
+              style: IconButton.styleFrom(
+                shape: const CircleBorder(),
+                side: BorderSide(color: Colors.grey.shade300),
+                backgroundColor: Colors.transparent,
+              ),
               icon: const Icon(Icons.refresh),
               onPressed: () {
                 // Forcer un rafraîchissement du profil pour obtenir les derniers documents

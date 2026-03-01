@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
 import 'dart:typed_data';
 import '../extensions/residence_marker_extension.dart';
 
@@ -211,127 +210,161 @@ class CustomMarkerGenerator {
     return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
   }
   
-  /// Crée un marqueur personnalisé avec le prix de la résidence directement intégré
-  /// Format exact de la capture d'écran - bulle rose avec icône de lit et prix F CFA
+  /// Marqueur prix style Google Hotels — or royal #D4AF37, largeur dynamique, icône Material
+  /// [isSelected] : fond blanc + bordure or + texte or (état sélectionné)
   static Future<BitmapDescriptor> createPriceMarker({
     required double price,
-    required Color backgroundColor,
-    String? iconEmoji, // Icône de lit/maison
-    double width = 100, // Largeur adaptée au format "XX XXX F CFA"
-    double height = 36, // Hauteur pour contenir l'icône et le texte
+    bool isSelected = false,
   }) async {
-    // Créer un PictureRecorder pour dessiner le marqueur personnalisé
-    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(pictureRecorder);
-    
-    // Arrondir les coins du rectangle comme dans la capture d'écran
-    final RRect rRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, width, height),
-      const Radius.circular(8),  // Coins modérément arrondis comme dans la capture
-    );
-    
-    // Dessiner le fond - ROSE COMME DANS LA CAPTURE D'ÉCRAN
-    final Paint backgroundPaint = Paint()
-      ..color = const Color(0xFFE91E63) // Rose comme dans la capture d'écran
-      ..style = PaintingStyle.fill;
-    
-    // Dessiner d'abord l'ombre pour qu'elle apparaisse sous l'étiquette
+    // ── Constantes de mise en page ──────────────────────────────────────────
+    const double scale     = 2.5;   // rendu hi-DPI
+    const double bubbleH   = 42.0;
+    const double arrowH    = 9.0;
+    const double hPad      = 11.0;
+    const double iconSz    = 17.0;
+    const double gap       = 5.0;
+    const double fontSize  = 13.0;
+    const double radius    = bubbleH / 2;
+    const Color  gold      = Color(0xFFD4AF37);
+
+    final Color bgColor = isSelected ? Colors.white : gold;
+    final Color fgColor = isSelected ? gold : Colors.white;
+
+    // ── Formatage du prix ────────────────────────────────────────────────────
+    final String priceStr = _formatPriceCFA(price.toInt());
+
+    // ── Mesure du texte prix ─────────────────────────────────────────────────
+    final TextPainter tpPrice = TextPainter(
+      text: TextSpan(
+        text: priceStr,
+        style: const TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // ── Mesure de l'icône ────────────────────────────────────────────────────
+    final TextPainter tpIcon = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(Icons.hotel.codePoint),
+        style: TextStyle(
+          fontSize: iconSz,
+          fontFamily: Icons.hotel.fontFamily,
+          package: Icons.hotel.fontPackage,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final double iconW   = tpIcon.width;
+    final double bubbleW = hPad + iconW + gap + tpPrice.width + hPad;
+    final double totalH  = bubbleH + arrowH;
+
+    // ── Canvas ──────────────────────────────────────────────────────────────
+    final recorder = ui.PictureRecorder();
+    final canvas   = Canvas(recorder);
+    canvas.scale(scale, scale);
+
+    // Ombre portée
     canvas.drawShadow(
-      Path()..addRRect(rRect),
-      Colors.black,
-      3.0,  // Ombre plus prononcée pour améliorer le contraste
+      Path()..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(1, 1, bubbleW - 2, bubbleH - 2),
+        const Radius.circular(radius),
+      )),
+      Colors.black54,
+      5.0,
       true,
     );
-    
-    // Dessiner l'étiquette bleue
-    canvas.drawRRect(rRect, backgroundPaint);
-    
-    // Ajouter un triangle en bas pour le style "bulle de dialogue" (augmenté proportionnellement)
-    final Path trianglePath = Path();
-    trianglePath.moveTo(width / 2 - 8, height); // Point gauche élargi
-    trianglePath.lineTo(width / 2 + 8, height); // Point droit élargi
-    trianglePath.lineTo(width / 2, height + 8); // Point bas allongé
-    trianglePath.close();
-    
-    canvas.drawPath(trianglePath, backgroundPaint);
-    
-    // Dessiner l'icône de lit/maison à gauche (comme dans la capture)
-    if (iconEmoji != null && iconEmoji.isNotEmpty) {
-      final iconStyle = ui.TextStyle(
-        color: Colors.white,
-        fontSize: 14, // Taille pour l'icône de lit visible
-        fontWeight: FontWeight.bold,
-      );
-      
-      final iconBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
-        textAlign: TextAlign.center,
-        maxLines: 1,
-      ))
-        ..pushStyle(iconStyle)
-        ..addText(iconEmoji);
-      
-      final iconParagraph = iconBuilder.build();
-      iconParagraph.layout(ui.ParagraphConstraints(width: 20)); // Espace fixe pour l'icône
-      
-      // Positionner l'icône à gauche avec padding
-      canvas.drawParagraph(
-        iconParagraph,
-        Offset(8, (height - iconParagraph.height) / 2),
+
+    // Fond pill
+    final pillRRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, bubbleW, bubbleH),
+      const Radius.circular(radius),
+    );
+    canvas.drawRRect(pillRRect, Paint()..color = bgColor);
+
+    // Bordure
+    canvas.drawRRect(
+      pillRRect,
+      Paint()
+        ..color = isSelected ? gold : Colors.white.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isSelected ? 2.5 : 1.0,
+    );
+
+    // Triangle pointeur bas-centre
+    final double ax = bubbleW / 2;
+    final arrowFill = Path()
+      ..moveTo(ax - 7, bubbleH)
+      ..lineTo(ax + 7, bubbleH)
+      ..lineTo(ax, totalH)
+      ..close();
+    canvas.drawPath(arrowFill, Paint()..color = bgColor);
+    if (isSelected) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(ax - 7, bubbleH)
+          ..lineTo(ax, totalH)
+          ..lineTo(ax + 7, bubbleH),
+        Paint()
+          ..color = gold
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..strokeJoin = StrokeJoin.round,
       );
     }
-    
-    // Configurer le texte du prix - taille adaptée à la capture d'écran
-    final textStyle = ui.TextStyle(
-      color: Colors.white,
-      fontSize: 14,  // Taille réduite pour correspondre à la capture
-      fontWeight: FontWeight.bold,
-      letterSpacing: -0.2,
-    );
-    
-    // Formater le prix exactement comme dans la capture d'écran : "XX XXX F CFA"
-    String formattedPrice;
-    final priceInt = price.toInt();
-    
-    // Format exact de la capture : "27 146 F CFA", "31 872 F CFA", "52 873 F CFA"
-    final formatter = NumberFormat.currency(
-      locale: 'fr_FR',
-      symbol: 'F CFA',
-      decimalDigits: 0,
-    );
-    formattedPrice = formatter.format(priceInt);
-    
-    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
-      textAlign: TextAlign.center,
+
+    // Icône hotel (Material Icons font — rendu fiable sur tous appareils)
+    final iconPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(Icons.hotel.codePoint),
+        style: TextStyle(
+          fontSize: iconSz,
+          fontFamily: Icons.hotel.fontFamily,
+          package: Icons.hotel.fontPackage,
+          color: fgColor,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    iconPainter.paint(canvas, Offset(hPad, (bubbleH - iconPainter.height) / 2));
+
+    // Texte prix
+    final para = (ui.ParagraphBuilder(ui.ParagraphStyle(
+      textAlign: TextAlign.left,
       maxLines: 1,
     ))
-      ..pushStyle(textStyle)
-      ..addText(formattedPrice);
-    
-    final paragraph = paragraphBuilder.build();
-    paragraph.layout(ui.ParagraphConstraints(width: width - (iconEmoji != null ? 30 : 0)));
-    
-    // Positionner le prix à droite de l'icône (comme dans la capture)
-    final priceOffset = iconEmoji != null 
-        ? Offset(32, (height - paragraph.height) / 2) // 32px pour laisser place à l'icône
-        : Offset((width - paragraph.maxIntrinsicWidth) / 2, (height - paragraph.height) / 2);
-    
-    canvas.drawParagraph(paragraph, priceOffset);
-    
-    // Convertir le dessin en image
-    final ui.Image image = await pictureRecorder.endRecording().toImage(
-      width.toInt(),
-      height.toInt(),
+      ..pushStyle(ui.TextStyle(
+        color: fgColor,
+        fontSize: fontSize,
+        fontWeight: ui.FontWeight.w700,
+      ))
+      ..addText(priceStr))
+      .build()
+      ..layout(ui.ParagraphConstraints(width: tpPrice.width + 4));
+
+    canvas.drawParagraph(
+      para,
+      Offset(hPad + iconW + gap, (bubbleH - para.height) / 2),
     );
-    
-    // Convertir l'image en ByteData
-    final ByteData? byteData = await image.toByteData(
-      format: ui.ImageByteFormat.png,
+
+    // ── Conversion en BitmapDescriptor ──────────────────────────────────────
+    final img = await recorder.endRecording().toImage(
+      (bubbleW * scale).ceil(),
+      (totalH  * scale).ceil(),
     );
-    
-    // Convertir ByteData en Uint8List pour BitmapDescriptor
-    final Uint8List uint8List = byteData!.buffer.asUint8List();
-    
-    // Créer le BitmapDescriptor
-    return BitmapDescriptor.fromBytes(uint8List);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
+  /// Formate un prix entier en "28 424 F CFA" (espace fine insécable)
+  static String _formatPriceCFA(int price) {
+    final str = price.toString();
+    final buf = StringBuffer();
+    final len = str.length;
+    for (int i = 0; i < len; i++) {
+      if (i > 0 && (len - i) % 3 == 0) buf.write('\u202F');
+      buf.write(str[i]);
+    }
+    return '${buf.toString()} F CFA';
   }
 }

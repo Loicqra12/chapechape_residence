@@ -68,7 +68,11 @@ const residenceSchema = mongoose.Schema({
     country: {
       type: String,
       default: 'CI' // Côte d'Ivoire par défaut
-    }
+    },
+    // Abidjan : commune + quartier (ex. Cocody, Marcory, Yopougon / Angré, Riviera, Zone 4)
+    commune: { type: String, trim: true },
+    quartier: { type: String, trim: true },
+    sousZone: { type: String, trim: true }
   },
   // Maintenir les champs précédents pour compatibilité descendante
   latitude: {
@@ -106,7 +110,29 @@ const residenceSchema = mongoose.Schema({
   type: {
     type: String,
     required: [true, 'Le type de propriété est requis'],
-    enum: ['apartment', 'house', 'villa', 'studio']
+    enum: [
+      // Types de base (ancien format)
+      'apartment', 'house', 'villa', 'studio', 'room',
+      // Résidences meublées (format partner)
+      'appartement_meuble', 'studio_meuble', 'villa_meublee',
+      'penthouse', 'loft', 'grenier',
+      // Hôtels & hébergements
+      'hotel', 'hotel_passage', 'motel', 'boutique_hotel',
+      'hotel_luxe', 'guest_house', 'residence_hoteliere',
+      // Hébergements insolites
+      'bungalow', 'lodge', 'case_traditionnelle',
+      'maison_flottante', 'campement_touristique',
+      // Colocations
+      'chambre_colocation', 'coliving', 'maison_hotes',
+      'residence_universitaire', 'cite_dortoir',
+      // Longue durée
+      'appartement_vide', 'villa_vide', 'immeuble', 'cour_commune',
+      // Économiques
+      'maison_hotes_economique', 'residence_familiale',
+      'chambres_passage',
+      // Autres
+      'other'
+    ]
   },
   status: {
     type: String,
@@ -276,13 +302,6 @@ const residenceSchema = mongoose.Schema({
     type: String,
     enum: ['cash', 'wave', 'orange_money', 'moov_money', 'mtn_money', 'credit_card', 'bank_transfer']
   }],
-  // Mode de réservation configuré par le partenaire
-  reservationMode: {
-    type: String,
-    enum: ['instant', 'approval_required'],
-    default: 'instant',
-    required: [true, 'Le mode de réservation est requis']
-  },
   // Champs pour la suppression douce
   deleted: {
     type: Boolean,
@@ -314,7 +333,10 @@ residenceSchema.virtual('location').get(function () {
       address: this.locationData.address || this.address,
       city: this.locationData.city || this.city,
       formattedAddress: this.locationData.formattedAddress,
-      coordinates: [this.locationData.coordinates.longitude, this.locationData.coordinates.latitude]
+      coordinates: [this.locationData.coordinates.longitude, this.locationData.coordinates.latitude],
+      commune: this.locationData.commune,
+      quartier: this.locationData.quartier,
+      neighborhood: this.locationData.quartier || this.locationData.commune
     };
   }
   // Sinon utiliser les anciennes données

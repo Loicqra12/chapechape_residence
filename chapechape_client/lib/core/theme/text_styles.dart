@@ -47,14 +47,15 @@ class AppTextStyles {
     color: AppTheme.textPrimary,
   );
 
-  /// Style pour les titres moyens
-  /// 22px / 1.3 line-height / Poppins-Bold
+  /// Style pour les titres moyens (sections)
+  /// 20px / 1.3 line-height / Poppins-SemiBold (600)
+  /// Couleur: #1A1A1A (noir strict, pas de doré)
   static const TextStyle title = TextStyle(
     fontFamily: _fontFamily,
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
+    fontSize: 20,
+    fontWeight: FontWeight.w600, // SemiBold au lieu de Bold
     height: 1.3,
-    color: AppTheme.textPrimary,
+    color: Color(0xFF1A1A1A), // Noir strict #1A1A1A
   );
 
   /// Style pour les titres grands (headlines)

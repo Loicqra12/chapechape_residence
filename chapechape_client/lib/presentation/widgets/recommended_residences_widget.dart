@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/models/residence_model.dart';
 import '../../core/services/recommendation_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/utils/string_utils.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/services/logger_service.dart';
@@ -110,12 +111,23 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.thumb_up_outlined,
+                      size: 20,
+                      color: const Color(0xFF1A1A1A),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: AppTextStyles.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -160,7 +172,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
     }
     
     return SizedBox(
-      height: 260,
+      height: 168,
       child: ListView.builder(
         padding: EdgeInsets.symmetric(horizontal: widget.padding.horizontal / 2),
         scrollDirection: Axis.horizontal,
@@ -174,8 +186,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
   }
 
   Widget _buildResidenceCard(BuildContext context, Residence residence, int index) {
-    final cardWidth = MediaQuery.of(context).size.width < 600 ? 220.0 : 260.0;
-    
+    final locationStr = _getLocationString(residence.location);
     return MouseRegion(
       onEnter: (_) => setState(() => _hoveredIndex = index),
       onExit: (_) => setState(() => _hoveredIndex = -1),
@@ -185,160 +196,128 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
           context.push('/residence/${residence.id}');
         },
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: widget.padding.horizontal / 2),
-          width: cardWidth,
-          child: Card(
-            elevation: _hoveredIndex == index ? 4 : 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Image de la résidence
-                Stack(
+          width: 176,
+          margin: EdgeInsets.only(right: 10, left: widget.padding.horizontal / 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
                   children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                      ),
+                    SizedBox(
+                      height: 120,
+                      width: double.infinity,
                       child: CachedNetworkImage(
-                        imageUrl: residence.images.isNotEmpty 
-                            ? residence.images.first 
+                        imageUrl: residence.images.isNotEmpty
+                            ? residence.images.first
                             : 'assets/images/placeholders/residence_premium.jpg',
-                        height: 140,
-                        width: double.infinity,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Shimmer.fromColors(
                           baseColor: Colors.grey[300]!,
                           highlightColor: Colors.grey[100]!,
-                          child: Container(
-                            height: 140,
-                            width: double.infinity,
-                            color: Colors.white,
-                          ),
+                          child: Container(color: Colors.white),
                         ),
                         errorWidget: (context, url, error) => Image.asset(
                           AppAssets.placeholderImage,
-                          height: 140,
-                          width: double.infinity,
                           fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                    // Badge "Recommandé pour vous"
                     Positioned(
-                      top: 10,
-                      left: 10,
+                      top: 6,
+                      left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.primaryColor.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.thumb_up,
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 4),
+                            const Icon(Icons.thumb_up, size: 10, color: Colors.white),
+                            const SizedBox(width: 3),
                             Text(
                               'Pour vous',
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 9,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    // Prix
                     Positioned(
-                      bottom: 10,
-                      right: 10,
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                        height: 32,
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          StringUtils.formatPrice(residence.price),
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.5),
+                            ],
                           ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 5,
+                      left: 8,
+                      child: Text(
+                        StringUtils.formatPrice(residence.price),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.6),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ],
                 ),
-                // Informations sur la résidence
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        residence.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _getLocationString(residence.location),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildFeatureChip(
-                            context,
-                            Icons.bed,
-                            '${residence.bedrooms} ch.',
-                          ),
-                          _buildFeatureChip(
-                            context,
-                            Icons.bathtub_outlined,
-                            '${residence.bathrooms} sdb',
-                          ),
-                          _buildFeatureChip(
-                            context,
-                            Icons.square_foot,
-                            '${residence.squareMeters.toInt()} m²',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                StringUtils.toTitleCase(residence.title),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A1A1A),
                 ),
-              ],
-            ),
-          ).animate(
-            target: _hoveredIndex == index ? 1 : 0,
-          ).scale(
-            duration: const Duration(milliseconds: 200),
-            begin: const Offset(1, 1),
-            end: const Offset(1.02, 1.02),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Text(
+                      locationStr,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -352,7 +331,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
         Icon(
           icon,
           size: 16,
-          color: AppTheme.primaryColor,
+          color: Colors.grey[600], // Icône grise fine
         ),
         const SizedBox(width: 4),
         Text(

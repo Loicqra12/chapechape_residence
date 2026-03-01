@@ -7,11 +7,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/residence_model.dart';
+import '../../core/models/residence_type_enum.dart';
 import '../../core/services/location_service.dart';
 import '../../core/services/nearby_residences_service.dart';
 import '../../core/extensions/residence_extensions.dart';
 import '../../core/extensions/residence_marker_extension.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import 'advanced_search_widget.dart';
 
 /// Widget qui affiche les résidences à proximité de l'utilisateur
@@ -55,15 +57,16 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
-  
+
   // Contrôleurs
   late AnimationController _animationController;
   final Completer<GoogleMapController> _mapControllerCompleter = Completer<GoogleMapController>();
-  
+
   // Données
   List<Residence> _nearbyResidences = [];
   Set<Marker> _markers = {};
   int _hoveredIndex = -1;
+  Residence? _selectedMarkerResidence;
   
   // Filtres
   String? _selectedCategory;
@@ -438,7 +441,6 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         markerId: const MarkerId('user_location'),
         position: _userLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Ma position'),
       ),
     );
     
@@ -449,7 +451,6 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
       final double? lng = residence.longitude;
       
       if (lat != null && lng != null) {
-        // Utiliser le nouveau système de marqueurs unifié avec icônes et prix
         final BitmapDescriptor markerIcon = await ResidenceMarkerExtension.generateMarkerForResidence(residence);
         
         markers.add(
@@ -457,18 +458,13 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
             markerId: MarkerId('residence_${residence.id}'),
             position: LatLng(lat, lng),
             icon: markerIcon,
-            infoWindow: InfoWindow(
-              title: residence.title,
-              snippet: '${residence.bedrooms} ch, ${residence.bathrooms} sdb - ${residence.location['displayAddress'] ?? ''}',
-            ),
+            consumeTapEvents: true,
             onTap: () {
-              // Trouver l'index de la résidence dans la liste
               final index = _nearbyResidences.indexWhere((r) => r.id == residence.id);
-              if (index != -1) {
-                setState(() {
-                  _hoveredIndex = index;
-                });
-              }
+              setState(() {
+                _selectedMarkerResidence = residence;
+                if (index != -1) _hoveredIndex = index;
+              });
             },
           ),
         );
@@ -497,9 +493,23 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 20,
+                            color: const Color(0xFF1A1A1A),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.title,
+                              style: AppTextStyles.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                       if (widget.subtitle != null) ...[                  
                         const SizedBox(height: 4),
@@ -518,8 +528,8 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   icon: const Icon(Icons.tune),
                   tooltip: 'Recherche avancée',
                   style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                    foregroundColor: AppTheme.primaryColor,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: const Color(0xFF1A1A1A),
                   ),
                 ),
               ],
@@ -850,7 +860,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         
         const SizedBox(height: 16),
         
-        // Liste des emplacements à proximité
+        // Liste des résidences — pas de second titre "À proximité", uniquement la liste
         _buildLocationsList(),
       ],
     );
@@ -858,7 +868,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
   
   Widget _buildMap() {
     return Container(
-      height: 200, // Augmentation de la hauteur pour une meilleure visibilité
+      height: 220,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -870,77 +880,122 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias, // Assure que la carte respecte le borderRadius
-      child: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: LatLng(_userLocation?.latitude ?? 0.0, _userLocation?.longitude ?? 0.0),
-          zoom: 14.0,
-        ),
-        markers: _markers,
-        onMapCreated: (controller) {
-          if (!_mapControllerCompleter.isCompleted) {
-            _mapControllerCompleter.complete(controller);
-          }
-          debugPrint('🗺️ Google Maps initialisée avec succès');
-        },
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: LatLng(_userLocation?.latitude ?? 0.0, _userLocation?.longitude ?? 0.0),
+              zoom: 14.0,
+            ),
+            markers: _markers,
+            onMapCreated: (controller) {
+              if (!_mapControllerCompleter.isCompleted) {
+                _mapControllerCompleter.complete(controller);
+              }
+            },
+            onTap: (_) => setState(() => _selectedMarkerResidence = null),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+          ),
+          // Carte flottante au tap d'un marqueur
+          if (_selectedMarkerResidence != null)
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 8,
+              child: _buildMapOverlayCard(_selectedMarkerResidence!),
+            ),
+        ],
       ),
     )
     .animate(controller: _animationController)
     .fadeIn(duration: 300.ms, curve: Curves.easeOutQuad)
     .moveY(begin: 20, end: 0, duration: 400.ms, curve: Curves.easeOutQuad);
   }
+
+  /// Carte compacte affichée en superposition sur la mini-carte au tap d'un marqueur
+  Widget _buildMapOverlayCard(Residence residence) {
+    return GestureDetector(
+      onTap: () => context.pushNamed('residence_details', pathParameters: {'id': residence.id}),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3))],
+        ),
+        child: Row(
+          children: [
+            // Miniature image
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
+              child: SizedBox(
+                width: 80,
+                height: 72,
+                child: residence.photos != null && residence.photos!.isNotEmpty
+                    ? Image.network(residence.photos!.first,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            Container(color: Colors.grey[200], child: const Icon(Icons.home, color: Colors.grey)))
+                    : Container(color: Colors.grey[200], child: const Icon(Icons.home, color: Colors.grey)),
+              ),
+            ),
+            // Infos
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      residence.title,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      residence.type.displayName,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      residence.formattedPrice,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD4AF37)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Bouton fermer
+            GestureDetector(
+              onTap: () => setState(() => _selectedMarkerResidence = null),
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.close, size: 16, color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   
+  /// Liste horizontale des résidences. Un seul titre "À proximité" en haut du widget (build), pas ici.
   Widget _buildLocationsList() {
     return Container(
-      height: 400,  // Augmenté encore pour accommoder les cartes plus hautes
+      height: 320,
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // En-tête du widget
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                // Titre et sous-titre
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      if (widget.subtitle != null) ...[                  
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.subtitle!,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                
-                // Bouton de recherche avancée
-                IconButton(
-                  onPressed: _showAdvancedSearch,
-                  icon: const Icon(Icons.tune),
-                  tooltip: 'Recherche avancée',
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                    foregroundColor: AppTheme.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Liste des emplacements à proximité
           SizedBox(
             height: 280,
             child: ListView.builder(
@@ -1022,7 +1077,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
         },
         child: Container(
           width: 220,
-          height: 380, // Augmenté pour accommoder les adresses particulièrement longues et éviter l'overflow sur toutes les résidences
+          constraints: const BoxConstraints(minHeight: 260, maxHeight: 380),
           margin: const EdgeInsets.only(right: 16, bottom: 8),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1037,7 +1092,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Empêche la colonne d'exiger plus d'espace que nécessaire
+            mainAxisSize: MainAxisSize.max,
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.only(
@@ -1133,81 +1188,72 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 8, right: 8, top: 6, bottom: 4), // Padding réduit encore plus
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Empêche le flex de prendre trop d'espace
-                  children: [
-                    // Titre de la résidence
-                    Text(
-                      residence.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8, top: 4, bottom: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        residence.title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    
-                    // Prix avec mise en avant
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        residence.formattedPrice,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryColor,
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          residence.formattedPrice,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                    
-                    // Caractéristiques basiques
-                    Row(
-                      children: [
-                        Icon(Icons.king_bed_outlined, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${residence.bedrooms}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                        const SizedBox(width: 10),
-                        Icon(Icons.bathtub_outlined, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${residence.bathrooms}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                        const SizedBox(width: 10),
-                        Icon(Icons.square_foot, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text('${residence.squareMeters.toStringAsFixed(0)}m²', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 2),
-                    
-                    // Adresse avec contrainte de hauteur
-                    // Limiter l'adresse à une seule ligne avec ellipsis pour les adresses longues
-                    Text(
-                      residence.location['displayAddress'] ?? residence.location['address'] ?? 'Adresse non disponible',
-                      style: TextStyle(
-                        fontSize: 11, // Police plus petite pour les adresses longues
-                        height: 1.1, // Interligne très réduit
-                        color: Colors.grey[600],
+                      Row(
+                        children: [
+                          Icon(Icons.king_bed_outlined, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
+                          Text('${residence.bedrooms}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          const SizedBox(width: 6),
+                          Icon(Icons.bathtub_outlined, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
+                          Text('${residence.bathrooms}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          const SizedBox(width: 6),
+                          Icon(Icons.square_foot, size: 14, color: Colors.grey[600]),
+                          const SizedBox(width: 2),
+                          Text('${residence.squareMeters.toStringAsFixed(0)}m²', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                        ],
                       ),
-                      maxLines: 1, // Limite à une seule ligne pour éviter les débordements
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    
-                    const SizedBox(height: 2),
-                    
-                    // Bouton Explorer avec contraintes réduites
-                    SizedBox(
-                      width: double.infinity,
-                      height: 30, // Hauteur réduite pour le bouton
-                      child: ElevatedButton(
+                      const SizedBox(height: 1),
+                      Text(
+                        residence.location['displayAddress'] ?? residence.location['address'] ?? 'Adresse non disponible',
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.1,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: ElevatedButton(
                         onPressed: () {
                           // Navigation directe vers la page de détail de la résidence
                           try {
@@ -1242,6 +1288,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                     ),
                   ],
                 ),
+              ),
               ),
             ],
           ),

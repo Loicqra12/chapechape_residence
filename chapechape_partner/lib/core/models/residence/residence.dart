@@ -51,7 +51,9 @@ class Residence {
   final String? regionName;
   final String? cityCode;
   final String? cityName;
-  
+  final String? commune;
+  final String? quartier;
+
   // Coordonnées GPS
   final double? latitude;
   final double? longitude;
@@ -114,6 +116,8 @@ class Residence {
     this.regionName,
     this.cityCode,
     this.cityName,
+    this.commune,
+    this.quartier,
     this.latitude,
     this.longitude,
     this.formattedAddress,
@@ -215,13 +219,17 @@ class Residence {
       }
     }
     
-    // Extraire les informations de localisation
+    // Extraire les informations de localisation (commune/quartier depuis locationData ou location)
     String? country = json['country']?.toString();
     String? countryName = json['countryName']?.toString();
     String? region = json['region']?.toString();
     String? regionName = json['regionName']?.toString();
     String? cityCode = json['cityCode']?.toString();
     String? cityName = json['cityName']?.toString();
+    final locData = json['locationData'] as Map<String, dynamic>?;
+    final loc = json['location'] as Map<String, dynamic>?;
+    String? commune = locData?['commune']?.toString() ?? loc?['commune']?.toString();
+    String? quartier = locData?['quartier']?.toString() ?? loc?['quartier']?.toString();
     
     // Extraire les coordonnées GPS
     double? latitude;
@@ -302,6 +310,8 @@ class Residence {
       regionName: regionName,
       cityCode: cityCode,
       cityName: cityName,
+      commune: commune,
+      quartier: quartier,
       latitude: latitude,
       longitude: longitude,
       formattedAddress: formattedAddress,
@@ -363,6 +373,8 @@ class Residence {
       'regionName': regionName,
       'cityCode': cityCode,
       'cityName': cityName,
+      'commune': commune,
+      'quartier': quartier,
       'latitude': latitude,
       'longitude': longitude,
       'formattedAddress': formattedAddress,

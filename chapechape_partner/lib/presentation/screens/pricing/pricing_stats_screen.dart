@@ -31,6 +31,11 @@ class _PricingStatsScreenState extends State<PricingStatsScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: const BorderSide(color: Colors.white54),
+              backgroundColor: Colors.transparent,
+            ),
             icon: const Icon(Icons.refresh),
             onPressed: () {
               context.read<PricingBloc>().add(LoadPricingStatsEvent());

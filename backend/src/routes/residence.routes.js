@@ -7,138 +7,160 @@ const upload = require('../middlewares/upload.middleware');
 const { uploadResidenceImages } = require('../config/cloudinary');
 const residenceController = require('../controllers/residence/residence.controller');
 const {
-    createResidence,
-    getResidences,
-    getResidence,
-    updateResidence,
-    deleteResidence,
-    searchResidences,
-    uploadImages,
-    deleteImage,
-    getAllResidences,
-    getPopularResidences,
-    checkResidenceAvailability,
-    getFavoriteResidences,
-    addToFavorites,
-    removeFromFavorites
+  createResidence,
+  getResidences,
+  getResidence,
+  updateResidence,
+  deleteResidence,
+  searchResidences,
+  uploadImages,
+  deleteImage,
+  getAllResidences,
+  getPopularResidences,
+  getResidenceCountByType,
+  getTrendingResidences,
+  checkResidenceAvailability,
+  getFavoriteResidences,
+  addToFavorites,
+  removeFromFavorites
 } = residenceController;
 const Residence = require('../models/residence.model');
 
-// Routes publiques
+// =============================================================================
+// RÈGLE FONDAMENTALE EXPRESS :
+// Les routes sont matchées dans l'ORDRE DE DÉCLARATION.
+// Toutes les routes statiques nommées DOIVENT être déclarées AVANT /:id,
+// sinon /:id les capture en premier (ex: "my-residences" → findById("my-residences") → 500).
+// Les routes nécessitant protect/authorize avant router.use(protect)
+// doivent avoir ces middlewares appliqués INLINE sur le handler.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// BLOC 1 — Routes publiques statiques (sans authentification)
+// Toutes déclarées avant /:id pour éviter toute capture parasite
+// -----------------------------------------------------------------------------
 router.get('/', getResidences);
 router.get('/search', searchResidences);
 router.get('/all', getAllResidences);
-router.get('/popular', getPopularResidences); // Nouveau: résidences populaires pour app client
+router.get('/popular', getPopularResidences);
+router.get('/stats/count-by-type', getResidenceCountByType);
+router.get('/trending', getTrendingResidences);
 
-// Routes protégées (partenaires uniquement)
-router.use(protect);
-
-// Récupérer les résidences du partenaire connecté
-router.get('/my-residences', authorize('partner'), async (req, res) => {
+// Résidences d'un partenaire par son ID (accès public — app client / site vitrine)
+router.get('/partner/:partnerId', async (req, res) => {
   try {
-    console.log('DEBUG - /my-residences - Utilisateur:', req.user);
-    console.log('DEBUG - /my-residences - ID Utilisateur:', req.user.id);
-    console.log('DEBUG - /my-residences - Rôle Utilisateur:', req.user.role);
-    
-    // Récupérer les résidences du partenaire avec un try/catch interne
+    const { partnerId } = req.params;
+    if (!partnerId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: 'ID partenaire invalide' });
+    }
+    const residences = await Residence.find({
+      partner: partnerId,
+      deleted: { $ne: true }
+    }).lean();
+    if (!residences || residences.length === 0) {
+      return res.status(404).json({ success: false, message: 'Aucune résidence trouvée pour ce partenaire' });
+    }
+    return res.json({ success: true, count: residences.length, data: residences });
+  } catch (error) {
+    console.error('Erreur GET /partner/:partnerId:', error.message);
+    return res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// BLOC 2 — Routes protégées statiques avec protect/authorize INLINE
+// Déclarées ici (avant /:id) pour ne pas être capturées par la route générique.
+// protect et authorize sont appliqués directement sur chaque route.
+// -----------------------------------------------------------------------------
+
+// Résidences du partenaire connecté
+router.get('/my-residences', protect, authorize('partner'), async (req, res) => {
+  console.log('DEBUG /my-residences - route atteinte');
+  try {
+    const partnerId = req.user?.id ?? req.user?._id;
+    if (!partnerId) {
+      console.error('DEBUG /my-residences - req.user manquant, keys:', req.user ? Object.keys(req.user) : 'null');
+      return res.status(401).json({ success: false, message: 'Utilisateur non identifié' });
+    }
+    const filter = { partner: partnerId, deleted: { $ne: true } };
     try {
-      console.log('DEBUG - /my-residences - Recherche des résidences pour partner:', req.user.id);
-      
-      // Vérifier si le partenaire existe dans la base de données
-      const filter = { partner: req.user.id, deleted: { $ne: true } }; // Exclure les résidences supprimées
-      console.log('DEBUG - /my-residences - Filtre de recherche:', JSON.stringify(filter));
-      
-      // Récupérer toutes les résidences pour vérification (DEBUG)
-      const allResidences = await Residence.find({ partner: req.user.id }).lean();
-      console.log(`DEBUG - TOUTES les résidences pour ce partenaire (sans filtre): ${allResidences.length}`);
-      
-      if (allResidences.length > 0) {
-        allResidences.forEach(res => {
-          console.log(`- Résidence ID: ${res._id}, Titre: ${res.title}, Status: ${res.status}, Supprimée: ${res.deleted || false}`);
-        });
-      } else {
-        console.log('Aucune résidence trouvée du tout pour ce partenaire (sans filtre)');
-      }
-      
-      // Maintenant avec le filtre 'deleted'
       const residences = await Residence.find(filter).lean();
-      console.log(`DEBUG - /my-residences - ${residences.length} résidences trouvées après filtrage`);
-      
-      if (residences.length > 0) {
-        residences.forEach(res => {
-          console.log(`- APRÈS FILTRE - Résidence ID: ${res._id}, Titre: ${res.title}, Status: ${res.status}`);
-        });
-      }
-      
-      res.json({ success: true, data: residences });
+      console.log('DEBUG /my-residences - ok, count=', residences.length);
+      return res.json({ success: true, data: residences });
     } catch (innerError) {
-      console.error('DEBUG - /my-residences - Erreur spécifique lors de la recherche:', innerError);
-      throw innerError; // Re-lancer l'erreur pour le catch externe
+      console.error('DEBUG /my-residences - Erreur MongoDB:', innerError.message, innerError.stack);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des résidences du partenaire',
+        error: innerError.message
+      });
     }
   } catch (error) {
-    console.error('Erreur détaillée lors de la récupération des résidences du partenaire:', error);
-    res.status(500).json({ 
-      success: false, 
+    console.error('DEBUG /my-residences - Erreur détaillée:', error.message, error.stack);
+    return res.status(500).json({
+      success: false,
       message: 'Erreur lors de la récupération des résidences du partenaire',
       error: error.message
     });
   }
 });
 
-// Routes pour les favoris (compatibilité app client) - nécessitent une authentification
+// Favoris du client connecté (compatibilité app client)
 router.get('/favorites', protect, getFavoriteResidences);
 router.post('/favorites/:id', protect, addToFavorites);
 router.delete('/favorites/:id', protect, removeFromFavorites);
 
-// Route de redirection pour les avis (compatibilité app client)
+// -----------------------------------------------------------------------------
+// BLOC 3 — Routes publiques dynamiques (avec paramètre :id)
+// Déclarées EN DERNIER parmi les routes publiques, après toutes les routes
+// statiques, pour ne pas capturer /my-residences, /favorites, /partner, etc.
+// -----------------------------------------------------------------------------
+router.get('/:id/availability', checkResidenceAvailability);
+
+// Redirection vers l'endpoint des avis (compatibilité app client — accès public)
 router.get('/:id/reviews', (req, res) => {
-    // Redirection vers l'endpoint existant des avis
-    res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
+  res.redirect(301, `/api/reviews/residence/${req.params.id}?${new URLSearchParams(req.query).toString()}`);
 });
 
-// Routes spécifiques avec paramètre id - doivent être après les routes générales mais avant la route générique /:id
-router.get('/:id/availability', checkResidenceAvailability); // Nouveau: vérification disponibilité pour app client
-
-// Route publique avec paramètre id - doit être après les routes spécifiques
+// Route générique — DOIT RESTER EN DERNIÈRE position dans les routes GET publiques
 router.get('/:id', getResidence);
 
-// Routes qui nécessitent des droits de partenaire ou d'administrateur
+// -----------------------------------------------------------------------------
+// BLOC 4 — Middleware global protect + authorize pour toutes les routes suivantes
+// Toutes les routes définies après ce bloc héritent de protect et authorize.
+// -----------------------------------------------------------------------------
+router.use(protect);
 router.use(authorize('partner', 'admin'));
 
-// Ajout de la validation Joi pour la création et la mise à jour
+// Création et modification (validation Joi incluse)
 router.post('/', validate(residenceValidation.createResidence), createResidence);
 router.put('/:id', validate(residenceValidation.updateResidence), updateResidence);
 router.delete('/:id', deleteResidence);
 
-// Routes pour la gestion des images
-// 1. Route traditionnelle avec upload de fichiers physiques
+// Gestion des images
 router.post('/:id/images/local', validate(residenceValidation.uploadImages), upload.residence.array('images', 5), uploadImages);
-
-// 2. Route avec upload direct vers Cloudinary (via multer-storage-cloudinary)
 router.post('/:id/images/cloudinary', validate(residenceValidation.uploadImages), uploadResidenceImages, uploadImages);
-
-// 3. Route pour recevoir directement des URLs Cloudinary (depuis l'app mobile/web)
 router.post('/:id/images', validate(residenceValidation.uploadImages), uploadImages);
-
-// 4. Route pour supprimer une image spécifique
 router.delete('/:id/images/:imageIndex', validate(residenceValidation.deleteImage), deleteImage);
 
-// Routes pour les nouvelles fonctionnalités
-router.post('/:id/nearby-places', protect, authorize('partner'), residenceController.addNearbyPlace);
-router.put('/:id/nearby-places', protect, authorize('partner'), residenceController.updateNearbyPlaces);
+// Points d'intérêt à proximité
+router.post('/:id/nearby-places', residenceController.addNearbyPlace);
+router.put('/:id/nearby-places', residenceController.updateNearbyPlaces);
 
-// Routes avec validation Joi pour les FAQs
-router.post('/:id/faqs', protect, authorize('partner'), residenceController.addFaq);
-router.put('/:id/faqs', protect, authorize('partner'), validate(residenceValidation.updateFaqs), residenceController.updateFaqs);
+// FAQs
+router.post('/:id/faqs', residenceController.addFaq);
+router.put('/:id/faqs', validate(residenceValidation.updateFaqs), residenceController.updateFaqs);
 
-// Routes avec validation Joi pour les méthodes de paiement
-router.put('/:id/payment-methods', protect, authorize('partner'), validate(residenceValidation.updatePaymentMethods), residenceController.updatePaymentMethods);
+// Méthodes de paiement
+router.put('/:id/payment-methods', validate(residenceValidation.updatePaymentMethods), residenceController.updatePaymentMethods);
 
-// Routes avec validation Joi pour les équipements améliorés
-router.put('/:id/enhanced-amenities', protect, authorize('partner'), validate(residenceValidation.updateEnhancedAmenities), residenceController.updateEnhancedAmenities);
+// Équipements améliorés
+router.put('/:id/enhanced-amenities', validate(residenceValidation.updateEnhancedAmenities), residenceController.updateEnhancedAmenities);
 
-// Autres routes
-router.put('/:id/stars', protect, authorize('admin'), residenceController.updateStars);
-router.put('/:id/ratings', protect, residenceController.updateRatings);
+// Étoiles (admin seulement — protect + authorize('admin') inline pour surcharger le authorize global)
+router.put('/:id/stars', authorize('admin'), residenceController.updateStars);
+
+// Notations (clients authentifiés — accessible via protect global)
+router.put('/:id/ratings', residenceController.updateRatings);
 
 module.exports = router;

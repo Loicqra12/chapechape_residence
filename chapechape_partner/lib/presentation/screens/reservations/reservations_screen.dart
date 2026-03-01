@@ -697,40 +697,42 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
 }
 
   Widget _buildEmptyReservationsState(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Illustration des réservations
-          Image.asset(
-            'assets/images/illustrations/empty_reservation.png',
-            width: MediaQuery.of(context).size.width * 0.85,
-            height: MediaQuery.of(context).size.width * 0.85,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback vers l'icône si l'image ne charge pas
-              return Icon(
-                Icons.calendar_today_outlined,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-              );
-            },
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/illustrations/empty_reservation.png',
+                width: MediaQuery.of(context).size.width * 0.65,
+                height: MediaQuery.of(context).size.width * 0.65,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.calendar_today_outlined,
+                    size: 80,
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Aucune réservation trouvée',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Vous n\'avez pas encore de réservations. Les demandes de réservation apparaîtront ici.',
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Aucune réservation trouvée',
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Vous n\'avez pas encore de réservations. Les demandes de réservation apparaîtront ici.',
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }

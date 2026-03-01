@@ -1,15 +1,7 @@
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
 
-// Chargement optionnel de rate-limit-redis (évite crash si npm install incomplet en prod)
-let RedisStore;
-try {
-  RedisStore = require('rate-limit-redis');
-} catch (e) {
-  logger.warn('rate-limit-redis not installed, rate limiting will use memory store. Run: npm install rate-limit-redis');
-}
-
-// Import du client Redis (avec support Mock)
+// Redis client (optionnel)
 let redisClient;
 try {
   redisClient = require('../config/redis');
@@ -17,32 +9,38 @@ try {
   logger.warn('Redis client import failed, using memory store for rate limiting');
 }
 
+// Chargement paresseux de rate-limit-redis (évite crash au démarrage si module absent)
+function getRedisStore() {
+  try {
+    return require('rate-limit-redis');
+  } catch (e) {
+    return null;
+  }
+}
+
 /**
  * Crée un store Redis avec fallback en mémoire
- * Si Redis est indisponible ou rate-limit-redis absent, rate-limit utilisera la mémoire locale
+ * Ne charge rate-limit-redis qu'au moment de créer le store (évite crash au démarrage)
  */
 const createStore = (prefix) => {
-  // En développement, sans Redis ou sans module rate-limit-redis → mémoire
-  if (process.env.NODE_ENV === 'development' || !redisClient || !RedisStore) {
-    if (!RedisStore) {
-      logger.warn(`Rate limiter "${prefix}" using memory store (rate-limit-redis not available)`);
-    } else {
-      logger.info(`Rate limiter "${prefix}" using memory store (dev mode)`);
-    }
-    return undefined; // express-rate-limit utilisera MemoryStore par défaut
+  if (process.env.NODE_ENV === 'development' || !redisClient) {
+    logger.info(`Rate limiter "${prefix}" using memory store (dev or no Redis)`);
+    return undefined;
   }
-
+  const RedisStoreClass = getRedisStore();
+  if (!RedisStoreClass) {
+    logger.warn(`Rate limiter "${prefix}" using memory store (rate-limit-redis not installed)`);
+    return undefined;
+  }
   try {
-    // En production, utiliser Redis
-    return new RedisStore({
+    return new RedisStoreClass({
       client: redisClient,
       prefix: `rl:${prefix}:`,
       sendCommand: (...args) => redisClient.call(...args),
     });
   } catch (error) {
     logger.error(`Failed to create Redis store for "${prefix}":`, error);
-    logger.warn(`Falling back to memory store for "${prefix}"`);
-    return undefined; // Fallback mémoire
+    return undefined;
   }
 };
 

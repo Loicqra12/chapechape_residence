@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_utils.dart';
-import '../../core/models/city.dart';
-import '../../core/models/country.dart';
-import 'search_bar_widget.dart';
+import '../screens/search_destination_screen.dart';
 import 'residence_type_selector_widget.dart';
-import 'price_range_slider_widget.dart';
-import 'multilevel_location_selector.dart';
 import 'animated_search_field.dart';
-import 'animated_filter_option.dart';
-import 'date_range_picker_widget.dart';
-import 'common/premium_card.dart';
+import 'duration_selector.dart';
 
 class AdvancedSearchWidget extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSearch;
-  
+
+  /// Active un layout plus proche d'Airbnb (utilisé par la barre d'accueil).
+  /// Pour l'instant ce flag est surtout là pour la compatibilité, le contenu reste identique.
+  final bool useAirbnbLayout;
+
   const AdvancedSearchWidget({
     Key? key,
     this.onSearch,
+    this.useAirbnbLayout = false,
   }) : super(key: key);
 
   @override
@@ -27,21 +27,17 @@ class AdvancedSearchWidget extends StatefulWidget {
 }
 
 class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
-  // État de la recherche
-  Country _selectedCountry = Country(
-    code: 'ci', 
-    name: 'Côte d\'Ivoire', 
-    phoneCode: '+225'
-  );
-  City? _selectedCity;
-  LocationSelection? _selectedLocation;
-  DateTimeRange? _selectedDateRange;
-  String? _selectedCategoryId;
+  // Destination sélectionnée via SearchDestinationScreen
+  DestinationResult? _selectedDestination;
+  DurationOption? _selectedDuration;
   ResidenceType? _selectedResidenceType;
   RangeValues _priceRange = const RangeValues(5000, 500000);
   
   // Utilisation des catégories définies dans le ResidenceTypeSelectorWidget
   final List<ResidenceCategory> _residenceCategories = availableResidenceCategories;
+  
+  // Types filtrés selon la durée
+  List<ResidenceType> _filteredTypes = [];
   
   // Contrôleur pour le champ de recherche
   final TextEditingController _searchController = TextEditingController();
@@ -51,21 +47,112 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
   static const double _maxPrice = 50000000;  // 50,000,000 FCFA
   
   @override
+  void initState() {
+    super.initState();
+    _filteredTypes = _getAllTypes(); // Initialement tous les types
+  }
+  
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
   
+  /// Récupère tous les types de toutes les catégories
+  List<ResidenceType> _getAllTypes() {
+    return _residenceCategories.expand((cat) => cat.types).toList();
+  }
+  
+  /// Filtre les types selon la durée sélectionnée et reconstruit les catégories
+  void _filterTypesByDuration(DurationOption? duration) {
+    if (duration == null) {
+      setState(() {
+        _filteredTypes = _getAllTypes();
+        // Si le type sélectionné reste valide, on le garde
+      });
+      return;
+    }
+
+    final allowedPeriods = duration.periods;
+    final filtered = _getAllTypes().where((type) {
+      final typePeriod = _getExpectedPricePeriodForType(type.id);
+      return allowedPeriods.contains(typePeriod);
+    }).toList();
+
+    setState(() {
+      _filteredTypes = filtered;
+      // Réinitialiser le type sélectionné s'il n'est plus compatible
+      if (_selectedResidenceType != null &&
+          !filtered.any((t) => t.id == _selectedResidenceType!.id)) {
+        _selectedResidenceType = null;
+      }
+    });
+  }
+
+  /// Construit les catégories filtrées depuis _filteredTypes
+  List<ResidenceCategory> _buildFilteredCategories() {
+    if (_filteredTypes.isEmpty || _selectedDuration == null) {
+      return _residenceCategories;
+    }
+    final filteredIds = _filteredTypes.map((t) => t.id).toSet();
+    return _residenceCategories
+        .map((cat) => ResidenceCategory(
+              id: cat.id,
+              name: cat.name,
+              icon: cat.icon,
+              types: cat.types.where((t) => filteredIds.contains(t.id)).toList(),
+            ))
+        .where((cat) => cat.types.isNotEmpty)
+        .toList();
+  }
+  
+  /// Reproduit la logique Partner App côté Client
+  String _getExpectedPricePeriodForType(String type) {
+    // HOUR
+    if (['hotel_passage', 'motel', 'chambres_passage'].contains(type)) {
+      return 'hour';
+    }
+    
+    // DAY
+    if ([
+      'studio_meuble',
+      'guest_house',
+      'boutique_hotel',
+      'hotel_luxe',
+      'lodge',
+      'bungalow',
+      'case_traditionnelle',
+      'campement_touristique',
+      'maison_flottante',
+      'maison_hotes',
+    ].contains(type)) {
+      return 'day';
+    }
+    
+    // WEEK
+    if ([
+      'maison_hotes_economique',
+      'residence_familiale',
+      'residence_hoteliere',
+    ].contains(type)) {
+      return 'week';
+    }
+    
+    // MONTH (par défaut)
+    return 'month';
+  }
+
   void _executeSearch() {
-    final searchParams = {
-      'country': _selectedCountry,
-      'city': _selectedCity,
-      'location': _selectedLocation?.toMap(),
-      'dateRange': _selectedDateRange,
-      'residenceType': _selectedResidenceType?.modelType != null ? _selectedResidenceType?.modelType.toString() : _selectedResidenceType?.id,
-      'categoryId': _selectedCategoryId,
-      'priceRange': _priceRange,
-      'searchTerm': _searchController.text,
+    final searchParams = <String, dynamic>{
+      if (_searchController.text.isNotEmpty) 'query': _searchController.text,
+      if (_selectedDestination != null) 'city': _selectedDestination!.city,
+      'countryCode': 'ci',
+      'minPrice': _priceRange.start,
+      'maxPrice': _priceRange.end,
+      if (_selectedResidenceType != null)
+        'residenceType': _selectedResidenceType!.id,
+      if (_selectedDuration != null)
+        'period': _selectedDuration!.periods.first,
     };
     
     if (widget.onSearch != null) {
@@ -83,107 +170,76 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
   }
   
   // La sélection de dates est maintenant gérée par le widget DateRangePickerWidget
-  
+
+  // Champ de recherche animé (réutilisé dans les deux layouts)
+  Widget _buildSearchField() {
+    return AnimatedSearchField(
+      controller: _searchController,
+      hint: 'Rechercher une résidence, un quartier, une ville...',
+      prefixIcon: Icons.search,
+      onSubmitted: (value) {
+        // Déclencher la recherche lors de la soumission
+        _executeSearch();
+      },
+      getSuggestions: (query) async {
+        // Ici, normalement, vous feriez appel à un service pour obtenir des suggestions
+        // Pour l'exemple, utilisons des suggestions statiques
+        await Future.delayed(const Duration(milliseconds: 300)); // Simuler un délai réseau
+        
+        if (query.isEmpty) return [];
+        
+        final suggestions = [
+          'Abidjan - Cocody',
+          'Abidjan - Marcory',
+          'Abidjan - Plateau',
+          'Abidjan - Zone 4',
+          'Abidjan - Angré',
+          'Yamoussoukro - Centre',
+          'Grand Bassam',
+          'Assinie',
+          'San Pedro',
+        ];
+        
+        return suggestions.where((suggestion) => 
+          suggestion.toLowerCase().contains(query.toLowerCase())
+        ).toList();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.softShadow,
       ),
-      child: ExpansionTile(
-        title: Row(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.search, color: AppTheme.primaryColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Recherche avancée',
-                style: TextStyle(
-                  color: Colors.grey[800],
-                  fontWeight: FontWeight.bold,
-                  fontSize: context.responsiveFontSize(18),
-                ),
-              ),
-            ),
+            // Localisation
+            _buildLocationSection(),
+
+            const SizedBox(height: 24),
+
+            // Durée
+            _buildDateRangeSection(),
+
+            const SizedBox(height: 24),
+
+            // Type de résidence et prix
+            _buildTypeAndPriceSection(),
+
+            const SizedBox(height: 16),
+
+            // Bouton de recherche
+            _buildSearchButton(),
           ],
         ),
-        initiallyExpanded: true,
-        backgroundColor: Colors.white,
-        collapsedBackgroundColor: Colors.white,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        childrenPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        children: [
-          // Champ de recherche animé
-          AnimatedSearchField(
-            controller: _searchController,
-            hint: 'Rechercher une résidence, un quartier, une ville...',
-            prefixIcon: Icons.search,
-            onSubmitted: (value) {
-              // Déclencher la recherche lors de la soumission
-              _executeSearch();
-            },
-            getSuggestions: (query) async {
-              // Ici, normalement, vous feriez appel à un service pour obtenir des suggestions
-              // Pour l'exemple, utilisons des suggestions statiques
-              await Future.delayed(const Duration(milliseconds: 300)); // Simuler un délai réseau
-              
-              if (query.isEmpty) return [];
-              
-              final suggestions = [
-                'Abidjan - Cocody',
-                'Abidjan - Marcory',
-                'Abidjan - Plateau',
-                'Abidjan - Zone 4',
-                'Abidjan - Angré',
-                'Yamoussoukro - Centre',
-                'Grand Bassam',
-                'Assinie',
-                'San Pedro',
-              ];
-              
-              return suggestions.where((suggestion) => 
-                suggestion.toLowerCase().contains(query.toLowerCase())
-              ).toList();
-            },
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Section des filtres rapides
-          _buildQuickFiltersSection(),
-          
-          const SizedBox(height: 24),
-          
-          // Localisation améliorée
-          _buildLocationSection(),
-          
-          const SizedBox(height: 24),
-          
-          // Date et durée
-          _buildDateRangeSection(),
-          
-          const SizedBox(height: 24),
-          
-          // Type de résidence et prix
-          _buildTypeAndPriceSection(),
-          
-          const SizedBox(height: 16),
-          
-          // Bouton de recherche
-          _buildSearchButton(),
-        ],
       )
       .animate()
       .fade(duration: 400.ms, curve: Curves.easeOutQuad)
@@ -191,99 +247,84 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     );
   }
   
-  // Section des filtres rapides avec options animées
-  Widget _buildQuickFiltersSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Filtres rapides',
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.bold,
-            fontSize: context.responsiveFontSize(16),
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Liste horizontale de filtres basée sur les catégories
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              // Option "Toutes les résidences"
-              AnimatedFilterOption(
-                label: 'Toutes',
-                icon: Icons.home,
-                isActive: _selectedCategoryId == null && _selectedResidenceType == null,
-                onTap: () {
-                  setState(() {
-                    _selectedCategoryId = null;
-                    _selectedResidenceType = null;
-                  });
-                },
-              ),
-              
-              const SizedBox(width: 8),
-              
-              // Options basées sur nos catégories
-              ..._residenceCategories.map((category) {
-                // Pour chaque catégorie, créer une option de filtre rapide
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: AnimatedFilterOption(
-                    label: category.name,
-                    icon: category.icon,
-                    isActive: _selectedCategoryId == category.id,
-                    onTap: () {
-                      setState(() {
-                        _selectedCategoryId = category.id;
-                        _selectedResidenceType = null; // Réinitialiser le type
-                      });
-                    },
-                  ),
-                );
-              }).toList(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-  
-  // Section de localisation
+  // Section de localisation — ouvre SearchDestinationScreen
   Widget _buildLocationSection() {
+    final hasDestination = _selectedDestination != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Localisation',
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.bold,
-            fontSize: context.responsiveFontSize(16),
-          ),
-        ),
-        
+        Text('Où ?', style: AppTextStyles.title),
         const SizedBox(height: 12),
-        
-        // Widget de sélection de localisation multi-niveau
-        MultilevelLocationSelector(
-          onLocationSelected: (location) {
-            setState(() {
-              _selectedLocation = location;
-              // Pour compatibilité avec le code existant
-              if (location.country != null) {
-                _selectedCountry = location.country!;
-              }
-              if (location.city != null) {
-                _selectedCity = location.city;
-              }
-            });
+        InkWell(
+          onTap: () async {
+            final result = await Navigator.of(context, rootNavigator: true)
+                .push<DestinationResult>(
+              MaterialPageRoute(
+                builder: (_) => const SearchDestinationScreen(),
+                fullscreenDialog: true,
+              ),
+            );
+            if (result != null) {
+              setState(() => _selectedDestination = result);
+            }
           },
-          initialSelection: _selectedLocation,
-          hint: 'Sélectionner un lieu',
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: hasDestination
+                  ? AppTheme.primaryColor.withOpacity(0.06)
+                  : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasDestination
+                    ? AppTheme.primaryColor
+                    : Colors.grey[300]!,
+                width: hasDestination ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  hasDestination
+                      ? Icons.location_on
+                      : Icons.location_on_outlined,
+                  size: 20,
+                  color: hasDestination
+                      ? AppTheme.primaryColor
+                      : Colors.grey[500],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasDestination
+                        ? _selectedDestination!.displayName
+                        : 'Choisir un quartier ou une ville',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: hasDestination
+                          ? const Color(0xFF1A1A1A)
+                          : Colors.grey[500],
+                      fontWeight: hasDestination
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (hasDestination)
+                  GestureDetector(
+                    onTap: () =>
+                        setState(() => _selectedDestination = null),
+                    child: Icon(Icons.close, size: 16, color: Colors.grey[500]),
+                  )
+                else
+                  Icon(Icons.arrow_forward_ios,
+                      size: 14, color: Colors.grey[400]),
+              ],
+            ),
+          ),
         ),
       ],
     )
@@ -292,31 +333,23 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     .slideX(begin: -0.1, end: 0, delay: 100.ms, duration: 300.ms);
   }
   
-  // Section de sélection de dates
+  // Section de sélection de durée (remplace dates)
   Widget _buildDateRangeSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Dates de séjour',
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontWeight: FontWeight.bold,
-            fontSize: context.responsiveFontSize(16),
-          ),
-        ),
-        
-        const SizedBox(height: 10),
-        
-        // Widget de sélection de dates personnalisé
-        DateRangePickerWidget(
-          initialDateRange: _selectedDateRange,
-          onDateRangeSelected: (dateRange) {
+        // Sélecteur de durée multi-période
+        DurationSelector(
+          initialDuration: _selectedDuration,
+          onDurationChanged: (duration) {
             setState(() {
-              _selectedDateRange = dateRange;
+              _selectedDuration = duration;
             });
+            // Filtrer automatiquement les types selon la durée
+            _filterTypesByDuration(duration);
           },
         ),
+        
       ],
     )
     .animate()
@@ -341,22 +374,44 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         
         const SizedBox(height: 12),
         
-        // Utiliser directement notre widget ResidenceTypeSelectorWidget
+        // Message contextuel si durée sélectionnée
+        if (_selectedDuration != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 14, color: AppTheme.primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Affichage des types compatibles avec "${_selectedDuration!.label}"',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // Types filtrés selon la durée sélectionnée
         ResidenceTypeSelectorWidget(
-          categories: _residenceCategories,
-          initialCategoryId: _selectedCategoryId,
+          categories: _buildFilteredCategories(),
           initialType: _selectedResidenceType,
           onTypeSelected: (type) {
-            setState(() {
-              _selectedResidenceType = type;
-              // Trouver la catégorie correspondante
-              for (var category in _residenceCategories) {
-                if (category.types.contains(type)) {
-                  _selectedCategoryId = category.id;
-                  break;
-                }
-              }
-            });
+            setState(() => _selectedResidenceType = type);
           },
         ),
         

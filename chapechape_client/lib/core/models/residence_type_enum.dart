@@ -250,15 +250,107 @@ extension ResidenceTypeExtension on ResidenceType {
   }
 
   /// Convertit une chaîne snake_case en ResidenceType
+  /// Couvre tous les types envoyés par l'app partner.
   static ResidenceType fromSnakeCase(String? value) {
     if (value == null) return ResidenceType.other;
-    
-    final camelCase = value.replaceAllMapped(
-      RegExp(r'_([a-z])'),
-      (match) => match.group(1)!.toUpperCase()
-    );
-    
-    return fromString(camelCase);
+
+    switch (value.toLowerCase().trim()) {
+      // ── Appartements ─────────────────────────────────────────────────
+      case 'appartement_meuble':
+      case 'furnished_apartment':
+        return ResidenceType.appartementMeuble;
+      case 'apartment':
+      case 'appartement':
+        return ResidenceType.apartment;
+      case 'appartement_vide':
+        return ResidenceType.appartementNonMeuble;
+      // ── Studios ──────────────────────────────────────────────────────
+      case 'studio_meuble':
+      case 'furnished_studio':
+        return ResidenceType.studioMeuble;
+      case 'studio':
+        return ResidenceType.studio;
+      // ── Villas ───────────────────────────────────────────────────────
+      case 'villa_meublee':
+      case 'villa_meuble':
+        return ResidenceType.villaMeublee;
+      case 'villa_vide':
+        return ResidenceType.villaNonMeublee;
+      case 'villa':
+        return ResidenceType.villa;
+      // ── Maison ───────────────────────────────────────────────────────
+      case 'house':
+      case 'maison':
+        return ResidenceType.house;
+      // ── Types spéciaux ────────────────────────────────────────────────
+      case 'penthouse':
+        return ResidenceType.penthouse;
+      case 'loft':
+        return ResidenceType.loft;
+      case 'grenier':
+        return ResidenceType.grenier;
+      case 'immeuble':
+        return ResidenceType.immeuble;
+      case 'cour_commune':
+        return ResidenceType.courCommune;
+      // ── Hôtels ───────────────────────────────────────────────────────
+      case 'hotel_passage':
+        return ResidenceType.hotelDePassage;
+      case 'motel':
+        return ResidenceType.motel;
+      case 'boutique_hotel':
+        return ResidenceType.boutiqueHotel;
+      case 'hotel_luxe':
+      case 'hotel_de_luxe':
+        return ResidenceType.hotelDeLuxe;
+      case 'guest_house':
+      case 'auberge_et_maison_d_hotes':
+        return ResidenceType.aubergeEtMaisonDHotes;
+      case 'residence_hoteliere':
+        return ResidenceType.residenceHoteliere;
+      case 'hotel':
+      case 'hotel_room':
+        return ResidenceType.hotel;
+      // ── Insolites ────────────────────────────────────────────────────
+      case 'bungalow':
+        return ResidenceType.bungalow;
+      case 'lodge':
+      case 'lodge_et_ecolodge':
+        return ResidenceType.lodgeEtEcolodge;
+      case 'case_traditionnelle':
+        return ResidenceType.caseTraditionnelle;
+      case 'maison_flottante':
+        return ResidenceType.maisonFlottante;
+      case 'campement_touristique':
+        return ResidenceType.campementTouristique;
+      // ── Colocations ──────────────────────────────────────────────────
+      case 'chambre_colocation':
+      case 'chambre_en_colocation':
+        return ResidenceType.chambreEnColocation;
+      case 'coliving':
+        return ResidenceType.cohabitation;
+      case 'maison_hotes':
+        return ResidenceType.guesthouse;
+      case 'residence_universitaire':
+        return ResidenceType.residenceUniversitaire;
+      case 'cite_dortoir':
+        return ResidenceType.citeDortoir;
+      // ── Économiques ──────────────────────────────────────────────────
+      case 'maison_hotes_economique':
+        return ResidenceType.maisonDHotesEconomique;
+      case 'residence_familiale':
+      case 'residence_familiale_en_location':
+        return ResidenceType.residenceFamilialeEnLocation;
+      case 'chambres_passage':
+      case 'chambres_de_passage':
+        return ResidenceType.chambresDePassage;
+      // ── Chambre / Room ───────────────────────────────────────────────
+      case 'room':
+      case 'chambre':
+        return ResidenceType.room;
+      default:
+        return ResidenceType.other;
+    }
   }
 
   /// Obtient la catégorie du type de résidence

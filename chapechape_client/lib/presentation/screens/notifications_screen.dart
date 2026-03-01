@@ -305,10 +305,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         case 'booking_reminder':
           context.push('/bookings');
           break;
+        // 🚫 Paiement masqué pour Google Play – redirection vers réservations
         case 'payment_received':
         case 'payment_failed':
         case 'payment_refunded':
-          context.push('/payments');
+          context.push('/bookings');
           break;
         case 'favorite_added':
         case 'favorite_price_changed':

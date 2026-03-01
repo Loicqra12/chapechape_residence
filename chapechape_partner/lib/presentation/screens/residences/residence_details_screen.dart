@@ -176,6 +176,15 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                         ),
                         // Bouton d'édition
                         IconButton(
+                          style: IconButton.styleFrom(
+                            shape: const CircleBorder(),
+                            side: BorderSide(
+                              color: innerBoxIsScrolled
+                                  ? Colors.grey.shade300
+                                  : Colors.white24,
+                            ),
+                            backgroundColor: Colors.transparent,
+                          ),
                           icon: Icon(
                             Icons.edit,
                             color: innerBoxIsScrolled ? Theme.of(context).colorScheme.onSurface : Colors.white,

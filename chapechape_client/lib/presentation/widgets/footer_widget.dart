@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../core/theme/text_styles.dart';
 
 class FooterWidget extends StatelessWidget {
   const FooterWidget({Key? key}) : super(key: key);
@@ -67,10 +68,8 @@ class FooterWidget extends StatelessWidget {
               children: [
                 Text(
                   'Besoin d\'aide ?',
-                  style: TextStyle(
+                  style: AppTextStyles.title.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -164,10 +163,9 @@ class FooterWidget extends StatelessWidget {
       child: ExpansionTile(
         title: Text(
           title,
-          style: TextStyle(
+          style: AppTextStyles.title.copyWith(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: const Color(0xFF1A1A1A),
           ),
         ),
         iconColor: const Color(0xFFD4AF37),

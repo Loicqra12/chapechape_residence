@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'residence_type_enum.dart';
 import '../utils/formatters.dart';
 import '../constants/app_assets.dart' as assets;
@@ -47,8 +48,10 @@ class Residence {
   final double fullDayRate;
   final double weekendRate;
   final bool isVip;
-  final String reservationMode; // 'instant' ou 'approval'
-  
+  final String reservationMode;
+  final List<String> paymentMethods;
+  final bool isFavorite;
+
   bool get hasDiscount => discountPrice != null && discountPrice! < price;
   double? get discountPrice => priceDetails != null && priceDetails!.containsKey('discountPrice') ? priceDetails!['discountPrice'] as double : null;
   double get discountPercentage => hasDiscount ? ((price - discountPrice!) / price) * 100 : 0;
@@ -63,7 +66,7 @@ class Residence {
       }
       return null;
     } catch (e) {
-      print('Erreur lors de l\'accès à latitude: $e');
+      if (kDebugMode) debugPrint('Erreur lors de l\'accès à latitude: $e');
       return null;
     }
   }
@@ -76,7 +79,7 @@ class Residence {
       }
       return null;
     } catch (e) {
-      print('Erreur lors de l\'accès à longitude: $e');
+      if (kDebugMode) debugPrint('Erreur lors de l\'accès à longitude: $e');
       return null;
     }
   }
@@ -114,7 +117,6 @@ class Residence {
   String get neighborhood => location.containsKey('neighborhood') ? location['neighborhood'] as String : '';
   String get address => location.containsKey('address') ? location['address'] as String : '';
   String get formattedAddress => location.displayAddress;
-  bool get isFavorite => priceDetails != null && priceDetails!.containsKey('isFavorite') ? priceDetails!['isFavorite'] as bool : false;
   List<double> get coordinates {
     // Cas 1: Format ancien (liste [longitude, latitude])
     if (location.containsKey('coordinates')) {
@@ -216,7 +218,9 @@ class Residence {
     this.fullDayRate = 0.0,
     this.weekendRate = 0.0,
     this.isVip = false,
-    this.reservationMode = 'instant', // Valeur par défaut
+    this.reservationMode = 'instant',
+    this.paymentMethods = const [],
+    this.isFavorite = false,
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
@@ -226,7 +230,7 @@ class Residence {
       try {
         createdAt = DateTime.parse(json['createdAt'] as String);
       } catch (e) {
-        print('Erreur de parsing de la date de création: $e');
+        if (kDebugMode) debugPrint('Erreur de parsing de la date de création: $e');
       }
     }
     
@@ -235,7 +239,7 @@ class Residence {
       try {
         updatedAt = DateTime.parse(json['updatedAt'] as String);
       } catch (e) {
-        print('Erreur de parsing de la date de mise à jour: $e');
+        if (kDebugMode) debugPrint('Erreur de parsing de la date de mise à jour: $e');
       }
     }
     
@@ -255,10 +259,15 @@ class Residence {
         residenceType = ResidenceType.other;
       }
     } catch (e) {
-      print('Erreur lors du parsing du type de résidence: $e');
+      if (kDebugMode) debugPrint('Erreur lors du parsing du type de résidence: $e');
       residenceType = ResidenceType.other;
     }
     
+    // Extraction préalable des amenities (nécessaire pour dériver hasPool/hasWifi)
+    final List<String> amenitiesList = json['amenities'] != null
+        ? List<String>.from(json['amenities'] as List)
+        : [];
+
     // Extraction des détails de prix
     String pricePeriod = json['pricePeriod'] as String? ?? 'month';
     double hourlyRate = 0.0;
@@ -309,19 +318,25 @@ class Residence {
       bathrooms: json['bathrooms'] != null
           ? int.parse(json['bathrooms'].toString())
           : 1,
-      squareMeters: json['squareMeters'] != null 
+      squareMeters: json['squareMeters'] != null
           ? double.parse(json['squareMeters'].toString())
-          : json['surface'] != null
-              ? double.parse(json['surface'].toString())
-              : 0.0,
-      amenities: json['amenities'] != null
-          ? List<String>.from(json['amenities'] as List)
-          : [],
-      hasPool: json['hasPool'] as bool? ?? false,
-      hasWifi: json['hasWifi'] as bool? ?? false,
+          : json['area'] != null
+              ? double.parse(json['area'].toString())
+              : json['surface'] != null
+                  ? double.parse(json['surface'].toString())
+                  : 0.0,
+      amenities: amenitiesList,
+      // hasPool/hasWifi : dérivés de la liste amenities (le backend ne renvoie pas ces champs directs)
+      hasPool: amenitiesList.contains('pool'),
+      hasWifi: amenitiesList.contains('wifi'),
       isVacationResidence: json['isVacationResidence'] as bool? ?? false,
       isSpecialResidence: json['isSpecialResidence'] as bool? ?? false,
-      isAvailable: json['isAvailable'] as bool? ?? true,
+      // isAvailable : le backend renvoie status:'available'/'unavailable', pas un champ isAvailable
+      isAvailable: json['status'] == 'available'
+          ? true
+          : json['status'] == 'unavailable'
+              ? false
+              : json['isAvailable'] as bool? ?? true,
       isFeatured: json['isFeatured'] as bool? ?? false,
       isPopular: json['isPopular'] as bool? ?? false,
       isVerified: json['isVerified'] as bool? ?? false,
@@ -331,16 +346,27 @@ class Residence {
               ? ((json['rating']['overall'] as num?)?.toDouble() ?? 0.0)
               : double.tryParse(json['rating'].toString()) ?? 0.0)
           : 0.0,
-      reviewCount: json['reviewCount'] as int? ?? 0,
+      // reviewCount : stocké dans rating.reviewCount côté backend, pas à la racine
+      reviewCount: json['rating'] is Map
+          ? (json['rating']['reviewCount'] as int? ?? 0)
+          : json['reviewCount'] as int? ?? 0,
       currency: json['currency'] as String? ?? 'XOF',
       type: residenceType,
       maxOccupancy: json['maxOccupancy'] as int? ?? 2,
       owner: json['owner'] as String? ?? json['ownerId'] as String? ?? '',
       createdAt: createdAt,
       updatedAt: updatedAt,
-      allowsPets: json['allowsPets'] as bool? ?? false,
-      allowsSmoking: json['allowsSmoking'] as bool? ?? false,
-      allowsParties: json['allowsParties'] as bool? ?? false,
+      // allowsPets/Smoking/Parties : le backend stocke dans rules:{pets,smoking,parties}
+      // Le partenaire envoie {allowsPets,...}, le backend normalise en {pets,...}
+      allowsPets: json['rules'] is Map
+          ? (json['rules']['pets'] as bool? ?? json['allowsPets'] as bool? ?? false)
+          : json['allowsPets'] as bool? ?? false,
+      allowsSmoking: json['rules'] is Map
+          ? (json['rules']['smoking'] as bool? ?? json['allowsSmoking'] as bool? ?? false)
+          : json['allowsSmoking'] as bool? ?? false,
+      allowsParties: json['rules'] is Map
+          ? (json['rules']['parties'] as bool? ?? json['allowsParties'] as bool? ?? false)
+          : json['allowsParties'] as bool? ?? false,
       priceDetails: json['priceDetails'] as Map<String, dynamic>?,
       contactInfo: json['contactInfo'] as Map<String, dynamic>?,
       videoUrl: json['videoUrl'] as String?,
@@ -348,7 +374,9 @@ class Residence {
       nearbyAttractions: json['nearbyAttractions'] != null
           ? List<String>.from(json['nearbyAttractions'] as List)
           : null,
-      rules: json['rules'] != null
+      // rules: le backend stocke {smoking, pets, parties} (Map), pas un tableau
+      // On retourne null ici — les booléens allowsPets/Smoking/Parties gèrent l'affichage
+      rules: json['rules'] is List
           ? List<String>.from(json['rules'] as List)
           : null,
         pricePeriod: pricePeriod,
@@ -357,6 +385,13 @@ class Residence {
         fullDayRate: fullDayRate,
         weekendRate: weekendRate,
         reservationMode: json['reservationMode'] as String? ?? 'instant',
+      paymentMethods: json['paymentMethods'] != null
+          ? List<String>.from(json['paymentMethods'] as List)
+          : [],
+      isFavorite: json['isFavorite'] as bool? ??
+          (json['priceDetails'] is Map && (json['priceDetails'] as Map).containsKey('isFavorite')
+              ? (json['priceDetails'] as Map)['isFavorite'] as bool? ?? false
+              : false),
     );
   }
 
@@ -409,6 +444,7 @@ class Residence {
         'weekend': weekendRate,
       },
       'reservationMode': reservationMode,
+      'isFavorite': isFavorite,
     };
   }
 
@@ -457,6 +493,8 @@ class Residence {
     double? fullDayRate,
     double? weekendRate,
     String? reservationMode,
+    List<String>? paymentMethods,
+    bool? isFavorite,
   }) {
     return Residence(
       id: id ?? this.id,
@@ -502,6 +540,8 @@ class Residence {
       fullDayRate: fullDayRate ?? this.fullDayRate,
       weekendRate: weekendRate ?? this.weekendRate,
       reservationMode: reservationMode ?? this.reservationMode,
+      paymentMethods: paymentMethods ?? this.paymentMethods,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 

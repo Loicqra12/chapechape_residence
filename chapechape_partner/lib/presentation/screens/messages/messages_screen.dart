@@ -602,6 +602,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
           showLogo: true,
           actions: [
             IconButton(
+              style: IconButton.styleFrom(
+                shape: const CircleBorder(),
+                side: BorderSide(color: Colors.grey.shade300),
+                backgroundColor: Colors.transparent,
+              ),
               icon: SvgPicture.asset(
                 AppIcons.search,
                 width: 24,
@@ -614,6 +619,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
               onPressed: _toggleSearchMode,
             ),
             IconButton(
+              style: IconButton.styleFrom(
+                shape: const CircleBorder(),
+                side: BorderSide(color: Colors.grey.shade300),
+                backgroundColor: Colors.transparent,
+              ),
               icon: SvgPicture.asset(
                 AppIcons.unread,
                 width: 24,
@@ -628,6 +638,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
               },
             ),
             IconButton(
+              style: IconButton.styleFrom(
+                shape: const CircleBorder(),
+                side: BorderSide(color: Colors.grey.shade300),
+                backgroundColor: Colors.transparent,
+              ),
               icon: SvgPicture.asset(
                 AppIcons.support,
                 width: 24,

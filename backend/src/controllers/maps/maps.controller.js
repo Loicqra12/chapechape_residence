@@ -197,9 +197,12 @@ exports.reverseGeocodeCoordinates = asyncHandler(async (req, res) => {
             if (types.includes('locality')) addressComponents.city = component.long_name;
             if (types.includes('country')) addressComponents.country = component.short_name;
             if (types.includes('administrative_area_level_1')) addressComponents.state = component.long_name;
+            if (types.includes('administrative_area_level_2')) addressComponents.commune = component.long_name;
             if (types.includes('postal_code')) addressComponents.postalCode = component.long_name;
             if (types.includes('route')) addressComponents.street = component.long_name;
             if (types.includes('street_number')) addressComponents.streetNumber = component.long_name;
+            if (types.includes('neighborhood')) addressComponents.neighborhood = component.long_name;
+            if (types.includes('sublocality')) addressComponents.sublocality = component.long_name;
         });
         
         res.json({

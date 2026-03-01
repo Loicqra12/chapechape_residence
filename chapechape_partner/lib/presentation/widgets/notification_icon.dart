@@ -38,6 +38,11 @@ class _NotificationIconState extends State<NotificationIcon> {
       alignment: Alignment.center,
       children: [
         IconButton(
+          style: IconButton.styleFrom(
+            shape: const CircleBorder(),
+            side: BorderSide(color: Colors.grey.shade300),
+            backgroundColor: Colors.transparent,
+          ),
           icon: const Icon(Icons.notifications),
           onPressed: () => _showNotificationMenu(context),
         ),

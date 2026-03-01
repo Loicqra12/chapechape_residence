@@ -183,10 +183,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
+  // 🚫 Paiement masqué pour Google Play – message à la place de la navigation
   void _navigateToPayment() {
-    if (_booking != null) {
-      context.push('/payment/${_booking!.id}');
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Le paiement en ligne sera bientôt disponible'),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   void _requestExtendDeadline() {

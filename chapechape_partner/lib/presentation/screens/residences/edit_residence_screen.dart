@@ -157,10 +157,11 @@ class _EditResidenceViewState extends State<_EditResidenceView>
   String _selectedRegion = 'AB'; // Abidjan par défaut
   String _selectedCity = 'CO'; // Cocody par défaut
   
-  // Variables pour la géolocalisation
+  // Variables pour la géolocalisation (quartier rempli par reverse geocode)
   double? _latitude;
   double? _longitude;
   String? _formattedAddress;
+  String? _quartierFromGeocode;
   
   // Variables pour le mode de réservation
   String _selectedReservationMode = 'instant'; // Par défaut: instantané
@@ -563,6 +564,9 @@ class _EditResidenceViewState extends State<_EditResidenceView>
       }
       if (widget.residence!.cityCode != null) {
         _selectedCity = widget.residence!.cityCode!;
+      }
+      if (widget.residence!.quartier != null && widget.residence!.quartier!.isNotEmpty) {
+        _quartierFromGeocode = widget.residence!.quartier;
       }
 
       // Initialiser les images existantes
@@ -1103,10 +1107,12 @@ class _EditResidenceViewState extends State<_EditResidenceView>
           'category': _selectedCategory,
           'status': _isAvailable ? 'available' : 'unavailable',
 
-          // Information sur la localisation (pays, région, ville, adresse)
+          // Information sur la localisation (pays, région, commune, quartier, adresse)
           'country': _selectedCountry,
           'region': _selectedRegion,
           'city': _selectedCity,
+          'commune': _getCityName(_selectedCity),
+          'quartier': _quartierFromGeocode ?? '',
           'address': _addressController.text,
           // Coordonnées GPS (si disponibles)
           'latitude': _latitude,
@@ -1342,6 +1348,11 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         title: Text(isEditing ? 'Modifier la résidence' : 'Nouvelle résidence'),
         actions: [
           IconButton(
+            style: IconButton.styleFrom(
+              shape: const CircleBorder(),
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.transparent,
+            ),
             icon: _isSubmitting
                 ? const SizedBox(
                     width: 20,
@@ -2361,6 +2372,29 @@ class _EditResidenceViewState extends State<_EditResidenceView>
               ),
               const SizedBox(height: 16),
 
+              DropdownButtonFormField<String>(
+                value: _getCitiesForRegion(_selectedRegion).any((c) => c.code == _selectedCity)
+                    ? _selectedCity
+                    : (_getCitiesForRegion(_selectedRegion).isNotEmpty
+                        ? _getCitiesForRegion(_selectedRegion).first.code
+                        : null),
+                decoration: InputDecoration(
+                  labelText: 'Commune',
+                  prefixIcon: Icon(Icons.place),
+                  border: OutlineInputBorder(),
+                ),
+                items: _getCitiesForRegion(_selectedRegion).map((city) {
+                  return DropdownMenuItem<String>(
+                    value: city.code,
+                    child: Text(city.name),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedCity = value);
+                  }
+                },
+              ),
               const SizedBox(height: 16),
 
               AddressAutocompleteField(
@@ -2380,12 +2414,12 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                       if (components['country'] != null) {
                         // Si nous avons un code pays dans les composantes,
                         // nous pourrions le mapper à nos codes pays internes
-                        // Pour l'instant, nous gardons simplement la vérification de base
                       }
-                      
                       if (components['city'] != null) {
                         _cityController.text = components['city'];
                       }
+                      // Quartier depuis le reverse geocode (neighborhood / sublocality)
+                      _quartierFromGeocode = components['neighborhood'] ?? components['sublocality'] ?? '';
                     }
                   });
                 },
@@ -2659,28 +2693,55 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     }
 
     // Facturation à la journée pour les séjours courts
-    if ([
-      'studio_meuble',
-      'guest_house',
-      'lodge',
-      'case_traditionnelle',
-      'campement_touristique',
-      'maison_flottante',
-      'boutiqueHotel',
-      'aubergeEtMaisonDHotes'
-    ].contains(type)) {
+  if ([
+    'studio_meuble',
+    'guest_house',
+    'boutique_hotel',
+    'hotel_luxe',
+    'lodge',
+    'bungalow',
+    'case_traditionnelle',
+    'campement_touristique',
+    'maison_flottante',
+    'maison_hotes',
+  ].contains(type)) {
       return 'day';
     }
 
     // Facturation à la semaine pour certains types spécifiques
-    if ([
-      'maison_hotes_economique',
-      'residence_familiale',
-    ].contains(type)) {
+  if ([
+    'maison_hotes_economique',
+    'residence_familiale',
+    'residence_hoteliere',
+  ].contains(type)) {
       return 'week';
     }
 
-    // Par défaut, facturation au mois pour les locations longue durée
+    // Facturation au mois pour les locations longue durée et colocations
+  if ([
+    // Résidences meublées longue durée
+    'appartement_meuble',
+    'villa_meublee',
+    'penthouse',
+    'loft',
+    'grenier',
+    
+    // Colocation
+    'chambre_colocation',
+    'coliving',
+    'residence_universitaire',
+    'cite_dortoir',
+    
+    // Non meublé
+    'appartement_vide',
+    'villa_vide',
+    'immeuble',
+    'cour_commune',
+  ].contains(type)) {
+    return 'month';
+  }
+
+  // Par défaut, facturation au mois pour les locations longue durée
     return 'month';
   }
 
@@ -2717,16 +2778,36 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         return 'Les hébergements de passage sont généralement facturés à l\'heure';
 
       case 'studio_meuble':
-      case 'guest_house':
-      case 'lodge':
-      case 'campement_touristique':
-      case 'case_traditionnelle':
-      case 'maison_flottante':
-        return 'Les séjours courts sont généralement facturés à la journée';
+    case 'guest_house':
+    case 'boutique_hotel':
+    case 'hotel_luxe':
+    case 'lodge':
+    case 'bungalow':
+    case 'campement_touristique':
+    case 'case_traditionnelle':
+    case 'maison_flottante':
+    case 'maison_hotes':
+      return 'Les séjours courts sont généralement facturés à la journée';
 
       case 'maison_hotes_economique':
-      case 'residence_familiale':
-        return 'Ce type d\'hébergement est souvent facturé à la semaine';
+    case 'residence_familiale':
+    case 'residence_hoteliere':
+      return 'Ce type d\'hébergement est souvent facturé à la semaine';
+
+      case 'appartement_meuble':
+    case 'villa_meublee':
+    case 'penthouse':
+    case 'loft':
+    case 'grenier':
+    case 'chambre_colocation':
+    case 'coliving':
+    case 'residence_universitaire':
+    case 'cite_dortoir':
+    case 'appartement_vide':
+    case 'villa_vide':
+    case 'immeuble':
+    case 'cour_commune':
+      return 'Les locations longue durée sont généralement facturées au mois';
 
       default:
         return 'Sélectionnez la période de tarification appropriée';
@@ -3116,9 +3197,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     return '';
   }
 
-  // Méthode pour obtenir la ville par défaut pour une région
+  // Méthode pour obtenir la ville (commune) par défaut pour une région
   String _getDefaultCity(String regionCode) {
-    final cities = _citiesByRegion[regionCode];
+    final key = '${_selectedCountry}_$regionCode';
+    final cities = _citiesByRegion[key];
     if (cities != null && cities.isNotEmpty) {
       return cities.first.code;
     }
@@ -3130,9 +3212,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     return _regionsByCountry[countryCode] ?? [];
   }
 
-  // Méthode pour obtenir les villes d'une région
+  // Méthode pour obtenir les communes d'une région (clé pays_région ex. CI_AB)
   List<LocationItem> _getCitiesForRegion(String regionCode) {
-    return _citiesByRegion[regionCode] ?? [];
+    final key = '${_selectedCountry}_$regionCode';
+    return _citiesByRegion[key] ?? [];
   }
 
   // Méthode pour obtenir le nom du pays à partir du code
@@ -3156,9 +3239,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     return '';
   }
 
-  // Méthode pour obtenir le nom de la ville à partir du code
+  // Méthode pour obtenir le nom de la commune à partir du code
   String _getCityName(String cityCode) {
-    final cities = _citiesByRegion[_selectedRegion] ?? [];
+    final key = '${_selectedCountry}_$_selectedRegion';
+    final cities = _citiesByRegion[key] ?? [];
     for (var city in cities) {
       if (city.code == cityCode) {
         return city.name;
