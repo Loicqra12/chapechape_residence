@@ -329,8 +329,11 @@ app.use("/api/users", csrfMiddleware);
 //   }
 // });
 
-// Routes avec cache pour les requêtes GET
-app.use("/api/residences", cache(3600), residenceRoutes);
+// Routes avec cache pour les requêtes GET (sans cache pour les routes authentifiées type /my-residences)
+app.use("/api/residences", cache({
+  duration: 3600,
+  condition: (req) => req.method === 'GET' && !req.headers.authorization
+}), residenceRoutes);
 app.use("/api/reviews", cache(1800), reviewRoutes);
 
 // ====================================================================
