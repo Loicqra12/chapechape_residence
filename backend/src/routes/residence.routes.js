@@ -41,20 +41,20 @@ router.use(protect);
 
 // Récupérer les résidences du partenaire connecté
 router.get('/my-residences', authorize('partner'), async (req, res) => {
+  console.log('DEBUG /my-residences - route atteinte');
   try {
-    const partnerId = req.user?.id ?? req.user?._id;
+    const partnerId = req.user?.id ?? req.user?._id ?? (req.user && req.user.id);
     if (!partnerId) {
-      console.error('DEBUG - /my-residences - req.user manquant ou sans id');
+      console.error('DEBUG /my-residences - req.user manquant, keys:', req.user ? Object.keys(req.user) : 'null');
       return res.status(401).json({ success: false, message: 'Utilisateur non identifié' });
     }
-
     const filter = { partner: partnerId, deleted: { $ne: true } };
-
     try {
       const residences = await Residence.find(filter).lean();
-      res.json({ success: true, data: residences });
+      console.log('DEBUG /my-residences - ok, count=', residences.length);
+      return res.json({ success: true, data: residences });
     } catch (innerError) {
-      console.error('DEBUG - /my-residences - Erreur MongoDB:', innerError.message, innerError.stack);
+      console.error('DEBUG /my-residences - Erreur MongoDB:', innerError.message, innerError.stack);
       return res.status(500).json({
         success: false,
         message: 'Erreur lors de la récupération des résidences du partenaire',
@@ -62,8 +62,8 @@ router.get('/my-residences', authorize('partner'), async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Erreur détaillée /my-residences:', error.message, error.stack);
-    res.status(500).json({
+    console.error('DEBUG /my-residences - Erreur détaillée:', error.message, error.stack);
+    return res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération des résidences du partenaire',
       error: error.message
