@@ -112,7 +112,15 @@ exports.registerPartner = asyncHandler(async (req, res) => {
             message: 'Compte partenaire créé. Veuillez vérifier votre numéro de téléphone pour activer votre compte.'
         });
     } catch (error) {
-        throw new apiError('Erreur lors de l\'inscription du partenaire', 500);
+        // Si c'est déjà une ApiError (par ex. email déjà utilisé, téléphone invalide),
+        // on la relaisse remonter telle quelle pour que le client voie le bon message + code HTTP.
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        // Sinon, on journalise l'erreur technique et on renvoie une 500 générique.
+        console.error('Erreur inattendue lors de l\'inscription partenaire:', error);
+        throw apiError.internal('Erreur lors de l\'inscription du partenaire');
     }
 });
 
