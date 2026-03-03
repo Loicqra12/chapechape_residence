@@ -31,7 +31,7 @@ const partnerSchema = new mongoose.Schema({
     documents: [{
         type: {
             type: String,
-            enum: ['identity', 'business', 'other'],
+            enum: ['identity', 'address', 'professional', 'business', 'other'],
             required: true
         },
         url: {

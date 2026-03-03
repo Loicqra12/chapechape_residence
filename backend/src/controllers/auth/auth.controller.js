@@ -377,10 +377,10 @@ exports.refreshToken = asyncHandler(async (req, res) => {
             throw new apiError('Token de rafraîchissement non fourni', 400);
         }
 
-        // Vérifier le refresh token
+        // Vérifier le refresh token (key rotation via utils/jwt)
         let decoded;
         try {
-            decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+            decoded = jwt.verifyToken(refreshToken, 'JWT_REFRESH_SECRET');
         } catch (error) {
             throw new apiError('Token de rafraîchissement invalide ou expiré', 401);
         }
@@ -391,19 +391,9 @@ exports.refreshToken = asyncHandler(async (req, res) => {
             throw new apiError('Utilisateur non trouvé', 404);
         }
 
-        // Générer un nouveau token d'accès
-        const accessToken = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
-        );
-
-        // Générer un nouveau token de rafraîchissement 
-        const newRefreshToken = jwt.sign(
-            { id: user._id },
-            process.env.JWT_REFRESH_SECRET,
-            { expiresIn: parseInt(process.env.JWT_REFRESH_EXPIRE) * 24 * 3600 } // Convert days to seconds
-        );
+        // Générer un nouveau token d'accès et refresh (key rotation via utils/jwt)
+        const accessToken = jwt.generateAccessToken(user._id.toString(), user.role);
+        const newRefreshToken = jwt.generateRefreshToken(user._id.toString());
 
         res.status(200).json({
             success: true,

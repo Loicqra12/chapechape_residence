@@ -25,6 +25,7 @@ const swaggerSpecs = require("./config/swagger");
 // Import des routes
 const residenceRoutes = require("./routes/residence.routes");
 const partnerRoutes = require("./routes/partner.routes");
+const partnerVerificationRoutes = require("./routes/partner-verification.routes");
 const reservationRoutes = require("./routes/reservation.routes");
 const favoriteRoutes = require("./routes/favorite.routes");
 const userRoutes = require("./routes/user.routes");
@@ -354,6 +355,7 @@ app.use("/api/reservations", reservationRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/partners", partnerRoutes);
+app.use("/api/partners/verify-phone", partnerVerificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/superadmin", superAdminRoutes);
@@ -372,8 +374,6 @@ app.use("/api/health", healthRoutes); // Routes pour les health checks avancés
 app.use("/api/ping", pingRoutes); // Routes pour les pings de connectivité
 app.use("/api/support", supportRoutes); // Routes pour les tickets de support
 app.use("/api/maintenance", maintenanceRoutes); // Routes pour la maintenance système (SuperAdmin)
-app.use("/api/superadmin", superAdminRoutes); // Routes pour la gestion superadmin
-app.use("/api/admin", adminRoutes); // Routes pour la gestion admin
 // app.use("/api/blog", cache(1800), blogRoutes); // Routes pour le blog dynamique (temporairement désactivé pour diagnostic)
 
 // 🔒 SÉCURITÉ CRITIQUE : Routes de test (TEMPORAIREMENT DÉSACTIVÉES POUR DIAGNOSTIC)

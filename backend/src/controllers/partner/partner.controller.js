@@ -13,12 +13,29 @@ const axios = require('axios');
 // Clé API Google Maps pour le géocodage inverse
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
-// Obtenir le profil du partenaire
+// Obtenir le profil du partenaire (User + documents depuis Partner pour l'app)
 exports.getPartnerProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
+    const userObj = user.toObject ? user.toObject() : { ...user };
+    const partner = await Partner.findById(req.user.id);
+    if (partner && partner.documents && partner.documents.length) {
+        userObj.documents = partner.documents.map((d) => ({
+            _id: d._id,
+            id: d._id,
+            type: d.type,
+            documentUrl: d.url || '',
+            url: d.url,
+            uploadDate: d.uploadedAt,
+            uploadedAt: d.uploadedAt,
+            status: d.verified ? 'approved' : 'pending',
+            verified: d.verified
+        }));
+    } else {
+        userObj.documents = userObj.documents || [];
+    }
     res.status(200).json({
         success: true,
-        data: user
+        data: userObj
     });
 });
 
@@ -147,37 +164,34 @@ exports.uploadDocument = asyncHandler(async (req, res) => {
                 message: 'Aucun document fourni'
             });
         }
-        
+
         const documentType = req.body.documentType || 'identity';
-        
-        // Récupérer le partenaire actuel
         const partner = await Partner.findById(req.user.id);
-        
-        // Créer un nouveau document
+
+        if (!partner) {
+            return res.status(404).json({
+                success: false,
+                message: 'Profil partenaire non trouvé'
+            });
+        }
+
         const newDocument = {
             type: documentType,
             url: req.file.filename,
             verified: false,
             uploadedAt: new Date()
         };
-        
-        // Ajouter le document à la liste
+
         const existingDocs = partner.documents || [];
         partner.documents = [...existingDocs, newDocument];
-        
-        // Sauvegarder le partenaire
         await partner.save();
-        
-        // URL du document
+
         const documentUrl = `/uploads/documents/${req.file.filename}`;
-        
+
         res.status(200).json({
             success: true,
             data: {
-                document: {
-                    ...newDocument.toObject(),
-                    url: documentUrl
-                },
+                document: { ...newDocument, url: documentUrl },
                 url: documentUrl
             }
         });

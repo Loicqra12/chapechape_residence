@@ -15,24 +15,24 @@ router.use(protect); // Toutes les routes nécessitent une authentification
 
 // Routes principales
 router.route('/')
-    .get(authorize('admin', 'partenaire', 'client'), getNotifications);
+    .get(authorize('admin', 'partner', 'client'), getNotifications);
 
 // Routes spéciales (doivent être avant les routes avec :id)
 router.route('/read-all')
-    .put(authorize('admin', 'partenaire', 'client'), markAllAsRead);
+    .put(authorize('admin', 'partner', 'client'), markAllAsRead);
 
 router.route('/read')
-    .delete(authorize('admin', 'partenaire', 'client'), deleteReadNotifications);
+    .delete(authorize('admin', 'partner', 'client'), deleteReadNotifications);
 
 // Route pour compter les notifications non lues
 router.route('/unread/count')
-    .get(authorize('admin', 'partenaire', 'client'), getUnreadCount);
+    .get(authorize('admin', 'partner', 'client'), getUnreadCount);
 
 // Routes avec paramètres
 router.route('/:id/read')
-    .put(authorize('admin', 'partenaire', 'client'), markAsRead);
+    .put(authorize('admin', 'partner', 'client'), markAsRead);
 
 router.route('/:id')
-    .delete(authorize('admin', 'partenaire', 'client'), deleteNotification);
+    .delete(authorize('admin', 'partner', 'client'), deleteNotification);
 
 module.exports = router;

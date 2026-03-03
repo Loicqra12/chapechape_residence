@@ -24,7 +24,7 @@ const createReservation = async (reservationBody) => {
       .populate('cancellationPolicy');
 
     if (!residence) {
-      throw new apiError('Résidence non trouvée', 404);
+      throw new ApiError('Résidence non trouvée', 404);
     }
 
     // Si la résidence n'a pas de politique d'annulation, utiliser la politique par défaut existante
@@ -34,7 +34,7 @@ const createReservation = async (reservationBody) => {
       const defaultPolicy = await CancellationPolicy.findOne({ isDefault: true });
 
       if (!defaultPolicy) {
-        throw new apiError('Aucune politique d\'annulation par défaut trouvée. Veuillez configurer les politiques d\'annulation.', 500);
+        throw new ApiError('Aucune politique d\'annulation par défaut trouvée. Veuillez configurer les politiques d\'annulation.', 500);
       }
 
       cancellationPolicyId = defaultPolicy._id;
@@ -50,7 +50,7 @@ const createReservation = async (reservationBody) => {
     );
 
     if (!isAvailable) {
-      throw new apiError('La résidence n\'est pas disponible pour ces dates', 400);
+      throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
     }
 
     // ✅ AJOUT : Calcul intelligent du prix selon le type de réservation
@@ -426,13 +426,13 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
       });
 
     if (!reservation) {
-      throw new apiError('Réservation non trouvée', 404);
+      throw new ApiError('Réservation non trouvée', 404);
     }
 
     // Vérifier si l'annulation est possible
     const canCancel = await reservation.canBeCancelled();
     if (!canCancel) {
-      throw new apiError('Cette réservation ne peut plus être annulée', 400);
+      throw new ApiError('Cette réservation ne peut plus être annulée', 400);
     }
 
     // Vérifier les permissions
@@ -440,7 +440,7 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
       reservation.client.toString() !== userId &&
       reservation.residence.owner.toString() !== userId
     ) {
-      throw new apiError('Non autorisé', 403);
+      throw new ApiError('Non autorisé', 403);
     }
 
     // Calculer le remboursement
@@ -527,18 +527,18 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       });
 
     if (!reservation) {
-      throw new apiError('Réservation non trouvée', 404);
+      throw new ApiError('Réservation non trouvée', 404);
     }
 
     // Vérifier si la modification est possible
     const canModify = await reservation.canBeModified();
     if (!canModify) {
-      throw new apiError('Cette réservation ne peut plus être modifiée', 400);
+      throw new ApiError('Cette réservation ne peut plus être modifiée', 400);
     }
 
     // Vérifier les permissions
     if (reservation.client.toString() !== userId) {
-      throw new apiError('Non autorisé', 403);
+      throw new ApiError('Non autorisé', 403);
     }
 
     // Vérifier la disponibilité pour les nouvelles dates
@@ -550,7 +550,7 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       );
 
       if (!isAvailable) {
-        throw new apiError('La résidence n\'est pas disponible pour ces dates', 400);
+        throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
       }
     }
 
