@@ -72,6 +72,17 @@ class NotificationRepository {
       return false;
     }
   }
+
+  /// Supprimer une notification (persiste côté serveur)
+  Future<bool> deleteNotification(String notificationId) async {
+    try {
+      final response = await _apiService.delete('/notifications/$notificationId');
+      return response.statusCode == 200 && (response.data['success'] ?? true);
+    } catch (e) {
+      debugPrint('❌ Erreur lors de la suppression de la notification: $e');
+      return false;
+    }
+  }
   
   /// Récupère les préférences de l'utilisateur
   Future<NotificationPreference> getUserPreferences(String userId) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme/colors.dart';
 import '../../../../core/models/payment/payment_model.dart';
 import '../../../../core/models/payment/payout_model.dart';
 import '../../../../core/services/api/payment_service.dart';
@@ -75,7 +76,7 @@ class UnifiedTransaction {
       status: payout.status.displayName,
       statusColor: Color(int.parse(payout.status.color.replaceFirst('#', '0xFF'))),
       icon: Icons.account_balance,
-      iconColor: Colors.blue,
+      iconColor: AppColors.brandPrimary,
       sourceId: payout.payoutId,
       rawData: payout.toJson(),
     );

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/services/onboarding_service.dart';
 import 'package:go_router/go_router.dart';
@@ -15,12 +16,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  // Couleurs raffinées
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -112,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: blackColor,
+      backgroundColor: AppTheme.textPrimary,
       body: Center(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -131,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: goldColor.withOpacity(0.3),
+                            color: AppTheme.primaryColor.withOpacity(0.3),
                             blurRadius: 20,
                             spreadRadius: 5,
                           ),

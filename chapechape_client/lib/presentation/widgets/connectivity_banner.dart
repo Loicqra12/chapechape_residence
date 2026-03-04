@@ -160,163 +160,240 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   }
 
   Widget _buildOfflineBanner(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: Colors.red.shade600,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.wifi_off,
-            color: Colors.white,
-            size: 20,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.lightGold,
+              Color(0xFFFFFBF5),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Vous êtes hors ligne',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Certaines fonctionnalités limitées sont disponibles',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppTheme.primaryColor.withOpacity(0.4),
+            width: 1,
+          ),
+          boxShadow: [
+            ...AppTheme.softShadow,
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          // Bouton pour forcer une vérification
-          IconButton(
-            icon: const Icon(
-              Icons.refresh,
-              color: Colors.white,
-              size: 18,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.wifi_off,
+                color: AppTheme.primaryColor,
+                size: 22,
+              ),
             ),
-            onPressed: () {
-              _checkConnectivity();
-            },
-            tooltip: 'Vérifier la connexion',
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vous êtes hors ligne',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Certaines fonctionnalités limitées sont disponibles',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.refresh,
+                color: AppTheme.primaryColor,
+                size: 20,
+              ),
+              onPressed: () {
+                _checkConnectivity();
+              },
+              tooltip: 'Vérifier la connexion',
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSyncButton(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: Colors.green.shade600,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.wifi,
-            color: Colors.white,
-            size: 20,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.lightGold,
+              Color(0xFFFFFBF5),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Connexion rétablie',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppTheme.primaryColor.withOpacity(0.4),
+            width: 1,
+          ),
+          boxShadow: [
+            ...AppTheme.softShadow,
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.wifi,
+                color: AppTheme.primaryColor,
+                size: 22,
               ),
             ),
-          ),
-          // Bouton fermer
-          IconButton(
-            icon: const Icon(
-              Icons.close,
-              color: Colors.white,
-              size: 18,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Connexion rétablie',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Vous pouvez synchroniser vos données',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onPressed: () {
-              setState(() {
-                _showSyncBanner = false;
-                _wasOffline = false;
-              });
-            },
-            tooltip: 'Fermer',
-          ),
-          SizedBox(
-            width: 120, // Définir une largeur fixe pour éviter l'erreur
-            child: TextButton.icon(
-              onPressed: () async {
-                try {
-                  // Masquer immédiatement la bannière de sync
-                  setState(() {
-                    _showSyncBanner = false;
-                  });
-                  
-                  // Afficher un message de synchronisation en cours
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Synchronisation en cours...'),
-                      backgroundColor: AppTheme.infoColor,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  
-                  // Utiliser la méthode synchronizeOfflineData de l'ApiService
-                  final success = await _apiService.synchronizeOfflineData();
-                  
-                  // Afficher un message approprié selon le résultat
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success 
-                        ? 'Synchronisation terminée avec succès' 
-                        : 'Échec de la synchronisation'),
-                      backgroundColor: success ? Colors.green : Colors.orange,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                  
-                  // Réinitialiser l'état après synchronisation
-                  setState(() {
-                    _wasOffline = false;
-                  });
-                } catch (e) {
-                  // Afficher un message d'erreur en cas d'exception
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erreur lors de la synchronisation: $e'),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                }
+            IconButton(
+              icon: Icon(
+                Icons.close,
+                color: AppTheme.textSecondary,
+                size: 20,
+              ),
+              onPressed: () {
+                setState(() {
+                  _showSyncBanner = false;
+                  _wasOffline = false;
+                });
               },
-              icon: const Icon(
-                Icons.sync,
-                color: Colors.white,
-                size: 16,
-              ),
-              label: const Text(
-                'Synchroniser',
-                style: TextStyle(color: Colors.white),
-              ),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.green.shade700,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
+              tooltip: 'Fermer',
+            ),
+            const SizedBox(width: 4),
+            Material(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                onTap: () async {
+                  try {
+                    setState(() {
+                      _showSyncBanner = false;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Synchronisation en cours...'),
+                        backgroundColor: AppTheme.infoColor,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    final success = await _apiService.synchronizeOfflineData();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? 'Synchronisation terminée avec succès'
+                              : 'Échec de la synchronisation',
+                        ),
+                        backgroundColor: success
+                            ? AppTheme.successColor
+                            : AppTheme.warningColor,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                    if (mounted) setState(() => _wasOffline = false);
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erreur lors de la synchronisation: $e'),
+                        backgroundColor: AppTheme.errorColor,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(24),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sync, size: 18, color: AppTheme.textLight),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Synchroniser',
+                        style: TextStyle(
+                          color: AppTheme.textLight,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -121,18 +121,18 @@ class PartnerDocument extends Equatable {
 
   factory PartnerDocument.fromJson(Map<String, dynamic> json) {
     return PartnerDocument(
-      id: json['id'] ?? json['_id'] ?? '',
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
       type: json['type'] ?? '',
-      documentUrl: json['documentUrl'] ?? '',
+      documentUrl: json['documentUrl'] ?? json['url'] ?? '',
       uploadDate: json['uploadDate'] != null
-          ? DateTime.parse(json['uploadDate'])
+          ? DateTime.parse(json['uploadDate'].toString())
           : json['uploadedAt'] != null
-              ? DateTime.parse(json['uploadedAt'])
+              ? DateTime.parse(json['uploadedAt'].toString())
               : DateTime.now(),
       validUntil: json['validUntil'] != null
-          ? DateTime.parse(json['validUntil'])
+          ? DateTime.parse(json['validUntil'].toString())
           : null,
-      status: json['status'] ?? 'pending',
+      status: json['status'] ?? (json['verified'] == true ? 'approved' : 'pending'),
       comment: json['comment'],
     );
   }

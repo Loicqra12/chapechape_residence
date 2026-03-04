@@ -20,24 +20,19 @@ import '../../core/services/recently_viewed_service.dart';
 import '../screens/booking_screen.dart';
 import '../widgets/skeletons/residence_details_skeleton.dart';
 
-// ── Palette ───────────────────────────────────────────────────────────────────
-const _kPrimary   = Color(0xFF222222);
-const _kSecondary = Color(0xFF717171);
-const _kDivider   = Color(0xFFDDDDDD);
-const _kRed       = Color(0xFFFF385C);
-const _kGreen     = Color(0xFF008A05);
+// ── Palette (délégée à AppTheme) ───────────────────────────────────────────────
 const _kBg        = Colors.white;
 
 // ── Typographie commune ───────────────────────────────────────────────────────
 const _kSectionTitle = TextStyle(
   fontSize: 18,
   fontWeight: FontWeight.w600,
-  color: _kPrimary,
+  color: AppTheme.textPrimary,
   letterSpacing: -0.2,
 );
 
-const _kBody = TextStyle(fontSize: 14, color: _kPrimary, height: 1.55);
-const _kCaption = TextStyle(fontSize: 12, color: _kSecondary);
+final _kBody = TextStyle(fontSize: 14, color: AppTheme.textPrimary, height: 1.55);
+final _kCaption = TextStyle(fontSize: 12, color: AppTheme.textSecondary);
 
 // ─────────────────────────────────────────────────────────────────────────────
 class ResidenceDetailsScreen extends StatefulWidget {
@@ -153,7 +148,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       return Container(
         color: const Color(0xFFF0F0F0),
         child: const Center(
-          child: Icon(Icons.image_not_supported_outlined, size: 56, color: _kSecondary),
+          child: Icon(Icons.image_not_supported_outlined, size: 56, color: AppTheme.textSecondary),
         ),
       );
     }
@@ -256,7 +251,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     _showAuthDialog();
                   }
                 },
-                iconColor: r.isFavorite ? _kRed : _kPrimary,
+                iconColor: r.isFavorite ? AppTheme.primaryColor : AppTheme.textPrimary,
               ),
             ),
           ]),
@@ -265,7 +260,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     );
   }
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap, {Color iconColor = _kPrimary}) {
+  Widget _circleBtn(IconData icon, VoidCallback onTap, {Color iconColor = AppTheme.textPrimary}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -330,7 +325,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
   Widget _sep({EdgeInsets padding = const EdgeInsets.symmetric(vertical: 24)}) {
     return Padding(
       padding: padding,
-      child: const Divider(height: 1, thickness: 1, color: _kDivider),
+      child: const Divider(height: 1, thickness: 1, color: AppTheme.dividerColor),
     );
   }
 
@@ -346,42 +341,42 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           '${r.type.displayName} · ${_shortCity(r)}',
           style: const TextStyle(
             fontSize: 13, fontWeight: FontWeight.w400,
-            color: _kSecondary, letterSpacing: 0.1,
+            color: AppTheme.textSecondary, letterSpacing: 0.1,
           ),
         ),
         const SizedBox(height: 6),
         // Titre
         Text(r.title, style: const TextStyle(
           fontSize: 22, fontWeight: FontWeight.w600,
-          color: _kPrimary, height: 1.25,
+          color: AppTheme.textPrimary, height: 1.25,
         )),
         const SizedBox(height: 12),
         // Note + avis + adresse courte
         Row(
           children: [
-            const Icon(Icons.star, size: 14, color: _kPrimary),
+            const Icon(Icons.star, size: 14, color: AppTheme.textPrimary),
             const SizedBox(width: 4),
             Text(
               r.rating > 0 ? r.rating.toStringAsFixed(1) : 'Nouveau',
               style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600, color: _kPrimary),
+                fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
             ),
             if (r.reviewCount > 0) ...[
               Text(
                 '  ·  ${r.reviewCount} avis',
                 style: const TextStyle(
-                  fontSize: 13, color: _kSecondary,
+                  fontSize: 13, color: AppTheme.textSecondary,
                   decoration: TextDecoration.underline),
               ),
             ],
             const Spacer(),
-            const Icon(Icons.location_on_outlined, size: 13, color: _kSecondary),
+            const Icon(Icons.location_on_outlined, size: 13, color: AppTheme.textSecondary),
             const SizedBox(width: 2),
             Flexible(
               child: Text(
                 _shortLocation(r),
                 style: const TextStyle(
-                  fontSize: 12, color: _kSecondary,
+                  fontSize: 12, color: AppTheme.textSecondary,
                   decoration: TextDecoration.underline),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -425,10 +420,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: _kPrimary),
+          Icon(icon, size: 22, color: AppTheme.textPrimary),
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(
-            fontSize: 15, fontWeight: FontWeight.w700, color: _kPrimary)),
+            fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
           const SizedBox(height: 2),
           Text(label, style: _kCaption, textAlign: TextAlign.center),
         ],
@@ -438,7 +433,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
 
   Widget _vLine() => Container(
     width: 1, margin: const EdgeInsets.symmetric(vertical: 4),
-    color: _kDivider,
+    color: AppTheme.dividerColor,
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -495,10 +490,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           expandText: 'Lire plus',
           collapseText: 'Réduire',
           maxLines: 4,
-          linkColor: _kPrimary,
+          linkColor: AppTheme.textPrimary,
           linkStyle: const TextStyle(
             fontSize: 14, fontWeight: FontWeight.w600,
-            color: _kPrimary, decoration: TextDecoration.underline,
+            color: AppTheme.textPrimary, decoration: TextDecoration.underline,
           ),
           style: _kBody,
         ),
@@ -570,7 +565,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
             child: Row(
               children: [
                 Icon(_amenityIcons[key] ?? Icons.check_circle_outline,
-                    size: 22, color: _kPrimary),
+                    size: 22, color: AppTheme.textPrimary),
                 const SizedBox(width: 16),
                 Text(_amenityLabels[key] ?? a, style: _kBody),
               ],
@@ -610,7 +605,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           const SizedBox(height: 16),
           const Text('Tarifs horaires',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                  color: _kSecondary)),
+                  color: AppTheme.textSecondary)),
           const SizedBox(height: 10),
           _rateRow('1 heure', fmt.format(r.hourlyRate), ''),
         ],
@@ -618,7 +613,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           const SizedBox(height: 16),
           const Text('Tarifs journaliers',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                  color: _kSecondary)),
+                  color: AppTheme.textSecondary)),
           const SizedBox(height: 10),
           if (r.halfDayRate > 0)
             _rateRow('Demi-journée', fmt.format(r.halfDayRate), ''),
@@ -641,7 +636,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           Text(
             suffix.isNotEmpty ? '$amount $suffix' : amount,
             style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: _kPrimary),
+                fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
           ),
         ],
       ),
@@ -669,7 +664,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          Icon(icon, size: 22, color: _kPrimary),
+          Icon(icon, size: 22, color: AppTheme.textPrimary),
           const SizedBox(width: 16),
           Expanded(child: Text(label, style: _kBody)),
           Row(
@@ -679,14 +674,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     ? Icons.check_circle_outline
                     : Icons.cancel_outlined,
                 size: 17,
-                color: allowed ? _kGreen : _kSecondary,
+                color: allowed ? AppTheme.successColor : AppTheme.textSecondary,
               ),
               const SizedBox(width: 5),
               Text(
                 allowed ? 'Autorisé' : 'Non autorisé',
                 style: TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w500,
-                  color: allowed ? _kGreen : _kSecondary,
+                  color: allowed ? AppTheme.successColor : AppTheme.textSecondary,
                 ),
               ),
             ],
@@ -729,18 +724,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF7F7F7),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _kDivider),
+                border: Border.all(color: AppTheme.dividerColor),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(_paymentIcons[m] ?? Icons.payments_outlined,
-                      size: 18, color: _kPrimary),
+                      size: 18, color: AppTheme.textPrimary),
                   const SizedBox(width: 8),
                   Text(_paymentLabels[m] ?? m,
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w500,
-                          color: _kPrimary)),
+                          color: AppTheme.textPrimary)),
                 ],
               ),
             );
@@ -809,18 +804,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(Icons.location_on_outlined,
-                        size: 18, color: _kSecondary),
+                        size: 18, color: AppTheme.textSecondary),
                     const SizedBox(width: 8),
                     Expanded(child: Text(addr,
                         style: const TextStyle(
-                            fontSize: 14, color: _kSecondary, height: 1.4))),
+                            fontSize: 14, color: AppTheme.textSecondary, height: 1.4))),
                   ],
                 ),
               if (distanceText != null) ...[
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.near_me_outlined, size: 16, color: _kSecondary),
+                    const Icon(Icons.near_me_outlined, size: 16, color: AppTheme.textSecondary),
                     const SizedBox(width: 8),
                     Text(distanceText, style: _kCaption),
                   ],
@@ -851,18 +846,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         // En-tête note globale
         Row(
           children: [
-            const Icon(Icons.star, size: 20, color: _kPrimary),
+            const Icon(Icons.star, size: 20, color: AppTheme.textPrimary),
             const SizedBox(width: 6),
             Text(
               r.rating > 0 ? r.rating.toStringAsFixed(1) : 'Nouveau',
               style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w700, color: _kPrimary),
+                  fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
             ),
             if (r.reviewCount > 0)
               Text(
                 '  ·  ${r.reviewCount} avis',
                 style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600, color: _kPrimary),
+                    fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
               ),
           ],
         ),
@@ -883,7 +878,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: _kPrimary),
+                      strokeWidth: 2, color: AppTheme.textPrimary),
                 ),
               );
             }
@@ -894,7 +889,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text('Aucun avis pour le moment',
-                      style: const TextStyle(fontSize: 14, color: _kSecondary)),
+                      style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                 ),
               );
             }
@@ -924,7 +919,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: _kDivider),
+          border: Border.all(color: AppTheme.dividerColor),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -933,16 +928,16 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               width: 40, height: 40,
               decoration: const BoxDecoration(
                 color: Color(0xFFF0F0F0), shape: BoxShape.circle),
-              child: const Icon(Icons.person_outline, color: _kSecondary, size: 20),
+              child: const Icon(Icons.person_outline, color: AppTheme.textSecondary, size: 20),
             ),
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
                 'Connectez-vous pour laisser un avis',
-                style: TextStyle(fontSize: 14, color: _kSecondary),
+                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: _kSecondary),
+            const Icon(Icons.chevron_right, size: 20, color: AppTheme.textSecondary),
           ],
         ),
       ),
@@ -953,7 +948,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: _kDivider),
+        border: Border.all(color: AppTheme.dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -961,7 +956,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         children: [
           const Text('Votre note',
               style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: _kSecondary)),
+                  fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
           const SizedBox(height: 10),
           Row(
             children: List.generate(5, (i) => GestureDetector(
@@ -970,7 +965,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 padding: const EdgeInsets.only(right: 4),
                 child: Icon(
                   i < _myRating ? Icons.star : Icons.star_border,
-                  size: 30, color: _kPrimary,
+                  size: 30, color: AppTheme.textPrimary,
                 ),
               ),
             )),
@@ -982,21 +977,21 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
             style: _kBody,
             decoration: InputDecoration(
               hintText: 'Partagez votre expérience…',
-              hintStyle: const TextStyle(fontSize: 14, color: _kSecondary),
+              hintStyle: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
               contentPadding: const EdgeInsets.all(14),
               filled: true,
               fillColor: const Color(0xFFFAFAFA),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: _kDivider),
+                borderSide: const BorderSide(color: AppTheme.dividerColor),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: _kDivider),
+                borderSide: const BorderSide(color: AppTheme.dividerColor),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: _kPrimary, width: 1.5),
+                borderSide: const BorderSide(color: AppTheme.textPrimary, width: 1.5),
               ),
             ),
           ),
@@ -1008,7 +1003,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: _kPrimary,
+                  color: AppTheme.textPrimary,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text('Publier',
@@ -1045,7 +1040,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 backgroundColor: const Color(0xFFF0F0F0),
                 child: Text(initial, style: const TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w600,
-                    color: _kPrimary)),
+                    color: AppTheme.textPrimary)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1055,19 +1050,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     Text(name.isNotEmpty ? name : 'Utilisateur',
                         style: const TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600,
-                            color: _kPrimary)),
+                            color: AppTheme.textPrimary)),
                     Text(date, style: _kCaption),
                   ],
                 ),
               ),
               Row(
                 children: [
-                  const Icon(Icons.star, size: 13, color: _kPrimary),
+                  const Icon(Icons.star, size: 13, color: AppTheme.textPrimary),
                   const SizedBox(width: 3),
                   Text(score.toStringAsFixed(1),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600,
-                          color: _kPrimary)),
+                          color: AppTheme.textPrimary)),
                 ],
               ),
             ],
@@ -1092,7 +1087,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        border: const Border(top: BorderSide(color: _kDivider, width: 1)),
+        border: const Border(top: BorderSide(color: AppTheme.dividerColor, width: 1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -1116,13 +1111,13 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                         text: fmt.format(r.price),
                         style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w700,
-                          color: _kPrimary),
+                          color: AppTheme.textPrimary),
                       ),
                       TextSpan(
                         text: ' ${_fmtPeriod(r.pricePeriod)}',
                         style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w400,
-                          color: _kSecondary),
+                          color: AppTheme.textSecondary),
                       ),
                     ],
                   ),
@@ -1132,7 +1127,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                   r.reservationMode == 'instant'
                       ? '⚡ Confirmation immédiate'
                       : '⏳ Sur approbation',
-                  style: const TextStyle(fontSize: 12, color: _kSecondary),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -1168,7 +1163,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                         style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A1A))),
+                            color: AppTheme.textPrimary)),
                   ),
           ),
         ],
@@ -1185,18 +1180,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: _kPrimary, width: 1.2),
+          border: Border.all(color: AppTheme.textPrimary, width: 1.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 17, color: _kPrimary),
+              Icon(icon, size: 17, color: AppTheme.textPrimary),
               const SizedBox(width: 8),
             ],
             Text(label, style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: _kPrimary)),
+                fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
           ],
         ),
       ),
@@ -1262,19 +1257,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: const Text(
           'Connectez-vous pour réserver ou mettre cette résidence en favoris.',
-          style: TextStyle(fontSize: 14, color: _kSecondary),
+          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Annuler',
-                style: TextStyle(color: _kSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () { Navigator.pop(context); context.go('/login'); },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
-                foregroundColor: const Color(0xFF1A1A1A),
+                foregroundColor: AppTheme.textLight,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
             child: const Text('Se connecter',
@@ -1317,7 +1312,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.errorColor));
       }
     }
   }
@@ -1334,14 +1329,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Merci pour votre avis !'),
-            backgroundColor: _kGreen));
+            backgroundColor: AppTheme.successColor));
         _commentCtrl.clear();
         setState(() { _myRating = 5.0; _reviewKey++; });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppTheme.errorColor));
       }
     }
   }

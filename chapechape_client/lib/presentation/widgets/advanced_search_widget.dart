@@ -304,8 +304,8 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
                     style: TextStyle(
                       fontSize: 14,
                       color: hasDestination
-                          ? const Color(0xFF1A1A1A)
-                          : Colors.grey[500],
+                          ? AppTheme.textPrimary
+                          : AppTheme.textSecondary,
                       fontWeight: hasDestination
                           ? FontWeight.w600
                           : FontWeight.normal,
@@ -317,7 +317,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
                   GestureDetector(
                     onTap: () =>
                         setState(() => _selectedDestination = null),
-                    child: Icon(Icons.close, size: 16, color: Colors.grey[500]),
+                    child: Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
                   )
                 else
                   Icon(Icons.arrow_forward_ios,

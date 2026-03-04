@@ -30,9 +30,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color whiteColor = Color(0xFFFFFFFF);
-  
   // Variables pour gérer la sélection de ville
   City? _selectedCity;
   

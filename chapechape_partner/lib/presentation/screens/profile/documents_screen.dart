@@ -108,17 +108,19 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             _isLoading = true;
           });
         } else if (state is AuthAuthenticated) {
+          final wasLoading = _isLoading;
           setState(() {
             _isLoading = false;
             _documents = state.partner.documents ?? [];
           });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Document téléchargé avec succès'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          if (wasLoading) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Document téléchargé avec succès'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         } else if (state is AuthFailure) {
           setState(() {
             _isLoading = false;
@@ -241,7 +243,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       statusText = 'Vérification complète';
       statusIcon = Icons.verified;
     } else {
-      statusColor = Colors.blue;
+      statusColor = Theme.of(context).colorScheme.primary;
       statusText = 'En attente de vérification';
       statusIcon = Icons.pending_actions;
     }
@@ -324,7 +326,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         LinearProgressIndicator(
           value: progress,
           backgroundColor: Colors.grey.shade300,
-          color: progress == 1.0 ? Colors.green : Colors.blue,
+          color: progress == 1.0 ? Colors.green : Theme.of(context).colorScheme.primary,
         ),
       ],
     );

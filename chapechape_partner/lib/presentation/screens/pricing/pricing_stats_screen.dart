@@ -92,7 +92,7 @@ class _PricingStatsScreenState extends State<PricingStatsScreen> {
                     value: stats.totalReservations.toString(),
                     subtitle: 'Total',
                     icon: Icons.home_outlined,
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -163,7 +163,7 @@ class _PricingStatsScreenState extends State<PricingStatsScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.pie_chart_outline, color: Colors.blue),
+                Icon(Icons.pie_chart_outline, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 const Text(
                   'Répartition par méthode',

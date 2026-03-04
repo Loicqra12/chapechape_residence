@@ -280,7 +280,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Nouvelle tentative ${_retryCount}/$_maxRetries...'),
-        backgroundColor: Colors.blue,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         duration: const Duration(seconds: 1),
       ),
     );
@@ -314,7 +314,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String _buildProfileImageUrl(String url) {
     // Validation et nettoyage de l'URL
     if (url.isEmpty) return '';
-    
+
+    // Le backend (user.model) met profileImage par défaut à "default.jpg" alors qu'aucun fichier n'existe → 404
+    if (url == 'default.jpg' || url.endsWith('/default.jpg') || url.toLowerCase().contains('default.jpg')) {
+      debugPrint('URL placeholder default.jpg ignorée (fichier absent sur le serveur): $url');
+      return '';
+    }
+
     // Détection des URLs problématiques
     if (url.contains('placeholder.com') || url.contains('undefined')) {
       debugPrint('URL d\'image problématique détectée: $url - Elle sera ignorée');
@@ -545,9 +551,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           ? ColorFilter.mode(Colors.red.withOpacity(0.2), BlendMode.srcATop)
                                           : null,
                                     )
-                                  : partner?.profilePictureUrl != null
+                                  : (partner?.profilePictureUrl != null &&
+                                     _buildProfileImageUrl(partner!.profilePictureUrl!).isNotEmpty)
                                       ? DecorationImage(
-                                          image: NetworkImage(_buildProfileImageUrl(partner!.profilePictureUrl!)),
+                                          image: NetworkImage(_buildProfileImageUrl(partner.profilePictureUrl!)),
                                           fit: BoxFit.cover,
                                           colorFilter: _uploadFailed 
                                               ? ColorFilter.mode(Colors.red.withOpacity(0.2), BlendMode.srcATop)
@@ -555,7 +562,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                         )
                                       : null,
                             ),
-                            child: _profileImage == null && partner?.profilePictureUrl == null
+                            child: _profileImage == null &&
+                                (partner?.profilePictureUrl == null ||
+                                 _buildProfileImageUrl(partner!.profilePictureUrl!).isEmpty)
                                 ? Icon(
                                     Icons.person,
                                     size: 60,

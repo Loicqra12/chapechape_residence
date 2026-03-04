@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
@@ -12,11 +13,6 @@ class StorageCacheScreen extends StatefulWidget {
 }
 
 class _StorageCacheScreenState extends State<StorageCacheScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
-
   bool _isLoading = true;
   String _cacheSize = "0 Ko";
   String _preferencesSize = "0 Ko";
@@ -91,7 +87,7 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur lors de l\'effacement du cache: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -125,7 +121,7 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
             child: const Text('Réinitialiser'),
           ),
         ],
@@ -157,7 +153,7 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur lors de la réinitialisation: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -176,14 +172,13 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Stockage et Cache'),
-        backgroundColor: goldColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: blackColor),
+            icon: const Icon(Icons.refresh),
             onPressed: _loadStorageInfo,
             tooltip: 'Rafraîchir',
           ),
@@ -198,7 +193,7 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Gérez l\'espace de stockage utilisé par l\'application.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                   ),
                 ),
                 
@@ -223,14 +218,14 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                   onClear: _clearingPreferences ? null : _clearPreferences,
                   isClearing: _clearingPreferences,
                   clearButtonText: 'Réinitialiser',
-                  clearButtonColor: Colors.red,
+                  clearButtonColor: AppTheme.errorColor,
                 ),
                 
                 AppSpacing.verticalLg,
                 
                 // Information sur le stockage
                 Card(
-                  color: greyColor.withOpacity(0.3),
+                  color: AppTheme.dividerColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
@@ -244,12 +239,12 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                             Container(
                               padding: EdgeInsets.all(AppSpacing.smd),
                               decoration: BoxDecoration(
-                                color: orangeColor.withOpacity(0.2),
+                                color: AppTheme.primaryColor.withOpacity(0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Icons.info_outline,
-                                color: orangeColor,
+                                color: AppTheme.primaryColor,
                               ),
                             ),
                             SizedBox(width: AppSpacing.md),
@@ -290,7 +285,7 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
     required VoidCallback? onClear,
     required bool isClearing,
     String clearButtonText = 'Effacer',
-    Color clearButtonColor = orangeColor,
+    Color clearButtonColor = AppTheme.primaryColor,
   }) {
     return Card(
       elevation: 1,
@@ -307,12 +302,12 @@ class _StorageCacheScreenState extends State<StorageCacheScreen> {
                 Container(
                   padding: EdgeInsets.all(AppSpacing.smd),
                   decoration: BoxDecoration(
-                    color: goldColor.withOpacity(0.2),
+                    color: AppTheme.primaryColor.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     icon,
-                    color: goldColor,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
                 SizedBox(width: AppSpacing.md),

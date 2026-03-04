@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
@@ -11,11 +12,6 @@ class LanguageScreen extends StatefulWidget {
 }
 
 class _LanguageScreenState extends State<LanguageScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
-  
   static const String languageKey = 'app_language';
   
   String _selectedLanguage = 'fr';
@@ -92,11 +88,10 @@ class _LanguageScreenState extends State<LanguageScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Langue'),
-        backgroundColor: goldColor,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -107,13 +102,13 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Choisissez la langue de l\'application.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                   ),
                 ),
                 
                 // Carte d'information sur la langue
                 Card(
-                  color: greyColor.withOpacity(0.3),
+                  color: AppTheme.dividerColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
@@ -124,12 +119,12 @@ class _LanguageScreenState extends State<LanguageScreen> {
                         Container(
                           padding: EdgeInsets.all(AppSpacing.smd),
                           decoration: BoxDecoration(
-                            color: orangeColor.withOpacity(0.2),
+                            color: AppTheme.primaryColor.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.info_outline,
-                            color: orangeColor,
+                            color: AppTheme.primaryColor,
                           ),
                         ),
                         SizedBox(width: AppSpacing.md),
@@ -161,12 +156,12 @@ class _LanguageScreenState extends State<LanguageScreen> {
       padding: EdgeInsets.only(bottom: AppSpacing.smd),
       child: Card(
         elevation: isSelected ? 2 : 0,
-        color: isSelected ? goldColor.withOpacity(0.2) : Colors.white,
+        color: isSelected ? AppTheme.primaryColor.withOpacity(0.2) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           side: isSelected
-              ? const BorderSide(color: goldColor, width: 2)
-              : BorderSide(color: greyColor, width: 1),
+              ? const BorderSide(color: AppTheme.primaryColor, width: 2)
+              : const BorderSide(color: AppTheme.dividerColor, width: 1),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -196,7 +191,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                       Text(
                         language['native'],
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[700],
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       if (language['isRTL'] == true)
@@ -205,7 +200,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                           child: Text(
                             'Écriture de droite à gauche',
                             style: AppTextStyles.caption.copyWith(
-                              color: Colors.grey,
+                              color: AppTheme.textSecondary,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -218,7 +213,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                 if (isSelected)
                   const Icon(
                     Icons.check_circle,
-                    color: orangeColor,
+                    color: AppTheme.primaryColor,
                     size: 24.0,
                   ),
               ],

@@ -9,7 +9,8 @@ import 'package:chapechape_client/core/services/payment_service.dart';
 import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
 import 'package:chapechape_client/core/models/phone_number.dart';
 
-import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/config/theme.dart' hide AppTheme;
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 
@@ -142,9 +143,9 @@ class _PaymentScreenState extends State<PaymentScreen>
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Veuillez entrer un numéro de téléphone valide'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: const Text('Veuillez entrer un numéro de téléphone valide'),
+              backgroundColor: AppTheme.errorColor,
             ),
           );
         }
@@ -348,9 +349,9 @@ class _PaymentScreenState extends State<PaymentScreen>
             } else {
               // Garde-fou: création de paiement échouée
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Création de paiement échouée. Veuillez réessayer.'),
-                  backgroundColor: Colors.red,
+                SnackBar(
+                  content: const Text('Création de paiement échouée. Veuillez réessayer.'),
+                  backgroundColor: AppTheme.errorColor,
                 ),
               );
             }
@@ -371,7 +372,7 @@ class _PaymentScreenState extends State<PaymentScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: AppTheme.errorColor,
               ),
             );
           }

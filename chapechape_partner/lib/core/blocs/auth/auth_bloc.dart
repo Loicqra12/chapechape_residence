@@ -408,9 +408,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final currentState = state as AuthAuthenticated;
         emit(AuthLoading());
         
+        final fileOrBytes = event.documentFile ?? event.documentBytes;
         final documentUrl = await _mediaService.uploadDocument(
           event.documentType,
-          event.documentFile,
+          fileOrBytes,
         );
         
         // Après l'upload, récupérer les données mises à jour du partenaire

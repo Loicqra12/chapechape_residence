@@ -808,7 +808,13 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: ChoiceChip(
-                    label: Text(category['name']),
+                    label: Text(
+                      category['name'],
+                      style: TextStyle(
+                        color: isSelected ? AppTheme.textLight : AppTheme.textPrimary,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {
@@ -818,6 +824,12 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                       });
                       _applyFilters();
                     },
+                    selectedColor: AppTheme.primaryColor,
+                    checkmarkColor: AppTheme.textLight,
+                    side: BorderSide(
+                      color: isSelected ? AppTheme.darkGold : Colors.grey.shade400,
+                      width: 1,
+                    ),
                   ),
                 );
               },

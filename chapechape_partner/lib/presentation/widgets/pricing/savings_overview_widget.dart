@@ -31,7 +31,7 @@ class SavingsOverviewWidget extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               Colors.green.withOpacity(0.1),
-              Colors.blue.withOpacity(0.05),
+              Theme.of(context).colorScheme.primary.withOpacity(0.05),
             ],
           ),
         ),
@@ -97,7 +97,7 @@ class SavingsOverviewWidget extends StatelessWidget {
                     label: 'Moyenne par client',
                     value: '${NumberFormat('#,###').format(avgSavingsPerReservation)} XOF',
                     icon: Icons.person,
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
@@ -106,12 +106,12 @@ class SavingsOverviewWidget extends StatelessWidget {
             const SizedBox(height: 16),
             
             // Barre de progression d'optimisation
-            _buildOptimizationProgress(),
+            _buildOptimizationProgress(context),
             
             const SizedBox(height: 16),
             
             // Impact détaillé
-            _buildImpactDetails(optimizationImpact),
+            _buildImpactDetails(context, optimizationImpact),
           ],
         ),
       ),
@@ -164,7 +164,7 @@ class SavingsOverviewWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildOptimizationProgress() {
+  Widget _buildOptimizationProgress(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -180,10 +180,10 @@ class SavingsOverviewWidget extends StatelessWidget {
             ),
             Text(
               '${stats.optimizationRate}%',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],
@@ -213,7 +213,7 @@ class SavingsOverviewWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildImpactDetails(Map<String, dynamic> impact) {
+  Widget _buildImpactDetails(BuildContext context, Map<String, dynamic> impact) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -249,7 +249,7 @@ class SavingsOverviewWidget extends StatelessWidget {
                   icon: Icons.monetization_on_outlined,
                   label: 'ROI ChapeChape',
                   value: '+${impact['chapeChapeROI']}%',
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],

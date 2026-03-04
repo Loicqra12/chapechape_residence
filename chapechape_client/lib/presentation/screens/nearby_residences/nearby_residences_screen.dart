@@ -5,6 +5,7 @@ import '../../../core/services/nearby_residences_service.dart';
 import '../../../core/models/residence_model.dart';
 import '../../../core/services/map_provider/google_maps_service.dart';
 import '../../../core/extensions/residence_marker_extension.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../widgets/common/empty_state_widget.dart';
@@ -175,7 +176,7 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Veuillez autoriser l\'accès à votre localisation pour utiliser cette fonctionnalité'),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.errorColor,
       ),
     );
   }
@@ -185,7 +186,7 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Impossible d\'obtenir votre position actuelle'),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.errorColor,
       ),
     );
   }

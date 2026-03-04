@@ -105,8 +105,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paramètres de notifications'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
         actions: [
           if (_isLoading)
             const Padding(

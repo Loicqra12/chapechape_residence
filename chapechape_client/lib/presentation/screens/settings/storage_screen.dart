@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
@@ -16,11 +17,6 @@ class StorageScreen extends StatefulWidget {
 }
 
 class _StorageScreenState extends State<StorageScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
-  
   bool _isLoading = true;
   bool _isClearingCache = false;
   String _cacheSize = "0 B";
@@ -142,11 +138,10 @@ class _StorageScreenState extends State<StorageScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Stockage et cache'),
-        backgroundColor: goldColor,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -203,7 +198,7 @@ class _StorageScreenState extends State<StorageScreen> {
   Widget _buildStorageGraph() {
     return Card(
       elevation: 0,
-      color: greyColor.withOpacity(0.3),
+      color: AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
@@ -225,7 +220,7 @@ class _StorageScreenState extends State<StorageScreen> {
                     child: LinearProgressIndicator(
                       value: 0.7,
                       backgroundColor: Colors.grey[300],
-                      color: orangeColor,
+                      color: AppTheme.primaryColor,
                       minHeight: 20,
                     ),
                   ),
@@ -238,7 +233,7 @@ class _StorageScreenState extends State<StorageScreen> {
               children: [
                 _buildStorageItem('Cache', _cacheSize, Colors.amber),
                 _buildStorageItem('App', _appSize, Colors.green),
-                _buildStorageItem('Total', _formatBytes(_totalSize, 2), orangeColor),
+                _buildStorageItem('Total', _formatBytes(_totalSize, 2), AppTheme.primaryColor),
               ],
             ),
           ],
@@ -279,7 +274,7 @@ class _StorageScreenState extends State<StorageScreen> {
   Widget _buildCacheCard() {
     return Card(
       elevation: 0,
-      color: greyColor.withOpacity(0.3),
+      color: AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
@@ -290,7 +285,7 @@ class _StorageScreenState extends State<StorageScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.cached, color: orangeColor, size: 24),
+                const Icon(Icons.cached, color: AppTheme.primaryColor, size: 24),
                 SizedBox(width: AppSpacing.sm),
                 Text(
                   'Données du cache',
@@ -314,7 +309,7 @@ class _StorageScreenState extends State<StorageScreen> {
               child: ElevatedButton(
                 onPressed: _isClearingCache ? null : _clearCache,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: orangeColor,
+                  backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
                   shape: RoundedRectangleBorder(
@@ -349,7 +344,7 @@ class _StorageScreenState extends State<StorageScreen> {
   Widget _buildDataCard() {
     return Card(
       elevation: 0,
-      color: greyColor.withOpacity(0.3),
+      color: AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
@@ -360,7 +355,7 @@ class _StorageScreenState extends State<StorageScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.storage, color: orangeColor, size: 24),
+                const Icon(Icons.storage, color: AppTheme.primaryColor, size: 24),
                 SizedBox(width: AppSpacing.sm),
                 Text(
                   'Données de l\'application',

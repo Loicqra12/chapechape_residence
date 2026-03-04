@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/colors.dart';
 
 /// Graphique en ligne interactif avec zoom et tap pour détails
 class InteractiveLineChart extends StatefulWidget {
@@ -21,7 +22,7 @@ class InteractiveLineChart extends StatefulWidget {
     required this.data,
     required this.title,
     this.yAxisLabel = '',
-    this.lineColor = Colors.blue,
+    this.lineColor = AppColors.brandPrimary,
     Color? gradientStartColor,
     Color? gradientEndColor,
     this.showDots = true,
@@ -29,7 +30,7 @@ class InteractiveLineChart extends StatefulWidget {
     this.minY = 0,
     double? maxY,
     this.onPointTap,
-  })  : gradientStartColor = gradientStartColor ?? Colors.blue,
+  })  : gradientStartColor = gradientStartColor ?? AppColors.brandPrimary,
         gradientEndColor = gradientEndColor ?? Colors.transparent,
         maxY = maxY ?? 0;
 

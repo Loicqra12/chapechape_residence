@@ -155,7 +155,7 @@ class _ReservationCalendarWidgetState extends State<ReservationCalendarWidget> {
         markerColor = Colors.orange;
         break;
       case ReservationStatus.confirmed:
-        markerColor = Colors.blue;
+        markerColor = Theme.of(context).colorScheme.primary;
         break;
       case ReservationStatus.inStay:
         markerColor = Colors.green;
@@ -167,7 +167,7 @@ class _ReservationCalendarWidgetState extends State<ReservationCalendarWidget> {
         markerColor = Colors.red;
         break;
       default:
-        markerColor = AppColors.primary;
+        markerColor = Theme.of(context).colorScheme.primary;
     }
     
     return Container(
@@ -293,7 +293,7 @@ class _ReservationCalendarWidgetState extends State<ReservationCalendarWidget> {
       case ReservationStatus.pending:
         return Colors.orange;
       case ReservationStatus.confirmed:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case ReservationStatus.inStay:
         return Colors.green;
       case ReservationStatus.completed:
@@ -301,7 +301,7 @@ class _ReservationCalendarWidgetState extends State<ReservationCalendarWidget> {
       case ReservationStatus.cancelled:
         return Colors.red;
       default:
-        return AppColors.primary;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 

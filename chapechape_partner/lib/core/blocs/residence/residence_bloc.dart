@@ -10,9 +10,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/sync_service.dart';
-import 'package:dio/dio.dart';
-import '../../services/api/api_service.dart';
-import '../../services/api/reservation_service.dart';
 import 'dart:convert';
 import '../../../core/services/event_bus/residence_event_bus.dart';
 import 'package:equatable/equatable.dart';
@@ -273,13 +270,9 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
     on<LoadResidenceDetails>(_onLoadResidenceDetails);
     on<RefreshResidences>(_onRefreshResidences);
     on<SynchronizeResidence>(_onSynchronizeResidence);
-    
-    // Initialiser le service de synchronisation
-    _syncService.initialize(
-      apiService: ApiService(),
-      residenceService: _residenceService,
-      reservationService: ReservationService(Dio()),
-    );
+
+    // SyncService est déjà initialisé dans main.dart avec les bonnes instances (apiService, residenceService, reservationService).
+    // Ne pas réinitialiser ici avec des instances vierges pour éviter 404 en cas de sync offline.
   }
 
   // Méthode pour convertir la liste de maps en liste de Résidences

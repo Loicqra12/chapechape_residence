@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -66,8 +67,8 @@ class AuthService {
     bool rememberMe = false,
   }) async {
     try {
-      // Ajouter des logs pour déboguer
-      print('Tentative de connexion avec: $email');
+      // Logs limités au debug (pas en prod)
+      debugPrint('Tentative de connexion');
       
       // Format exact comme dans Postman
       final Map<String, dynamic> loginData = {
@@ -83,7 +84,7 @@ class AuthService {
       // Utiliser le chemin complet avec /api
       final response = await _apiService.post('/auth/login', data: loginData);
 
-      print('Réponse du serveur: ${response.data}');
+      debugPrint('Connexion réussie');
       
       final user = User.fromJson(response.data['user']);
       await _storage.write(key: 'token', value: response.data['token']);
@@ -210,10 +211,10 @@ class AuthService {
     }
   }
 
-  // Réinitialiser le mot de passe
+  /// Demande d'envoi de l'email « mot de passe oublié » (backend: POST /auth/forgot-password)
   Future<void> resetPassword({required String email}) async {
     try {
-      await _apiService.post('/auth/reset-password', data: {
+      await _apiService.post('/auth/forgot-password', data: {
         'email': email,
       });
     } on DioException catch (e) {
@@ -251,11 +252,8 @@ class AuthService {
       // Obtenir les détails d'authentification de la demande Google
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       
-      // 🔍 DEBUG: Vérifier les tokens reçus
-      print("🔑 Google Access Token: ${googleAuth.accessToken?.substring(0, 50)}...");
-      print("🔑 Google ID Token: ${googleAuth.idToken?.substring(0, 50)}...");
-      print("🔍 ID Token null? ${googleAuth.idToken == null}");
-      print('🟢 Google ID Token (envoyé au backend) : ${googleAuth.idToken?.substring(0, 60)}...');
+      // Tokens Google : ne pas logger en production (debugPrint uniquement)
+      debugPrint('Google Sign-In: tokens reçus');
       
       // Créer un nouvel identifiant d'authentification Firebase à partir du token
       final firebase_auth.AuthCredential credential = firebase_auth.GoogleAuthProvider.credential(

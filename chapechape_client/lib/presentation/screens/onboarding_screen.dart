@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/services/onboarding_service.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -73,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     'Passer',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
                 ),
@@ -101,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Text(
                       _pages[_currentPage]['title']!,
                       style: AppTextStyles.headline.copyWith(
-                        color: const Color(0xFF1A1A1A),
+                        color: AppTheme.textPrimary,
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,
@@ -115,7 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Text(
                       _pages[_currentPage]['description']!,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey,
+                        color: AppTheme.textSecondary,
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,
@@ -143,8 +144,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: _currentPage == index ? 24 : 8,
                           decoration: BoxDecoration(
                             color: _currentPage == index
-                                ? const Color(0xFFFFD700)
-                                : Colors.grey.shade300,
+                                ? AppTheme.primaryColor
+                                : AppTheme.dividerColor,
                             borderRadius: BorderRadius.circular(AppSpacing.xs),
                           ),
                         ),
@@ -158,8 +159,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: ElevatedButton(
                         onPressed: _nextPage,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFD700),
-                          foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.smd),
                           ),

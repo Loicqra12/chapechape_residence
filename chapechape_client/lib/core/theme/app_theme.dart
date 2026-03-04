@@ -207,7 +207,7 @@ class AppTheme {
         surface: Colors.white,
         background: backgroundColor,
         error: errorColor,
-        onPrimary: textPrimary,
+        onPrimary: textLight,
         onSecondary: textPrimary,
         onTertiary: textLight,
         onSurface: textPrimary,
@@ -257,16 +257,17 @@ class AppTheme {
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: primaryColor,
+        foregroundColor: textLight,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: textPrimary),
-        titleTextStyle: headingMedium,
+        iconTheme: const IconThemeData(color: textLight),
+        titleTextStyle: headingMedium.copyWith(color: textLight),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: textPrimary,
+          foregroundColor: textLight,
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -461,7 +462,8 @@ class AppTheme {
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFF2C2C2C),
+        backgroundColor: primaryColor,
+        foregroundColor: textLight,
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: textLight),
@@ -470,7 +472,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: textPrimary,
+          foregroundColor: textLight,
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

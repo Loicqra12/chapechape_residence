@@ -40,7 +40,7 @@ class DocumentStatusCard extends StatelessWidget {
         statusText = 'Document rejeté';
         break;
       default:
-        statusColor = Colors.blue;
+        statusColor = Theme.of(context).colorScheme.primary;
         statusIcon = Icons.file_present;
         statusText = 'Document téléchargé';
     }
@@ -205,9 +205,11 @@ class DocumentStatusCard extends StatelessWidget {
   }
 }
 
-// Extension pour capitaliser la première lettre
+// Extension pour capitaliser la première lettre (sécurisée si vide)
 extension StringExtension on String {
   String capitalize() {
+    if (isEmpty) return this;
+    if (length == 1) return toUpperCase();
     return '${this[0].toUpperCase()}${substring(1)}';
   }
 }

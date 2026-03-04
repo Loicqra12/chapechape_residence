@@ -8,6 +8,7 @@ import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
+import 'package:chapechape_client/core/constants/app_assets.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
 import 'package:chapechape_client/core/services/error_message_service.dart';
 import 'package:chapechape_client/presentation/widgets/custom_button.dart';
@@ -87,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Connexion'),
+            title: const SizedBox.shrink(),
             backgroundColor: Colors.white,
             elevation: 0,
             leading: IconButton(
@@ -98,49 +99,87 @@ class _LoginScreenState extends State<LoginScreen> {
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppSpacing.verticalLg,
-                      Center(
-                        child: SizedBox(
-                          width: 200,
-                          height: 80,
-                          child: Image.asset(
-                            'assets/logos/app_logo.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
+                      // Illustration : compacte, tout visible + fondu
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxW = constraints.maxWidth;
+                          const maxH = 130.0;
+                          return SizedBox(
+                            height: maxH + 20,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              clipBehavior: Clip.none,
+                              children: [
+                                SizedBox(
+                                  width: maxW,
+                                  height: maxH,
+                                  child: FittedBox(
+                                    fit: BoxFit.contain,
+                                    child: Image.asset(
+                                      'assets/images/empty_states/empty_connexion_illustration.png',
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  height: 36,
+                                  child: IgnorePointer(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.white.withOpacity(0),
+                                            Colors.white,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                      AppSpacing.verticalXl,
+                      const SizedBox(height: 12),
                       Text(
-                        'Bienvenue sur ChapeChape Résidences',
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        'Bienvenue sur ChapeChape',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       AppSpacing.verticalSm,
                       Text(
                         'Connectez-vous pour accéder à votre compte',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
+                          color: AppTheme.textSecondary,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      AppSpacing.verticalXl,
+                      const SizedBox(height: 12),
                       CustomTextField(
                         controller: _emailController,
-                        labelText: 'Email',
-                        hintText: 'Entrez votre adresse email',
+                        labelText: 'Email ou téléphone',
+                        hintText: 'Entrez votre email ou numéro de téléphone',
                         prefixIcon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
-                        validator: FormValidators.validateEmail,
+                        validator: FormValidators.validateEmailOrPhone,
                         onSaved: (value) => _email = value ?? '',
                       ),
-                      AppSpacing.verticalMd,
+                      AppSpacing.verticalSmd,
                       CustomTextField(
                         controller: _passwordController,
                         labelText: 'Mot de passe',
@@ -152,14 +191,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             _isPasswordVisible
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.grey,
+                            color: AppTheme.textSecondary,
                           ),
                           onPressed: _togglePasswordVisibility,
                         ),
                         validator: FormValidators.validatePassword,
                         onSaved: (value) => _password = value ?? '',
                       ),
-                      AppSpacing.verticalMd,
+                      AppSpacing.verticalSmd,
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -209,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      AppSpacing.verticalXl,
+                      AppSpacing.verticalSmd,
                       SizedBox(
                         width: double.infinity,
                         child: CustomButton(
@@ -218,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: state is AuthLoading ? null : _submitForm,
                         ),
                       ),
-                      AppSpacing.verticalLg,
+                      AppSpacing.verticalSmd,
                       Wrap(
                         alignment: WrapAlignment.center,
                         crossAxisAlignment: WrapCrossAlignment.center,
@@ -242,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      AppSpacing.verticalXl,
+                      AppSpacing.verticalSmd,
                       Row(
                         children: [
                           Expanded(
@@ -268,37 +307,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      AppSpacing.verticalLg,
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _socialLoginButton(
-                            icon: 'logos/google_logo.png',
-                            onPressed: () {
-                              context.read<AuthBloc>().add(
-                                const GoogleLoginRequested(),
-                              );
-                            },
-                          ),
-                          SizedBox(width: AppSpacing.lg),
-                          _socialLoginButton(
-                            icon: 'logos/facebook_logo.png',
-                            onPressed: () {
-                              context.read<AuthBloc>().add(
-                                const FacebookLoginRequested(),
-                              );
-                            },
-                          ),
-                          SizedBox(width: AppSpacing.lg),
-                          _socialLoginButton(
-                            icon: 'logos/apple_logo.png',
-                            onPressed: () {
-                              // Implémenter la connexion avec Apple
-                            },
-                          ),
-                        ],
+                      AppSpacing.verticalSmd,
+                      Center(
+                        child: _googleLoginButton(
+                          onPressed: () {
+                            context.read<AuthBloc>().add(
+                                  const GoogleLoginRequested(),
+                                );
+                          },
+                        ),
                       ),
-                      AppSpacing.verticalMd,
+                      AppSpacing.verticalSmd,
                       // Message légal
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -356,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      AppSpacing.verticalMd,
+                      AppSpacing.verticalSmd,
                     ],
                   ),
                 ),
@@ -368,44 +387,45 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _socialLoginButton({required String icon, required VoidCallback onPressed}) {
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 3,
-                offset: const Offset(0, 1),
-              ),
-            ],
+  /// Bouton de connexion Google conforme (logo officiel multicolore sur fond blanc).
+  Widget _googleLoginButton({required VoidCallback onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.textPrimary,
+          backgroundColor: Colors.white,
+          side: BorderSide(color: Colors.grey.shade300),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.smd),
-                child: Icon(
-                  icon == 'logos/google_logo.png' ? Icons.g_mobiledata : 
-                  icon == 'logos/facebook_logo.png' ? Icons.facebook : 
-                  Icons.apple,
-                  size: 24,
-                  color: icon == 'logos/google_logo.png' ? Colors.red : 
-                         icon == 'logos/facebook_logo.png' ? Colors.blue : 
-                         Colors.black,
-                ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Image.asset(
+                AppAssets.googleLogo,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.g_mobiledata, color: Colors.red, size: 24);
+                },
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            const Text(
+              'Continuer avec Google',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

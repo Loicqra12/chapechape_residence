@@ -73,7 +73,7 @@ class PaymentService {
       // Note: Le backend n'a pas d'endpoint direct pour withdrawals
       // Les retraits se font via le système de payouts pour les partners
       final response = await _apiService.post(
-        '/api/payments/create-payment-intent', // Utiliser l'endpoint existant
+        '/payments/create-payment-intent',
         data: {
           'amount': amount,
           'paymentMethod': method,
@@ -90,7 +90,7 @@ class PaymentService {
   Future<void> cancelWithdrawal({required String transactionId}) async {
     try {
       await _apiService.post(
-        '/api/payments/$transactionId/refund', // ✅ ALIGNÉ - endpoint existant backend
+        '/payments/$transactionId/refund',
         data: {
           'reason': 'Annulation demandée par le partenaire'
         },
@@ -104,7 +104,7 @@ class PaymentService {
   Future<PaymentModel> getTransactionDetails({required String transactionId}) async {
     try {
       final response = await _apiService.get(
-        '/api/payments/$transactionId',
+        '/payments/$transactionId',
       );
       
       return PaymentModel.fromJson(response.data['transaction']);
@@ -132,7 +132,7 @@ class PaymentService {
   Future<List<Map<String, dynamic>>> getPaymentMethods() async {
     try {
       // Utiliser l'API existante pour récupérer les méthodes de paiement
-      final response = await _apiService.get('/api/pricing/payment-methods');
+      final response = await _apiService.get('/pricing/payment-methods');
       return List<Map<String, dynamic>>.from(response.data['data'] ?? []);
     } catch (e) {
       throw Exception('Impossible de récupérer les méthodes de paiement: $e');
@@ -143,7 +143,7 @@ class PaymentService {
   Future<Map<String, dynamic>> getPaymentStats() async {
     try {
       final partnerId = await _getCurrentPartnerId();
-      final response = await _apiService.get('/api/payouts/stats/$partnerId');
+      final response = await _apiService.get('/payouts/stats/$partnerId');
       return response.data;
     } catch (e) {
       throw Exception('Impossible de récupérer les statistiques de paiement: $e');
@@ -171,7 +171,7 @@ class PaymentService {
       // Récupérer l'ID du partner connecté depuis AuthService
       final partnerId = await _getCurrentPartnerId();
       final response = await _apiService.get(
-        '/api/payouts/partner/$partnerId', // ✅ ALIGNÉ avec backend
+        '/payouts/partner/$partnerId',
         queryParameters: queryParams,
       );
       
@@ -186,7 +186,7 @@ class PaymentService {
   Future<PayoutModel> getPayoutDetails(String payoutId) async {
     try {
       final response = await _apiService.get(
-        '/api/payouts/$payoutId', // ✅ ALIGNÉ avec backend - endpoint existant
+        '/payouts/$payoutId',
       );
       
       return PayoutModel.fromJson(response.data['payout']);
@@ -201,7 +201,7 @@ class PaymentService {
       // Récupérer l'ID du partner connecté depuis AuthService
       final partnerId = await _getCurrentPartnerId();
       final response = await _apiService.get(
-        '/api/payouts/stats/$partnerId', // ✅ ALIGNÉ avec backend
+        '/payouts/stats/$partnerId',
       );
       
       return PayoutStats.fromJson(response.data['stats']);
@@ -239,7 +239,7 @@ class PaymentService {
       // Utiliser l'endpoint getPayouts existant avec filtres
       final partnerId = await _getCurrentPartnerId();
       final response = await _apiService.get(
-        '/api/payouts/partner/$partnerId', // ✅ ALIGNÉ avec backend
+        '/payouts/partner/$partnerId',
         queryParameters: queryParams,
       );
       

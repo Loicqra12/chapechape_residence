@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/pricing/pricing_model.dart';
+import '../../../core/theme/colors.dart';
 
 /// Widget graphique pour afficher la répartition par méthode de paiement
 class MethodBreakdownChart extends StatelessWidget {
@@ -194,7 +195,7 @@ class MethodBreakdownChart extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: AppColors.brandPrimary,
                 ),
               ),
               const Text(

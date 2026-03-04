@@ -76,6 +76,8 @@ class ErrorHandler {
       case 502:
       case 503:
         return 'Erreur serveur: Veuillez réessayer plus tard';
+      case 504:
+        return 'Le serveur met trop de temps à répondre. Réessayez dans un instant.';
       default:
         return defaultMessage;
     }

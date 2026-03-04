@@ -89,10 +89,10 @@ class GroupedNotificationsList extends StatelessWidget {
     }
   }
 
-  Color _getGroupColor(String type) {
+  Color _getGroupColor(String type, Color primaryColor) {
     switch (type) {
       case 'booking':
-        return Colors.blue;
+        return primaryColor;
       case 'payment':
         return Colors.green;
       case 'message':
@@ -142,7 +142,7 @@ class GroupedNotificationsList extends StatelessWidget {
         final groupNotifications = groupedNotifications[groupType]!;
         final groupTitle = _getGroupTitle(groupType);
         final groupIcon = _getGroupIcon(groupType);
-        final groupColor = _getGroupColor(groupType);
+        final groupColor = _getGroupColor(groupType, theme.colorScheme.primary);
         final unreadCount = groupNotifications.where((n) => !n.isRead).length;
 
         return _NotificationGroup(

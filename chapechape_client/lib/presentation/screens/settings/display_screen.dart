@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
@@ -11,11 +12,6 @@ class DisplayScreen extends StatefulWidget {
 }
 
 class _DisplayScreenState extends State<DisplayScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
-  
   static const String themeKey = 'app_theme';
   static const String textSizeKey = 'text_size';
   
@@ -75,11 +71,10 @@ class _DisplayScreenState extends State<DisplayScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Affichage'),
-        backgroundColor: goldColor,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -90,7 +85,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Personnalisez l\'apparence de l\'application selon vos préférences.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                   ),
                 ),
                 
@@ -131,7 +126,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                 _buildSectionHeader('Taille du texte'),
                 
                 Card(
-                  color: greyColor.withOpacity(0.3),
+                  color: AppTheme.dividerColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
@@ -143,7 +138,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.text_fields, color: orangeColor),
+                            const Icon(Icons.text_fields, color: AppTheme.primaryColor),
                             SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Text(
@@ -157,7 +152,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                               '${(_textSizeScale * 100).toInt()}%',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: orangeColor,
+                                color: AppTheme.primaryColor,
                               ),
                             ),
                           ],
@@ -172,8 +167,8 @@ class _DisplayScreenState extends State<DisplayScreen> {
                                 min: 0.8,
                                 max: 1.4,
                                 divisions: 6,
-                                activeColor: orangeColor,
-                                inactiveColor: greyColor,
+                                activeColor: AppTheme.primaryColor,
+                                inactiveColor: AppTheme.dividerColor,
                                 onChanged: (value) {
                                   setState(() {
                                     _textSizeScale = value;
@@ -194,7 +189,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                            border: Border.all(color: greyColor),
+                            border: Border.all(color: AppTheme.dividerColor),
                           ),
                           child: Text(
                             'Voici un exemple de texte avec la taille sélectionnée.',
@@ -217,7 +212,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
       padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
       child: Text(
         title,
-        style: AppTextStyles.subtitle.copyWith(color: blackColor),
+        style: AppTextStyles.subtitle.copyWith(color: AppTheme.textPrimary),
       ),
     );
   }
@@ -232,11 +227,11 @@ class _DisplayScreenState extends State<DisplayScreen> {
     
     return Card(
       elevation: isSelected ? 2 : 0,
-      color: isSelected ? goldColor.withOpacity(0.2) : greyColor.withOpacity(0.3),
+      color: isSelected ? AppTheme.primaryColor.withOpacity(0.2) : AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         side: isSelected
-            ? const BorderSide(color: goldColor, width: 2)
+            ? const BorderSide(color: AppTheme.primaryColor, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -249,12 +244,12 @@ class _DisplayScreenState extends State<DisplayScreen> {
               Container(
                 padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isSelected ? goldColor : Colors.white,
+                  color: isSelected ? AppTheme.primaryColor : Colors.white,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
-                  color: isSelected ? Colors.white : orangeColor,
+                  color: isSelected ? AppTheme.textLight : AppTheme.primaryColor,
                   size: 28,
                 ),
               ),
@@ -272,7 +267,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[700],
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                   ],
@@ -281,7 +276,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
               if (isSelected)
                 const Icon(
                   Icons.check_circle,
-                  color: orangeColor,
+                  color: AppTheme.primaryColor,
                   size: 24.0,
                 ),
             ],

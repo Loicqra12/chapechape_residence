@@ -39,8 +39,12 @@ class HomeSearchBar extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFFFFBF5),
           borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: AppTheme.primaryColor.withOpacity(0.45),
+            width: 1.2,
+          ),
           boxShadow: AppTheme.softShadow,
         ),
         child: InkWell(
@@ -53,19 +57,19 @@ class HomeSearchBar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.search, color: Color(0xFF1A1A1A), size: 24),
+                Icon(Icons.search, color: AppTheme.textPrimary, size: 24),
                 const SizedBox(width: AppSpacing.smd),
                 Expanded(
                   child: Text(
                     'Commencer ma recherche',
                     style: AppTextStyles.body.copyWith(
-                      color: Colors.grey[600],
+                      color: AppTheme.textSecondary,
                       fontSize: 17,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Icon(Icons.tune, color: Colors.grey[400], size: 22),
+                Icon(Icons.tune, color: AppTheme.textSecondary, size: 22),
               ],
             ),
           ),
@@ -108,7 +112,7 @@ class _SearchOverlayPage extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: AppTheme.softShadow,
                 ),
-                child: const Icon(Icons.close, size: 18, color: Color(0xFF1A1A1A)),
+                child: Icon(Icons.close, size: 18, color: AppTheme.textPrimary),
               ),
             ),
           ),

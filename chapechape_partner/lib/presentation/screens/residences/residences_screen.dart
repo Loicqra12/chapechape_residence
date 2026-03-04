@@ -90,16 +90,22 @@ class _ResidencesViewState extends State<_ResidencesView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => EditResidenceScreen()),
-        ).then((_) => _loadResidences()),
-        tooltip: 'Ajouter une résidence',
-        child: const Icon(Icons.add),
-      ),
-      body: CustomScrollView(
+    return BlocBuilder<ResidenceBloc, ResidenceState>(
+      builder: (context, state) {
+        // Un seul bouton d'ajout : masquer le FAB quand la liste est vide (empty state a déjà son bouton)
+        final showFab = state is! ResidenceLoaded || state.residences.isNotEmpty;
+        return Scaffold(
+          floatingActionButton: showFab
+              ? FloatingActionButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => EditResidenceScreen()),
+                  ).then((_) => _loadResidences()),
+                  tooltip: 'Ajouter une résidence',
+                  child: const Icon(Icons.add),
+                )
+              : null,
+          body: CustomScrollView(
         slivers: [
           ScreenAppBars.getResidencesAppBar(context),
           SliverToBoxAdapter(
@@ -139,13 +145,19 @@ class _ResidencesViewState extends State<_ResidencesView> {
                   _sortResidences(availableResidences);
                   _sortResidences(unavailableResidences);
                   
+                  final bottomInset = MediaQuery.of(context).padding.bottom;
+                  final horizontalPadding = MediaQuery.sizeOf(context).width > 600 ? 24.0 : 16.0;
                   return RefreshIndicator(
                     onRefresh: () async => _loadResidences(),
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: Padding(
-                        // Padding bas pour éviter que le FAB chevauche les boutons Modifier/Supprimer
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                        padding: EdgeInsets.fromLTRB(
+                          horizontalPadding,
+                          16,
+                          horizontalPadding,
+                          120 + bottomInset,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -258,6 +270,8 @@ class _ResidencesViewState extends State<_ResidencesView> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 

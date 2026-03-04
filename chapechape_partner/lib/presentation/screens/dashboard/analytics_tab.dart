@@ -90,11 +90,11 @@ class AnalyticsTab extends StatelessWidget {
                 const SizedBox(height: 32),
 
                 // Top résidences
-                _buildTopResidencesSection(data.revenue),
+                _buildTopResidencesSection(context, data.revenue),
                 const SizedBox(height: 32),
 
                 // Réservations par statut
-                _buildBookingsByStatusSection(data.stats),
+                _buildBookingsByStatusSection(context, data.stats),
                 const SizedBox(height: 24),
               ],
             ),
@@ -334,7 +334,7 @@ class AnalyticsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildTopResidencesSection(RevenueStats revenue) {
+  Widget _buildTopResidencesSection(BuildContext context, RevenueStats revenue) {
     if (revenue.bestResidences.isEmpty) {
       return _buildEmptyState(
         'Aucune résidence',
@@ -408,8 +408,8 @@ class AnalyticsTab extends StatelessWidget {
           child: InteractiveBarChart(
             title: '',
             data: chartData,
-            barColor: Colors.blue,
-            selectedBarColor: Colors.blue[300],
+            barColor: Theme.of(context).colorScheme.primary,
+            selectedBarColor: Theme.of(context).colorScheme.primary.withOpacity(0.6),
             yAxisLabel: 'FCFA',
             showGrid: true,
             onBarTap: (bar) {
@@ -421,7 +421,7 @@ class AnalyticsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildBookingsByStatusSection(GeneralStats stats) {
+  Widget _buildBookingsByStatusSection(BuildContext context, GeneralStats stats) {
     final bookings = stats.bookingsByStatus;
     
     if (bookings.isEmpty || bookings.values.every((v) => v == 0)) {
@@ -434,7 +434,7 @@ class AnalyticsTab extends StatelessWidget {
       return BarChartDataPoint(
         label: label,
         value: entry.value.toDouble(),
-        color: _getStatusColor(entry.key),
+        color: _getStatusColor(context, entry.key),
       );
     }).toList();
 
@@ -520,12 +520,12 @@ class AnalyticsTab extends StatelessWidget {
     }
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(BuildContext context, String status) {
     switch (status) {
       case 'pending':
         return Colors.orange;
       case 'confirmed':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'completed':
         return Colors.green;
       case 'cancelled':

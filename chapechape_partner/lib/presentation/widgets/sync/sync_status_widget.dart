@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/services/sync_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/sync/sync_bloc.dart';
+import '../../../core/theme/colors.dart';
 
 /// Widget qui affiche l'état actuel de la synchronisation
 class SyncStatusWidget extends StatelessWidget {
@@ -141,7 +142,7 @@ class SyncStatusWidget extends StatelessWidget {
   /// Retourne la couleur de fond correspondant à l'état de synchronisation
   Color _getBackgroundColor(SyncState state) {
     if (state is SyncInProgress) {
-      return Colors.blue.withOpacity(0.2);
+      return AppColors.brandPrimary.withOpacity(0.2);
     } else if (state is SyncError) {
       return Colors.red.withOpacity(0.2);
     } else if (state is SyncOffline) {
@@ -158,7 +159,7 @@ class SyncStatusWidget extends StatelessWidget {
   /// Retourne la couleur du texte correspondant à l'état de synchronisation
   Color _getTextColor(SyncState state) {
     if (state is SyncInProgress) {
-      return Colors.blue;
+      return AppColors.brandPrimary;
     } else if (state is SyncError) {
       return Colors.red;
     } else if (state is SyncOffline) {
@@ -232,7 +233,7 @@ class SyncStatusIconWidget extends StatelessWidget {
   
   Color _getColor(SyncState state) {
     if (state is SyncInProgress) {
-      return Colors.blue;
+      return AppColors.brandPrimary;
     } else if (state is SyncError) {
       return Colors.red;
     } else if (state is SyncOffline) {

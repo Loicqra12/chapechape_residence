@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dio/dio.dart';
+import 'config/app_config_manager.dart';
 
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
@@ -57,8 +58,9 @@ Future<void> setupServiceLocator() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(sharedPreferences);
   
+  // Utiliser l'URL de l'API depuis AppConfigManager (production)
   final dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.1.74:4000/api',
+    baseUrl: AppConfigManager.apiUrl,
     connectTimeout: const Duration(milliseconds: 15000),
     receiveTimeout: const Duration(milliseconds: 15000),
   ));

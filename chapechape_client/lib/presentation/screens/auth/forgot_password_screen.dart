@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_state.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/utils/form_validators.dart';
@@ -60,7 +61,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: AppTheme.errorColor,
               ),
             );
           }

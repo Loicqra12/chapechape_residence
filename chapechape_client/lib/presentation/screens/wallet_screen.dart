@@ -36,7 +36,6 @@ class _WalletScreenState extends State<WalletScreen> with SingleTickerProviderSt
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Portefeuille & Récompenses'),
-        backgroundColor: const Color(0xFFFFD700),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.black,

@@ -190,7 +190,7 @@ class AppConfigManager {
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
-              'appVersion': '1.0.0',
+              'appVersion': '1.3.1',
               'environment': 'production',
             };
           } else {
@@ -203,7 +203,7 @@ class AppConfigManager {
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
-              'appVersion': '1.0.0',
+              'appVersion': '1.3.1',
               'environment': 'production',
             };
           }
@@ -234,7 +234,7 @@ class AppConfigManager {
   static String get apiVersion => _config['apiVersion'] as String? ?? 'v1';
   static int get apiTimeout => _config['apiTimeout'] as int? ?? 30000;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int? ?? 5000;
-  static String get appVersion => _config['appVersion'] as String? ?? '1.0.0';
+  static String get appVersion => _config['appVersion'] as String? ?? '1.3.1';
   static String get environmentName => _config['environment'] as String? ?? 'development';
 
   /// Indique si l'application est en mode débogage
@@ -325,6 +325,8 @@ class AppConfigManager {
   }
   
   /// Liste des patterns d'images problématiques connus
+  /// Patterns spécifiques (fichiers connus problématiques). Ne pas utiliser de pattern
+  /// trop générique comme 'images-' qui bloquerait des URLs légitimes (ex. uploads/residences/images-xxx.jpg).
   static final List<String> _knownProblematicImagePatterns = [
     'images-1745027999174-175590833.jpg',
     'images-1745120501449-279771060.jpg',
@@ -333,8 +335,6 @@ class AppConfigManager {
     'images-1744134364693-973598783.jpg',
     'images-1743013773412-758687489.jpg',
     'images-1744744845850-187001226.jpg',
-    // Pattern générique pour les images sans host
-    'images-',
   ];
   
   /// Construit une URL d'image de profil complète

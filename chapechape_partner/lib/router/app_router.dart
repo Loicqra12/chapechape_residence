@@ -259,9 +259,9 @@ class AppRouter {
         return null;
       }
 
-      // Vérifier si l'onboarding a déjà été vu
+      // Vérifier si l'onboarding a déjà été vu (même clé que OnboardingService)
       final prefs = await SharedPreferences.getInstance();
-      final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+      final hasSeenOnboarding = prefs.getBool('onboarding_complete') ?? false;
 
       // Si authentifié, quitter uniquement auth et onboarding (pas /residences/add, etc.)
       if (isAuthenticated && (state.matchedLocation.startsWith('/auth') || state.matchedLocation == '/onboarding')) {

@@ -9,12 +9,15 @@ import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing.dart';
 import '../../core/theme/text_styles.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/models/residence_type_enum.dart';
 import '../../core/models/promotion_model.dart';
 import '../../core/services/promotion_service.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/shared_preferences_service.dart';
 import '../widgets/featured_listings.dart';
+import '../widgets/advanced_search_widget.dart';
+import '../widgets/special_residences_widget.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/tendances_widget.dart';
 import '../widgets/exclusive_promotions_widget.dart';
@@ -123,17 +126,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
             key: const Key('home_screen_list_view'),
             children: [
-              // Hero texte centré en haut (sans bannière) avec animation
+              // Hero avec fond homescreen_plan + dégradé or/beige et texte centré
               BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, authState) {
                   final isDark = Theme.of(context).brightness == Brightness.dark;
                   final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+                    color: isDark ? Colors.white : AppTheme.textPrimary,
                     letterSpacing: -0.3,
                   );
                   final subtitleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    color: isDark ? AppTheme.textSecondary : AppTheme.textSecondary,
                     height: 1.35,
                   );
                   String title;
@@ -143,35 +146,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ? authState.user.firstName
                         : 'là';
                     title = 'Bonjour $name 👋';
-                    subtitle = 'Vous cherchez pour quand ?';
+                    subtitle = 'À l\'heure, à la nuit ou au mois en fonction de votre zone';
                   } else {
                     title = 'Trouvez votre résidence idéale en Côte d\'Ivoire';
                     subtitle = 'À l\'heure, à la nuit ou au mois en fonction de votre zone';
                   }
                   return FadeTransition(
                     opacity: _heroFade,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            title,
-                            style: titleStyle,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        image: const DecorationImage(
+                          image: AssetImage(AppAssets.homescreenPlan),
+                          fit: BoxFit.cover,
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppTheme.lightGold.withOpacity(0.72),
+                            AppTheme.primaryColor.withOpacity(0.18),
+                            Colors.white.withOpacity(0.82),
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                title,
+                                style: titleStyle,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                subtitle,
+                                style: subtitleStyle,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            subtitle,
-                            style: subtitleStyle,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );
@@ -278,9 +303,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   },
                 ),
               ),
-
               const SizedBox(height: 12),
-
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 240),
                 child: const TopRatedSectionWidget(limit: 6),
@@ -296,4 +319,5 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },
     );
   }
+
 }

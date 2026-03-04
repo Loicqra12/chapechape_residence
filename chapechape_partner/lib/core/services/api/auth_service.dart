@@ -135,6 +135,11 @@ class AuthService {
           'email': email,
           'password': password,
         },
+        // Timeouts étendus pour le login (Dio v5: pas de connectTimeout dans Options)
+        options: Options(
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 90),
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -300,11 +305,11 @@ class AuthService {
     }
   }
 
-  /// Demande une réinitialisation de mot de passe
+  /// Demande une réinitialisation de mot de passe (envoi email avec lien)
   Future<bool> requestPasswordReset(String email) async {
     try {
       final response = await _dio.post(
-        '/auth/reset-password-request',
+        '/auth/forgot-password',
         data: {'email': email},
       );
       
@@ -319,18 +324,15 @@ class AuthService {
     }
   }
   
-  /// Réinitialise le mot de passe avec un token
+  /// Réinitialise le mot de passe avec le token reçu par email (backend: PUT /auth/reset-password/:resetToken)
   Future<bool> resetPassword({
     required String token,
     required String newPassword,
   }) async {
     try {
-      final response = await _dio.post(
-        '/auth/reset-password',
-        data: {
-          'token': token,
-          'newPassword': newPassword,
-        },
+      final response = await _dio.put(
+        '/auth/reset-password/$token',
+        data: {'password': newPassword},
       );
       
       if (response.statusCode == 200) {

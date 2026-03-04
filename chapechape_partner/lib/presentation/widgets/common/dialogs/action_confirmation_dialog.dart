@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/colors.dart';
 
 /// Type d'action pour personnaliser l'apparence du dialogue
 enum ActionType {
@@ -70,11 +71,11 @@ class ActionTypeConfig {
         );
       case ActionType.info:
         return const ActionTypeConfig(
-          color: Colors.blue,
+          color: AppColors.brandPrimary,
           icon: Icons.info_outline,
           defaultTitle: 'Information',
           confirmLabel: 'OK',
-          confirmButtonColor: Colors.blue,
+          confirmButtonColor: AppColors.brandPrimary,
         );
     }
   }

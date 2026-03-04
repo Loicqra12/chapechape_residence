@@ -162,10 +162,10 @@ class _MessageInputState extends State<MessageInput> {
               ),
               SizedBox(height: 20),
               ListTile(
-                leading: Icon(Icons.chat, color: Colors.blue),
+                leading: Icon(Icons.chat, color: Theme.of(context).colorScheme.primary),
                 title: Text('Chat interne'),
                 subtitle: Text('Message privé dans l\'application'),
-                trailing: _selectedPlatform == 'chat' ? Icon(Icons.check, color: Colors.blue) : null,
+                trailing: _selectedPlatform == 'chat' ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                 onTap: () {
                   setState(() {
                     _selectedPlatform = 'chat';
@@ -214,7 +214,7 @@ class _MessageInputState extends State<MessageInput> {
         return Icon(Icons.sms, color: Colors.orange);
       case 'chat':
       default:
-        return Icon(Icons.chat, color: Colors.blue);
+        return Icon(Icons.chat, color: Theme.of(context).colorScheme.primary);
     }
   }
 
@@ -226,7 +226,7 @@ class _MessageInputState extends State<MessageInput> {
         return Colors.orange;
       case 'chat':
       default:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 

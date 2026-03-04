@@ -10,6 +10,7 @@ import '../../core/models/residence_model.dart';
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
 import '../../core/blocs/residence/residence_bloc.dart'; // Contient déjà l'export de residence_event.dart
+import '../../core/theme/app_theme.dart';
 
 class ResidenceCard extends StatelessWidget {
   final Residence residence;
@@ -31,10 +32,6 @@ class ResidenceCard extends StatelessWidget {
     this.showMountainBadge = false,
   }) : super(key: key);
 
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  
   // Utilitaire de formatage de devise
   String _formatCurrency(double value) {
     return NumberFormat.currency(
@@ -258,7 +255,7 @@ class ResidenceCard extends StatelessWidget {
                           ),
                           child: Icon(
                             residence.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: residence.isFavorite ? Colors.red : Colors.grey,
+                            color: residence.isFavorite ? AppTheme.primaryColor : AppTheme.textSecondary,
                             size: 14,
                           ),
                         ),
@@ -273,7 +270,7 @@ class ResidenceCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: AppTheme.textPrimary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -281,7 +278,7 @@ class ResidenceCard extends StatelessWidget {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textSecondary),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
@@ -305,7 +302,7 @@ class ResidenceCard extends StatelessWidget {
       children: [
         Icon(
           icon,
-          color: Colors.grey,
+          color: AppTheme.textSecondary,
           size: 16,
         ),
         const SizedBox(width: 2),
@@ -313,7 +310,7 @@ class ResidenceCard extends StatelessWidget {
           child: Text(
             text,
             style: const TextStyle(
-              color: Colors.grey,
+              color: AppTheme.textSecondary,
               fontSize: 12,
             ),
             overflow: TextOverflow.ellipsis,

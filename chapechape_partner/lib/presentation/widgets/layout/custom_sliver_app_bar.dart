@@ -7,6 +7,7 @@ import 'package:chapechape_partner/core/theme/colors.dart';
 class CustomSliverAppBar extends StatelessWidget {
   final String title;
   final List<Widget>? actions;
+  final Widget? leading;
   final bool showLogo;
   final Color? backgroundColor;
   final double? expandedHeight;
@@ -18,6 +19,7 @@ class CustomSliverAppBar extends StatelessWidget {
     Key? key,
     required this.title,
     this.actions,
+    this.leading,
     this.showLogo = true,
     this.backgroundColor,
     this.expandedHeight,
@@ -38,7 +40,7 @@ class CustomSliverAppBar extends StatelessWidget {
       surfaceTintColor: bgColor,
       elevation: 0,
       shadowColor: Colors.black.withOpacity(0.05),
-      leading: showLogo ? const ChapeChapeLogo() : null,
+      leading: leading ?? (showLogo ? const ChapeChapeLogo() : null),
       iconTheme: IconThemeData(
         color: Theme.of(context).brightness == Brightness.dark
             ? Colors.white
@@ -50,15 +52,20 @@ class CustomSliverAppBar extends StatelessWidget {
             : AppColors.textPrimary,
       ),
       centerTitle: false,
-      title: Text(
-        title,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.5,
-              fontSize: titleFontSize,
-            ),
+      title: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+                fontSize: titleFontSize,
+              ),
+        ),
       ),
       actions: actions,
       flexibleSpace: flexibleSpace,

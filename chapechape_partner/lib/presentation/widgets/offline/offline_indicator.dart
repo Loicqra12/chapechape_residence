@@ -64,19 +64,19 @@ class PendingOperationsCounter extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.blue.shade100,
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.shade300),
+            border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.sync, color: Colors.blue.shade700, size: 16),
+              Icon(Icons.sync, color: Theme.of(context).colorScheme.primary, size: 16),
               const SizedBox(width: 4),
               Text(
                 '${snapshot.data!.pending} en attente',
                 style: TextStyle(
-                  color: Colors.blue.shade700,
+                  color: Theme.of(context).colorScheme.primary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),

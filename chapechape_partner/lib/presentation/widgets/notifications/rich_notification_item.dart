@@ -39,10 +39,10 @@ class RichNotificationItem extends StatelessWidget {
     }
   }
 
-  Color _getNotificationColor(String type) {
+  Color _getNotificationColor(String type, Color primaryColor) {
     switch (type) {
       case 'booking':
-        return Colors.blue;
+        return primaryColor;
       case 'payment':
         return Colors.green;
       case 'message':
@@ -77,7 +77,7 @@ class RichNotificationItem extends StatelessWidget {
     }
   }
 
-  List<QuickActionButton> _getQuickActions(String type) {
+  List<QuickActionButton> _getQuickActions(String type, Color primaryColor) {
     switch (type) {
       case 'booking':
         return [
@@ -90,7 +90,7 @@ class RichNotificationItem extends StatelessWidget {
           QuickActionButton(
             icon: Icons.visibility,
             label: 'Voir',
-            color: Colors.blue,
+            color: primaryColor,
             action: 'view',
           ),
           QuickActionButton(
@@ -105,7 +105,7 @@ class RichNotificationItem extends StatelessWidget {
           QuickActionButton(
             icon: Icons.visibility,
             label: 'Voir',
-            color: Colors.blue,
+            color: primaryColor,
             action: 'view',
           ),
           QuickActionButton(
@@ -120,7 +120,7 @@ class RichNotificationItem extends StatelessWidget {
           QuickActionButton(
             icon: Icons.reply,
             label: 'Répondre',
-            color: Colors.blue,
+            color: primaryColor,
             action: 'reply',
           ),
           QuickActionButton(
@@ -135,7 +135,7 @@ class RichNotificationItem extends StatelessWidget {
           QuickActionButton(
             icon: Icons.reply,
             label: 'Répondre',
-            color: Colors.blue,
+            color: primaryColor,
             action: 'reply',
           ),
           QuickActionButton(
@@ -150,7 +150,7 @@ class RichNotificationItem extends StatelessWidget {
           QuickActionButton(
             icon: Icons.visibility,
             label: 'Voir',
-            color: Colors.blue,
+            color: primaryColor,
             action: 'view',
           ),
         ];
@@ -160,9 +160,10 @@ class RichNotificationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
     final icon = _getNotificationIcon(notification.type);
-    final color = _getNotificationColor(notification.type);
-    final quickActions = _getQuickActions(notification.type);
+    final color = _getNotificationColor(notification.type, primaryColor);
+    final quickActions = _getQuickActions(notification.type, primaryColor);
     final hasImage = notification.imageUrl != null && notification.imageUrl!.isNotEmpty;
 
     return Dismissible(

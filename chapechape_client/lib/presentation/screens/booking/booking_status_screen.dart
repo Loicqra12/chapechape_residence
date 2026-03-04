@@ -38,7 +38,7 @@ class BookingStatusScreen extends StatelessWidget {
       status: 'rejected',
       bookingId: bookingId,
       icon: Icons.cancel_outlined,
-      backgroundColor: Colors.red,
+      backgroundColor: AppTheme.errorColor,
       actions: [
         if (onNewBooking != null)
           _ActionButton(

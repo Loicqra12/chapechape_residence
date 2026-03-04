@@ -519,7 +519,7 @@ class _PaymentMethodsManagerWidgetState extends State<PaymentMethodsManagerWidge
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.timelapse, size: 14, color: Colors.blue),
+                    Icon(Icons.timelapse, size: 14, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 4),
                     Text('Traitement: ${commissionData['processingTime']}'),
                   ],

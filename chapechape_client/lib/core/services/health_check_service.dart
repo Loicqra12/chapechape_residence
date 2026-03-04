@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:chapechape_client/core/config/app_config_manager.dart';
 
 /// Service de vérification de santé du serveur optimisé
 class HealthCheckService {
@@ -27,9 +28,10 @@ class HealthCheckService {
     try {
       _lastServerCheck = DateTime.now();
       
-      // Utiliser l'endpoint ping dédié
+      // Utiliser l'endpoint ping depuis AppConfigManager (production)
+      final pingUrl = '${AppConfigManager.apiUrl}/ping';
       final response = await http.get(
-        Uri.parse('http://192.168.1.74:4000/api/ping'),
+        Uri.parse(pingUrl),
       ).timeout(const Duration(seconds: 5));
       
       _isServerHealthy = response.statusCode == 200;

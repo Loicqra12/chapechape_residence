@@ -58,18 +58,24 @@ class CustomTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.grey) : null,
+        prefixIcon: prefixIcon != null
+            ? Icon(prefixIcon, color: AppTheme.textSecondary, size: 22)
+            : null,
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.grey[100],
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -80,11 +86,11 @@ class CustomTextField extends StatelessWidget {
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         labelStyle: TextStyle(
-          color: Colors.grey[700],
+          color: AppTheme.textSecondary,
           fontSize: 16,
         ),
         hintStyle: TextStyle(
-          color: Colors.grey[400],
+          color: AppTheme.textSecondary.withOpacity(0.7),
           fontSize: 14,
         ),
         errorStyle: const TextStyle(

@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../core/theme/colors.dart';
 
 /// Graphique en barres interactif avec tap pour détails
 class InteractiveBarChart extends StatefulWidget {
@@ -18,7 +19,7 @@ class InteractiveBarChart extends StatefulWidget {
     required this.data,
     required this.title,
     this.yAxisLabel = '',
-    this.barColor = Colors.blue,
+    this.barColor = AppColors.brandPrimary,
     this.selectedBarColor,
     this.showGrid = true,
     this.minY = 0,

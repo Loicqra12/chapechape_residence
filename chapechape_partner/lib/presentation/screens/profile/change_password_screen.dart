@@ -102,7 +102,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Changer le mot de passe'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: const Text('Changer le mot de passe'),
+          ),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -184,7 +192,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(

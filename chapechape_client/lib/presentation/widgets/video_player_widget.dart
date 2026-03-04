@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
@@ -76,7 +77,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppTheme.textPrimary,
         elevation: 0,
       ),
       backgroundColor: Colors.black,
@@ -122,8 +123,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             icon: const Icon(Icons.open_in_browser),
             label: const Text('Ouvrir dans le navigateur'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD700),
-              foregroundColor: Colors.black,
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: AppTheme.textLight,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
           ),
@@ -134,7 +135,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     if (!_isInitialized) {
       return const Center(
         child: CircularProgressIndicator(
-          color: Color(0xFFFFD700),
+          color: AppTheme.primaryColor,
         ),
       );
     }
@@ -157,7 +158,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             icon: const Icon(
               Icons.play_circle_fill,
               size: 80,
-              color: Color(0xFFFFD700),
+              color: AppTheme.primaryColor,
             ),
           ),
         Positioned(
@@ -168,7 +169,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             _controller,
             allowScrubbing: true,
             colors: const VideoProgressColors(
-              playedColor: Color(0xFFFFD700),
+              playedColor: AppTheme.primaryColor,
               bufferedColor: Colors.white24,
               backgroundColor: Colors.grey,
             ),

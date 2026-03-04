@@ -1993,7 +1993,7 @@ class DashboardScreen extends StatelessWidget {
               context,
               Icons.home,
               '${stats.totalResidences} résidence${stats.totalResidences > 1 ? 's' : ''}',
-              Colors.blue,
+              Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 4),
             _buildStatRow(
@@ -2480,7 +2480,7 @@ class DashboardScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_balance_wallet, color: Colors.blue),
+              Icon(Icons.account_balance_wallet, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               Text(
                 'Mes Reversements',
@@ -2520,7 +2520,7 @@ class DashboardScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_balance_wallet, color: Colors.blue),
+              Icon(Icons.account_balance_wallet, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               Text(
                 'Mes Reversements',
@@ -2582,12 +2582,12 @@ class DashboardScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.account_balance_wallet,
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
               ),
@@ -2681,7 +2681,7 @@ class DashboardScreen extends StatelessWidget {
                   'Commissions',
                   stats.formattedTotalCommission,
                   Icons.percent,
-                  Colors.blue,
+                  Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 12),

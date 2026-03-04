@@ -91,7 +91,6 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Aide et Support'),
-        backgroundColor: const Color(0xFFFFD700),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.black,
