@@ -190,7 +190,7 @@ class AppConfigManager {
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
-              'appVersion': '1.3.1',
+              'appVersion': '1.7.0',
               'environment': 'production',
             };
           } else {
@@ -203,7 +203,7 @@ class AppConfigManager {
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
-              'appVersion': '1.3.1',
+              'appVersion': '1.7.0',
               'environment': 'production',
             };
           }
@@ -234,7 +234,7 @@ class AppConfigManager {
   static String get apiVersion => _config['apiVersion'] as String? ?? 'v1';
   static int get apiTimeout => _config['apiTimeout'] as int? ?? 30000;
   static int get wsReconnectInterval => _config['wsReconnectInterval'] as int? ?? 5000;
-  static String get appVersion => _config['appVersion'] as String? ?? '1.3.1';
+  static String get appVersion => _config['appVersion'] as String? ?? '1.7.0';
   static String get environmentName => _config['environment'] as String? ?? 'development';
 
   /// Indique si l'application est en mode débogage
