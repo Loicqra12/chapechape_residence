@@ -329,7 +329,7 @@ class _CountrySelectorWidgetState extends State<CountrySelectorWidget> {
         statusText = 'Beta';
         break;
       case 'planned':
-        badgeColor = Colors.blue;
+        badgeColor = Theme.of(context).colorScheme.primary;
         statusText = 'Prévu';
         break;
       default:

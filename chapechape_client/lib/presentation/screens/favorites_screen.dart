@@ -16,11 +16,6 @@ import 'package:chapechape_client/presentation/widgets/common/empty_state_widget
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({Key? key}) : super(key: key);
 
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-
   @override
   Widget build(BuildContext context) {
     final favoriteRepository = context.read<FavoriteBloc>().favoriteRepository;
@@ -32,7 +27,6 @@ class FavoritesScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Favoris'),
-          backgroundColor: goldColor,
         ),
         body: BlocBuilder<FavoriteBloc, FavoriteState>(
           builder: (context, state) {
@@ -55,14 +49,14 @@ class FavoritesScreen extends StatelessWidget {
                     Icon(
                       Icons.error_outline,
                       size: 64,
-                      color: Colors.red[400],
+                      color: AppTheme.errorColor,
                     ),
                     AppSpacing.verticalMd,
                     Text(
                       'Erreur',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.red[600],
+                        color: AppTheme.errorColor,
                       ),
                     ),
                     AppSpacing.verticalSm,
@@ -72,7 +66,7 @@ class FavoritesScreen extends StatelessWidget {
                         state.message,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[700],
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ),
@@ -99,12 +93,12 @@ class FavoritesScreen extends StatelessWidget {
       imagePath: 'assets/images/empty_states/empty_favorites_illustration.png',
       title: 'Aucun coup de cœur',
       subtitle: 'Explorez nos résidences et sauvegardez vos préférées pour les retrouver facilement',
-      action: ElevatedButton.icon(
+        action: ElevatedButton.icon(
         icon: const Icon(Icons.explore),
         label: const Text('Découvrir les résidences'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: goldColor,
-          foregroundColor: blackColor,
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: AppTheme.textLight,
           padding: AppSpacing.buttonPadding,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -136,12 +130,12 @@ class FavoritesScreen extends StatelessWidget {
     return Dismissible(
       key: Key(residence.id),
       background: Container(
-        color: Colors.red,
+        color: AppTheme.errorColor,
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: AppSpacing.md + AppSpacing.xs),
         child: const Icon(
           Icons.delete,
-          color: Colors.white,
+          color: AppTheme.textLight,
         ),
       ),
       direction: DismissDirection.endToStart,
@@ -210,7 +204,7 @@ class FavoritesScreen extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       height: 180,
-                      color: Colors.grey[300],
+                      color: AppTheme.dividerColor,
                       child: const Icon(Icons.image_not_supported, size: 50),
                     );
                   },
@@ -237,13 +231,13 @@ class FavoritesScreen extends StatelessWidget {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
-                            color: residence.status == 'available' ? Colors.green : Colors.red,
+                            color: residence.status == 'available' ? AppTheme.successColor : AppTheme.errorColor,
                             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           ),
                           child: Text(
                             residence.status == 'available' ? 'Disponible' : 'Indisponible',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white,
+                              color: AppTheme.textLight,
                             ),
                           ),
                         ),
@@ -253,14 +247,14 @@ class FavoritesScreen extends StatelessWidget {
                     if (residence.location != null)
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                          SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              residence.location!.displayAddress,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                        const Icon(Icons.location_on, size: 16, color: AppTheme.textSecondary),
+                        SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            residence.location!.displayAddress,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -272,7 +266,7 @@ class FavoritesScreen extends StatelessWidget {
                       '${residence.pricePerNight} FCFA / nuit',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: goldColor,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
                   ],

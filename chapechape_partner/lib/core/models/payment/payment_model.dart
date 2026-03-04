@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart' show Colors, Color;
+import '../../theme/colors.dart';
 
 /// Énumération des méthodes de paiement disponibles (harmonisée avec client)
 enum PaymentMethod {
@@ -279,7 +280,7 @@ extension PaymentStatusExtension on PaymentStatus {
       case PaymentStatus.pending:
         return Colors.orange;
       case PaymentStatus.processing:
-        return Colors.blue;
+        return AppColors.brandPrimary;
       case PaymentStatus.succeeded:
         return Colors.green;
       case PaymentStatus.failed:

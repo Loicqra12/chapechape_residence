@@ -154,7 +154,7 @@ class _ReservationApprovalScreenState extends State<ReservationApprovalScreen>
               Text(isApproval ? 'Approbation en cours...' : 'Rejet en cours...'),
             ],
           ),
-          backgroundColor: Colors.blue,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 30), // Long timeout pour l'API call
         ),
       );
@@ -337,14 +337,14 @@ class _ReservationApprovalScreenState extends State<ReservationApprovalScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue[600]!, Colors.blue[400]!],
+          colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

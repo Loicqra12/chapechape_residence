@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/blocs/theme/theme_bloc.dart';
 import '../../../core/blocs/settings/settings_bloc.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
@@ -20,38 +21,19 @@ class SettingsScreen extends StatefulWidget {
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
   
-  // Méthode factory pour créer l'écran avec son propre BlocProvider
+  /// Crée l'écran en réutilisant les blocs déjà fournis par [context].
+  /// Toujours avec BlocProvider.value pour éviter "different constructor" au rebuild
+  /// et pour ne pas fermer les blocs au dispose.
   static Widget withBloc(BuildContext context) {
+    final themeBloc = context.read<ThemeBloc>();
+    final settingsBloc = context.read<SettingsBloc>();
+    final authBloc = context.read<AuthBloc>();
+
     return MultiBlocProvider(
       providers: [
-        BlocProvider<ThemeBloc>(
-          create: (context) {
-            try {
-              return context.read<ThemeBloc>();
-            } catch (_) {
-              return ThemeBloc();
-            }
-          },
-        ),
-        BlocProvider<SettingsBloc>(
-          create: (context) {
-            try {
-              return context.read<SettingsBloc>();
-            } catch (_) {
-              return SettingsBloc();
-            }
-          },
-        ),
-        BlocProvider<AuthBloc>(
-          create: (context) {
-            try {
-              return context.read<AuthBloc>();
-            } catch (_) {
-              // Fall back to original AuthBloc if needed
-              return context.read<AuthBloc>();
-            }
-          },
-        ),
+        BlocProvider<ThemeBloc>.value(value: themeBloc),
+        BlocProvider<SettingsBloc>.value(value: settingsBloc),
+        BlocProvider<AuthBloc>.value(value: authBloc),
       ],
       child: const SettingsScreen(),
     );
@@ -129,25 +111,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Sauvegarde immédiate d'un booléen (pour toggles).
+  Future<void> _saveSingleBool(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
+
+  /// Sauvegarde immédiate d'une chaîne (pour langue, devise, paiement).
+  Future<void> _saveSingleString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/main');
+            }
+          },
+        ),
         title: const Text('Paramètres'),
         actions: [
           TextButton(
             onPressed: _saveSettings,
             child: Text(
               'Enregistrer',
-              style: TextStyle(color: theme.colorScheme.onPrimary),
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16 + bottomPadding,
+        ),
         children: [
           // Paramètres d'affichage
           Card(
@@ -175,15 +188,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Mode sombre'),
                   subtitle: const Text('Activer le thème sombre'),
                   value: _isDarkMode,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _isDarkMode = value;
-                    });
-                    // Mettre à jour le thème via le BLoC
-                    if (value) {
-                      context.read<ThemeBloc>().add(const ThemeChanged(ThemeMode.dark));
-                    } else {
-                      context.read<ThemeBloc>().add(const ThemeChanged(ThemeMode.light));
+                  onChanged: (bool value) async {
+                    setState(() => _isDarkMode = value);
+                    await _saveSingleBool('dark_mode', value);
+                    if (!mounted) return;
+                    final themeBloc = context.read<ThemeBloc>();
+                    if (!themeBloc.isClosed) {
+                      themeBloc.add(
+                        value ? const ThemeChanged(ThemeMode.dark) : const ThemeChanged(ThemeMode.light),
+                      );
+                    }
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(value ? 'Mode sombre activé' : 'Mode sombre désactivé'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
                     }
                   },
                 ),
@@ -204,18 +225,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               title: Text(language),
                               value: language,
                               groupValue: _selectedLanguage,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedLanguage = value!;
-                                });
-                                Navigator.pop(context);
-                                
-                                // Afficher un message indiquant que le changement de langue sera appliqué au redémarrage
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Le changement de langue sera appliqué au prochain redémarrage'),
-                                  ),
-                                );
+                              onChanged: (value) async {
+                                final newVal = value!;
+                                setState(() => _selectedLanguage = newVal);
+                                await _saveSingleString('language', newVal);
+                                if (context.mounted) Navigator.pop(context);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Langue enregistrée. Appliquée au prochain redémarrage.'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
                               },
                             );
                           }).toList(),
@@ -223,7 +245,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('ANNULER'),
+                            child: Text(
+                              'ANNULER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),
@@ -282,7 +307,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('ANNULER'),
+                            child: Text(
+                              'ANNULER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),
@@ -333,18 +361,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               title: Text(currency),
                               value: currency,
                               groupValue: _selectedCurrency,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedCurrency = value!;
-                                });
-                                Navigator.pop(context);
-                                
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Devise mise à jour'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
+                              onChanged: (value) async {
+                                final newVal = value!;
+                                setState(() => _selectedCurrency = newVal);
+                                await _saveSingleString('currency', newVal);
+                                if (context.mounted) Navigator.pop(context);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Devise enregistrée'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
                               },
                             );
                           }).toList(),
@@ -352,7 +381,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('ANNULER'),
+                            child: Text(
+                              'ANNULER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),
@@ -377,18 +409,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 title: Text(method),
                                 value: method,
                                 groupValue: _selectedPaymentMethod,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedPaymentMethod = value!;
-                                  });
-                                  Navigator.pop(context);
-                                  
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Méthode de paiement mise à jour'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
+                                onChanged: (value) async {
+                                  final newVal = value!;
+                                  setState(() => _selectedPaymentMethod = newVal);
+                                  await _saveSingleString('default_payment_method', newVal);
+                                  if (context.mounted) Navigator.pop(context);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Méthode de paiement enregistrée'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
                                 },
                               );
                             }).toList(),
@@ -397,7 +430,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('ANNULER'),
+                            child: Text(
+                              'ANNULER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),
@@ -436,17 +472,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Mode économie de données'),
                   subtitle: const Text('Réduire l\'utilisation des données mobiles'),
                   value: _dataLimitMode,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _dataLimitMode = value;
-                    });
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(value ? 'Mode économie de données activé' : 'Mode économie de données désactivé'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                  onChanged: (bool value) async {
+                    setState(() => _dataLimitMode = value);
+                    await _saveSingleBool('data_limit_mode', value);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(value ? 'Mode économie de données activé' : 'Mode économie de données désactivé'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1),
@@ -454,17 +490,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Mode hors ligne'),
                   subtitle: const Text('Accéder aux données sans connexion internet'),
                   value: _offlineMode,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _offlineMode = value;
-                    });
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(value ? 'Mode hors ligne activé' : 'Mode hors ligne désactivé'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                  onChanged: (bool value) async {
+                    setState(() => _offlineMode = value);
+                    await _saveSingleBool('offline_mode', value);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(value ? 'Mode hors ligne activé' : 'Mode hors ligne désactivé'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1),
@@ -612,7 +648,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('FERMER'),
+                            child: Text(
+                              'FERMER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),
@@ -651,15 +690,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Notifications push'),
                   subtitle: const Text('Recevoir des notifications push'),
                   value: _notificationsEnabled,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _notificationsEnabled = value;
-                    });
-                    
-                    // Mettre à jour les paramètres de notification via le BLoC
+                  onChanged: (bool value) async {
+                    setState(() => _notificationsEnabled = value);
+                    await _saveSingleBool('notifications_enabled', value);
                     context.read<SettingsBloc>().add(
                       ToggleNotifications(enabled: value),
                     );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(value ? 'Notifications push activées' : 'Notifications push désactivées'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1),
@@ -667,17 +711,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Notifications SMS'),
                   subtitle: const Text('Recevoir des notifications par SMS (utile en cas de connexion internet limitée)'),
                   value: _smsNotificationsEnabled,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _smsNotificationsEnabled = value;
-                    });
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(value ? 'Notifications SMS activées' : 'Notifications SMS désactivées'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                  onChanged: (bool value) async {
+                    setState(() => _smsNotificationsEnabled = value);
+                    await _saveSingleBool('sms_notifications_enabled', value);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(value ? 'Notifications SMS activées' : 'Notifications SMS désactivées'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1),
@@ -689,9 +733,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? (bool value) {
                           // Cette option est liée à l'option principale
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text('Cette option est liée aux notifications push'),
-                              backgroundColor: Colors.blue,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                             ),
                           );
                         }
@@ -706,9 +750,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? (bool value) {
                           // Cette option est liée à l'option principale
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text('Cette option est liée aux notifications push'),
-                              backgroundColor: Colors.blue,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                             ),
                           );
                         }
@@ -722,9 +766,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: _notificationsEnabled
                       ? (bool value) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text('Cette option est liée aux notifications push'),
-                              backgroundColor: Colors.blue,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                             ),
                           );
                         }
@@ -766,10 +810,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const privacyUrl = 'https://presentation.chapechaperesidence.com/politique-de-confidentialite';
                     final Uri uri = Uri.parse(privacyUrl);
                     try {
-                      if (await canLaunchUrl(uri)) {
-                        // Utiliser platformDefault au lieu de externalApplication pour éviter l'erreur component name
-                        await launchUrl(uri, mode: LaunchMode.platformDefault);
-                      } else {
+                      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      if (!ok && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Impossible d\'ouvrir la page de confidentialité'),
@@ -779,12 +821,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     } catch (e) {
                       debugPrint('Erreur URL: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erreur: ${e.toString()}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erreur: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -797,10 +841,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const termsUrl = 'https://presentation.chapechaperesidence.com/conditions';
                     final Uri uri = Uri.parse(termsUrl);
                     try {
-                      if (await canLaunchUrl(uri)) {
-                        // Utiliser platformDefault au lieu de externalApplication pour éviter l'erreur component name
-                        await launchUrl(uri, mode: LaunchMode.platformDefault);
-                      } else {
+                      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      if (!ok && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Impossible d\'ouvrir les conditions d\'utilisation'),
@@ -810,12 +852,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     } catch (e) {
                       debugPrint('Erreur URL: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erreur: ${e.toString()}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erreur: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -828,10 +872,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const rulesUrl = 'https://presentation.chapechaperesidence.com/conditions';
                     final Uri uri = Uri.parse(rulesUrl);
                     try {
-                      if (await canLaunchUrl(uri)) {
-                        // Utiliser platformDefault au lieu de externalApplication pour éviter l'erreur component name
-                        await launchUrl(uri, mode: LaunchMode.platformDefault);
-                      } else {
+                      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      if (!ok && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Impossible d\'ouvrir le règlement de la plateforme'),
@@ -841,12 +883,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     } catch (e) {
                       debugPrint('Erreur URL: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erreur: ${e.toString()}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erreur: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -951,7 +995,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text('ANNULER'),
+                                    child: Text(
+                                      'ANNULER',
+                                      style: TextStyle(color: theme.colorScheme.primary),
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -1022,23 +1069,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: Row(
-                          children: [
-                            Image.asset(
-                              'assets/images/logo.png',
-                              width: 40,
-                              height: 40,
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Text(
-                                'ChapeChape Partner',
-                                style: theme.textTheme.titleLarge,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+                        title: const Text('ChapeChape Partner'),
                         content: SingleChildScrollView(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -1074,7 +1105,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('FERMER'),
+                            child: Text(
+                              'FERMER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),
@@ -1201,7 +1235,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('FERMER'),
+                            child: Text(
+                              'FERMER',
+                              style: TextStyle(color: theme.colorScheme.primary),
+                            ),
                           ),
                         ],
                       ),

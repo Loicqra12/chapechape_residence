@@ -278,7 +278,7 @@ class MediaService {
       }
 
       final response = await _dio.post(
-        '/partners/upload/document',
+        '/partners/documents',
         data: formData,
         options: Options(
           headers: {

@@ -115,8 +115,6 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_getPaymentMethodTitle()),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close),

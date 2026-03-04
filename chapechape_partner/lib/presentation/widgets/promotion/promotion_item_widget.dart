@@ -34,7 +34,7 @@ class PromotionItemWidget extends StatelessWidget {
         tagColor = Colors.orange;
         break;
       case PromotionType.seasonal:
-        tagColor = Colors.blue;
+        tagColor = Theme.of(context).colorScheme.primary;
         break;
       case PromotionType.bundle:
         tagColor = Colors.purple;

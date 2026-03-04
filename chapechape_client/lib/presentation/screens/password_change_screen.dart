@@ -197,7 +197,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                     Expanded(child: Text('Erreur: ${state.message}')),
                   ],
                 ),
-                backgroundColor: Colors.red,
+                backgroundColor: AppTheme.errorColor,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.smd),

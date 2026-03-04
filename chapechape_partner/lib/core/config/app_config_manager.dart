@@ -325,6 +325,8 @@ class AppConfigManager {
   }
   
   /// Liste des patterns d'images problématiques connus
+  /// Patterns spécifiques (fichiers connus problématiques). Ne pas utiliser de pattern
+  /// trop générique comme 'images-' qui bloquerait des URLs légitimes (ex. uploads/residences/images-xxx.jpg).
   static final List<String> _knownProblematicImagePatterns = [
     'images-1745027999174-175590833.jpg',
     'images-1745120501449-279771060.jpg',
@@ -333,8 +335,6 @@ class AppConfigManager {
     'images-1744134364693-973598783.jpg',
     'images-1743013773412-758687489.jpg',
     'images-1744744845850-187001226.jpg',
-    // Pattern générique pour les images sans host
-    'images-',
   ];
   
   /// Construit une URL d'image de profil complète

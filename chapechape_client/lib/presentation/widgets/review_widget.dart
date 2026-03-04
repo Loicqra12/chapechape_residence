@@ -1,7 +1,7 @@
 // lib/presentation/widgets/review_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 
 class ReviewWidget extends StatelessWidget {
   final String userName;
@@ -59,7 +59,7 @@ class ReviewWidget extends StatelessWidget {
                           rating: rating,
                           itemBuilder: (context, _) => const Icon(
                             Icons.star,
-                            color: AppColors.goldColor,
+                            color: AppTheme.primaryColor,
                           ),
                           itemCount: 5,
                           itemSize: 16,
@@ -68,7 +68,7 @@ class ReviewWidget extends StatelessWidget {
                         Text(
                           date,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryColor,
+                            color: AppTheme.textSecondary,
                           ),
                         ),
                       ],

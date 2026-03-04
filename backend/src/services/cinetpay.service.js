@@ -11,10 +11,10 @@ const logger = require('../utils/logger');
  */
 class CinetPayService {
     constructor() {
-        // Configuration CinetPay depuis variables d'environnement
-        this.apiKey = process.env.CINETPAY_API_KEY || '12101517668893b672bc4e978042813';
-        this.siteId = process.env.CINETPAY_SITE_ID || '105903820';
-        this.secretKey = process.env.CINETPAY_SECRET_KEY || '1679853586868a1c510ca6a039324919';
+        // Configuration CinetPay depuis variables d'environnement (aucun fallback pour éviter d'exposer des clés)
+        this.apiKey = process.env.CINETPAY_API_KEY;
+        this.siteId = process.env.CINETPAY_SITE_ID;
+        this.secretKey = process.env.CINETPAY_SECRET_KEY;
         this.baseUrl = process.env.CINETPAY_BASE_URL || 'https://api-checkout.cinetpay.com/v2';
         this.mode = process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'TEST';
         

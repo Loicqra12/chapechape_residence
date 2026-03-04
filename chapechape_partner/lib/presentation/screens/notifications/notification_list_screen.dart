@@ -139,7 +139,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
     switch (notification.type) {
       case 'residence':
         icon = Icons.home;
-        iconColor = Colors.blue;
+        iconColor = Theme.of(context).colorScheme.primary;
         break;
       case 'booking':
         icon = Icons.calendar_today;
@@ -211,7 +211,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
               ),

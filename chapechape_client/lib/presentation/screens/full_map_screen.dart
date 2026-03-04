@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/extensions/residence_marker_extension.dart';
@@ -488,7 +489,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
     }
@@ -721,14 +722,14 @@ class _FullMapScreenState extends State<FullMapScreen> {
                     return FilterChip(
                       avatar: Icon(c.$3,
                           size: 16,
-                          color: isOn ? Colors.white : const Color(0xFF555555)),
+                          color: isOn ? Colors.white : AppTheme.textSecondary),
                       label: Text(c.$2),
                       selected: isOn,
-                      selectedColor: const Color(0xFFD4AF37),
+                      selectedColor: AppTheme.primaryColor,
                       checkmarkColor: Colors.white,
-                      backgroundColor: Colors.grey[100],
+                      backgroundColor: AppTheme.dividerColor,
                       labelStyle: TextStyle(
-                          color: isOn ? Colors.white : const Color(0xFF333333),
+                          color: isOn ? Colors.white : AppTheme.textPrimary,
                           fontWeight: isOn ? FontWeight.w600 : FontWeight.normal),
                       onSelected: (v) {
                         setSt(() {
@@ -748,7 +749,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFD4AF37),
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -782,7 +783,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.map_outlined, color: Color(0xFF1A1A1A)),
+                leading: Icon(Icons.map_outlined, color: AppTheme.textPrimary),
                 title: const Text('Standard'),
                 onTap: () {
                   Navigator.pop(context);
@@ -790,7 +791,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.satellite_alt_outlined, color: Color(0xFF1A1A1A)),
+                leading: Icon(Icons.satellite_alt_outlined, color: AppTheme.textPrimary),
                 title: const Text('Satellite'),
                 onTap: () {
                   Navigator.pop(context);
@@ -798,7 +799,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.terrain_outlined, color: Color(0xFF1A1A1A)),
+                leading: Icon(Icons.terrain_outlined, color: AppTheme.textPrimary),
                 title: const Text('Hybride'),
                 onTap: () {
                   Navigator.pop(context);
@@ -826,7 +827,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
           Container(
             width: 40, height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              color: AppTheme.dividerColor, borderRadius: BorderRadius.circular(2)),
           ),
           ListTile(
             leading: const Icon(Icons.list_alt_outlined),
@@ -908,12 +909,12 @@ class _FullMapScreenState extends State<FullMapScreen> {
                             height: 160,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.grey[300],
+                              color: AppTheme.dividerColor,
                               child: const Icon(Icons.home, size: 50),
                             ),
                           )
                         : Container(
-                            color: Colors.grey[300],
+                            color: AppTheme.dividerColor,
                             child: const Icon(Icons.home, size: 50),
                           ),
                       
@@ -1015,7 +1016,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                               ? residence.location.displayAddress 
                               : 'Adresse non disponible',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
+                            color: AppTheme.textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1027,13 +1028,13 @@ class _FullMapScreenState extends State<FullMapScreen> {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: AppTheme.dividerColor,
                             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                           child: Text(
                             residence.type.displayName,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[700],
+                              color: AppTheme.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1054,12 +1055,12 @@ class _FullMapScreenState extends State<FullMapScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(amenityIcon, size: 12, color: Colors.grey[600]),
+                                    Icon(amenityIcon, size: 12, color: AppTheme.textSecondary),
                                     const SizedBox(width: 2),
                                     Text(
                                       _getAmenityLabel(amenity),
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Colors.grey[600],
+                                        color: AppTheme.textSecondary,
                                         fontSize: 11,
                                       ),
                                     ),
@@ -1076,7 +1077,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                             Text(
                               'Afficher les détails',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFFD4AF37),
+                                color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
@@ -1084,7 +1085,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                             const Icon(
                               Icons.arrow_forward_ios,
                               size: 12,
-                              color: Color(0xFFD4AF37),
+                              color: AppTheme.primaryColor,
                             ),
                           ],
                         ),
@@ -1273,18 +1274,18 @@ class _FullMapScreenState extends State<FullMapScreen> {
     return FilterChip(
       avatar: Icon(icon,
           size: 15,
-          color: isSelected ? Colors.white : const Color(0xFF555555)),
+          color: isSelected ? Colors.white : AppTheme.textSecondary),
       label: Text(label),
       selected: isSelected,
       checkmarkColor: Colors.white,
-      selectedColor: const Color(0xFFD4AF37),
+      selectedColor: AppTheme.primaryColor,
       backgroundColor: Colors.white,
       side: BorderSide(
-        color: isSelected ? const Color(0xFFD4AF37) : Colors.grey[300]!,
+        color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
       ),
       labelStyle: TextStyle(
         fontSize: 12,
-        color: isSelected ? Colors.white : const Color(0xFF333333),
+        color: isSelected ? Colors.white : AppTheme.textPrimary,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       onSelected: (bool selected) {

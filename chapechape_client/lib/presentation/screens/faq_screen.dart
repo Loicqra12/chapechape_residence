@@ -109,7 +109,6 @@ class _FaqScreenState extends State<FaqScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('FAQ'),
-        backgroundColor: AppTheme.primaryColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/residence_service.dart';
@@ -15,11 +16,6 @@ class ReviewsScreen extends StatefulWidget {
 }
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-
   late ResidenceService _residenceService;
   Map<String, dynamic> reviewsData = {};
   bool isLoading = true;
@@ -69,8 +65,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Avis'),
-        backgroundColor: goldColor,
-        foregroundColor: blackColor,
       ),
       body: _buildBody(),
     );
@@ -80,7 +74,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     if (isLoading) {
       return const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(goldColor),
+          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
         ),
       );
     }
@@ -90,20 +84,16 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            Icon(Icons.error_outline, size: 64, color: AppTheme.errorColor),
             AppSpacing.verticalMd,
             Text(
               errorMessage!,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red[600]),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.errorColor),
             ),
             AppSpacing.verticalMd,
             ElevatedButton(
               onPressed: _loadReviews,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: goldColor,
-                foregroundColor: blackColor,
-              ),
               child: const Text('Réessayer'),
             ),
           ],
@@ -115,7 +105,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final stats = reviewsData['stats'] as Map<String, dynamic>? ?? {};
 
     if (reviews.isEmpty) {
-    if (reviews.isEmpty) {
       return const EmptyStateWidget(
         imagePath: 'assets/images/empty_states/empty_reviews_illustration.png',
         title: 'Aucun avis pour l\'instant',
@@ -123,11 +112,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         fallbackIcon: Icons.rate_review_outlined,
       );
     }
-    }
 
     return RefreshIndicator(
       onRefresh: _loadReviews,
-      color: goldColor,
+      color: AppTheme.primaryColor,
       child: ListView(
         padding: AppSpacing.pagePadding,
         children: [
@@ -166,7 +154,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 averageRating.toStringAsFixed(1),
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   fontSize: 48,
-                  color: goldColor,
+                  color: AppTheme.primaryColor,
                 ),
               ),
               SizedBox(width: AppSpacing.md),
@@ -178,7 +166,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   Text(
                     '$numberOfReviews avis',
                     style: AppTextStyles.body.copyWith(
-                      color: Colors.grey[600],
+                      color: AppTheme.textSecondary,
                     ),
                   ),
                 ],
@@ -197,7 +185,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         return Icon(
           index < rating.floor() ? Icons.star : 
           index < rating ? Icons.star_half : Icons.star_border,
-          color: goldColor,
+          color: AppTheme.primaryColor,
           size: 20,
         );
       }),
@@ -210,7 +198,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       children: [
         Text(
           'Avis des clients',
-          style: AppTextStyles.title.copyWith(color: blackColor),
+          style: AppTextStyles.title.copyWith(color: AppTheme.textPrimary),
         ),
         AppSpacing.verticalMd,
         ...reviews.map((review) => _buildReviewCard(review)).toList(),
@@ -259,11 +247,11 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: goldColor,
+                backgroundColor: AppTheme.primaryColor,
                 child: Text(
                   userInitial,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: blackColor,
+                    color: AppTheme.textLight,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -283,7 +271,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                       Text(
                         DateFormat('dd/MM/yyyy').format(reviewDate),
                         style: AppTextStyles.caption.copyWith(
-                          color: Colors.grey[600],
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                   ],
@@ -296,7 +284,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   Text(
                     overallRating.toStringAsFixed(1),
                     style: AppTextStyles.caption.copyWith(
-                      color: Colors.grey[600],
+                      color: AppTheme.textSecondary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

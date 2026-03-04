@@ -46,7 +46,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
         return Scaffold(
       appBar: AppBar(
         title: const Text('Historique des réservations'),
-              backgroundColor: AppTheme.primaryColor,
               bottom: TabBar(
                 controller: _tabController,
                 isScrollable: true,
@@ -435,7 +434,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
               );
             },
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppTheme.errorColor,
               foregroundColor: Colors.white,
             ),
             child: const Text('Confirmer'),

@@ -393,21 +393,21 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue[50],
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue[200]!),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue[700], size: 16),
+              Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 16),
               const SizedBox(width: 8),
               Text(
                 'Pourquoi cette vérification ?',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  color: Colors.blue[700],
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -419,7 +419,7 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
             '• Notifications importantes (réservations, paiements)\n'
             '• Sécuriser votre compte business',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.blue[600],
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ],

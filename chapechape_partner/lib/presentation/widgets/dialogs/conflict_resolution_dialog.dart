@@ -151,7 +151,7 @@ class _ConflictResolutionDialogState extends State<ConflictResolutionDialog> {
               title: 'Conserver ma version (locale)',
               subtitle: 'Écraser les modifications du serveur',
               icon: Icons.phone_android,
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 12),
             _buildResolutionOption(
@@ -207,7 +207,7 @@ class _ConflictResolutionDialogState extends State<ConflictResolutionDialog> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.phone_android, size: 14, color: Colors.blue[700]),
+                        Icon(Icons.phone_android, size: 14, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 4),
                         const Text(
                           'Local:',

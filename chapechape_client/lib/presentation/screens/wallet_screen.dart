@@ -37,7 +37,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           ),
                     ),
                   ),
-                  const SizedBox(width: 48), // pour équilibrer la place de l'icône retour
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -46,10 +46,8 @@ class _WalletScreenState extends State<WalletScreen> {
             padding: const EdgeInsets.all(16.0),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // SECTION PORTEFEUILLE
                 _buildWalletSection(),
                 const SizedBox(height: 24),
-                // SECTION RÉCOMPENSES
                 _buildRewardsSection(),
                 const SizedBox(height: 12),
               ]),

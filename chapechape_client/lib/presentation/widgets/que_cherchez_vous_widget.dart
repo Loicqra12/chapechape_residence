@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing.dart';
 
@@ -60,12 +61,13 @@ class QueCherchezVousWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withOpacity(0.08)
-                          : Colors.white,
+                          : AppTheme.lightGold,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: isDark
                             ? Colors.white24
-                            : Colors.grey.shade300,
+                            : AppTheme.primaryColor.withOpacity(0.6),
+                        width: 1.2,
                       ),
                       boxShadow: isDark ? null : AppTheme.softShadow,
                     ),
@@ -90,24 +92,125 @@ class QueCherchezVousWidget extends StatelessWidget {
             }).toList(),
           ),
           const SizedBox(height: AppSpacing.md),
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                context.push('/search');
-              },
-              icon: Icon(Icons.tune, size: 18, color: subColor),
-              label: Text(
-                'Continuer ma recherche',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: subColor,
+          const _ContinueSearchCard(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Carte "Continuer ma recherche" : texte à gauche, pile d'images à droite, fond blanc, contour or, ombre douce.
+class _ContinueSearchCard extends StatelessWidget {
+  const _ContinueSearchCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
+    final subColor = isDark ? Colors.grey[400]! : AppTheme.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          context.push('/search');
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.08) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.primaryColor.withOpacity(0.5),
+              width: 1.2,
+            ),
+            boxShadow: AppTheme.softShadow,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Explorer les résidences',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Continuer ma recherche',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: subColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 72,
+                height: 56,
+                child: Stack(
+                  alignment: Alignment.centerRight,
+                  children: [
+                    _stackedImage(0),
+                    _stackedImage(1),
+                    _stackedImage(2),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _stackedImage(int index) {
+    const double width = 48;
+    const double height = 40;
+    const double offset = 12;
+
+    // Trois vraies images de résidences issues des assets
+    const List<String> images = [
+      ResidenceAssets.villa1,
+      ResidenceAssets.apartment4,
+      ResidenceAssets.luxury1,
+    ];
+    final imagePath = images[index % images.length];
+
+    return Positioned(
+      right: index * offset,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white, width: 1.5),
+          boxShadow: AppTheme.softShadow,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: AppTheme.lightGold,
+            child: Icon(
+              Icons.home_work_outlined,
+              color: AppTheme.primaryColor.withOpacity(0.6),
+              size: 24,
             ),
           ),
-        ],
+        ),
       ),
     );
   }

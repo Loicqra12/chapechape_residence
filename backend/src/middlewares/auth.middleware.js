@@ -94,6 +94,9 @@ exports.authorize = (...roles) => {
     };
 };
 
+// Alias utilisé par les routes (partner-verification, etc.) : même logique qu'authorize
+exports.restrictTo = exports.authorize;
+
 // Vérifier la validité d'un refresh token
 exports.validateRefreshToken = async (req, res, next) => {
     try {

@@ -67,7 +67,7 @@ class BookingSmsWidget extends StatelessWidget {
                   context,
                   icon: Icons.access_time,
                   label: 'Rappel',
-                  color: Colors.blue,
+                  color: Theme.of(context).colorScheme.primary,
                   onTap: () => _sendBookingNotification(
                     context, 
                     smsService, 

@@ -237,7 +237,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil'),
-        backgroundColor: const Color(0xFFFFD700),
       ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, authState) {
@@ -292,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: EdgeInsets.only(top: AppSpacing.xxl40 + AppSpacing.xxs, bottom: AppSpacing.lg),
             decoration: const BoxDecoration(
-              color: AppTheme.secondaryColor,
+              color: AppTheme.primaryColor,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30),
@@ -315,9 +314,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: Colors.white,
+                      backgroundColor: AppTheme.textLight,
                       child: IconButton(
-                        icon: const Icon(Icons.camera_alt, size: 20, color: Colors.black),
+                        icon: Icon(Icons.camera_alt, size: 20, color: AppTheme.textPrimary),
                         onPressed: _pickImage,
                       ),
                     ),
@@ -328,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   '${user.firstName} ${user.lastName}',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.black,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 SizedBox(height: AppSpacing.xs5), // 5px pour espacement spécifique
@@ -336,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   user.email,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.black87,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
                 AppSpacing.verticalLg,
@@ -455,8 +454,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ElevatedButton(
                         onPressed: _isPhoneValid ? _startPhoneVerification : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: AppTheme.textLight,
                           padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: AppSpacing.sm),
                         ),
                         child: const Text('Vérifier le numéro'),
@@ -467,12 +466,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: AppSpacing.cardPadding,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(color: AppTheme.dividerColor),
                         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.phone, color: Colors.grey),
+                          Icon(Icons.phone, color: AppTheme.textSecondary),
                           SizedBox(width: AppSpacing.smd),
                           Expanded(
                             child: Text(
@@ -481,7 +480,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           if (_phoneVerified)
-                            const Icon(Icons.verified, color: Colors.green),
+                            Icon(Icons.verified, color: AppTheme.successColor),
                         ],
                       ),
                     ),
@@ -497,7 +496,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: ElevatedButton(
                             onPressed: _saveProfile,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.secondaryColor,
+                              backgroundColor: AppTheme.primaryColor,
                               padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -506,7 +505,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Text(
                               'Enregistrer',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.black,
+                                color: AppTheme.textLight,
                               ),
                             ),
                           ),
@@ -529,7 +528,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: ElevatedButton(
                             onPressed: _toggleEdit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.secondaryColor,
+                              backgroundColor: AppTheme.primaryColor,
                               padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -538,7 +537,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Text(
                               'Modifier le profil',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.black,
+                                color: AppTheme.textLight,
                               ),
                             ),
                           ),
@@ -654,12 +653,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
       leading: Icon(
         icon,
-        color: isDestructive ? Colors.red : Colors.black87,
+        color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
       ),
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isDestructive ? Colors.red : Colors.black87,
+          color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
           fontWeight: FontWeight.w500,
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,11 +17,6 @@ class AboutScreen extends StatefulWidget {
 }
 
 class _AboutScreenState extends State<AboutScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
-  
   String _appVersion = '1.0.0';
   String _deviceInfo = 'Information non disponible';
   
@@ -72,7 +68,7 @@ class _AboutScreenState extends State<AboutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Impossible de charger le document: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
     }
@@ -83,11 +79,10 @@ class _AboutScreenState extends State<AboutScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('À propos'),
-        backgroundColor: goldColor,
       ),
       body: SingleChildScrollView(
         padding: AppSpacing.pagePadding,
@@ -115,7 +110,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 errorBuilder: (ctx, error, _) => Icon(
                   Icons.home_work,
                   size: 80,
-                  color: goldColor,
+                  color: AppTheme.primaryColor,
                 ),
               ),
             ),
@@ -211,7 +206,7 @@ class _AboutScreenState extends State<AboutScreen> {
   }) {
     return Card(
       elevation: 0,
-      color: greyColor.withOpacity(0.3),
+      color: AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
@@ -247,7 +242,7 @@ class _AboutScreenState extends State<AboutScreen> {
             child: Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[700],
+                color: AppTheme.textSecondary,
               ),
             ),
           ),
@@ -259,7 +254,7 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _buildLinksCard() {
     return Card(
       elevation: 0,
-      color: greyColor.withOpacity(0.3),
+      color: AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
@@ -325,7 +320,7 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _buildLegalDocumentItem(String title, IconData icon, {required VoidCallback onTap}) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: orangeColor),
+      leading: Icon(icon, color: AppTheme.primaryColor),
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: onTap,
@@ -359,7 +354,7 @@ class _LegalDocumentScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: _AboutScreenState.goldColor,
+        backgroundColor: AppTheme.primaryColor,
       ),
       body: Padding(
         padding: AppSpacing.pagePadding,

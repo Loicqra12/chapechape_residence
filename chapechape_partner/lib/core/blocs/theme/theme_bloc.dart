@@ -31,7 +31,9 @@ class ThemeState extends Equatable {
 
 // Bloc
 class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
-  ThemeBloc() : super(const ThemeState(ThemeMode.light)) {
+  /// [initialMode] permet de restaurer le mode depuis SharedPreferences au démarrage.
+  ThemeBloc({ThemeMode? initialMode})
+      : super(ThemeState(initialMode ?? ThemeMode.light)) {
     on<ThemeChanged>(_onThemeChanged);
   }
 

@@ -6,6 +6,7 @@ import 'package:chapechape_client/core/utils/booking_helpers.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart' as booking_events;
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as booking_states;
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/presentation/widgets/qr/qr_code_display_widget.dart';
@@ -137,7 +138,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: AppTheme.errorColor,
               ),
             );
           } else if (state is booking_states.BookingLoading) {

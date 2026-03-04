@@ -1,6 +1,7 @@
 // lib/presentation/widgets/bottom_nav_bar.dart
 import 'package:flutter/material.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -35,8 +36,8 @@ class BottomNavBar extends StatelessWidget {
       tabBuilder: (int index, bool isActive) {
         // Couleurs personnalisées basées sur l'état actif/inactif
         final color = isActive 
-            ? const Color(0xFFFFD700) // Gold pour actif
-            : Colors.black.withOpacity(0.5); // Gris pour inactif
+            ? AppTheme.primaryColor
+            : AppTheme.textSecondary;
             
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -65,7 +66,7 @@ class BottomNavBar extends StatelessWidget {
       },
       backgroundColor: Theme.of(context).colorScheme.surface,
       activeIndex: currentIndex,
-      splashColor: const Color(0xFFFFD700),
+      splashColor: AppTheme.primaryColor,
       notchSmoothness: NotchSmoothness.softEdge,
       gapLocation: GapLocation.none,
       leftCornerRadius: 12,

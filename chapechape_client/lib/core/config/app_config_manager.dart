@@ -140,10 +140,10 @@ class AppConfigManager {
             // Configuration par défaut
             _config = {
               'appName': 'ChapeChape Client (Dev)',
-              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.74:4000/api',
-              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.74:4000',
-              'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.74:4000/media',
-              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.74:4000/ws',
+              'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.75:4000/api',
+              'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.75:4000',
+              'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.75:4000/media',
+              'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.75:4000/ws',
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
@@ -225,10 +225,10 @@ class AppConfigManager {
       // Utiliser les valeurs par défaut (développement) en cas d'erreur
       _config = {
         'appName': 'ChapeChape Client (Fallback)',
-        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.74:4000/api',
-        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.74:4000',
-        'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.74:4000/media',
-        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.74:4000/ws',
+        'apiUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.75:4000/api',
+        'apiBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.75:4000',
+        'mediaBaseUrl': '${_useSecureConnection ? 'https' : 'http'}://192.168.1.75:4000/media',
+        'wsUrl': '${_useSecureConnection ? 'wss' : 'ws'}://192.168.1.75:4000/ws',
         'apiVersion': 'v1',
         'apiTimeout': 30000,
         'wsReconnectInterval': 5000,
@@ -241,7 +241,7 @@ class AppConfigManager {
 
   /// Accesseurs de la configuration
   static String get appName => _config['appName'] as String;
-  // Fallback vers l'API de production si la config échoue (branche production)
+  // Fallback vers l'API de production si la config échoue (branche google-play-submission)
   static String get apiUrl => _config['apiUrl'] as String? ?? 'https://api.chapechaperesidence.com/api';
   static String get apiBaseUrl => _config['apiBaseUrl'] as String? ?? 'https://api.chapechaperesidence.com';
   static String get mediaBaseUrl => _config['mediaBaseUrl'] as String? ?? 'https://api.chapechaperesidence.com/media';
@@ -334,7 +334,7 @@ class AppConfigManager {
   }
 
   /// Obtient l'adresse IP actuelle du serveur
-  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.74';
+  static String get serverIp => _ipDetectionService?.serverIp ?? '192.168.1.75';
 
   /// Obtient le port actuel du serveur
   static int get serverPort => _ipDetectionService?.serverPort ?? 4000;

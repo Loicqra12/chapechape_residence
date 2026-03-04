@@ -109,7 +109,7 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur lors de la vérification de la disponibilité: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
       return false;
@@ -122,7 +122,7 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
       return;
@@ -134,7 +134,7 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Les dates sélectionnées ne sont pas disponibles'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
       return;

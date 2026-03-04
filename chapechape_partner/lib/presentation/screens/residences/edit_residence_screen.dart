@@ -1962,10 +1962,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                         leading: Container(
                           padding: EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.water_drop_rounded, color: Colors.blue.shade700, size: 24),
+                          child: Icon(Icons.water_drop_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
                         ),
                         title: Text('Eau & Électricité', 
                           style: TextStyle(fontWeight: FontWeight.w600)),

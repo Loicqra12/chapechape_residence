@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_theme.dart';
 import '../widgets/advanced_search_widget.dart';
 
 /// Écran des critères de recherche (style Airbnb).
@@ -10,18 +11,17 @@ class SearchCriteriaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
         backgroundColor: Colors.white,
+        foregroundColor: Theme.of(context).brightness == Brightness.dark ? null : AppTheme.textPrimary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFF1A1A1A)),
+          icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Recherche',
           style: TextStyle(
-            color: const Color(0xFF1A1A1A),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),

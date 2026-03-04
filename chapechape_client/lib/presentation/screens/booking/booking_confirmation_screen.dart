@@ -390,7 +390,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 ),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorColor,
             duration: const Duration(seconds: 6),
           ),
         );

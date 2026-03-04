@@ -8,6 +8,7 @@ class AppAssets {
   static const String appLogoDark = 'assets/logos/logo_dark.png';
   static const String appIcon = 'assets/logos/app_icon.png';
   static const String splashLogo = 'assets/logos/splash_logo.png';
+  static const String googleLogo = 'assets/icons/google_logo.png';
   
   // Retourne une URL pour un avatar dynamique basé sur le nom de l'utilisateur
   static String getDefaultAvatar({String name = 'User', int size = 100}) {
@@ -32,6 +33,7 @@ class AppAssets {
   static const String welcomeImage = 'assets/images/backgrounds/welcome_bg.jpg';
   static const String loginBackground = 'assets/images/backgrounds/login_bg.jpg';
   static const String registerBackground = 'assets/images/backgrounds/register_bg.jpg';
+  static const String homescreenPlan = 'assets/images/backgrounds/homescreen_plan.png';
   static const String paymentSuccess = 'assets/images/payment/payment_success.png';
   static const String paymentError = 'assets/images/payment/payment_error.png';
   static const String searchBackground = 'assets/images/backgrounds/search_bg.jpg';

@@ -120,7 +120,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Le délai de paiement est dépassé.'),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.errorColor,
       ),
     );
   }

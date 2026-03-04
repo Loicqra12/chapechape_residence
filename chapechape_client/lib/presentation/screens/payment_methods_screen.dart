@@ -25,7 +25,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Moyens de paiement'),
-        backgroundColor: const Color(0xFFFFD700),
       ),
       body: SingleChildScrollView(
         padding: context.responsivePadding,

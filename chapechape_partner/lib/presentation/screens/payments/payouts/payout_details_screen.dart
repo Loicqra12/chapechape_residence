@@ -297,11 +297,11 @@ class _PayoutDetailsScreenState extends State<PayoutDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.schedule, color: Colors.blue),
-                SizedBox(width: 8),
-                Text(
+                Icon(Icons.schedule, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                const Text(
                   'Dates importantes',
                   style: TextStyle(
                     fontSize: 16,
@@ -469,7 +469,7 @@ class _PayoutDetailsScreenState extends State<PayoutDetailsScreen> {
   Color _getStatusColor(PayoutStatus status) {
     switch (status) {
       case PayoutStatus.scheduled:
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case PayoutStatus.pending:
         return Colors.orange;
       case PayoutStatus.success:

@@ -71,12 +71,12 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) async {
     try {
       if (state is NotificationLoaded) {
+        final currentState = state as NotificationLoaded;
         emit(NotificationActionInProgress());
-        
+
         final success = await _repository.markAsRead(event.notificationId);
-        
+
         if (success) {
-          final currentState = state as NotificationLoaded;
           final updatedNotifications = currentState.notifications.map((notification) {
             if (notification.id == event.notificationId) {
               return notification.copyWith(isRead: true);
@@ -105,9 +105,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) async {
     try {
       if (state is NotificationLoaded) {
-        emit(NotificationActionInProgress());
-        
         final currentState = state as NotificationLoaded;
+        emit(NotificationActionInProgress());
+
         for (final notification in currentState.notifications.where((n) => !n.isRead)) {
           await _repository.markAsRead(notification.id);
         }
@@ -136,16 +136,16 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) async {
     try {
       if (state is NotificationLoaded) {
+        final currentState = state as NotificationLoaded;
         emit(NotificationActionInProgress());
-        
-        final success = true;
-        
+
+        final success = await _repository.deleteNotification(event.notificationId);
+
         if (success) {
-          final currentState = state as NotificationLoaded;
           final deletedNotification = currentState.notifications
               .firstWhere((n) => n.id == event.notificationId);
           final wasUnread = !deletedNotification.isRead;
-          
+
           final updatedNotifications = currentState.notifications
               .where((n) => n.id != event.notificationId)
               .toList();
@@ -158,6 +158,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
           ));
 
           emit(const NotificationActionSuccess('Notification supprimée'));
+        } else {
+          emit(NotificationError('Impossible de supprimer la notification'));
         }
       }
     } catch (error) {

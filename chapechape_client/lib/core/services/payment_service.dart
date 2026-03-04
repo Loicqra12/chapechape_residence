@@ -179,7 +179,7 @@ class PaymentService {
   }) async {
     try {
       final response = await _apiService
-          .post('/api/payments/$paymentIntentId/confirm', data: {
+          .post('/payments/$paymentIntentId/confirm', data: {
         if (otp != null) 'otp': otp,
         if (transactionId != null) 'transactionId': transactionId,
       });
@@ -259,7 +259,7 @@ class PaymentService {
     try {
       // CORRIGÉ: Utiliser le bon endpoint backend avec préfixe /api
       final response = await _apiService
-          .post('/api/payments/$paymentIntentId/confirm', data: {
+          .post('/payments/$paymentIntentId/confirm', data: {
         'paymentMethod': 'bank_transfer',
         'bankDetails': {
           'bankName': bankDetails['bankName'],
@@ -402,7 +402,7 @@ class PaymentService {
     try {
       // CORRIGÉ: Utiliser le bon endpoint backend avec préfixe /api
       final response =
-          await _apiService.post('/api/payments/$paymentId/refund', data: {
+          await _apiService.post('/payments/$paymentId/refund', data: {
         'amount': amount,
         'reason': reason ?? 'Remboursement demandé par l\'utilisateur',
       });
@@ -423,7 +423,7 @@ class PaymentService {
     try {
       // CORRIGÉ: Le backend n'a pas d'endpoint /payments/{id}/cancel
       // Utiliser l'endpoint refund avec montant complet pour "annuler"
-      await _apiService.post('/api/payments/$paymentId/refund', data: {
+      await _apiService.post('/payments/$paymentId/refund', data: {
         'reason': reason ?? 'Annulation demandée par l\'utilisateur',
         // Le montant sera déduit automatiquement par le backend (remboursement complet)
       });

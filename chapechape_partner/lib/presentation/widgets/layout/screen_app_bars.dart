@@ -24,12 +24,23 @@ class ScreenAppBars {
   );
 
   static CustomSliverAppBar getSecurityHistoryAppBar(BuildContext context) {
+    final theme = Theme.of(context);
     return CustomSliverAppBar(
       title: 'Historique de Sécurité',
+      showLogo: false,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.of(context).canPop()
+            ? Navigator.of(context).pop()
+            : context.go('/main'),
+        style: IconButton.styleFrom(
+          foregroundColor: theme.colorScheme.onSurface,
+        ),
+      ),
       actions: [
         IconButton(
           style: _appBarIconCircleStyle,
-          icon: const Icon(Icons.refresh, color: Color(0xFF1A1A1A)),
+          icon: Icon(Icons.refresh, color: theme.colorScheme.onSurface),
           onPressed: () {
             // Rafraîchir les données de sécurité
             // Cette fonctionnalité sera implémentée dans le bloc
@@ -37,7 +48,7 @@ class ScreenAppBars {
         ),
         IconButton(
           style: _appBarIconCircleStyle,
-          icon: const Icon(Icons.help_outline, color: Color(0xFF1A1A1A)),
+          icon: Icon(Icons.help_outline, color: theme.colorScheme.onSurface),
           onPressed: () {
             // Afficher l'aide sur la sécurité
             showDialog(

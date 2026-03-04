@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 class ErrorView extends StatelessWidget {
   final String message;
@@ -19,7 +20,7 @@ class ErrorView extends StatelessWidget {
           Icon(
             Icons.error_outline,
             size: 64,
-            color: Colors.red[300],
+            color: AppTheme.errorColor,
           ),
           const SizedBox(height: 16),
           Text(
@@ -42,8 +43,8 @@ class ErrorView extends StatelessWidget {
             icon: const Icon(Icons.refresh),
             label: const Text('Réessayer'),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD700),
-              foregroundColor: const Color(0xFF1A1A1A),
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: AppTheme.textLight,
             ),
           ),
         ],

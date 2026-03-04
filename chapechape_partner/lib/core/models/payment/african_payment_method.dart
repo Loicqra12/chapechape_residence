@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' show IconData, Icons, Color, Colors;
+import '../../theme/colors.dart';
 
 /// Énumération des méthodes de paiement africaines disponibles
 enum AfricanPaymentMethod {
@@ -130,7 +131,7 @@ extension AfricanPaymentMethodExtension on AfricanPaymentMethod {
   Color get color {
     switch (this) {
       case AfricanPaymentMethod.wave:
-        return Colors.blue;
+        return AppColors.brandPrimary;
       case AfricanPaymentMethod.orangeMoney:
         return Colors.orange;
       case AfricanPaymentMethod.mtnMoney:
@@ -142,11 +143,11 @@ extension AfricanPaymentMethodExtension on AfricanPaymentMethod {
       case AfricanPaymentMethod.bankCard:
         return Colors.purple;
       case AfricanPaymentMethod.visa:
-        return Colors.blue[900]!;
+        return AppColors.brandPrimary;
       case AfricanPaymentMethod.mastercard:
         return Colors.red[700]!;
       case AfricanPaymentMethod.paypal:
-        return Colors.blueAccent;
+        return AppColors.brandPrimary;
       case AfricanPaymentMethod.stripe:
         return Colors.purple[800]!;
       case AfricanPaymentMethod.bankTransfer:

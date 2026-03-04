@@ -77,7 +77,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppTheme.errorColor,
                   action: SnackBarAction(
                     label: 'Réessayer',
                     onPressed: () {

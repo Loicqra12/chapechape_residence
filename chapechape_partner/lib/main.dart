@@ -49,6 +49,7 @@ import 'core/services/api/help_service.dart';
 // import 'core/services/api/review_service.dart';
 import 'core/blocs/payment/payment_bloc.dart';
 import 'core/blocs/help/help_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/blocs/theme/theme_bloc.dart';
 import 'core/blocs/settings/settings_bloc.dart';
 import 'presentation/blocs/pricing/pricing_bloc.dart';
@@ -110,8 +111,8 @@ Future<void> main() async {
   // 🔧 UTILISER AppConfigManager.apiUrl au lieu de l'ancienne configuration
   final dio = Dio(BaseOptions(
     baseUrl: AppConfigManager.apiUrl,  // ← FIX: Utilise maintenant la config centralisée
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 3),
+    connectTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 60),
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -152,6 +153,13 @@ Future<void> main() async {
 
   // Create the router with authBloc
   final appRouter = AppRouter(authBloc);
+
+  // Restaurer le mode sombre depuis les préférences pour le ThemeBloc
+  final prefs = await SharedPreferences.getInstance();
+  final darkMode = prefs.getBool('dark_mode') ?? false;
+  final themeBloc = ThemeBloc(
+    initialMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+  );
 
   // Initialiser le service de synchronisation
   final syncService = SyncService();
@@ -293,9 +301,7 @@ Future<void> main() async {
               helpService: HelpService(dio),
             ),
           ),
-          BlocProvider<ThemeBloc>(
-            create: (context) => ThemeBloc(),
-          ),
+          BlocProvider<ThemeBloc>.value(value: themeBloc),
           BlocProvider<SettingsBloc>(
             create: (context) => SettingsBloc(),
           ),
@@ -306,28 +312,35 @@ Future<void> main() async {
             ),
           ),
         ],
-        child: MaterialApp.router(
-          title: 'ChapeChape Partner',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            fontFamily: 'Poppins',
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF1A237E),
-              brightness: Brightness.light,
-            ),
-            useMaterial3: true,
-            appBarTheme: const AppBarTheme(
-              centerTitle: true,
-              elevation: 0,
-            ),
-            cardTheme: CardTheme(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        child: BlocBuilder<ThemeBloc, ThemeState>(
+          buildWhen: (prev, curr) => prev.themeMode != curr.themeMode,
+          builder: (context, state) {
+            return MaterialApp.router(
+              title: 'ChapeChape Partner',
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                fontFamily: 'Poppins',
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: const Color(0xFF1A237E),
+                  brightness: Brightness.light,
+                ),
+                useMaterial3: true,
+                appBarTheme: const AppBarTheme(
+                  centerTitle: true,
+                  elevation: 0,
+                ),
+                cardTheme: CardTheme(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
-            ),
-          ),
-          routerConfig: appRouter.router,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: state.themeMode,
+              routerConfig: appRouter.router,
+            );
+          },
         ),
       ),
     ),

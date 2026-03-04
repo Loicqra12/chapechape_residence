@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/config/app_config_manager.dart';
+import '../../../core/theme/colors.dart';
 
 /// Service pour gérer la vérification SMS des partenaires
 class PartnerVerificationService {
@@ -329,7 +330,7 @@ class VerificationHistoryItem {
       case 'partner_phone_verified':
         return Colors.green;
       case 'partner_sms_sent':
-        return Colors.blue;
+        return AppColors.brandPrimary;
       case 'partner_verification_request':
         return Colors.orange;
       case 'partner_sms_failed':

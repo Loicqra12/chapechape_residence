@@ -114,7 +114,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Erreur lors de la sélection de cette localisation'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
           duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
         ),

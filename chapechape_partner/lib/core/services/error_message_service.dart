@@ -203,7 +203,7 @@ class ErrorMessageService {
             ),
           ],
         ),
-        backgroundColor: Colors.blue[700],
+        backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(
@@ -317,20 +317,20 @@ class ErrorMessageService {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue[200]!),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.lightbulb_outline, color: Colors.blue[700], size: 20),
+                      Icon(Icons.lightbulb_outline, color: Theme.of(context).colorScheme.primary, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           advice,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.blue[900],
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),

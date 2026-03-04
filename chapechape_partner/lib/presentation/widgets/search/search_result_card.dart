@@ -4,6 +4,7 @@ import '../../../core/models/reservation/reservation.dart';
 import '../../../core/models/message/conversation.dart';
 import '../../../core/models/notification/notification_model.dart';
 import 'package:intl/intl.dart';
+import '../../../core/theme/colors.dart';
 
 /// Card générique pour afficher un résultat de recherche
 class SearchResultCard extends StatelessWidget {
@@ -35,7 +36,7 @@ class SearchResultCard extends StatelessWidget {
   }) {
     return SearchResultCard(
       icon: Icons.home,
-      iconColor: Colors.blue,
+      iconColor: AppColors.brandPrimary,
       title: residence.name,
       subtitle: '${residence.city} • ${residence.price} FCFA/nuit',
       trailing: residence.isAvailable ? 'Disponible' : 'Indisponible',
@@ -163,10 +164,10 @@ class SearchResultCard extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(trailing!).withOpacity(0.1),
+                  color: _getStatusColor(context, trailing!).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _getStatusColor(trailing!).withOpacity(0.3),
+                    color: _getStatusColor(context, trailing!).withOpacity(0.3),
                   ),
                 ),
                 child: Text(
@@ -174,7 +175,7 @@ class SearchResultCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: _getStatusColor(trailing!),
+                    color: _getStatusColor(context, trailing!),
                   ),
                 ),
               )
@@ -190,7 +191,7 @@ class SearchResultCard extends StatelessWidget {
     return text;
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(BuildContext context, String status) {
     final statusLower = status.toLowerCase();
     if (statusLower.contains('actif') || statusLower.contains('confirmé')) {
       return Colors.green;
@@ -199,7 +200,7 @@ class SearchResultCard extends StatelessWidget {
     } else if (statusLower.contains('annulé') || statusLower.contains('refusé')) {
       return Colors.red;
     } else if (statusLower.contains('nouveau') || statusLower.contains('non lu')) {
-      return Colors.blue;
+      return Theme.of(context).colorScheme.primary;
     }
     return Colors.grey;
   }

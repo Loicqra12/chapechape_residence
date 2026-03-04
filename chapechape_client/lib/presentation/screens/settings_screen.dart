@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/presentation/screens/settings/temperature_screen.dart';
@@ -7,26 +8,20 @@ import 'package:chapechape_client/presentation/screens/settings/display_screen.d
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/about_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/notification_settings_screen.dart';
+import 'package:chapechape_client/presentation/screens/settings/language_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color darkGold = Color(0xFFCCAC00);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Paramètres'),
-        backgroundColor: goldColor,
       ),
       body: ListView(
         padding: AppSpacing.pagePadding,
@@ -103,7 +98,12 @@ class SettingsScreen extends StatelessWidget {
             'Choisir la langue de l\'application',
             Icons.language_outlined,
             () {
-              // Navigation vers les paramètres de langue
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LanguageScreen(),
+                ),
+              );
             },
           ),
           _buildSettingItem(
@@ -190,7 +190,7 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: darkGold,
+              color: AppTheme.primaryColor,
               fontWeight: FontWeight.bold,
             ),
       ),
@@ -207,7 +207,7 @@ class SettingsScreen extends StatelessWidget {
   }) {
     return Card(
       elevation: 0,
-      color: greyColor.withOpacity(0.3),
+      color: AppTheme.dividerColor.withOpacity(0.3),
       margin: EdgeInsets.only(bottom: AppSpacing.sm),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -216,14 +216,14 @@ class SettingsScreen extends StatelessWidget {
         contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         leading: Icon(
           icon,
-          color: isDestructive ? Colors.red : orangeColor,
+          color: isDestructive ? AppTheme.errorColor : AppTheme.primaryColor,
           size: 28,
         ),
         title: Text(
           title,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: isDestructive ? Colors.red : blackColor,
+            color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
           ),
         ),
         subtitle: Text(subtitle),

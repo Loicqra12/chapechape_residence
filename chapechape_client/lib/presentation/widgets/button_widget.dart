@@ -1,5 +1,6 @@
 // lib/widgets/button_widget.dart
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -15,8 +16,8 @@ class CustomButton extends StatelessWidget {
     super.key,
     required this.text,
     required this.onPressed,
-    this.backgroundColor = const Color(0xFFFFD700), // Gold
-    this.textColor = Colors.black,
+    this.backgroundColor = AppTheme.primaryColor,
+    this.textColor = AppTheme.textLight,
     this.width,
     this.height = 50,
     this.isOutlined = false,

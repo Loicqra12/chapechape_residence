@@ -165,6 +165,15 @@ exports.confirmPayment = async (req, res) => {
             });
         }
 
+        // Vérifier que la réservation appartient à l'utilisateur connecté
+        const reservation = await Reservation.findById(payment.reservation);
+        if (!reservation || reservation.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "Non autorisé à confirmer ce paiement"
+            });
+        }
+
         // Vérifier le statut du paiement auprès du fournisseur
         const statusResponse = await PaymentService.checkPaymentStatus(
             payment.transactionId,

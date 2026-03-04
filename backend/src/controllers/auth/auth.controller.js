@@ -112,7 +112,15 @@ exports.registerPartner = asyncHandler(async (req, res) => {
             message: 'Compte partenaire créé. Veuillez vérifier votre numéro de téléphone pour activer votre compte.'
         });
     } catch (error) {
-        throw new apiError('Erreur lors de l\'inscription du partenaire', 500);
+        // Si c'est déjà une ApiError (par ex. email déjà utilisé, téléphone invalide),
+        // on la relaisse remonter telle quelle pour que le client voie le bon message + code HTTP.
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        // Sinon, on journalise l'erreur technique et on renvoie une 500 générique.
+        console.error('Erreur inattendue lors de l\'inscription partenaire:', error);
+        throw apiError.internal('Erreur lors de l\'inscription du partenaire');
     }
 });
 
@@ -369,10 +377,10 @@ exports.refreshToken = asyncHandler(async (req, res) => {
             throw new apiError('Token de rafraîchissement non fourni', 400);
         }
 
-        // Vérifier le refresh token
+        // Vérifier le refresh token (key rotation via utils/jwt)
         let decoded;
         try {
-            decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+            decoded = jwt.verifyToken(refreshToken, 'JWT_REFRESH_SECRET');
         } catch (error) {
             throw new apiError('Token de rafraîchissement invalide ou expiré', 401);
         }
@@ -383,19 +391,9 @@ exports.refreshToken = asyncHandler(async (req, res) => {
             throw new apiError('Utilisateur non trouvé', 404);
         }
 
-        // Générer un nouveau token d'accès
-        const accessToken = jwt.sign(
-            { id: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
-        );
-
-        // Générer un nouveau token de rafraîchissement 
-        const newRefreshToken = jwt.sign(
-            { id: user._id },
-            process.env.JWT_REFRESH_SECRET,
-            { expiresIn: parseInt(process.env.JWT_REFRESH_EXPIRE) * 24 * 3600 } // Convert days to seconds
-        );
+        // Générer un nouveau token d'accès et refresh (key rotation via utils/jwt)
+        const accessToken = jwt.generateAccessToken(user._id.toString(), user.role);
+        const newRefreshToken = jwt.generateRefreshToken(user._id.toString());
 
         res.status(200).json({
             success: true,

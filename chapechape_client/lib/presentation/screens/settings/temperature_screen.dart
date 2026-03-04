@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
@@ -11,11 +12,6 @@ class TemperatureScreen extends StatefulWidget {
 }
 
 class _TemperatureScreenState extends State<TemperatureScreen> {
-  static const Color goldColor = Color(0xFFFFD700);
-  static const Color orangeColor = Color(0xFFFF8C00);
-  static const Color blackColor = Color(0xFF1A1A1A);
-  static const Color greyColor = Color(0xFFE0E0E0);
-  
   static const String temperatureUnitKey = 'temperature_unit';
   String _temperatureUnit = 'C'; // Par défaut en Celsius
   bool _isLoading = true;
@@ -56,11 +52,10 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: blackColor),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text('Température'),
-        backgroundColor: goldColor,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -72,7 +67,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Choisissez votre unité de température préférée. Cette unité sera utilisée partout dans l\'application.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
                   ),
                 ),
                 
@@ -100,7 +95,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                 
                 // Exemple de conversion
                 Card(
-                  color: greyColor.withOpacity(0.3),
+                  color: AppTheme.dividerColor.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
@@ -131,7 +126,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                           '• 0°C = 32°F (Point de congélation de l\'eau)\n'
                           '• 20°C = 68°F (Température ambiante confortable)\n'
                           '• 37°C = 98.6°F (Température corporelle normale)',
-                          style: AppTextStyles.body.copyWith(color: Colors.grey[700]),
+                          style: AppTextStyles.body.copyWith(color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -153,11 +148,11 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
     
     return Card(
       elevation: isSelected ? 2 : 0,
-      color: isSelected ? goldColor.withOpacity(0.2) : greyColor.withOpacity(0.3),
+      color: isSelected ? AppTheme.primaryColor.withOpacity(0.2) : AppTheme.dividerColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         side: isSelected
-            ? const BorderSide(color: goldColor, width: 2)
+            ? const BorderSide(color: AppTheme.primaryColor, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -170,12 +165,12 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
               Container(
                 padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isSelected ? goldColor : Colors.white,
+                  color: isSelected ? AppTheme.primaryColor : Colors.white,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
-                  color: isSelected ? Colors.white : orangeColor,
+                  color: isSelected ? AppTheme.textLight : AppTheme.primaryColor,
                   size: 28,
                 ),
               ),
@@ -192,7 +187,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                     ),
                     Text(
                       subtitle,
-                      style: AppTextStyles.body.copyWith(color: Colors.grey[700]),
+                      style: AppTextStyles.body.copyWith(color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
@@ -200,14 +195,14 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
               Text(
                 example,
                 style: AppTextStyles.subtitle.copyWith(
-                  color: isSelected ? orangeColor : Colors.grey[700],
+                  color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
                 ),
               ),
               SizedBox(width: AppSpacing.sm),
               if (isSelected)
                 const Icon(
                   Icons.check_circle,
-                  color: orangeColor,
+                  color: AppTheme.primaryColor,
                   size: 24.0,
                 ),
             ],

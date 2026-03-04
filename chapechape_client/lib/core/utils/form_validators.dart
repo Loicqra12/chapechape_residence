@@ -1,4 +1,23 @@
 class FormValidators {
+  /// Valide soit un email, soit un numéro de téléphone (utilisé pour le login).
+  static String? validateEmailOrPhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Veuillez entrer votre email ou téléphone';
+    }
+
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    final phoneRegex = RegExp(r'^\+?[0-9]{8,15}$');
+
+    final isEmail = emailRegex.hasMatch(value);
+    final isPhone = phoneRegex.hasMatch(value);
+
+    if (!isEmail && !isPhone) {
+      return 'Veuillez entrer un email ou un numéro de téléphone valide';
+    }
+
+    return null;
+  }
+
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Veuillez entrer votre adresse email';

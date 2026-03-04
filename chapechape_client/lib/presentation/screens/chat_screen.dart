@@ -35,7 +35,6 @@ class ChatScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Messages'),
-          backgroundColor: Theme.of(context).primaryColor,
         ),
         body: BlocBuilder<chat.ChatBloc, chat.ChatState>(
           builder: (context, state) {
