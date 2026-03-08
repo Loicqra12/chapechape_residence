@@ -8,6 +8,7 @@ const apiError = require('../../utils/apiError');
 const notificationService = require('../../services/notification.service');
 const auditService = require('../../services/audit.service');
 const LoginAttempt = require('../../models/loginAttempt.model');
+const logger = require('../../utils/logger');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -173,28 +174,34 @@ exports.login = asyncHandler(async (req, res) => {
             const randomDelay = Math.floor(Math.random() * 100) + 50;
             await new Promise(resolve => setTimeout(resolve, randomDelay));
 
-            // Enregistrer la tentative de connexion échouée
-            await LoginAttempt.create({
-                ip: req.ip,
-                email: email,
-                success: false,
-                attempts: 1,
-                lastAttempt: new Date()
-            });
-
-            // Enregistrer l'échec dans l'audit trail (si user existe)
-            if (user) {
-                await auditService.logActivity({
-                    userId: user._id,
-                    action: 'login_failed',
-                    module: 'auth',
-                    description: `Tentative de connexion échouée depuis ${req.ip}`,
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    metadata: { email, reason: 'invalid_password' },
-                    status: 'failure',
-                    severity: 'medium'
+            // Enregistrer la tentative de connexion échouée (non bloquant)
+            try {
+                await LoginAttempt.create({
+                    ip: req.ip,
+                    email: email,
+                    success: false,
+                    attempts: 1,
+                    lastAttempt: new Date()
                 });
+            } catch (e) {
+                logger.warn('LoginAttempt create (échec) ignoré:', e?.message);
+            }
+            if (user) {
+                try {
+                    await auditService.logActivity({
+                        userId: user._id,
+                        action: 'login_failed',
+                        module: 'auth',
+                        description: `Tentative de connexion échouée depuis ${req.ip}`,
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        metadata: { email, reason: 'invalid_password' },
+                        status: 'failure',
+                        severity: 'medium'
+                    });
+                } catch (e) {
+                    logger.warn('Audit login_failed ignoré:', e?.message);
+                }
             }
 
             throw new apiError('Email ou mot de passe incorrect', 401);
@@ -204,27 +211,33 @@ exports.login = asyncHandler(async (req, res) => {
         user.lastLogin = Date.now();
         await user.save();
 
-        // Enregistrer la tentative de connexion réussie
-        await LoginAttempt.create({
-            ip: req.ip,
-            email: email,
-            success: true,
-            attempts: 1,
-            lastAttempt: new Date()
-        });
-
-        // Enregistrer l'activité dans l'audit trail
-        await auditService.logActivity({
-            userId: user._id,
-            action: 'login',
-            module: 'auth',
-            description: `Connexion réussie depuis ${req.ip}`,
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent'),
-            metadata: { email, role: user.role },
-            status: 'success',
-            severity: 'low'
-        });
+        // Enregistrer la tentative de connexion réussie (non bloquant)
+        try {
+            await LoginAttempt.create({
+                ip: req.ip,
+                email: email,
+                success: true,
+                attempts: 1,
+                lastAttempt: new Date()
+            });
+        } catch (e) {
+            logger.warn('LoginAttempt create (succès) ignoré:', e?.message);
+        }
+        try {
+            await auditService.logActivity({
+                userId: user._id,
+                action: 'login',
+                module: 'auth',
+                description: `Connexion réussie depuis ${req.ip}`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
+                metadata: { email, role: user.role },
+                status: 'success',
+                severity: 'low'
+            });
+        } catch (e) {
+            logger.warn('Audit login ignoré:', e?.message);
+        }
 
         // Envoyer notification de nouvelle connexion
         try {
@@ -257,6 +270,11 @@ exports.login = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
+        logger.error('POST /api/auth/login - erreur', {
+            message: error?.message,
+            stack: error?.stack,
+            name: error?.name
+        });
         throw new apiError('Erreur lors de la connexion', 500);
     }
 });
