@@ -182,8 +182,10 @@ class AuditService {
      */
     async getLocationInfo(ipAddress) {
         try {
-            // Utiliser un service gratuit de géolocalisation IP
-            const response = await axios.get(`http://ip-api.com/json/${ipAddress}?fields=country,regionName,city`);
+            const response = await axios.get(
+                `http://ip-api.com/json/${ipAddress}?fields=country,regionName,city`,
+                { timeout: 5000 }
+            );
             
             if (response.data && response.data.country) {
                 return {

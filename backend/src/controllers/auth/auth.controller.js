@@ -208,47 +208,36 @@ exports.login = asyncHandler(async (req, res) => {
             throw new apiError('Email ou mot de passe incorrect', 401);
         }
 
-        // Mettre à jour la dernière connexion (update ciblé pour éviter erreur de validation sur anciens comptes)
-        await User.findByIdAndUpdate(user._id, { lastLogin: new Date() }, { runValidators: false });
-
-        // Enregistrer la tentative de connexion réussie (non bloquant)
+        // Mettre à jour lastLogin (non bloquant : ne pas faire échouer le login)
         try {
-            await LoginAttempt.create({
-                ip: req.ip,
-                email: email,
-                success: true,
-                attempts: 1,
-                lastAttempt: new Date()
-            });
+            await User.findByIdAndUpdate(user._id, { lastLogin: new Date() }, { runValidators: false });
         } catch (e) {
-            logger.warn('LoginAttempt create (succès) ignoré:', e?.message);
-        }
-        try {
-            await auditService.logActivity({
-                userId: user._id,
-                action: 'login',
-                module: 'auth',
-                description: `Connexion réussie depuis ${req.ip}`,
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent'),
-                metadata: { email, role: user.role },
-                status: 'success',
-                severity: 'low'
-            });
-        } catch (e) {
-            logger.warn('Audit login ignoré:', e?.message);
+            logger.warn('lastLogin non mis à jour:', e?.message);
         }
 
-        // Envoyer notification de nouvelle connexion
-        try {
-            await notificationService.notifyNewLogin(
-                user._id,
-                req.ip,
-                req.get('User-Agent')
-            );
-        } catch (notificationError) {
-            console.error('Erreur notification nouvelle connexion:', notificationError);
-        }
+        // Audit et notification en arrière-plan (ne jamais bloquer la réponse login)
+        auditService.logActivity({
+            userId: user._id,
+            action: 'login',
+            module: 'auth',
+            description: `Connexion réussie depuis ${req.ip}`,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            metadata: { email, role: user.role },
+            status: 'success',
+            severity: 'low'
+        }).catch((e) => logger.warn('Audit login ignoré:', e?.message));
+
+        LoginAttempt.create({
+            ip: req.ip,
+            email: email,
+            success: true,
+            attempts: 1,
+            lastAttempt: new Date()
+        }).catch((e) => logger.warn('LoginAttempt create (succès) ignoré:', e?.message));
+
+        notificationService.notifyNewLogin(user._id, req.ip, req.get('User-Agent'))
+            .catch((e) => console.error('Erreur notification nouvelle connexion:', e?.message));
 
         // Rôle normalisé (anciens comptes peuvent avoir rôle invalide ou manquant)
         const safeRole = ['client', 'partner_pending', 'partner', 'admin', 'superadmin', 'owner'].includes(user.role) ? user.role : 'client';
