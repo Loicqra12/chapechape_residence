@@ -10,6 +10,9 @@ const auditService = require('../../services/audit.service');
 const LoginAttempt = require('../../models/loginAttempt.model');
 const logger = require('../../utils/logger');
 
+// Hash bcrypt valide pour utilisateur inexistant (évite que bcrypt.compare lance → 500 au lieu de 401)
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy', 10);
+
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
@@ -159,10 +162,8 @@ exports.login = asyncHandler(async (req, res) => {
             }
         }
 
-        // ✅ PROTECTION TIMING ATTACK: Hash dummy si utilisateur inexistant
-        // Cela garantit que le temps de réponse est constant, que l'utilisateur existe ou non
-        const dummyPassword = '$2a$10$dummyhashtopreventtimingattacksonnonexistentusers1234567890';
-        const userPassword = user ? user.password : dummyPassword;
+        // ✅ PROTECTION TIMING ATTACK: hash bcrypt valide si utilisateur inexistant (évite 500)
+        const userPassword = user ? user.password : DUMMY_PASSWORD_HASH;
 
         // ✅ TOUJOURS exécuter bcrypt.compare (même si user n'existe pas)
         // Temps de réponse constant
@@ -273,6 +274,7 @@ exports.login = asyncHandler(async (req, res) => {
             stack: error?.stack,
             name: error?.name
         });
+        console.error('POST /api/auth/login - erreur réelle:', error?.message, error?.stack);
         throw new apiError('Erreur lors de la connexion', 500);
     }
 });
