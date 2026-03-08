@@ -9,153 +9,136 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  // Palette de couleurs élégante
-  static const Color primaryColor = Color(0xFF1A1A1A);
-  static const Color accentColor = Color(0xFFFFD700); // Or
-  static const Color textColor = Color(0xFF1A1A1A);
-  
-  late AnimationController _animationController;
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _textFadeAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _slideAnimation;
-  
+  bool _maquetteFailed = false;
+
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
-    _navigateAfterDelay();
-  }
-  
-  void _initializeAnimations() {
-    // Phase 1: logo (0–50%), Phase 2: texte (40–90%) — courbes fluides
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1400),
       vsync: this,
     );
-    
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+        parent: _controller,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
       ),
     );
-    
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.96, end: 1.0).animate(
       CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
       ),
     );
-    
-    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.4, 0.85, curve: Curves.easeOut),
-      ),
-    );
-    
-    _slideAnimation = Tween<double>(begin: 24, end: 0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.4, 0.9, curve: Curves.easeOutCubic),
-      ),
-    );
-    
-    _animationController.forward();
+    _controller.forward();
+    _navigateAfterDelay();
   }
-  
+
   Future<void> _navigateAfterDelay() async {
-    await Future.delayed(const Duration(milliseconds: 2200));
+    await Future.delayed(const Duration(milliseconds: 2800));
     if (mounted) {
       context.go('/onboarding');
     }
   }
-  
+
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Container(
-                      width: 220,
-                      height: 220,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentColor.withOpacity(0.2),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(20),
-                      child: Semantics(
-                        label: 'Logo ChapeChape Partner',
-                        image: true,
-                        child: Image.asset(
-                          AppImages.logoPrimary,
-                          width: 180,
-                          height: 180,
-                          semanticLabel: 'Logo ChapeChape Partner',
-                        ),
-                      ),
-                    ),
+      body: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          if (_maquetteFailed) {
+            return _buildFallbackSplash();
+          }
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Image.asset(
+                    AppImages.splashMaquette,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    errorBuilder: (_, __, ___) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted && !_maquetteFailed) {
+                          setState(() => _maquetteFailed = true);
+                        }
+                      });
+                      return _buildFallbackSplash();
+                    },
                   ),
                 ),
-                const SizedBox(height: 40),
-                Transform.translate(
-                  offset: Offset(0, _slideAnimation.value),
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Text(
-                      "ChapeChape Partner",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: textColor,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Transform.translate(
-                  offset: Offset(0, _slideAnimation.value),
-                  child: FadeTransition(
-                    opacity: _textFadeAnimation,
-                    child: Text(
-                      "Gérez vos résidences avec excellence",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: textColor.withOpacity(0.7),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFallbackSplash() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          radius: 1.2,
+          colors: [
+            const Color(0xFFF0EEF7),
+            const Color(0xFFE8E4F0),
+            const Color(0xFFE0DCE8),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              AppImages.logoPrimary,
+              width: 160,
+              height: 160,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.home_work_rounded,
+                size: 80,
+                color: const Color(0xFF4A3E7A),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'CHAPECHAPE',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF4A3E7A),
+                letterSpacing: 3.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'RESIDENCE PARTENAIRE',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF4A3E7A).withOpacity(0.9),
+                letterSpacing: 2.2,
+              ),
+            ),
+          ],
         ),
       ),
     );

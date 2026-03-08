@@ -2,6 +2,13 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import AppScreenshots from '../components/home/AppScreenshots'
 import Contact from '../components/home/Contact'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
+const clientAndroid = (import.meta as any).env?.VITE_CLIENT_ANDROID_URL || '#'
+const clientIos = (import.meta as any).env?.VITE_CLIENT_IOS_URL || '#'
+const partnerAndroid = (import.meta as any).env?.VITE_PARTNER_ANDROID_URL || '#'
+const partnerIos = (import.meta as any).env?.VITE_PARTNER_IOS_URL || '#'
 
 export default function Apps() {
   // Variantes d'animation pour les titres et textes
@@ -96,6 +103,11 @@ export default function Apps() {
 
   return (
     <div className="bg-secondary-50">
+      <SEOHead
+        title="Applications"
+        description="Téléchargez ChapeChape Client et ChapeChape Partner : recherche, réservation et gestion de résidences en Côte d'Ivoire."
+        url={`${siteUrl}/apps`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -139,7 +151,7 @@ export default function Apps() {
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
               Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">Applications</span>
             </h1>
-            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+            <p className="text-xl text-secondary-200 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
               Découvrez comment nos applications mobiles facilitent la gestion et la location de résidences en Afrique de l'Ouest, où que vous soyez.
             </p>
           </motion.div>
@@ -191,7 +203,7 @@ export default function Apps() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:border-primary-200 hover:shadow-xl transition-all duration-300 group"
+                  className="bg-white p-8 rounded-2xl shadow-lg border border-secondary-100 dark:border-secondary-800 hover:border-primary-200 hover:shadow-xl transition-all duration-300 group"
                 >
                   <dt className="flex items-center gap-x-4 text-lg font-bold leading-7 text-secondary-900">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 group-hover:bg-primary-500 group-hover:text-white transition-colors duration-300">
@@ -208,7 +220,9 @@ export default function Apps() {
           <div className="mt-16 flex justify-center">
             <div className="flex flex-wrap gap-4 justify-center">
               <a
-                href="#"
+                href={clientAndroid}
+                target={clientAndroid !== '#' ? '_blank' : undefined}
+                rel={clientAndroid !== '#' ? 'noopener noreferrer' : undefined}
                 className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-900 text-white hover:bg-secondary-800 transition-all transform hover:-translate-y-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
@@ -220,7 +234,9 @@ export default function Apps() {
                 </div>
               </a>
               <a
-                href="#"
+                href={clientIos}
+                target={clientIos !== '#' ? '_blank' : undefined}
+                rel={clientIos !== '#' ? 'noopener noreferrer' : undefined}
                 className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-900 text-white hover:bg-secondary-800 transition-all transform hover:-translate-y-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
@@ -295,7 +311,9 @@ export default function Apps() {
           <div className="mt-16 flex justify-center">
             <div className="flex flex-wrap gap-4 justify-center">
               <a
-                href="#"
+                href={partnerAndroid}
+                target={partnerAndroid !== '#' ? '_blank' : undefined}
+                rel={partnerAndroid !== '#' ? 'noopener noreferrer' : undefined}
                 className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-800 text-white hover:bg-secondary-900 transition-all transform hover:-translate-y-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
@@ -307,7 +325,9 @@ export default function Apps() {
                 </div>
               </a>
               <a
-                href="#"
+                href={partnerIos}
+                target={partnerIos !== '#' ? '_blank' : undefined}
+                rel={partnerIos !== '#' ? 'noopener noreferrer' : undefined}
                 className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-800 text-white hover:bg-secondary-900 transition-all transform hover:-translate-y-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">

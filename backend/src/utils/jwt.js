@@ -9,13 +9,16 @@ const logger = require('./logger');
  * @returns {string} - Token JWT généré
  */
 const generateAccessToken = (userId, role) => {
-    // Utiliser la clé active pour la signature
-    const secret = keyRotation.getActiveKey('JWT_SECRET');
-    
+    const secret = keyRotation.getActiveKey('JWT_SECRET') || process.env.JWT_SECRET;
+    if (!secret || secret.length < 16) {
+        throw new Error('JWT_SECRET non configuré ou trop court (min. 16 caractères)');
+    }
+    const expireHours = parseInt(process.env.JWT_EXPIRE, 10) || 24;
+    const expiresInSeconds = expireHours * 3600;
     return jwt.sign(
         { id: userId, role },
         secret,
-        { expiresIn: parseInt(process.env.JWT_EXPIRE) * 3600 } // Convert hours to seconds
+        { expiresIn: expiresInSeconds }
     );
 };
 
@@ -25,13 +28,16 @@ const generateAccessToken = (userId, role) => {
  * @returns {string} - Token de rafraîchissement
  */
 const generateRefreshToken = (userId) => {
-    // Utiliser la clé active pour la signature
-    const secret = keyRotation.getActiveKey('JWT_REFRESH_SECRET');
-    
+    const secret = keyRotation.getActiveKey('JWT_REFRESH_SECRET') || process.env.JWT_REFRESH_SECRET;
+    if (!secret || secret.length < 16) {
+        throw new Error('JWT_REFRESH_SECRET non configuré ou trop court (min. 16 caractères)');
+    }
+    const expireDays = parseInt(process.env.JWT_REFRESH_EXPIRE, 10) || 7;
+    const expiresInSeconds = expireDays * 24 * 3600;
     return jwt.sign(
         { id: userId },
         secret,
-        { expiresIn: parseInt(process.env.JWT_REFRESH_EXPIRE) * 24 * 3600 } // Convert days to seconds
+        { expiresIn: expiresInSeconds }
     );
 };
 

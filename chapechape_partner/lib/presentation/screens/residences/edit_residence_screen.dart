@@ -1374,7 +1374,7 @@ class _EditResidenceViewState extends State<_EditResidenceView>
             Tab(icon: Icon(Icons.info_outline), text: 'Infos'),
             Tab(icon: Icon(Icons.payments), text: 'Tarifs'),
             Tab(icon: Icon(Icons.home_work), text: 'Équipements'),
-            Tab(icon: Icon(Icons.location_on), text: 'Localisation'),
+            Tab(icon: Icon(Icons.location_on), text: 'Lieu'),
             Tab(icon: Icon(Icons.photo_camera), text: 'Photos'),
           ],
         ) : null,
@@ -1466,8 +1466,10 @@ class _EditResidenceViewState extends State<_EditResidenceView>
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(errorMessage),
-                backgroundColor: theme.colorScheme.error,
+                content: Text(errorMessage, style: const TextStyle(color: Colors.white)),
+                backgroundColor: Colors.black87,
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 duration: const Duration(seconds: 5),
                 action: action != null
                     ? SnackBarAction(

@@ -52,9 +52,7 @@ const navigation = [
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openSubMenus, setOpenSubMenus] = useState<string[]>([])
-
-  // Debug: Log l'état du menu mobile
-  console.log('Mobile menu open:', mobileMenuOpen)
+  const [expandedDesktopMenu, setExpandedDesktopMenu] = useState<string | null>(null)
 
   const toggleSubMenu = (name: string) => {
     setOpenSubMenus(prev =>
@@ -86,25 +84,28 @@ export default function Navbar() {
           <button
             type="button"
             className="-m-2.5 inline-flex items-center justify-center rounded-xl p-2.5 text-primary-300 hover:text-primary-400 hover:bg-secondary-800 transition-all duration-200"
-            onClick={() => {
-              console.log('Hamburger clicked, setting mobile menu to true')
-              setMobileMenuOpen(true)
-            }}
+            onClick={() => setMobileMenuOpen(true)}
           >
             <span className="sr-only">Ouvrir le menu principal</span>
             <Bars3Icon className="h-6 w-6" aria-hidden="true" />
           </button>
         </div>
         <div className="hidden lg:flex lg:gap-x-8">
-          {navigation.map((item) => (
-            item.submenu ? (
-              <div key={item.name} className="relative group">
+          {navigation.map((item) => {
+            const isExpanded = item.submenu ? expandedDesktopMenu === item.name : false
+            const ariaExpanded = isExpanded ? 'true' : 'false' as 'true' | 'false'
+            return item.submenu ? (
+              <div
+                key={item.name}
+                className="relative group"
+                onMouseEnter={() => setExpandedDesktopMenu(item.name)}
+                onMouseLeave={() => setExpandedDesktopMenu(null)}
+              >
                 <button
                   className="flex items-center gap-x-1 text-sm font-medium leading-6 text-primary-300 hover:text-primary-400 transition-all duration-200 px-3 py-2 rounded-lg hover:bg-secondary-800 cursor-pointer"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
-                      // Toggle menu visibility by focusing on first submenu item
                       const firstLink = e.currentTarget.nextElementSibling?.querySelector('a')
                       if (firstLink instanceof HTMLElement) {
                         firstLink.focus()
@@ -112,7 +113,7 @@ export default function Navbar() {
                     }
                   }}
                   aria-haspopup="true"
-                  aria-expanded="false"
+                  {...{ 'aria-expanded': ariaExpanded }}
                 >
                   {item.name}
                   <ChevronDownIcon className="h-4 w-4 transition-transform duration-200 text-primary-400 group-hover:rotate-180 group-hover:text-primary-300" />
@@ -145,8 +146,8 @@ export default function Navbar() {
                 {item.name}
                 <span className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-primary-500 to-secondary-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
               </Link>
-            )
-          ))}
+            );
+          })}
         </div>
       </nav>
       {/* Mobile menu via React Portal */}

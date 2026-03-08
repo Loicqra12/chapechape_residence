@@ -1,5 +1,9 @@
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import Contact from '../components/home/Contact'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
 // Données des partenaires
 const partners = [
@@ -100,6 +104,11 @@ const categories = [
 const Partners = () => {
   return (
     <div className="bg-white">
+      <SEOHead
+        title="Partenaires"
+        description="Partenaires ChapeChape Residence : Wave, Orange Money, MTN, banques. Paiements et services en Côte d'Ivoire."
+        url={`${siteUrl}/partners`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -174,7 +183,7 @@ const Partners = () => {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 group border border-gray-100"
             >
-              <div className="p-10 flex items-center justify-center h-56 bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
+              <div className="p-10 flex items-center justify-center h-56 bg-gradient-to-br from-secondary-50 to-secondary-100 dark:from-secondary-800 dark:to-secondary-700 relative overflow-hidden">
                 <div className="absolute inset-0 bg-white/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <img
                   src={partner.logo}
@@ -235,12 +244,12 @@ const Partners = () => {
                 </p>
               </div>
               <div className="md:w-1/3 flex justify-center md:justify-end">
-                <a
-                  href="/contact"
+                <Link
+                  to="/contact"
                   className="btn-primary w-full md:w-auto text-center px-8 py-4 text-base shadow-lg shadow-primary-500/20"
                 >
                   Nous contacter
-                </a>
+                </Link>
               </div>
             </motion.div>
           </div>

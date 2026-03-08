@@ -1,3 +1,7 @@
+/**
+ * Catégories d'hébergement alignées sur l'app ChapeChape Residence.
+ * 6 catégories, 28 types au total — du économique au confort, court ou longue durée.
+ */
 export interface ResidenceType {
   id: string;
   name: string;
@@ -8,68 +12,75 @@ export interface ResidenceType {
 
 export const residenceTypes: ResidenceType[] = [
   {
-    id: 'apartment',
-    name: 'Appartements',
-    description: 'Des appartements modernes et élégants, parfaitement équipés pour vous offrir un maximum de confort pendant votre séjour.',
+    id: 'meuble',
+    name: 'Résidences meublées',
+    description: 'Studios, appartements et villas meublés, penthouse, loft ou grenier aménagé : des espaces prêts à vivre pour courts ou longs séjours.',
     features: [
-      'Cuisine entièrement équipée',
-      'Salon spacieux',
-      'WiFi haut débit',
-      'Climatisation',
-      'Balcon avec vue'
+      'Studio, appartement ou villa meublé',
+      'Penthouse, loft, grenier aménagé',
+      'Idéal court ou longue durée',
+      'Équipements inclus'
     ],
-    imageUrl: '/assets/residences/apartment.jpg'
+    imageUrl: '/assets/residences/meuble.png'
   },
   {
-    id: 'villa',
-    name: 'Villas Luxueuses',
-    description: 'Des villas de standing avec piscine privée, idéales pour les familles ou les groupes en quête d\'intimité et de confort.',
+    id: 'hotel',
+    name: 'Hôtels & hébergements classiques',
+    description: 'Hôtels de passage, motels, boutique-hôtels, hôtels de luxe, auberges et résidences hôtelières pour tous les besoins en hébergement.',
     features: [
-      'Piscine privée',
-      'Jardin tropical',
-      'Plusieurs chambres',
-      'Espace de vie ouvert',
-      'Sécurité 24/7'
+      'Hôtel de passage, motel, boutique-hôtel',
+      'Hôtel de luxe, auberge, résidence hôtelière',
+      'Services adaptés à chaque formule',
+      'Réservation à l\'heure, au jour ou au mois'
     ],
-    imageUrl: '/assets/residences/villa.jpg'
+    imageUrl: '/assets/residences/hotel.png'
   },
   {
-    id: 'studio',
-    name: 'Studios',
-    description: 'Des studios fonctionnels et bien aménagés, parfaits pour les voyageurs d\'affaires ou les courts séjours.',
+    id: 'insolite',
+    name: 'Hébergements insolites & nature',
+    description: 'Bungalows, lodges, cases traditionnelles, maisons flottantes ou campements : pour des séjours hors du commun en pleine nature.',
     features: [
-      'Espace optimisé',
-      'Coin bureau',
-      'Kitchenette équipée',
-      'Douche moderne',
-      'Localisation centrale'
+      'Bungalow, lodge & écolodge',
+      'Case traditionnelle, maison flottante',
+      'Campement touristique',
+      'Expérience nature et authenticité'
     ],
-    imageUrl: '/assets/residences/studio.jpg'
+    imageUrl: '/assets/residences/insolite.png'
   },
   {
-    id: 'duplex',
-    name: 'Duplex & Lofts',
-    description: 'Des espaces sur deux niveaux offrant une expérience de vie unique avec des volumes généreux et un aménagement contemporain.',
+    id: 'colocation',
+    name: 'Colocation & résidences partagées',
+    description: 'Chambres en colocation, coliving, maisons d\'hôtes, résidences universitaires et cités dortoir : pour vivre à plusieurs ou en communauté.',
     features: [
-      'Double hauteur sous plafond',
-      'Escalier design',
-      'Grandes baies vitrées',
-      'Espace de vie modulable',
-      'Finitions premium'
+      'Chambre en colocation, coliving',
+      'Maison d\'hôtes, résidence universitaire',
+      'Cité & dortoir',
+      'Idéal étudiants et travailleurs'
     ],
-    imageUrl: '/assets/residences/duplex.jpg'
+    imageUrl: '/assets/residences/colocation.png'
   },
   {
-    id: 'traditional',
-    name: 'Résidences Traditionnelles',
-    description: 'Des logements authentiques qui célèbrent l\'architecture locale et vous permettent de vivre une expérience culturelle immersive.',
+    id: 'longue_duree',
+    name: 'Résidences longue durée',
+    description: 'Appartements et villas non meublés, immeubles et cours communes : pour des locations longue durée et une installation durable.',
     features: [
-      'Architecture traditionnelle',
-      'Matériaux locaux',
-      'Décoration artisanale',
-      'Cour intérieure',
-      'Expérience authentique'
+      'Appartement ou villa non meublé',
+      'Immeuble, cour commune',
+      'Location longue durée',
+      'Adapté aux familles et professionnels'
     ],
-    imageUrl: '/assets/residences/traditional.jpg'
+    imageUrl: '/assets/residences/longue_duree.png'
+  },
+  {
+    id: 'economique',
+    name: 'Hébergements économiques',
+    description: 'Maisons d\'hôtes économiques, résidences familiales et chambres de passage : des options accessibles pour petits budgets et séjours courts.',
+    features: [
+      'Maison d\'hôtes économique',
+      'Résidence familiale, chambres de passage',
+      'Tarifs accessibles',
+      'Confort simple et pratique'
+    ],
+    imageUrl: '/assets/residences/economique.png'
   }
-]; 
+];

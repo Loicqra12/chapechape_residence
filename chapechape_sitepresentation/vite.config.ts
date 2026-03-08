@@ -8,7 +8,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
     // Optimisations de performance
     rollupOptions: {
       output: {

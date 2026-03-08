@@ -7,6 +7,7 @@ import '../../services/api/auth_service.dart';
 import '../../services/api/media_service.dart';
 import 'package:dio/dio.dart';
 import 'dart:convert';
+import '../../exceptions/api_exception.dart';
 import 'auth_event.dart';
 
 // Note: Les événements sont maintenant définis dans auth_event.dart
@@ -276,7 +277,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         partner: loginResult.partner,
       ));
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      final message = e is ApiException ? e.message : 'Un problème est survenu. Réessayez.';
+      emit(AuthFailure(message));
     }
   }
 
@@ -321,7 +323,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         partner: registerResult.partner,
       ));
     } catch (e) {
-      emit(AuthFailure(e.toString()));
+      final message = e is ApiException ? e.message : 'Un problème est survenu. Réessayez.';
+      emit(AuthFailure(message));
     }
   }
 

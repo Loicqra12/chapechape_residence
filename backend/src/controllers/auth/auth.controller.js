@@ -8,6 +8,10 @@ const apiError = require('../../utils/apiError');
 const notificationService = require('../../services/notification.service');
 const auditService = require('../../services/audit.service');
 const LoginAttempt = require('../../models/loginAttempt.model');
+const logger = require('../../utils/logger');
+
+// Hash bcrypt valide pour utilisateur inexistant (évite que bcrypt.compare lance → 500 au lieu de 401)
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy', 10);
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -158,10 +162,8 @@ exports.login = asyncHandler(async (req, res) => {
             }
         }
 
-        // ✅ PROTECTION TIMING ATTACK: Hash dummy si utilisateur inexistant
-        // Cela garantit que le temps de réponse est constant, que l'utilisateur existe ou non
-        const dummyPassword = '$2a$10$dummyhashtopreventtimingattacksonnonexistentusers1234567890';
-        const userPassword = user ? user.password : dummyPassword;
+        // ✅ PROTECTION TIMING ATTACK: hash bcrypt valide si utilisateur inexistant (évite 500)
+        const userPassword = user ? user.password : DUMMY_PASSWORD_HASH;
 
         // ✅ TOUJOURS exécuter bcrypt.compare (même si user n'existe pas)
         // Temps de réponse constant
@@ -173,48 +175,48 @@ exports.login = asyncHandler(async (req, res) => {
             const randomDelay = Math.floor(Math.random() * 100) + 50;
             await new Promise(resolve => setTimeout(resolve, randomDelay));
 
-            // Enregistrer la tentative de connexion échouée
-            await LoginAttempt.create({
-                ip: req.ip,
-                email: email,
-                success: false,
-                attempts: 1,
-                lastAttempt: new Date()
-            });
-
-            // Enregistrer l'échec dans l'audit trail (si user existe)
-            if (user) {
-                await auditService.logActivity({
-                    userId: user._id,
-                    action: 'login_failed',
-                    module: 'auth',
-                    description: `Tentative de connexion échouée depuis ${req.ip}`,
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    metadata: { email, reason: 'invalid_password' },
-                    status: 'failure',
-                    severity: 'medium'
+            // Enregistrer la tentative de connexion échouée (non bloquant)
+            try {
+                await LoginAttempt.create({
+                    ip: req.ip,
+                    email: email,
+                    success: false,
+                    attempts: 1,
+                    lastAttempt: new Date()
                 });
+            } catch (e) {
+                logger.warn('LoginAttempt create (échec) ignoré:', e?.message);
+            }
+            if (user) {
+                try {
+                    await auditService.logActivity({
+                        userId: user._id,
+                        action: 'login_failed',
+                        module: 'auth',
+                        description: `Tentative de connexion échouée depuis ${req.ip}`,
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        metadata: { email, reason: 'invalid_password' },
+                        status: 'failure',
+                        severity: 'medium'
+                    });
+                } catch (e) {
+                    logger.warn('Audit login_failed ignoré:', e?.message);
+                }
             }
 
             throw new apiError('Email ou mot de passe incorrect', 401);
         }
 
-        // Mettre à jour la dernière connexion
-        user.lastLogin = Date.now();
-        await user.save();
+        // Mettre à jour lastLogin (non bloquant : ne pas faire échouer le login)
+        try {
+            await User.findByIdAndUpdate(user._id, { lastLogin: new Date() }, { runValidators: false });
+        } catch (e) {
+            logger.warn('lastLogin non mis à jour:', e?.message);
+        }
 
-        // Enregistrer la tentative de connexion réussie
-        await LoginAttempt.create({
-            ip: req.ip,
-            email: email,
-            success: true,
-            attempts: 1,
-            lastAttempt: new Date()
-        });
-
-        // Enregistrer l'activité dans l'audit trail
-        await auditService.logActivity({
+        // Audit et notification en arrière-plan (ne jamais bloquer la réponse login)
+        auditService.logActivity({
             userId: user._id,
             action: 'login',
             module: 'auth',
@@ -224,23 +226,22 @@ exports.login = asyncHandler(async (req, res) => {
             metadata: { email, role: user.role },
             status: 'success',
             severity: 'low'
-        });
+        }).catch((e) => logger.warn('Audit login ignoré:', e?.message));
 
-        // Envoyer notification de nouvelle connexion
-        try {
-            await notificationService.notifyNewLogin(
-                user._id,
-                req.ip,
-                req.get('User-Agent')
-            );
-        } catch (notificationError) {
-            console.error('Erreur notification nouvelle connexion:', notificationError);
-        }
+        LoginAttempt.create({
+            ip: req.ip,
+            email: email,
+            success: true,
+            attempts: 1,
+            lastAttempt: new Date()
+        }).catch((e) => logger.warn('LoginAttempt create (succès) ignoré:', e?.message));
 
-        // Générer le token d'accès avec la nouvelle fonction
-        const accessToken = jwt.generateAccessToken(user._id, user.role);
+        notificationService.notifyNewLogin(user._id, req.ip, req.get('User-Agent'))
+            .catch((e) => console.error('Erreur notification nouvelle connexion:', e?.message));
 
-        // Générer le token de rafraîchissement
+        // Rôle normalisé (anciens comptes peuvent avoir rôle invalide ou manquant)
+        const safeRole = ['client', 'partner_pending', 'partner', 'admin', 'superadmin', 'owner'].includes(user.role) ? user.role : 'client';
+        const accessToken = jwt.generateAccessToken(user._id, safeRole);
         const refreshToken = jwt.generateRefreshToken(user._id);
 
         res.status(200).json({
@@ -248,15 +249,24 @@ exports.login = asyncHandler(async (req, res) => {
             token: accessToken,
             refreshToken,
             user: {
-                id: user._id.toString(),  // Convertir l'ObjectId en string
+                id: user._id.toString(),
                 email: user.email,
-                firstName: user.firstName || '',  // Valeur par défaut si null
-                lastName: user.lastName || '',    // Valeur par défaut si null
-                role: user.role || 'client',     // Valeur par défaut si null
-                phoneNumber: user.phoneNumber || '' // Valeur par défaut si null
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                role: safeRole,
+                phoneNumber: user.phoneNumber || ''
             }
         });
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+        logger.error('POST /api/auth/login - erreur', {
+            message: error?.message,
+            stack: error?.stack,
+            name: error?.name
+        });
+        console.error('POST /api/auth/login - erreur réelle:', error?.message, error?.stack);
         throw new apiError('Erreur lors de la connexion', 500);
     }
 });

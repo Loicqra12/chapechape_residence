@@ -810,12 +810,15 @@ class ResidenceService {
         print('🏠 Création résidence - Corps de la réponse: ${response.body}');
         
       // Vérifier si la création a réussi
-        if (response.statusCode != 201 && response.statusCode != 200) {
-        throw ApiException(
-          'Erreur lors de la création de la résidence: ${response.statusCode}',
-          response.statusCode,
-          {}
-        );
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        String message = 'Vérifiez les informations saisies et réessayez.';
+        try {
+          final body = jsonDecode(response.body);
+          if (body is Map && body['message'] != null && body['message'].toString().trim().isNotEmpty) {
+            message = body['message'].toString();
+          }
+        } catch (_) {}
+        throw ApiException(message, response.statusCode, {});
       }
       
       // Extraire l'ID de la résidence créée

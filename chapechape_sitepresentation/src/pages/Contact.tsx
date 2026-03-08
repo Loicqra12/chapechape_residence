@@ -1,10 +1,19 @@
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { MapPinIcon } from '@heroicons/react/24/outline'
 import ContactComponent from '../components/home/Contact'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
 const Contact = () => {
   return (
     <div className="bg-white">
+      <SEOHead
+        title="Contact"
+        description="Contactez ChapeChape Residence : support, questions, réservations. Abidjan, Côte d'Ivoire."
+        url={`${siteUrl}/contact`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -48,7 +57,7 @@ const Contact = () => {
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
               Contactez <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">Nous</span>
             </h1>
-            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+            <p className="text-xl text-secondary-200 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
               Notre équipe est à votre disposition pour répondre à toutes vos questions et vous accompagner dans vos projets.
             </p>
           </motion.div>
@@ -57,7 +66,7 @@ const Contact = () => {
 
       {/* Composant de contact existant - Ajustement marge négative pour chevauchement élégant */}
       <div className="-mt-20 relative z-20 container mx-auto px-4 max-w-7xl">
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-secondary-100 dark:border-secondary-800">
           <ContactComponent />
         </div>
       </div>
@@ -85,7 +94,7 @@ const Contact = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
+                className="bg-white p-8 rounded-2xl shadow-lg border border-secondary-100 dark:border-secondary-800 hover:shadow-xl transition-shadow"
               >
                 <h3 className="text-lg font-bold text-secondary-900 mb-3">Quels sont vos horaires d'ouverture ?</h3>
                 <p className="text-secondary-600 leading-relaxed">
@@ -99,7 +108,7 @@ const Contact = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
+                className="bg-white p-8 rounded-2xl shadow-lg border border-secondary-100 dark:border-secondary-800 hover:shadow-xl transition-shadow"
               >
                 <h3 className="text-lg font-bold text-secondary-900 mb-3">Comment visiter un logement ?</h3>
                 <p className="text-secondary-600 leading-relaxed">
@@ -113,7 +122,7 @@ const Contact = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.3 }}
-                className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
+                className="bg-white p-8 rounded-2xl shadow-lg border border-secondary-100 dark:border-secondary-800 hover:shadow-xl transition-shadow"
               >
                 <h3 className="text-lg font-bold text-secondary-900 mb-3">Quel est le délai de réponse ?</h3>
                 <p className="text-secondary-600 leading-relaxed">
@@ -127,7 +136,7 @@ const Contact = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.4 }}
-                className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow"
+                className="bg-white p-8 rounded-2xl shadow-lg border border-secondary-100 dark:border-secondary-800 hover:shadow-xl transition-shadow"
               >
                 <h3 className="text-lg font-bold text-secondary-900 mb-3">Comment devenir partenaire ?</h3>
                 <p className="text-secondary-600 leading-relaxed">
@@ -138,12 +147,12 @@ const Contact = () => {
             </div>
 
             <div className="text-center mt-12">
-              <a href="/faq" className="inline-flex items-center text-primary-600 hover:text-primary-700 font-bold transition-colors group">
+              <Link to="/faq" className="inline-flex items-center text-primary-600 hover:text-primary-700 font-bold transition-colors group">
                 Voir toutes les questions fréquentes
                 <svg className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -166,7 +175,7 @@ const Contact = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 rounded-3xl overflow-hidden shadow-2xl h-[500px] border border-gray-100">
+            <div className="lg:col-span-2 rounded-3xl overflow-hidden shadow-2xl h-[500px] border border-secondary-100 dark:border-secondary-800">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.4736881794175!2d-3.9761723852929284!3d5.3481699371855435!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMjAnNTMuNCJOIDPCsDU4JzMzLjEiVw!5e0!3m2!1sfr!2sci!4v1663342965642!5m2!1sfr!2sci"
                 width="100%"
@@ -191,7 +200,7 @@ const Contact = () => {
                 </div>
 
                 <h3 className="text-2xl font-bold mb-6 font-display">Notre adresse</h3>
-                <p className="text-gray-300 leading-relaxed mb-8 text-lg">
+                <p className="text-secondary-200 leading-relaxed mb-8 text-lg">
                   Angré, Rond-point CNPS<br />
                   En face du restaurant La Shish<br />
                   92HH+CVM Riviera, Abidjan<br />

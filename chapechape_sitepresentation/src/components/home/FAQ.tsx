@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 
 type FAQItem = {
@@ -198,7 +199,7 @@ const FAQ = () => {
               {/* Glow effect background */}
               <div className={`absolute -inset-1 bg-gradient-to-r from-primary-400 to-secondary-400 rounded-2xl blur-lg opacity-0 group-hover:opacity-20 transition-all duration-500 ${isSearchFocused ? 'opacity-30' : ''}`} />
               
-              <div className={`relative flex items-center bg-white dark:bg-gray-800 rounded-2xl border-2 transition-all duration-300 shadow-lg hover:shadow-xl ${isSearchFocused ? 'border-primary-400 shadow-primary-100 dark:shadow-primary-900/20' : 'border-gray-200 dark:border-gray-600'}`}>
+              <div className={`relative flex items-center bg-white dark:bg-secondary-800 rounded-2xl border-2 transition-all duration-300 shadow-lg hover:shadow-xl ${isSearchFocused ? 'border-primary-400 shadow-primary-100 dark:shadow-primary-900/20' : 'border-secondary-200 dark:border-secondary-600'}`}>
                 {/* Search Icon */}
                 <motion.div 
                   className="pl-6 pr-3"
@@ -226,7 +227,7 @@ const FAQ = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
-                  className="flex-1 py-4 pr-6 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none text-lg"
+                  className="flex-1 py-4 pr-6 bg-transparent text-secondary-900 dark:text-white placeholder-secondary-500 dark:placeholder-secondary-400 focus:outline-none text-lg"
                 />
                 
                 {/* Clear button */}
@@ -239,7 +240,7 @@ const FAQ = () => {
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => setSearchQuery('')}
-                      className="mr-4 p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+                      className="mr-4 p-2 rounded-full bg-secondary-100 dark:bg-secondary-700 text-secondary-500 dark:text-secondary-400 hover:bg-secondary-200 dark:hover:bg-secondary-600 transition-colors duration-200"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -279,14 +280,14 @@ const FAQ = () => {
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
-                  className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center"
+                  className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-secondary-200 to-secondary-300 dark:from-secondary-700 dark:to-secondary-600 rounded-full flex items-center justify-center"
                 >
-                  <svg className="w-8 h-8 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-secondary-500 dark:text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.291-1.007-5.691-2.709M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                 </motion.div>
-                <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Aucun résultat trouvé</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                <h3 className="text-xl font-semibold text-secondary-700 dark:text-secondary-300 mb-2">Aucun résultat trouvé</h3>
+                <p className="text-secondary-500 dark:text-secondary-400 max-w-md mx-auto">
                   Nous n'avons pas trouvé de questions correspondant à "<span className="font-medium text-primary-600 dark:text-primary-400">{searchQuery}</span>". 
                   Essayez avec d'autres mots-clés ou contactez notre support.
                 </p>
@@ -312,7 +313,7 @@ const FAQ = () => {
                     className="overflow-hidden"
                   >
                     <motion.div
-                      className={`rounded-xl p-6 shadow-lg border border-primary-200/30 transition-all duration-500 hover:shadow-xl ${activeIndex === index ? 'bg-gradient-to-r from-primary-50 via-white to-secondary-50 shadow-xl border-primary-300/50 scale-[1.02]' : 'bg-white dark:bg-gray-800 hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-white dark:hover:from-gray-700 dark:hover:to-gray-800'}`}
+                      className={`rounded-xl p-6 shadow-lg border border-primary-200/30 transition-all duration-500 hover:shadow-xl ${activeIndex === index ? 'bg-gradient-to-r from-primary-50 via-white to-secondary-50 shadow-xl border-primary-300/50 scale-[1.02]' : 'bg-white dark:bg-secondary-800 hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-white dark:hover:from-secondary-700 dark:hover:to-secondary-800'}`}
                       whileHover={{ 
                         scale: activeIndex === index ? 1.02 : 1.01, 
                         transition: { duration: 0.3, type: "spring", stiffness: 300 } 
@@ -388,7 +389,7 @@ const FAQ = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4, delay: 0.2 }}
-                                className="text-secondary-600 dark:text-gray-300 leading-relaxed text-base"
+                                className="text-secondary-600 dark:text-secondary-300 leading-relaxed text-base"
                               >
                                 {faq.answer}
                               </motion.p>
@@ -411,8 +412,8 @@ const FAQ = () => {
             transition={{ duration: 0.6, delay: 0.8 }}
             className="flex justify-center mt-12"
           >
-            <a 
-              href="/contact" 
+            <Link 
+              to="/contact" 
               className="group inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 transition-all duration-300 border border-primary-200 shadow-sm"
             >
               <span className="mr-2">Vous avez d'autres questions?</span>
@@ -426,7 +427,7 @@ const FAQ = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
                 </svg>
               </motion.span>
-            </a>
+            </Link>
           </motion.div>
         </div>
       </div>

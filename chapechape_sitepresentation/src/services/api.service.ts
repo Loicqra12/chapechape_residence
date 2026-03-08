@@ -1,5 +1,6 @@
-// Configuration de l'API
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+// Configuration de l'API (en production, définir VITE_API_BASE_URL)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost:4000/api');
+const API_TIMEOUT_MS = 15000;
 
 // Types pour les requêtes
 export interface ContactFormData {
@@ -67,14 +68,18 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
         ...options,
       });
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -84,8 +89,12 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('API Request Error:', error);
+      if (import.meta.env.DEV && error instanceof Error) {
+        console.error('API Request Error:', error.message);
+      }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

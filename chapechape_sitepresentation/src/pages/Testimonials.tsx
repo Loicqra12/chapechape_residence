@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import Contact from '../components/home/Contact'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
 // Données des témoignages
 const testimonials = [
@@ -92,12 +96,18 @@ const Testimonials = () => {
   const [filter, setFilter] = useState<'all' | 'locataire' | 'proprietaire'>('all')
 
   // Filtrer les témoignages
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/\u0300-\u036f/g, '')
   const filteredTestimonials = filter === 'all'
     ? testimonials
-    : testimonials.filter(t => t.role.toLowerCase().includes(filter))
+    : testimonials.filter(t => normalize(t.role).includes(normalize(filter)))
 
   return (
     <div className="bg-white">
+      <SEOHead
+        title="Témoignages"
+        description="Témoignages clients et propriétaires : avis sur ChapeChape Residence, location et gestion à Abidjan, Côte d'Ivoire."
+        url={`${siteUrl}/testimonials`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -269,12 +279,12 @@ const Testimonials = () => {
                 Votre témoignage nous aide à améliorer continuellement nos services et à inspirer notre communauté.
               </p>
             </motion.div>
-            <a
-              href="/contact"
+            <Link
+              to="/contact"
               className="btn-primary inline-block px-10 py-4 text-base shadow-lg shadow-primary-500/20"
             >
               Soumettre un témoignage
-            </a>
+            </Link>
           </div>
         </div>
       </div>

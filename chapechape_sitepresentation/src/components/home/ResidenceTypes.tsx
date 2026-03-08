@@ -1,32 +1,37 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { residenceTypes, ResidenceType } from '../../data/residences';
-import ResidencePlaceholder from './ResidencePlaceholders';
+import ResidencePlaceholder, { type ResidencePlaceholderType } from './ResidencePlaceholders';
 
 const ResidenceTypes = () => {
-  // Vérifier que les données sont correctement importées
-  console.log('Types de résidences disponibles:', residenceTypes);
-
   const [selectedType, setSelectedType] = useState<ResidenceType>(residenceTypes[0]);
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLElement>(null);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
 
-  // Vérification de la disponibilité des images
+  const scrollTabs = (direction: 'left' | 'right') => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const step = el.clientWidth * 0.6;
+    el.scrollBy({ left: direction === 'left' ? -step : step, behavior: 'smooth' });
+  };
+
+  // Vérification de la disponibilité des images (URL absolue pour éviter les échecs de chargement)
   useEffect(() => {
     const checkImages = async () => {
+      const base = typeof window !== 'undefined' ? window.location.origin : '';
       for (const type of residenceTypes) {
         try {
           const img = new Image();
-          img.src = type.imageUrl;
+          const url = type.imageUrl.startsWith('http') ? type.imageUrl : base + type.imageUrl;
+          img.src = url;
           await new Promise((resolve, reject) => {
-            img.onload = resolve;
+            img.onload = () => resolve(null);
             img.onerror = reject;
-            // Si l'image est déjà en cache, onload pourrait ne pas se déclencher
-            if (img.complete) resolve(null);
+            if (img.complete && img.naturalWidth > 0) resolve(null);
           });
           setImagesLoaded(prev => ({ ...prev, [type.id]: true }));
-        } catch (error) {
-          console.error(`Impossible de charger l'image pour ${type.id}:`, error);
+        } catch {
           setImagesLoaded(prev => ({ ...prev, [type.id]: false }));
         }
       }
@@ -39,7 +44,6 @@ const ResidenceTypes = () => {
   useEffect(() => {
     if (residenceTypes.length > 0 && !selectedType) {
       setSelectedType(residenceTypes[0]);
-      console.log('Type initial défini:', residenceTypes[0].name);
     }
   }, [residenceTypes, selectedType]);
 
@@ -66,7 +70,6 @@ const ResidenceTypes = () => {
 
   // Fonction de gestion du changement de type
   const handleTypeChange = (type: ResidenceType) => {
-    console.log('Type sélectionné:', type.name);
     setSelectedType(type);
   };
 
@@ -132,27 +135,33 @@ const ResidenceTypes = () => {
     })
   };
 
+  const bgImageUrl = '/assets/images/background_categorie.png';
+
   return (
     <section
       ref={containerRef}
-      className="relative py-16 overflow-hidden bg-gradient-to-b from-white to-secondary-50"
+      className="relative py-16 overflow-hidden"
     >
-      {/* Arrière-plan avec dégradé */}
+      {/* Image de fond catégories (couche la plus basse) */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <img
+          src={bgImageUrl}
+          alt=""
+          className="h-full w-full object-cover object-center"
+          aria-hidden
+        />
+      </div>
+      {/* Overlay très léger pour que l'image reste bien visible */}
+      <div className="absolute inset-0 z-[1] bg-white/15 pointer-events-none" aria-hidden />
+
+      {/* Légère teinte dorée (très subtile) */}
       <motion.div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(212,175,55,0.03),transparent_70%)] -z-10"
+        className="absolute inset-0 z-[1] bg-[radial-gradient(ellipse_80%_50%_at_50%_20%,rgba(212,175,55,0.08),transparent_60%)] pointer-events-none"
         style={{ y, opacity }}
       />
 
-      {/* Motif élégant en arrière-plan */}
-      <motion.div
-        className="absolute inset-0 bg-[linear-gradient(135deg,rgba(212,175,55,0.02)_1px,transparent_1px),linear-gradient(45deg,rgba(212,175,55,0.02)_1px,transparent_1px)] bg-[size:50px_50px] -z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.5 }}
-      />
-
       {/* Particules dorées subtiles */}
-      <div className="absolute inset-0 overflow-hidden -z-5">
+      <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
         {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
@@ -187,11 +196,11 @@ const ResidenceTypes = () => {
             className="inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm border border-primary-100 text-primary-800 text-xs font-bold tracking-widest uppercase mb-6"
           >
             <span className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
-            Collection Exclusive
+            6 catégories, 28 types
           </motion.div>
 
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 font-display tracking-tight">
-            Nos Types de Résidences
+            Tous types d'hébergement
           </h2>
 
           <motion.p
@@ -199,13 +208,13 @@ const ResidenceTypes = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl text-secondary-600 max-w-2xl mx-auto text-base font-light leading-relaxed"
+            className="text-lg text-secondary-600 max-w-2xl mx-auto font-light leading-relaxed"
           >
-            Une sélection variée d'espaces de vie, conçus pour répondre à vos exigences de <span className="text-primary-600 font-medium">confort et de style</span>.
+            Du studio au villa, de l'hôtel de passage au lodge : trouvez ou proposez l'hébergement qui vous correspond, <span className="text-primary-600 font-medium">tous budgets et toutes durées</span>.
           </motion.p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           {/* Section de gauche - Visualisation avec parallax 3D */}
           <motion.div
             className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl group perspective-1000 transition-all duration-500 border border-white/20"
@@ -225,47 +234,52 @@ const ResidenceTypes = () => {
                 exit="exit"
                 className="absolute inset-0"
               >
-                {/* Image avec parallax 3D effect */}
+                {/* Image avec parallax 3D effect ; fallback placeholder si chargement échoue */}
                 {selectedType.imageUrl && (imagesLoaded[selectedType.id] !== false) ? (
                   <motion.div
-                    className="w-full h-full bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url(${selectedType.imageUrl})`,
-                    }}
+                    className="w-full h-full bg-cover bg-center relative"
                     whileHover={{
                       scale: 1.1,
                       transition: { duration: 0.8, ease: "easeOut" }
                     }}
-                  ></motion.div>
+                  >
+                    <img
+                      src={selectedType.imageUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover object-center"
+                      onError={() => setImagesLoaded(prev => ({ ...prev, [selectedType.id]: false }))}
+                    />
+                  </motion.div>
                 ) : (
-                  <ResidencePlaceholder type={selectedType.id as any} className="w-full h-full" />
+                  <ResidencePlaceholder type={selectedType.id as ResidencePlaceholderType} className="w-full h-full" />
                 )}
 
-                {/* Overlay Gradient Premium */}
+                {/* Overlay gradient + titre, étoiles, CTA (style maquette) */}
                 <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/90 via-secondary-900/20 to-transparent opacity-90">
                   <div className="absolute bottom-0 left-0 p-8 w-full">
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
+                      className="flex flex-col items-start"
                     >
                       <h3 className="text-3xl font-display font-bold text-white mb-2 tracking-wide">{selectedType.name}</h3>
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="flex text-primary-400">
-                          {[...Array(5)].map((_, i) => (
-                            <span key={i} className="text-sm">★</span>
-                          ))}
-                        </div>
-                        <span className="text-white/60 text-sm font-light uppercase tracking-wider">Premium Collection</span>
+                      <div className="flex gap-0.5 mb-4" aria-hidden>
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className="text-primary-400 text-lg leading-none">★</span>
+                        ))}
                       </div>
-
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-6 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white rounded-full text-sm font-medium hover:bg-white hover:text-secondary-900 transition-all duration-300"
+                      <motion.a
+                        href="/residences"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-700 via-primary-600 to-primary-400 text-white rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transition-shadow"
                       >
-                        Voir les disponibilités
-                      </motion.button>
+                        Voir les offres
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </motion.a>
                     </motion.div>
                   </div>
                 </div>
@@ -273,205 +287,99 @@ const ResidenceTypes = () => {
             </AnimatePresence>
           </motion.div>
 
-          {/* Section de droite - Sélection et description */}
-          <div>
+          {/* Section de droite - Onglets soulignés + contenu (style maquette) */}
+          <div className="flex flex-col lg:min-h-[380px]">
+            {/* Barre d'onglets avec flèches et soulignement actif */}
             <motion.div
               variants={containerVariants}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              className="space-y-4 mb-6"
+              className="flex items-center gap-1 mb-6 border-b border-secondary-200"
             >
-              <h3 className="text-xl font-semibold text-secondary-900">Choisissez votre type de résidence</h3>
-              {/* Tabs animés avec slider doré - Style Stripe */}
-              <div className="relative flex flex-wrap gap-3 p-2 bg-white/80 backdrop-blur-sm rounded-2xl border border-primary-100/30 shadow-lg">
-                {/* Slider doré qui glisse */}
-                <motion.div
-                  className="absolute top-2 left-2 h-10 bg-gradient-to-r from-primary-300 via-primary-400 to-primary-300 rounded-xl shadow-lg"
-                  animate={{
-                    x: residenceTypes.findIndex(type => type.id === selectedType.id) * (120 + 12), // 120px width + 12px gap
-                    width: 120
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30,
-                    duration: 0.6
-                  }}
-                />
-
-                {residenceTypes.map((type, index) => {
+              <button
+                type="button"
+                onClick={() => scrollTabs('left')}
+                className="flex-shrink-0 p-2 rounded-lg text-secondary-500 hover:text-secondary-800 hover:bg-secondary-100 transition-colors"
+                aria-label="Onglets précédents"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div
+                ref={tabsScrollRef}
+                className="flex flex-1 flex-nowrap gap-0 min-w-0 overflow-x-auto scroll-smooth scrollbar-hide"
+              >
+                {residenceTypes.map((type) => {
                   const isSelected = selectedType.id === type.id;
-
                   return (
-                    <motion.button
+                    <button
                       key={type.id}
                       type="button"
-                      onClick={() => {
-                        console.log('Clic sur le bouton:', type.name);
-                        handleTypeChange(type);
-                      }}
-                      className={`relative z-10 inline-flex items-center justify-center px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer min-w-[120px] ${isSelected
-                        ? 'text-secondary-900 font-semibold'
-                        : 'text-secondary-600 hover:text-secondary-900'
-                        }`}
-                      whileHover={{
-                        y: -2,
-                        scale: 1.05,
-                        transition: { duration: 0.2 }
-                      }}
-                      whileTap={{ scale: 0.95 }}
-                      animate={{
-                        color: isSelected ? '#1a1a1a' : '#666666'
-                      }}
+                      onClick={() => handleTypeChange(type)}
+                      className={`flex-shrink-0 py-3 px-4 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-[2px] ${
+                        isSelected
+                          ? 'text-secondary-900 font-semibold border-primary-500'
+                          : 'text-secondary-500 border-transparent hover:text-secondary-700'
+                      }`}
                     >
-                      {/* Glow effect au hover */}
-                      <motion.div
-                        className="absolute inset-0 rounded-xl bg-primary-300/10 opacity-0"
-                        whileHover={{ opacity: isSelected ? 0 : 1 }}
-                        transition={{ duration: 0.2 }}
-                      />
-
                       {type.name}
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
+              <button
+                type="button"
+                onClick={() => scrollTabs('right')}
+                className="flex-shrink-0 p-2 rounded-lg text-secondary-500 hover:text-secondary-800 hover:bg-secondary-100 transition-colors"
+                aria-label="Onglets suivants"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </motion.div>
 
             <motion.div
               key={selectedType.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="bg-white p-6 rounded-xl shadow-md border border-primary-100/20"
+              transition={{ duration: 0.35 }}
+              className="flex-1 bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-md border border-secondary-100"
             >
-              <h4 className="text-xl font-bold text-secondary-900 mb-3">{selectedType.name}</h4>
-              <p className="text-secondary-600 mb-6">{selectedType.description}</p>
+              <h4 className="text-2xl font-bold text-secondary-900 mb-3 font-display tracking-tight">{selectedType.name}</h4>
+              <p className="text-secondary-600 text-base leading-relaxed mb-6">{selectedType.description}</p>
 
-              <h5 className="text-md font-semibold text-secondary-800 mb-3">Caractéristiques</h5>
-              {/* Checklist animée avec icônes en cascade - Style Stripe */}
-              <div className="space-y-2 mb-6">
+              <h5 className="text-xs font-semibold text-secondary-800 uppercase tracking-widest mb-3">Caractéristiques</h5>
+              <ul className="space-y-3 mb-8 list-none">
                 {selectedType.features.map((feature, index) => (
-                  <motion.div
-                    key={`${selectedType.id}-${index}`}
-                    initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    transition={{
-                      delay: index * 0.15,
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 20
-                    }}
-                    className="flex items-center text-secondary-600 group/item"
-                  >
-                    {/* Icône check animée */}
-                    <motion.div
-                      className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-300/20 flex items-center justify-center mr-3 group-hover/item:bg-primary-300/30 transition-colors"
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{
-                        delay: index * 0.15 + 0.2,
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 15
-                      }}
-                      whileHover={{
-                        scale: 1.2,
-                        rotate: 360,
-                        transition: { duration: 0.4 }
-                      }}
-                    >
-                      <motion.svg
-                        className="w-3 h-3 text-primary-300"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{
-                          delay: index * 0.15 + 0.4,
-                          duration: 0.3
-                        }}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </motion.svg>
-                    </motion.div>
-
-                    {/* Texte avec effet de typing */}
+                  <li key={`${selectedType.id}-${index}`} className="flex items-center gap-3 text-secondary-700">
                     <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{
-                        delay: index * 0.15 + 0.3,
-                        duration: 0.4
-                      }}
-                      className="group-hover/item:text-secondary-800 transition-colors"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.06 }}
+                      className="flex-shrink-0 text-primary-500"
+                      aria-hidden
                     >
-                      {feature}
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
                     </motion.span>
-                  </motion.div>
+                    <span className="text-[15px] leading-snug">{feature}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
-              {/* Gradient hover button premium - Style Stripe */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="flex justify-center md:justify-start"
+              <a
+                href="/residences"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-100 to-primary-50 text-secondary-800 rounded-full text-sm font-semibold border border-primary-200/60 hover:from-primary-200 hover:to-primary-100 transition-colors"
               >
-                <motion.a
-                  href="/residences"
-                  className="relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-300 via-primary-400 to-primary-300 text-secondary-900 rounded-full font-medium overflow-hidden group cursor-pointer"
-                  whileHover={{
-                    scale: 1.05,
-                    boxShadow: "0 20px 40px rgba(212, 175, 55, 0.3)",
-                    transition: { duration: 0.3 }
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  animate={{
-                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                  }}
-                  transition={{
-                    backgroundPosition: {
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "linear"
-                    }
-                  }}
-                  style={{
-                    backgroundSize: '200% 100%'
-                  }}
-                >
-                  {/* Effet ripple au hover */}
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                    initial={{ x: '-100%' }}
-                    whileHover={{
-                      x: '100%',
-                      transition: { duration: 0.6, ease: "easeInOut" }
-                    }}
-                  />
-
-                  {/* Glow effect premium */}
-                  <motion.div
-                    className="absolute -inset-1 bg-gradient-to-r from-primary-300/50 via-primary-400/50 to-primary-300/50 rounded-full blur-md opacity-0 group-hover:opacity-100"
-                    transition={{ duration: 0.3 }}
-                  />
-
-                  <span className="relative z-10">Explorer cette option</span>
-                  <motion.span
-                    className="relative z-10 bg-secondary-900/20 w-6 h-6 rounded-full flex items-center justify-center"
-                    whileHover={{ x: 5, rotate: 90 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </motion.span>
-                </motion.a>
-              </motion.div>
+                Voir les offres
+                <svg className="w-4 h-4 text-secondary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
             </motion.div>
           </div>
         </div>

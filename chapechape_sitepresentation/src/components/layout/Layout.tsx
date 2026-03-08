@@ -1,16 +1,16 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
 
 const Layout = () => {
-  // Remonte en haut de la page à chaque changement de route
+  const location = useLocation()
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [])
+  }, [location.pathname])
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-secondary-900">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-secondary-900 font-body">
       <Navbar />
       <main className="flex-grow">
         <Outlet />

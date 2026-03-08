@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
+const clientAndroid = (import.meta as any).env?.VITE_CLIENT_ANDROID_URL || '#'
+const clientIos = (import.meta as any).env?.VITE_CLIENT_IOS_URL || '#'
+const partnerAndroid = (import.meta as any).env?.VITE_PARTNER_ANDROID_URL || '#'
+const partnerIos = (import.meta as any).env?.VITE_PARTNER_IOS_URL || '#'
+
 // Configuration des applications
 const apps = [
   {
@@ -158,7 +163,9 @@ const AppScreenshots: React.FC = () => {
                   <motion.a
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    href="#"
+                    href={activeApp.id === 'client' ? clientAndroid : partnerAndroid}
+                    target={(activeApp.id === 'client' ? clientAndroid : partnerAndroid) !== '#' ? '_blank' : undefined}
+                    rel={(activeApp.id === 'client' ? clientAndroid : partnerAndroid) !== '#' ? 'noopener noreferrer' : undefined}
                     className="flex items-center gap-3 px-6 py-3 bg-secondary-900 text-white rounded-xl shadow-xl hover:bg-secondary-800 transition-colors"
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" /></svg>
@@ -171,7 +178,9 @@ const AppScreenshots: React.FC = () => {
                   <motion.a
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    href="#"
+                    href={activeApp.id === 'client' ? clientIos : partnerIos}
+                    target={(activeApp.id === 'client' ? clientIos : partnerIos) !== '#' ? '_blank' : undefined}
+                    rel={(activeApp.id === 'client' ? clientIos : partnerIos) !== '#' ? 'noopener noreferrer' : undefined}
                     className="flex items-center gap-3 px-6 py-3 bg-secondary-900 text-white rounded-xl shadow-xl hover:bg-secondary-800 transition-colors"
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" /></svg>
