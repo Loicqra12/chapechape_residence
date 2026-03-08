@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import SEOHead from '../components/seo/SEOHead';
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com';
 
 // Données des services
 const services = [
@@ -67,6 +70,11 @@ export default function Services() {
 
   return (
     <div className="bg-white min-h-screen">
+      <SEOHead
+        title="Nos services"
+        description="Services propriétaires et locataires : gestion locative, maintenance, réservation et accompagnement. ChapeChape Residence, Côte d'Ivoire."
+        url={`${siteUrl}/services`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -128,7 +136,7 @@ export default function Services() {
                 onClick={() => setActiveTab(service.id)}
                 className={`flex items-center px-8 py-4 rounded-full text-sm font-bold uppercase tracking-wide transition-all duration-300 shadow-lg ${activeTab === service.id
                     ? 'bg-primary-500 text-white transform scale-105 shadow-primary-500/30 ring-4 ring-primary-500/20'
-                    : 'bg-white text-secondary-600 hover:bg-gray-50 hover:text-primary-500'
+                    : 'bg-white text-secondary-600 hover:bg-secondary-50 hover:text-primary-500'
                   }`}
               >
                 <span className={`mr-3 ${activeTab === service.id ? 'text-white' : 'text-primary-500'}`}>
@@ -222,7 +230,7 @@ export default function Services() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gray-50 relative overflow-hidden">
+      <section className="py-24 bg-secondary-50 relative overflow-hidden">
         <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold text-secondary-900 mb-6 font-display">
             Prêt à vivre l'expérience ChapeChape ?

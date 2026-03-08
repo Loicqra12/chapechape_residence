@@ -4,6 +4,9 @@ import Coverage from '../components/home/Coverage'
 import Stats from '../components/home/Stats'
 import Contact from '../components/home/Contact'
 import Partners from '../components/home/Partners'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
 export default function About() {
   // Variantes d'animation pour les titres et textes
@@ -18,6 +21,11 @@ export default function About() {
 
   return (
     <div className="bg-secondary-50 dark:bg-secondary-900">
+      <SEOHead
+        title="À propos"
+        description="ChapeChape Residence : location de résidences de standing en Côte d'Ivoire. Découvrez notre histoire, nos valeurs et notre engagement pour votre confort."
+        url={`${siteUrl}/about`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -61,7 +69,7 @@ export default function About() {
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
               À Propos de <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">ChapeChape</span>
             </h1>
-            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
+            <p className="text-xl text-secondary-200 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
               Découvrez notre histoire, notre mission et ce qui fait de ChapeChape Residence le partenaire idéal pour votre expérience résidentielle en Afrique de l'Ouest.
             </p>
           </motion.div>
@@ -139,9 +147,9 @@ export default function About() {
                 {
                   name: 'Accessibilité',
                   description: 'Rendre la location de résidences meublées simple et rapide pour tous.',
-                  color: 'from-blue-400 to-blue-600',
-                  bgColor: 'from-blue-50/50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20',
-                  shadowColor: 'group-hover:shadow-blue-400/25',
+                  color: 'from-primary-400 to-primary-600',
+                  bgColor: 'from-primary-50/50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-800/20',
+                  shadowColor: 'group-hover:shadow-primary-400/25',
                   icon: (
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
@@ -351,9 +359,9 @@ export default function About() {
                 role: 'CEO & Co-fondateur',
                 initial: 'A',
                 description: 'Fondateur de Onlouta, une plateforme de location d\'équipements. Adams est un visionnaire du numérique en Afrique de l\'Ouest. Il apporte son expertise en gestion de projets technologiques et sa connaissance approfondie du marché ivoirien.',
-                color: 'from-blue-500 to-blue-700',
-                bgColor: 'from-blue-50/50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20',
-                shadowColor: 'group-hover:shadow-blue-500/25',
+                color: 'from-primary-500 to-primary-700',
+                bgColor: 'from-primary-50/50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-800/20',
+                shadowColor: 'group-hover:shadow-primary-500/25',
               },
               {
                 name: 'Sidney Jordan',

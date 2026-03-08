@@ -56,10 +56,17 @@ class _LoginScreenState extends State<LoginScreen> {
         });
 
         if (state is AuthFailure) {
+          // UX type grandes apps : message court, barre sobre (pas de bannière rouge)
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
-              backgroundColor: Theme.of(context).colorScheme.error,
+              content: Text(
+                state.message,
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.black87,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              duration: const Duration(seconds: 4),
             ),
           );
         }

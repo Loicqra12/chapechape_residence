@@ -13,10 +13,15 @@ export default function SEOHead({
   title,
   description,
   keywords = 'location résidence Côte d\'Ivoire, logement Abidjan, appartement meublé, villa luxueuse, gestion locative',
-  image = 'https://presentation.chapechaperesidence.com/assets/logo.png',
-  url = 'https://presentation.chapechaperesidence.com',
+  image,
+  url,
   type = 'website'
 }: SEOHeadProps) {
+  const baseUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SITE_URL
+    ? (import.meta as any).env.VITE_SITE_URL
+    : 'https://presentation.chapechaperesidence.com'
+  const defaultImage = `${baseUrl}/assets/logo.png`
+  const fullUrl = url || baseUrl
   const fullTitle = `${title} - ChapeChape Residence`
   
   return (
@@ -25,21 +30,21 @@ export default function SEOHead({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
-      <link rel="canonical" href={url} />
+      <link rel="canonical" href={fullUrl} />
       
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />
-      <meta property="og:url" content={url} />
+      <meta property="og:url" content={fullUrl} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={image} />
+      <meta property="og:image" content={image || defaultImage} />
       
       {/* Twitter */}
       <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:url" content={url} />
+      <meta property="twitter:url" content={fullUrl} />
       <meta property="twitter:title" content={fullTitle} />
       <meta property="twitter:description" content={description} />
-      <meta property="twitter:image" content={image} />
+      <meta property="twitter:image" content={image || defaultImage} />
     </Helmet>
   )
 }

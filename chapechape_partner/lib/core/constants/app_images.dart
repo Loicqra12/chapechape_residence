@@ -40,6 +40,10 @@ class AppImages {
   static const String gradientPrimary = '$_backgroundsPath/gradient_primary.svg';
   static const String textureLight = '$_backgroundsPath/texture_light.svg';
   static const String textureDark = '$_backgroundsPath/texture_dark.svg';
+  /// Fond du splash screen (palmes, dégradé)
+  static const String splashBackground = '$_backgroundsPath/splash_background.png';
+  /// Maquette complète du splash (logo + texte + fond en une seule image)
+  static const String splashMaquette = '$_backgroundsPath/splash_maquette.png';
 
   /// Retourne l'image de placeholder appropriée pour une résidence
   static String getResidencePlaceholder({bool isDarkMode = false}) {

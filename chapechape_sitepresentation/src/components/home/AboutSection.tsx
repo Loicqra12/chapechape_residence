@@ -1,5 +1,18 @@
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import {
+  SparklesIcon,
+  HandRaisedIcon,
+  LightBulbIcon,
+  HeartIcon,
+  ShieldCheckIcon,
+  StarIcon,
+  UserGroupIcon,
+  BuildingOffice2Icon,
+  FlagIcon,
+  RocketLaunchIcon,
+  MapPinIcon,
+} from '@heroicons/react/24/outline';
 
 const AboutSection = () => {
   const containerRef = useRef(null);
@@ -87,19 +100,25 @@ const AboutSection = () => {
     }
   ];
 
-  // Données de l'équipe
+  // Données de l'équipe (format capture: initiales, rôle, tags)
   const team = [
     {
       name: "Adams Diaby",
-      role: "CEO & Co-fondateur",
+      shortName: "A. Diaby",
+      role: "CEO & CO-FONDATEUR",
       description: "Fondateur de Onloutou, une plateforme de location d'équipements, Adams est un visionnaire du numérique en Afrique de l'Ouest. Il apporte son expertise en gestion de projets digitaux et sa connaissance approfondie du marché ivoirien.",
-      image: "/assets/team/adams-diaby.jpg"
+      image: "/assets/team/adams-diaby.jpg",
+      techTag: "Tech & Produit",
+      location: "Basé à Abidjan",
     },
     {
       name: "Sidney Jordan",
-      role: "CTO & Co-fondateur",
+      shortName: "S. Jordan",
+      role: "CTO & CO-FONDATEUR",
       description: "Fondateur de Soutrali Deals, une plateforme numérique ivoirienne qui valorise les produits, services et talents issus de l'économie informelle et artisanale. Sidney est responsable de la stratégie technologique et du développement de la plateforme.",
-      image: "/assets/team/sidney-jordan.jpg"
+      image: "/assets/team/sidney-jordan.jpg",
+      techTag: "Tech & Engineering",
+      location: "Basé à Abidjan",
     }
   ];
 
@@ -171,7 +190,7 @@ const AboutSection = () => {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm border border-primary-100 text-primary-800 text-xs font-bold tracking-widest uppercase mb-6"
+            className="inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm border border-primary-100 text-primary-800 text-xs font-bold tracking-widest uppercase mb-6 font-body"
           >
             <span className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></span>
             Excellence & Innovation
@@ -210,23 +229,23 @@ const AboutSection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-500 group"
+            className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-secondary-100 hover:shadow-2xl transition-all duration-500 group"
           >
             <motion.h3
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-primary-600 bg-clip-text text-transparent mb-4 inline-flex items-center group-hover:scale-105 transition-transform duration-300"
+              className="text-2xl font-bold bg-gradient-to-r from-secondary-900 to-primary-600 bg-clip-text text-transparent mb-4 inline-flex items-center group-hover:scale-105 transition-transform duration-300 font-display"
             >
               <motion.span
                 initial={{ rotate: 0 }}
                 whileInView={{ rotate: 360 }}
                 viewport={{ once: true }}
                 transition={{ duration: 1, delay: 0.3 }}
-                className="text-2xl mr-3"
+                className="mr-3 flex shrink-0 text-primary-500"
               >
-                🌟
+                <SparklesIcon className="w-7 h-7" strokeWidth={2} aria-hidden />
               </motion.span>
               Notre Vision
             </motion.h3>
@@ -235,7 +254,7 @@ const AboutSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-gray-700 mb-6 text-base leading-relaxed"
+              className="text-secondary-600 dark:text-secondary-400 mb-6 text-base leading-relaxed font-body"
             >
               ChapeChapeRésidence aspire à devenir
               <span className="font-semibold text-primary-600">la référence en Afrique de l'Ouest</span>
@@ -254,7 +273,7 @@ const AboutSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="rounded-xl overflow-hidden shadow-lg"
           >
-            <div className="relative w-full h-[300px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 overflow-hidden">
+            <div className="relative w-full h-[300px] bg-gradient-to-br from-secondary-50 to-secondary-100 dark:from-secondary-800 dark:to-secondary-900 overflow-hidden">
               {/* Background Grid */}
               <div className="absolute inset-0 opacity-20">
                 <svg className="w-full h-full" viewBox="0 0 400 300">
@@ -263,7 +282,7 @@ const AboutSection = () => {
                       <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" />
                     </pattern>
                   </defs>
-                  <rect width="100%" height="100%" fill="url(#grid-vision)" className="text-slate-400" />
+                  <rect width="100%" height="100%" fill="url(#grid-vision)" className="text-secondary-400" />
                 </svg>
               </div>
 
@@ -457,9 +476,11 @@ const AboutSection = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="text-2xl font-bold text-secondary-900 mb-4 inline-flex items-center"
+              className="text-2xl font-bold text-secondary-900 dark:text-white mb-4 inline-flex items-center font-display"
             >
-              <span className="text-primary-300 mr-2">🤝</span>
+              <span className="mr-2 flex shrink-0 text-primary-500" aria-hidden>
+                <HandRaisedIcon className="w-7 h-7" strokeWidth={2} />
+              </span>
               Notre Culture d'Entreprise
             </motion.h3>
             <motion.p
@@ -467,7 +488,7 @@ const AboutSection = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-secondary-700 mb-6"
+              className="text-secondary-600 dark:text-secondary-400 mb-6 font-body"
             >
               Nous cultivons une culture d'innovation, de proximité et de responsabilité. Chez ChapeChapeRésidence, chaque membre de l'équipe est encouragé à proposer des idées novatrices, à rester à l'écoute des besoins des utilisateurs et à agir avec intégrité. Nous valorisons la collaboration, l'agilité et l'engagement envers l'excellence du service.
             </motion.p>
@@ -481,7 +502,7 @@ const AboutSection = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="rounded-xl overflow-hidden shadow-lg md:order-1"
           >
-            <div className="relative w-full h-[300px] bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
+            <div className="relative w-full h-[300px] bg-gradient-to-br from-white to-secondary-50 dark:from-secondary-800 dark:to-secondary-900 overflow-hidden">
               {/* Confettis dorés subtils en arrière-plan */}
               {Array.from({ length: 12 }).map((_, index) => (
                 <motion.div
@@ -509,7 +530,7 @@ const AboutSection = () => {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="relative w-48 h-48">
                   {[
-                    { angle: 0, name: 'A', color: 'from-blue-400 to-blue-600', value: 'innovation' },
+                    { angle: 0, name: 'A', color: 'from-primary-400 to-primary-600', value: 'innovation' },
                     { angle: 72, name: 'S', color: 'from-green-400 to-green-600', value: 'proximite' },
                     { angle: 144, name: 'M', color: 'from-purple-400 to-purple-600', value: 'responsabilite' },
                     { angle: 216, name: 'L', color: 'from-orange-400 to-orange-600', value: 'collaboration' },
@@ -567,13 +588,13 @@ const AboutSection = () => {
                     );
                   })}
 
-                  {/* Icônes dorées qui se passent entre les avatars */}
+                  {/* Icônes Heroicons qui se passent entre les avatars */}
                   {[
-                    { icon: '💡', path: [0, 72], delay: 0 }, // Innovation
-                    { icon: '❤️', path: [72, 144], delay: 1 }, // Proximité
-                    { icon: '🛡️', path: [144, 216], delay: 2 }, // Responsabilité
-                    { icon: '🤝', path: [216, 288], delay: 3 }, // Collaboration
-                    { icon: '⭐', path: [288, 0], delay: 4 } // Excellence
+                    { Icon: LightBulbIcon, path: [0, 72], delay: 0 },
+                    { Icon: HeartIcon, path: [72, 144], delay: 1 },
+                    { Icon: ShieldCheckIcon, path: [144, 216], delay: 2 },
+                    { Icon: HandRaisedIcon, path: [216, 288], delay: 3 },
+                    { Icon: StarIcon, path: [288, 0], delay: 4 }
                   ].map((iconData, index) => {
                     const startAngle = iconData.path[0];
                     const endAngle = iconData.path[1];
@@ -584,10 +605,11 @@ const AboutSection = () => {
                     const endX = Math.cos((endAngle * Math.PI) / 180) * radius;
                     const endY = Math.sin((endAngle * Math.PI) / 180) * radius;
 
+                    const { Icon } = iconData;
                     return (
                       <motion.div
                         key={index}
-                        className="absolute w-6 h-6 flex items-center justify-center text-lg"
+                        className="absolute w-6 h-6 flex items-center justify-center text-primary-500"
                         style={{
                           left: `calc(50% + ${startX}px - 12px)`,
                           top: `calc(50% + ${startY}px - 12px)`
@@ -605,13 +627,13 @@ const AboutSection = () => {
                           ease: "easeInOut"
                         }}
                       >
-                        {iconData.icon}
+                        <Icon className="w-6 h-6" strokeWidth={2} aria-hidden />
                       </motion.div>
                     );
                   })}
 
                   {/* Lignes de connexion animées entre les personnages */}
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 192 192">
+                  <svg className="absolute inset-0 w-full h-full text-primary-500" viewBox="0 0 192 192" aria-hidden>
                     {[0, 1, 2, 3, 4].map((index) => {
                       const nextIndex = (index + 1) % 5;
                       const angle1 = index * 72;
@@ -630,7 +652,7 @@ const AboutSection = () => {
                           y1={y1}
                           x2={x2}
                           y2={y2}
-                          stroke="#f59e0b"
+                          stroke="currentColor"
                           strokeWidth="2"
                           strokeDasharray="5,5"
                           animate={{
@@ -659,7 +681,7 @@ const AboutSection = () => {
           </motion.div>
         </div>
 
-        {/* Section Nos Valeurs */}
+        {/* Section Nos Valeurs — format capture: icône au-dessus, sous-titre, cartes bordure primary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -668,16 +690,34 @@ const AboutSection = () => {
           className="mb-20"
         >
           <div className="text-center mb-10">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="flex justify-center mb-3"
+            >
+              <span className="text-primary-500" aria-hidden>
+                <SparklesIcon className="w-8 h-8 mx-auto" strokeWidth={2} />
+              </span>
+            </motion.div>
             <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="text-2xl font-bold text-secondary-900 mb-4 inline-flex items-center justify-center"
+              className="text-2xl md:text-3xl font-bold text-secondary-900 dark:text-white mb-2 font-display"
             >
-              <span className="text-primary-300 mr-2">💎</span>
               Nos Valeurs
             </motion.h3>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-secondary-600 dark:text-secondary-400 text-sm md:text-base max-w-2xl mx-auto font-body"
+            >
+              Les principes qui guident chacune de nos décisions et actions au quotidien.
+            </motion.p>
           </div>
 
           <motion.div
@@ -685,61 +725,61 @@ const AboutSection = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6"
           >
             {values.map((value, index) => (
               <motion.div
                 key={value.title}
                 custom={index}
                 variants={itemVariants}
-                whileHover={{ y: -10, scale: 1.02, transition: { duration: 0.3 } }}
-                className="relative bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-primary-100/30 hover:shadow-2xl hover:shadow-primary-200/40 hover:border-primary-300/60 transition-all duration-300 group overflow-hidden"
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="relative bg-secondary-50 dark:bg-secondary-800/50 p-6 rounded-2xl shadow-soft-xl border border-secondary-200 dark:border-secondary-700 border-l-4 border-r-4 border-b-4 border-l-primary-500 border-r-primary-500 border-b-primary-500 dark:border-l-primary-400 dark:border-r-primary-400 dark:border-b-primary-400 transition-all duration-300"
               >
-                {/* Glow effect on hover */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-br from-primary-100/20 to-primary-200/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"
-                />
                 <div className="relative z-10">
-                  <motion.div
-                    className="rounded-full bg-gradient-to-br from-primary-100 to-primary-200 w-14 h-14 flex items-center justify-center text-primary-600 mb-4 shadow-md group-hover:shadow-lg group-hover:shadow-primary-300/50 transition-all duration-300"
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                  >
+                  <div className="rounded-full bg-secondary-100 dark:bg-secondary-700 w-14 h-14 flex items-center justify-center text-primary-600 dark:text-primary-400 mb-4 border-2 border-primary-400 dark:border-primary-500">
                     {value.icon}
-                  </motion.div>
-                  <h4 className="text-lg font-bold text-secondary-900 mb-2">{value.title}</h4>
-                  <p className="text-secondary-600 text-sm leading-relaxed">{value.description}</p>
+                  </div>
+                  <h4 className="text-lg font-bold text-secondary-900 dark:text-white mb-2 font-display">{value.title}</h4>
+                  <p className="text-secondary-600 dark:text-secondary-400 text-sm leading-relaxed font-body">{value.description}</p>
                 </div>
               </motion.div>
             ))}
           </motion.div>
         </motion.div>
 
-        {/* Section Qui sommes-nous */}
+        {/* Section Qui sommes-nous — format capture: icône au-dessus, cartes avec bandeau primary + pills */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
-          className="mb-10"
+          className="mb-16"
         >
           <div className="text-center mb-10">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="flex justify-center mb-3"
+            >
+              <span className="text-primary-500" aria-hidden>
+                <UserGroupIcon className="w-8 h-8 mx-auto" strokeWidth={2} />
+              </span>
+            </motion.div>
             <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-2xl font-bold text-secondary-900 mb-4 inline-flex items-center justify-center"
+              className="text-2xl md:text-3xl font-bold text-secondary-900 dark:text-white mb-2 font-display"
             >
-              <span className="text-primary-300 mr-2">👥</span>
               Qui sommes-nous ?
             </motion.h3>
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-secondary-600 max-w-2xl mx-auto"
+              transition={{ delay: 0.1 }}
+              className="text-secondary-600 dark:text-secondary-400 text-sm md:text-base max-w-2xl mx-auto font-body"
             >
               ChapeChapeRésidence est le fruit de la collaboration entre deux entrepreneurs passionnés par la transformation digitale du secteur immobilier en Afrique.
             </motion.p>
@@ -753,34 +793,74 @@ const AboutSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: index * 0.2 }}
-                whileHover={{ y: -8, scale: 1.02, transition: { duration: 0.3 } }}
-                className="bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-primary-200/30 border border-primary-100/30 group transition-all duration-300"
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="bg-white dark:bg-secondary-800 rounded-2xl overflow-hidden shadow-xl border border-secondary-200 dark:border-secondary-700 flex flex-col md:flex-row"
               >
-                <div className="flex flex-col md:flex-row">
-                  <div className="md:w-1/3 relative overflow-hidden">
-                    <div className="bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 h-48 md:h-full flex items-center justify-center shadow-inner">
-                      <motion.div
-                        className="text-6xl font-bold text-white drop-shadow-lg"
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        {member.name.charAt(0)}
-                      </motion.div>
-                    </div>
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    />
-                    {/* Golden accent line */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary-200 to-transparent group-hover:via-primary-300 transition-all duration-300" />
+                {/* Bandeau primary avec initiale / photo + shortName + LinkedIn */}
+                <div className="md:w-2/5 relative bg-gradient-to-br from-primary-400 to-primary-600 p-8 flex flex-col items-center justify-center min-h-[200px] md:min-h-[280px]">
+                  <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-3xl font-bold border-2 border-white/40 mb-4 font-display">
+                    {member.name.charAt(0)}
                   </div>
-                  <div className="p-8 md:w-2/3 relative">
-                    <h4 className="text-2xl font-bold text-secondary-900 mb-2 group-hover:text-primary-700 transition-colors duration-300">{member.name}</h4>
-                    <p className="text-primary-600 font-bold mb-4 text-sm tracking-wide uppercase">{member.role}</p>
-                    <p className="text-secondary-600 text-sm leading-relaxed">{member.description}</p>
+                  <p className="text-white/90 text-sm font-medium italic font-body mb-3">{member.shortName}</p>
+                  <a
+                    href="https://www.linkedin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-9 h-9 rounded bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    aria-label="LinkedIn"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                  </a>
+                </div>
+                {/* Contenu: nom, rôle, description, pills */}
+                <div className="md:w-3/5 p-6 md:p-8 flex flex-col justify-center">
+                  <h4 className="text-xl md:text-2xl font-bold text-secondary-900 dark:text-white mb-1 font-display">{member.name}</h4>
+                  <p className="text-primary-600 dark:text-primary-400 font-bold text-xs tracking-widest uppercase mb-4 font-body">{member.role}</p>
+                  <p className="text-secondary-600 dark:text-secondary-400 text-sm leading-relaxed font-body mb-6">{member.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold font-body bg-blue-50 border border-blue-400 text-blue-800 dark:bg-blue-950/40 dark:border-blue-500 dark:text-blue-200">
+                      <RocketLaunchIcon className="w-4 h-4" strokeWidth={2} aria-hidden />
+                      {member.techTag}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-secondary-700 border border-primary-400 text-primary-600 dark:text-primary-400 text-xs font-semibold font-body">
+                      <MapPinIcon className="w-4 h-4" strokeWidth={2} aria-hidden />
+                      {member.location}
+                    </span>
                   </div>
                 </div>
               </motion.div>
             ))}
+          </div>
+        </motion.div>
+
+        {/* Barre Statistiques & Mission — format capture */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="rounded-2xl overflow-hidden border border-secondary-200 dark:border-secondary-700 border-b-0"
+        >
+          <div className="bg-gradient-to-r from-primary-400 to-primary-600 px-6 py-8 md:py-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-6">
+              {[
+                { value: '2023', label: 'Année de création', Icon: BuildingOffice2Icon },
+                { value: '2', label: 'Co-fondateurs', Icon: UserGroupIcon },
+                { value: '100%', label: 'Focus Afrique de l\'Ouest', Icon: FlagIcon },
+                { value: 'Mission', label: 'Transformer l\'immobilier', Icon: HeartIcon },
+              ].map((stat, index) => {
+                const StatIcon = stat.Icon;
+                return (
+                  <div key={index} className="flex flex-col items-center text-center">
+                    <span className="text-secondary-900 mb-2" aria-hidden>
+                      <StatIcon className="w-8 h-8 mx-auto" strokeWidth={2} />
+                    </span>
+                    <span className="text-secondary-900 font-bold text-lg md:text-xl font-display block">{stat.value}</span>
+                    <span className="text-secondary-800/90 text-sm font-body">{stat.label}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </motion.div>
 
@@ -794,7 +874,7 @@ const AboutSection = () => {
         >
           <a
             href="/about"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-50 text-primary-500 rounded-full border border-primary-200 hover:bg-primary-100 transition-colors duration-300"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary-500 bg-primary-200 text-secondary-900 font-semibold hover:bg-primary-300 transition-colors duration-300 font-body"
           >
             <span>En savoir plus sur notre entreprise</span>
             <motion.span

@@ -1,5 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
 // Données des questions fréquemment posées
 const faqItems = [
@@ -145,6 +149,11 @@ const FAQ = () => {
 
   return (
     <div className="bg-white">
+      <SEOHead
+        title="FAQ"
+        description="Questions fréquentes sur ChapeChape Residence : réservation, location, propriétaires, documents. Réponses et conseils."
+        url={`${siteUrl}/faq`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
@@ -305,15 +314,15 @@ const FAQ = () => {
             <p className="text-primary-100 mb-8 max-w-2xl mx-auto text-lg">
               Notre équipe de support client est là pour vous aider et répondre à toutes vos questions.
             </p>
-            <a
-              href="/contact"
+            <Link
+              to="/contact"
               className="btn-primary inline-flex items-center"
             >
               Contactez-nous
               <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

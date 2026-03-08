@@ -1,7 +1,7 @@
 name: chapechape_partner
 description: "Application de gestion pour les partenaires ChapeChape Residence"
 publish_to: "none"
-version: 1.7.0+14
+version: 1.8.0+15
 
 environment:
   sdk: ^3.5.4
@@ -117,13 +117,13 @@ flutter:
     - assets/icons/message/
     - assets/fonts/
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/logo/app_icon.png"
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: assets/images/logo/logo_primary.png
+  color: "#E8E4F0"
+  image: assets/images/backgrounds/splash_maquette.png
   android: true
   ios: true

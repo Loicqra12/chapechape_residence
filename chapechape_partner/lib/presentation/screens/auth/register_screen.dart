@@ -68,9 +68,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Les noms sont obligatoires, pas de fallback automatique
       if (firstName.isEmpty || lastName.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Prénom et nom sont obligatoires'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Prénom et nom sont obligatoires', style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.black87,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           ),
         );
         return;
@@ -100,8 +102,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (state is AuthFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
-              backgroundColor: Theme.of(context).colorScheme.error,
+              content: Text(state.message, style: const TextStyle(color: Colors.white)),
+              backgroundColor: Colors.black87,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              duration: const Duration(seconds: 4),
             ),
           );
         }

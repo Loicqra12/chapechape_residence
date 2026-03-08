@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import SEOHead from '../components/seo/SEOHead';
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com';
 
 const Team = () => {
   useEffect(() => {
@@ -94,8 +97,13 @@ const Team = () => {
 
   return (
     <div className="bg-white min-h-screen">
+      <SEOHead
+        title="Notre équipe"
+        description="Découvrez l'équipe ChapeChape Residence : fondateurs, experts et professionnels dédiés à la location de résidences de standing en Côte d'Ivoire."
+        url={`${siteUrl}/team`}
+      />
       {/* Hero Section */}
-      <section className="relative py-24 bg-secondary-900 overflow-hidden">
+      <section className="relative py-32 bg-secondary-900 overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
         <div className="absolute inset-0 bg-gradient-to-b from-secondary-900/50 via-secondary-900/80 to-white" />

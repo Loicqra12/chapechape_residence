@@ -1,9 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { apiService, Residence } from '../services/api.service';
 import { useToast } from '../components/ui/ToastProvider';
+import SEOHead from '../components/seo/SEOHead';
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com';
 
 const Residences = () => {
   const [residences, setResidences] = useState<Residence[]>([]);
@@ -64,6 +66,11 @@ const Residences = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      <SEOHead
+        title="Résidences"
+        description="Résidences disponibles à la location : appartements et villas meublés à Abidjan. ChapeChape Residence, Côte d'Ivoire."
+        url={`${siteUrl}/residences`}
+      />
       {/* Hero Section */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />

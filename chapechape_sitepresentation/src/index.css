@@ -24,6 +24,16 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer components {
   .feature-card {
     @apply relative p-6 bg-white dark:bg-secondary-800 rounded-xl shadow-soft-xl dark:shadow-none hover:shadow-gold transition-all duration-200;

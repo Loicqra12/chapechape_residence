@@ -18,6 +18,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import AccountDeletion from './pages/AccountDeletion'
 import CookiePolicy from './pages/CookiePolicy'
+import Resources from './pages/Resources'
+import Careers from './pages/Careers'
 
 function App() {
   const location = useLocation()
@@ -40,6 +42,8 @@ function App() {
             <Route path="blog" element={<Blog />} />
             <Route path="faq" element={<FAQ />} />
             <Route path="partners" element={<Partners />} />
+            <Route path="resources" element={<Resources />} />
+            <Route path="careers" element={<Careers />} />
             <Route path="contact" element={<Contact />} />
             <Route path="politique-de-confidentialite" element={<PrivacyPolicy />} />
             <Route path="conditions" element={<TermsOfService />} />

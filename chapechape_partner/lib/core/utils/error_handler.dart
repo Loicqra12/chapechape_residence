@@ -44,40 +44,42 @@ class ErrorHandler {
       }
     }
     
-    // Erreur générique
+    // Erreur générique (message sobre, pas technique)
     print('🔴 Erreur non gérée: $error');
     return ApiException(
-      'Une erreur inattendue est survenue',
+      'Un problème est survenu. Réessayez.',
       500,
       {'error': error.toString()},
     );
   }
 
-  /// Récupère un message d'erreur adapté selon le code de statut
+  /// Récupère un message d'erreur adapté selon le code de statut (UX type grandes apps)
   static String _getErrorMessage(int statusCode, Map<String, dynamic> data) {
     final defaultMessage = data['message'] as String? ?? 'Une erreur est survenue';
-    
+    final hasCustomMessage = defaultMessage.isNotEmpty && defaultMessage != 'Une erreur est survenue';
+
     switch (statusCode) {
       case 400:
-        return 'Requête invalide: $defaultMessage';
+        return hasCustomMessage ? defaultMessage : 'Requête invalide';
       case 401:
-        return 'Session expirée: Veuillez vous reconnecter';
+        // Connexion : afficher le message du serveur (ex. "Email ou mot de passe incorrect")
+        return hasCustomMessage ? defaultMessage : 'Session expirée. Reconnectez-vous.';
       case 403:
-        return 'Accès refusé: Vous n\'avez pas les permissions nécessaires';
+        return hasCustomMessage ? defaultMessage : 'Accès refusé';
       case 404:
-        return 'Ressource non trouvée: $defaultMessage';
+        return hasCustomMessage ? defaultMessage : 'Ressource non trouvée';
       case 409:
-        return 'Conflit: $defaultMessage';
+        return hasCustomMessage ? defaultMessage : 'Conflit';
       case 422:
-        return 'Données invalides: $defaultMessage';
+        return hasCustomMessage ? defaultMessage : 'Données invalides';
       case 429:
-        return 'Trop de requêtes: Veuillez réessayer plus tard';
+        return 'Trop de requêtes. Réessayez dans un moment.';
       case 500:
       case 502:
       case 503:
-        return 'Erreur serveur: Veuillez réessayer plus tard';
+        return 'Connexion impossible pour le moment. Réessayez dans un instant.';
       case 504:
-        return 'Le serveur met trop de temps à répondre. Réessayez dans un instant.';
+        return 'Réponse trop lente. Réessayez dans un instant.';
       default:
         return defaultMessage;
     }

@@ -396,8 +396,21 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         emit(ResidenceLoaded(residences));
       }
     } catch (e) {
-      emit(ResidenceError('Erreur lors de la création: $e'));
+      final message = _userFriendlyMessage(e, 'Vérifiez les informations saisies et réessayez.');
+      emit(ResidenceError(message));
     }
+  }
+
+  /// Message rassurant pour l'utilisateur (pas de code 400 ni de termes techniques)
+  static String _userFriendlyMessage(dynamic e, String fallback) {
+    if (e is ApiException) {
+      final msg = e.message;
+      if (msg.contains('400') || msg.contains('500') || msg.contains('Exception') || msg.contains('Erreur lors de')) {
+        return fallback;
+      }
+      return msg;
+    }
+    return fallback;
   }
 
   Future<void> _onUpdateResidence(

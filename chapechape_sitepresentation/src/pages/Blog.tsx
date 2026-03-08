@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { apiService, validateNewsletterForm, type NewsletterData } from '../services/api.service'
 import { trackContactForm } from '../components/analytics/GoogleAnalytics'
 import { useToast } from '../components/ui/ToastProvider'
+import SEOHead from '../components/seo/SEOHead'
+
+const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
 // Données des articles de blog
 const blogPosts = [
@@ -165,6 +168,11 @@ const Blog = () => {
 
   return (
     <div className="bg-white">
+      <SEOHead
+        title="Blog"
+        description="Actualités et conseils immobilier en Côte d'Ivoire : marché, décoration, investissement. ChapeChape Residence."
+        url={`${siteUrl}/blog`}
+      />
       {/* Hero Section Harmonisé */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />

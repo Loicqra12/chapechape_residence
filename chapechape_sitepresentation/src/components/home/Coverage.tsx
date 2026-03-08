@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
 
 type LocationData = {
@@ -382,10 +383,10 @@ const Coverage = () => {
                   ))}
                 </div>
                 <div className="mt-6 pt-6 border-t border-white/10">
-                  <a href="/contact" className="text-sm text-primary-300 hover:text-white transition-colors flex items-center gap-2 group">
+                  <Link to="/contact" className="text-sm text-primary-300 hover:text-white transition-colors flex items-center gap-2 group">
                     Devenir partenaire local
                     <span className="group-hover:translate-x-1 transition-transform">→</span>
-                  </a>
+                  </Link>
                 </div>
               </div>
             </motion.div>
