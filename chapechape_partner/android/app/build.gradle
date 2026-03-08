@@ -42,19 +42,19 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.chapechape.chapechape_partner"
-    compileSdk = 34
-    ndkVersion = "25.1.8937393"
+    compileSdk = 35
+    ndkVersion = "28.0.12433518"
     
     // Force all Android libraries to use SDK 23 as minimum
     buildToolsVersion = "33.0.2"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '17'
     }
 
     lintOptions {
