@@ -269,6 +269,9 @@ exports.login = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
         logger.error('POST /api/auth/login - erreur', {
             message: error?.message,
             stack: error?.stack,
