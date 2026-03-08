@@ -6,7 +6,7 @@ buildscript {
 
     dependencies {
         // Utiliser les versions qui correspondent au SDK
-        classpath 'com.android.tools.build:gradle:8.1.4'
+        classpath 'com.android.tools.build:gradle:8.5.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
         classpath 'com.google.gms:google-services:4.4.0'
     }
@@ -33,8 +33,8 @@ allprojects {
     afterEvaluate { project ->
         if (project.hasProperty('android')) {
             project.android.compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_11
-                targetCompatibility = JavaVersion.VERSION_11
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
             }
             
             // Désactiver explicitement les transformations JDK pour tous les projets
