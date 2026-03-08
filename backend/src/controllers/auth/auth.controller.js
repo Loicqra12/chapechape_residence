@@ -207,9 +207,8 @@ exports.login = asyncHandler(async (req, res) => {
             throw new apiError('Email ou mot de passe incorrect', 401);
         }
 
-        // Mettre à jour la dernière connexion
-        user.lastLogin = Date.now();
-        await user.save();
+        // Mettre à jour la dernière connexion (update ciblé pour éviter erreur de validation sur anciens comptes)
+        await User.findByIdAndUpdate(user._id, { lastLogin: new Date() }, { runValidators: false });
 
         // Enregistrer la tentative de connexion réussie (non bloquant)
         try {
@@ -250,10 +249,9 @@ exports.login = asyncHandler(async (req, res) => {
             console.error('Erreur notification nouvelle connexion:', notificationError);
         }
 
-        // Générer le token d'accès avec la nouvelle fonction
-        const accessToken = jwt.generateAccessToken(user._id, user.role);
-
-        // Générer le token de rafraîchissement
+        // Rôle normalisé (anciens comptes peuvent avoir rôle invalide ou manquant)
+        const safeRole = ['client', 'partner_pending', 'partner', 'admin', 'superadmin', 'owner'].includes(user.role) ? user.role : 'client';
+        const accessToken = jwt.generateAccessToken(user._id, safeRole);
         const refreshToken = jwt.generateRefreshToken(user._id);
 
         res.status(200).json({
@@ -261,12 +259,12 @@ exports.login = asyncHandler(async (req, res) => {
             token: accessToken,
             refreshToken,
             user: {
-                id: user._id.toString(),  // Convertir l'ObjectId en string
+                id: user._id.toString(),
                 email: user.email,
-                firstName: user.firstName || '',  // Valeur par défaut si null
-                lastName: user.lastName || '',    // Valeur par défaut si null
-                role: user.role || 'client',     // Valeur par défaut si null
-                phoneNumber: user.phoneNumber || '' // Valeur par défaut si null
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                role: safeRole,
+                phoneNumber: user.phoneNumber || ''
             }
         });
     } catch (error) {
