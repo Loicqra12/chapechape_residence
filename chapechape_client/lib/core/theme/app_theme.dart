@@ -319,7 +319,7 @@ class AppTheme {
           borderSide: const BorderSide(color: errorColor, width: 2),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -378,7 +378,7 @@ class AppTheme {
         thumbColor: primaryColor,
         overlayColor: primaryColor.withOpacity(0.2),
       ),
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         labelColor: primaryColor,
         unselectedLabelColor: textSecondary,
         indicator: BoxDecoration(
@@ -524,7 +524,7 @@ class AppTheme {
           borderSide: const BorderSide(color: errorColor, width: 2),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -583,7 +583,7 @@ class AppTheme {
         thumbColor: primaryColor,
         overlayColor: primaryColor.withOpacity(0.2),
       ),
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         labelColor: primaryColor,
         unselectedLabelColor: const Color(0xFFAAAAAA),
         indicator: BoxDecoration(

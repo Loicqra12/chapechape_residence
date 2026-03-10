@@ -113,7 +113,7 @@ class AppTheme {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardColor,
         elevation: elevationSmall,
         margin: const EdgeInsets.all(spacingS),
@@ -222,7 +222,7 @@ class AppTheme {
         ),
         side: const BorderSide(color: textTertiaryColor),
       ),
-      tabBarTheme: const TabBarTheme(
+      tabBarTheme: const TabBarThemeData(
         labelColor: primaryColor,
         unselectedLabelColor: textSecondaryColor,
         indicatorColor: primaryColor,

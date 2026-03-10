@@ -1,10 +1,10 @@
 name: chapechape_partner
 description: "Application de gestion pour les partenaires ChapeChape Residence"
 publish_to: "none"
-version: 1.9.0+16
+version: 1.11.1+20
 
 environment:
-  sdk: ^3.5.4
+  sdk: ^3.11.0
 
 dependencies:
   flutter:
@@ -47,7 +47,7 @@ dependencies:
   uuid: ^4.2.1
   path_provider: ^2.1.1
   open_filex: ^4.3.4
-  file_picker: ^5.5.0
+  file_picker: ^8.1.0
   table_calendar: ^3.0.9
   permission_handler: ^11.0.1
   camera: ^0.10.5+5
@@ -56,7 +56,7 @@ dependencies:
   flutter_chat_ui: ^1.6.9
   flutter_chat_types: ^3.6.2
   http: ^1.1.0
-  freezed_annotation: ^2.4.1
+  freezed_annotation: ^3.0.0
   logging: ^1.2.0
   provider: ^6.0.5
   # Système de cache local
@@ -79,9 +79,9 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   bloc_test: ^9.1.6
   mocktail: ^1.0.3
-  build_runner: ^2.4.6
-  freezed: ^2.4.2
-  json_serializable: ^6.7.1
+  build_runner: ^2.4.14
+  freezed: ^3.0.0
+  json_serializable: ^6.11.4
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.3.8
 
