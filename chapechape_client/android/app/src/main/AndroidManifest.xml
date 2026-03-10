@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:label="chapechape_client"
+        android:label="ChapeChape Résidences"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
