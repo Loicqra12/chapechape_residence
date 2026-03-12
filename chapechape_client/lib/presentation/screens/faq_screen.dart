@@ -107,23 +107,19 @@ class _FaqScreenState extends State<FaqScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('FAQ'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.support_agent),
-            onPressed: () => context.push('/support'),
-            tooltip: 'Contacter le support',
-          ),
-        ],
-      ),
       body: ListView(
         padding: AppSpacing.pagePadding,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.support_agent),
+                onPressed: () => context.push('/support'),
+                tooltip: 'Contacter le support',
+              ),
+            ],
+          ),
           // Header
           Container(
             padding: EdgeInsets.all(AppSpacing.md + AppSpacing.xs),

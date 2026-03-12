@@ -49,18 +49,14 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Température'),
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: AppSpacing.pagePadding,
+              padding: AppSpacing.pagePadding.copyWith(
+                bottom: AppSpacing.pagePadding.bottom + safeBottom + 8,
+              ),
               children: [
                 // En-tête explicatif
                 Padding(

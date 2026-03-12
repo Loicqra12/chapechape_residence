@@ -324,39 +324,47 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
   void _showCountryPicker() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: AppSpacing.cardPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Sélectionner un pays',
-              style: AppTextStyles.title.copyWith(
-                fontWeight: FontWeight.bold,
+      builder: (context) {
+        final maxH = MediaQuery.of(context).size.height * 0.6;
+        return SizedBox(
+          height: maxH,
+          child: Container(
+            padding: AppSpacing.cardPadding,
+            child: ListView(
+              children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Text(
+                  'Sélectionner un pays',
+                  style: AppTextStyles.title.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: AppSpacing.md),
-            ...(_countries.map((country) => ListTile(
-              leading: Text(
-                country['flag']!,
-                style: AppTextStyles.headline.copyWith(fontSize: 24),
-              ),
-              title: Text(country['name']!),
-              subtitle: Text(country['dial']!),
-              trailing: _selectedCountryCode == country['code']
-                  ? Icon(Icons.check, color: widget.themeColor ?? Theme.of(context).primaryColor)
-                  : null,
-              onTap: () {
-                _onCountryChanged(country['code']!);
-                Navigator.pop(context);
-              },
-            )).toList()),
-          ],
+              ..._countries.map((country) => ListTile(
+                leading: Text(
+                  country['flag']!,
+                  style: AppTextStyles.headline.copyWith(fontSize: 24),
+                ),
+                title: Text(country['name']!),
+                subtitle: Text(country['dial']!),
+                trailing: _selectedCountryCode == country['code']
+                    ? Icon(Icons.check, color: widget.themeColor ?? Theme.of(context).primaryColor)
+                    : null,
+                onTap: () {
+                  _onCountryChanged(country['code']!);
+                  Navigator.pop(context);
+                },
+              )),
+            ],
+          ),
         ),
-      ),
+      );
+      },
     );
   }
 }

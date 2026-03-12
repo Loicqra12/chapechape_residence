@@ -52,25 +52,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         notificationRepository: notificationRepository,
       )..add(const LoadNotifications()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Notifications'),
-          actions: [
-            BlocBuilder<NotificationBloc, NotificationState>(
-              builder: (context, state) {
-                if (state is NotificationLoaded && state.notifications.isNotEmpty) {
-                  return IconButton(
-                    icon: const Icon(Icons.done_all),
-                    tooltip: 'Marquer tout comme lu',
-                    onPressed: () {
-                      context.read<NotificationBloc>().add(const MarkAllNotificationsAsRead());
-                    },
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
-        ),
         body: BlocConsumer<NotificationBloc, NotificationState>(
           listener: (context, state) {
             if (state is NotificationError) {
@@ -121,28 +102,50 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   subtitle: 'Nous vous tiendrons informé de vos réservations, promotions et nouveautés important',
                 );
               }
-              
-              return RefreshIndicator(
-                onRefresh: () async {
-                  HapticFeedback.mediumImpact();
-                  context.read<NotificationBloc>().add(const LoadNotifications(isRefresh: true));
-                },
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: state.notifications.length + (state.hasReachedMax ? 0 : 1),
-                  itemBuilder: (context, index) {
-                    if (index == state.notifications.length) {
-                      return const Center(
-                        child: Padding(
-                          padding: AppSpacing.cardPadding,
-                          child: CircularProgressIndicator(),
+
+              final hasUnread = state.notifications.any((n) => !n.isRead);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (hasUnread)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.done_all, size: 18),
+                          label: const Text('Marquer tout comme lu'),
+                          onPressed: () {
+                            context.read<NotificationBloc>().add(const MarkAllNotificationsAsRead());
+                          },
                         ),
-                      );
-                    }
-                    final notification = state.notifications[index];
-                    return _buildNotificationItem(context, notification);
-                  },
-                ),
+                      ),
+                    ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        HapticFeedback.mediumImpact();
+                        context.read<NotificationBloc>().add(const LoadNotifications(isRefresh: true));
+                      },
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: state.notifications.length + (state.hasReachedMax ? 0 : 1),
+                        itemBuilder: (context, index) {
+                          if (index == state.notifications.length) {
+                            return const Center(
+                              child: Padding(
+                                padding: AppSpacing.cardPadding,
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+                          final notification = state.notifications[index];
+                          return _buildNotificationItem(context, notification);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               );
             }
             return const SizedBox.shrink();
@@ -318,7 +321,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           break;
         case 'system_maintenance':
         case 'account_update':
-          context.push('/settings');
+          context.push('/profile/settings');
           break;
         default:
           if (notification.actionUrl != null) {

@@ -46,16 +46,36 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes réservations'),
+        backgroundColor: Colors.white,
         elevation: 0,
+        iconTheme: IconThemeData(
+          color: AppTheme.textPrimary,
+        ),
+        title: Text(
+          'Mes réservations',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.go('/profile');
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/profile');
+            }
           },
         ),
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: AppTheme.primaryColor,
+          labelColor: AppTheme.primaryColor,
+          unselectedLabelColor: Colors.grey[600],
+          labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
           tabs: const [
             Tab(text: 'Toutes'),
             Tab(text: 'À venir'),
@@ -79,7 +99,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           },
         ),
       ),
-      body: BlocConsumer<BookingBloc, booking_states.BookingState>(
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: BlocConsumer<BookingBloc, booking_states.BookingState>(
         listener: (context, state) {
           setState(() {
             _isLoading = state is booking_states.BookingLoading;
@@ -104,27 +127,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           }
 
           if (state is booking_states.UserBookingsLoaded) {
-            final List<Booking> bookings = state.bookings;
-
-            if (bookings.isEmpty) {
-              return EmptyStateWidget(
-                imagePath: 'assets/images/empty_states/empty_bookings_illustration.png',
-                title: 'Aucune réservation',
-                subtitle: 'Commencez votre aventure ! Réservez votre première résidence dès maintenant',
-                action: ElevatedButton.icon(
-                  icon: const Icon(Icons.search),
-                  label: const Text('Trouver une résidence'),
-                  style: ElevatedButton.styleFrom(
-                    padding: AppSpacing.buttonPadding,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    ),
-                  ),
-                  onPressed: () => context.go('/residences'),
-                ),
-              );
-            }
-
             return LoadingOverlay(
               isLoading: _isLoading,
               child: Column(
@@ -152,12 +154,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.go('/residences');
-        },
-        child: const Icon(Icons.add),
-        tooltip: 'Nouvelle réservation',
       ),
     );
   }
@@ -167,32 +163,35 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
       final bookings = _filterBookings(state.bookings, filter);
 
       if (bookings.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.calendar_today,
-                size: 64,
-                color: Colors.grey,
+        final imagePath = filter == 'upcoming'
+            ? 'assets/images/empty_states/empty_Avenir_illustration.png'
+            : filter == 'past'
+                ? 'assets/images/empty_states/empty_passee_illustration.png'
+                : 'assets/images/empty_states/empty_Toutes_illustration.png';
+
+        final title = filter == 'upcoming'
+            ? 'Aucune réservation à venir'
+            : filter == 'past'
+                ? 'Aucune réservation passée'
+                : 'Aucune réservation';
+
+        return EmptyStateWidget(
+          imagePath: imagePath,
+          title: title,
+          subtitle:
+              'Commencez votre aventure ! Réservez votre première résidence dès maintenant',
+          action: ElevatedButton.icon(
+            onPressed: () {
+              context.goNamed('home');
+            },
+            icon: const Icon(Icons.search),
+            label: const Text('Trouver une résidence'),
+            style: ElevatedButton.styleFrom(
+              padding: AppSpacing.buttonPadding,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
-              AppSpacing.verticalMd,
-              Text(
-                'Aucune réservation ${_getFilterText(filter)}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              AppSpacing.verticalLg,
-              ElevatedButton.icon(
-                onPressed: () {
-                  context.go('/residences');
-                },
-                icon: const Icon(Icons.search),
-                label: const Text('Trouver une résidence'),
-              ),
-            ],
+            ),
           ),
         );
       }

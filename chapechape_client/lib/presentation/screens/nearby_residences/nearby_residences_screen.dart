@@ -244,15 +244,6 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Autour de moi'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadNearbyResidences,
-          ),
-        ],
-      ),
       body: _isLocationEnabled
           ? _buildContent()
           : _buildLocationDisabledContent(),
@@ -317,6 +308,11 @@ class _NearbyResidencesScreenState extends State<NearbyResidencesScreen> {
                 ),
               ),
               Text('${_currentRadius.toStringAsFixed(1)} km'),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _loadNearbyResidences,
+                tooltip: 'Actualiser',
+              ),
             ],
           ),
           

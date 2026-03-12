@@ -165,10 +165,11 @@ flutter:
         - asset: assets/fonts/Poppins-SemiBold.ttf
           weight: 600
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/logos/app_icon.png"
+  remove_alpha_ios: true
 
 flutter_native_splash:
   color: "#FFFFFF"

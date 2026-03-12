@@ -204,15 +204,13 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
   Widget _buildBookingTypeSelector() {
     final availableTypes = <String, String>{};
     
-    // Ajouter les types selon la résidence
+    // Ajouter UNIQUEMENT les types réellement configurés sur la résidence
     if (widget.residence.hourlyRates != null && 
         (widget.residence.hourlyRates!.oneHour > 0 || widget.residence.hourlyRates!.twoHours > 0)) {
       availableTypes['hour'] = 'Réservation horaire';
     }
     
     availableTypes['day'] = 'Réservation journalière';
-    availableTypes['week'] = 'Réservation hebdomadaire';
-    availableTypes['month'] = 'Réservation mensuelle';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

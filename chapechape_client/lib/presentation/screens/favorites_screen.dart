@@ -25,9 +25,6 @@ class FavoritesScreen extends StatelessWidget {
         favoriteRepository: favoriteRepository,
       )..add(const LoadFavorites()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Favoris'),
-        ),
         body: BlocBuilder<FavoriteBloc, FavoriteState>(
           builder: (context, state) {
             if (state is FavoriteLoading) {
@@ -89,17 +86,22 @@ class FavoritesScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyFavorites(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
     return EmptyStateWidget(
       imagePath: 'assets/images/empty_states/empty_favorites_illustration.png',
-      title: 'Aucun coup de cœur',
-      subtitle: 'Explorez nos résidences et sauvegardez vos préférées pour les retrouver facilement',
-        action: ElevatedButton.icon(
-        icon: const Icon(Icons.explore),
-        label: const Text('Découvrir les résidences'),
+      imageHeight: screenHeight * 0.30,
+      title: 'Aucune résidence favorite',
+      subtitle: 'Explorez les résidences et ajoutez-les à vos favoris.',
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      action: ElevatedButton.icon(
+        icon: const Icon(Icons.explore, size: 20),
+        label: const Text('Explorer les résidences'),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: AppTheme.textLight,
-          padding: AppSpacing.buttonPadding,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          elevation: 1,
+          shadowColor: Colors.black26,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
