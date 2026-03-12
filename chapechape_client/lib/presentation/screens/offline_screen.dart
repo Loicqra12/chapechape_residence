@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/optimized_connectivity_service.dart';
 import 'package:chapechape_client/presentation/widgets/residence_card.dart';
@@ -86,8 +87,8 @@ class _OfflineScreenState extends State<OfflineScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mode Hors Ligne'),
-        backgroundColor: Colors.red.shade600,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.black,
         elevation: 0,
         actions: [
           StreamBuilder<bool>(

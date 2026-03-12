@@ -230,7 +230,10 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.lg),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
                       child: FadeTransition(
                         opacity: _fadeAnimation,
                         child: Column(
@@ -243,24 +246,24 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                 height: 1.2,
                               ),
                             ),
-                            AppSpacing.verticalSmd,
+                            AppSpacing.verticalSm,
                             Text(
                               'Créez un mot de passe fort pour sécuriser votre compte',
                               style: AppTheme.bodyMedium.copyWith(
                                 color: AppTheme.textSecondary,
                               ),
                             ),
-                            AppSpacing.verticalXl,
+                            AppSpacing.verticalLg,
                             
-                            // Illustration
+                            // Illustration empty state locale
                             Center(
-                              child: Lottie.network(
-                                'https://assets9.lottiefiles.com/packages/lf20_yom6uvgj.json',
-                                height: 180,
-                                animate: true,
+                              child: Image.asset(
+                                'assets/images/empty_states/empty_changemotpasse_illustration.png',
+                                height: 160,
+                                fit: BoxFit.contain,
                               ),
                             ),
-                            AppSpacing.verticalXl,
+                            AppSpacing.verticalLg,
                             
                             // Formulaire
                             Form(
@@ -362,12 +365,12 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                       return null;
                                     },
                                   ),
-                                  AppSpacing.verticalXl,
+                                  AppSpacing.verticalLg,
                                   
                                   // Bouton de soumission
                                   SizedBox(
                                     width: double.infinity,
-                                    height: 56,
+                                    height: 48,
                                     child: ElevatedButton(
                                       onPressed: state is UserLoading ? null : _submitForm,
                                       style: ElevatedButton.styleFrom(

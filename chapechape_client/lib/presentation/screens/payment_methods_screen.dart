@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/utils/responsive_utils.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
@@ -19,92 +18,91 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Moyens de paiement'),
-      ),
-      body: SingleChildScrollView(
-        padding: context.responsivePadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // En-tête avec description
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: Text(
-                'Gérez vos moyens de paiement pour faciliter vos réservations',
-                style: TextStyle(
-                  fontSize: context.responsiveFontSize(16),
-                  color: Colors.grey[600],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: context.responsivePadding.add(
+            const EdgeInsets.only(bottom: 24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // En-tête avec description
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: Text(
+                  'Gérez vos moyens de paiement pour faciliter vos réservations',
+                  style: TextStyle(
+                    fontSize: context.responsiveFontSize(16),
+                    color: Colors.grey[600],
+                  ),
                 ),
               ),
-            ),
 
-            // Méthodes de paiement enregistrées
-            Text(
-              'Méthodes enregistrées',
-              style: TextStyle(
-                fontSize: context.responsiveFontSize(18),
-                fontWeight: FontWeight.bold,
+              // Méthodes de paiement enregistrées
+              Text(
+                'Méthodes enregistrées',
+                style: TextStyle(
+                  fontSize: context.responsiveFontSize(18),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Afficher les méthodes ou un message si aucune
-            _savedMethods.isEmpty
-                ? _buildEmptyMethodsMessage()
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _savedMethods.length,
-                    itemBuilder: (context, index) {
-                      return _buildPaymentMethodCard(_savedMethods[index]);
-                    },
-                  ),
+              // Afficher les méthodes ou un message si aucune
+              _savedMethods.isEmpty
+                  ? _buildEmptyMethodsMessage()
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _savedMethods.length,
+                      itemBuilder: (context, index) {
+                        return _buildPaymentMethodCard(_savedMethods[index]);
+                      },
+                    ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Ajouter une nouvelle méthode
-            Text(
-              'Ajouter un moyen de paiement',
-              style: TextStyle(
-                fontSize: context.responsiveFontSize(18),
-                fontWeight: FontWeight.bold,
+              // Ajouter une nouvelle méthode
+              Text(
+                'Ajouter un moyen de paiement',
+                style: TextStyle(
+                  fontSize: context.responsiveFontSize(18),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Types de paiement supportés
-            _buildPaymentTypeCard(
-              icon: Icons.phone_android,
-              title: 'Mobile Money',
-              subtitle: 'Orange Money, MTN Mobile Money, Moov Money, Wave',
-              onTap: () => _showAddMobileMoneyDialog(),
-              color: Colors.orange[100]!,
-              iconColor: Colors.deepOrange,
-            ),
-            
-            _buildPaymentTypeCard(
-              icon: Icons.credit_card,
-              title: 'Carte bancaire',
-              subtitle: 'Visa, Mastercard',
-              onTap: () => _showAddCardDialog(),
-              color: Colors.blue[100]!,
-              iconColor: Colors.blue,
-            ),
-            
-            _buildPaymentTypeCard(
-              icon: Icons.account_balance_wallet,
-              title: 'PayPal',
-              subtitle: 'Payer avec votre compte PayPal',
-              onTap: () => _showPaypalDialog(),
-              color: Colors.indigo[100]!,
-              iconColor: Colors.indigo,
-            ),
-          ],
+              // Types de paiement supportés
+              _buildPaymentTypeCard(
+                icon: Icons.phone_android,
+                title: 'Mobile Money',
+                subtitle: 'Orange Money, MTN Mobile Money, Moov Money, Wave',
+                onTap: () => _showAddMobileMoneyDialog(),
+                color: Colors.orange[100]!,
+                iconColor: Colors.deepOrange,
+              ),
+              
+              _buildPaymentTypeCard(
+                icon: Icons.credit_card,
+                title: 'Carte bancaire',
+                subtitle: 'Visa, Mastercard',
+                onTap: () => _showAddCardDialog(),
+                color: Colors.blue[100]!,
+                iconColor: Colors.blue,
+              ),
+              
+              _buildPaymentTypeCard(
+                icon: Icons.account_balance_wallet,
+                title: 'PayPal',
+                subtitle: 'Payer avec votre compte PayPal',
+                onTap: () => _showPaypalDialog(),
+                color: Colors.indigo[100]!,
+                iconColor: Colors.indigo,
+              ),
+
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -116,12 +114,12 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         padding: const EdgeInsets.all(32.0),
         child: Column(
           children: [
-            Icon(
-              Icons.credit_card_off,
-              size: 64,
-              color: Colors.grey[400],
+            Image.asset(
+              'assets/images/empty_states/empty_aucunpayment_illustration.png',
+              height: 160,
+              fit: BoxFit.contain,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               'Aucun moyen de paiement',
               style: TextStyle(

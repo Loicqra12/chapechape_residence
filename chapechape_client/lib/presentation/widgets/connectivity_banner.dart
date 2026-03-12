@@ -147,13 +147,17 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
         Expanded(child: widget.child),
         
         // Bouton de synchronisation quand la connexion est rétablie
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: _buildSyncButton(context),
-          crossFadeState: _showSyncBanner
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 300),
+        SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 8),
+          child: AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: _buildSyncButton(context),
+            crossFadeState: _showSyncBanner
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+          ),
         ),
       ],
     );
@@ -249,90 +253,62 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.lightGold,
-              Color(0xFFFFFBF5),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFFFFF6E5),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.4),
+            color: AppTheme.primaryColor.withOpacity(0.35),
             width: 1,
           ),
           boxShadow: [
             ...AppTheme.softShadow,
-            BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.12),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
           ],
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.wifi,
-                color: AppTheme.primaryColor,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Connexion rétablie',
-                    style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.wifi,
+                  color: AppTheme.primaryColor,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'Connexion rétablie',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Synchronisation des données disponible',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Vous pouvez synchroniser vos données',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(
-                Icons.close,
-                color: AppTheme.textSecondary,
-                size: 20,
-              ),
-              onPressed: () {
-                setState(() {
-                  _showSyncBanner = false;
-                  _wasOffline = false;
-                });
-              },
-              tooltip: 'Fermer',
-            ),
-            const SizedBox(width: 4),
-            Material(
-              color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(24),
-              child: InkWell(
-                onTap: () async {
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: () async {
                   try {
                     setState(() {
                       _showSyncBanner = false;
@@ -371,25 +347,21 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                     );
                   }
                 },
-                borderRadius: BorderRadius.circular(24),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.sync, size: 18, color: AppTheme.textLight),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Synchroniser',
-                        style: TextStyle(
-                          color: AppTheme.textLight,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.black,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                   ),
                 ),
+                child: const Text('Synchroniser'),
               ),
             ),
           ],

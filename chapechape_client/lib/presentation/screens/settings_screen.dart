@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
-import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/presentation/screens/settings/temperature_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/display_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
@@ -15,59 +15,30 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Paramètres'),
-      ),
       body: ListView(
-        padding: AppSpacing.pagePadding,
+        padding: AppSpacing.pagePadding.copyWith(
+          bottom: AppSpacing.pagePadding.bottom + safeBottom + 8,
+        ),
         children: [
           _buildSectionHeader(context, 'Paramètres de l\'appareil'),
-          _buildSettingItem(
-            context,
-            'Appareils connectés',
-            'Gérer tous vos appareils connectés',
-            Icons.devices,
-            () {
-              // Navigation vers les paramètres des appareils
-            },
-          ),
-          _buildSettingItem(
+          _buildSettingTile(context, 'Appareils connectés', Icons.devices, () {}),
+          _buildSettingTile(
             context,
             'Température',
-            'Unités de température et préférences',
             Icons.thermostat_outlined,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TemperatureScreen(),
-                ),
-              );
-            },
+            () => context.push('/profile/settings/temperature'),
           ),
-          _buildSettingItem(
+          _buildSettingTile(
             context,
             'Affichage',
-            'Thème, luminosité et taille de texte',
             Icons.brightness_6_outlined,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DisplayScreen(),
-                ),
-              );
-            },
+            () => context.push('/profile/settings/display'),
           ),
-          _buildSettingItem(
+          _buildSettingTile(
             context,
             'Notifications',
-            'Gérer les notifications push',
             Icons.notifications_outlined,
             () {
               Navigator.push(
@@ -78,24 +49,15 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          _buildSettingItem(
+          _buildSettingTile(
             context,
             'Stockage et cache',
-            'Gérer le stockage local et les données en cache',
             Icons.storage_outlined,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StorageScreen(),
-                ),
-              );
-            },
+            () => context.push('/profile/settings/storage'),
           ),
-          _buildSettingItem(
+          _buildSettingTile(
             context,
             'Langue',
-            'Choisir la langue de l\'application',
             Icons.language_outlined,
             () {
               Navigator.push(
@@ -106,79 +68,21 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          _buildSettingItem(
+          _buildSettingTile(
             context,
             'À propos',
-            'Informations sur l\'application et mise à jour',
             Icons.info_outline,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AboutScreen(),
-                ),
-              );
-            },
+            () => context.push('/profile/settings/about'),
           ),
           AppSpacing.verticalLg,
           _buildSectionHeader(context, 'Paramètres des e-mails'),
-          _buildSettingItem(
-            context,
-            'Fréquence des e-mails',
-            'Définir la fréquence de réception des e-mails',
-            Icons.schedule_outlined,
-            () {
-              // Navigation vers les paramètres de fréquence des e-mails
-            },
-          ),
-          _buildSettingItem(
-            context,
-            'Types de notifications',
-            'Choisir les types d\'e-mails à recevoir',
-            Icons.mail_outline,
-            () {
-              // Navigation vers les paramètres de types d'e-mails
-            },
-          ),
-          _buildSettingItem(
-            context,
-            'Format des e-mails',
-            'Configurer le format des e-mails reçus',
-            Icons.format_paint_outlined,
-            () {
-              // Navigation vers les paramètres de format des e-mails
-            },
-          ),
+          _buildSettingTile(context, 'Fréquence des e-mails', Icons.schedule_outlined, () {}),
+          _buildSettingTile(context, 'Types de notifications', Icons.mail_outline, () {}),
+          _buildSettingTile(context, 'Format des e-mails', Icons.format_paint_outlined, () {}),
           AppSpacing.verticalLg,
           _buildSectionHeader(context, 'Compte et sécurité'),
-          _buildSettingItem(
-            context,
-            'Informations personnelles',
-            'Modifier vos informations de profil',
-            Icons.person_outline,
-            () {
-              // Navigation vers les paramètres de profil
-            },
-          ),
-          _buildSettingItem(
-            context,
-            'Mot de passe',
-            'Modifier votre mot de passe',
-            Icons.lock_outline,
-            () {
-              // Navigation vers les paramètres de mot de passe
-            },
-          ),
-          _buildSettingItem(
-            context,
-            'Déconnexion',
-            'Se déconnecter de l\'application',
-            Icons.logout,
-            () {
-              // Action de déconnexion
-            },
-            isDestructive: true,
-          ),
+          _buildSettingTile(context, 'Informations personnelles', Icons.person_outline, () {}),
+          _buildSettingTile(context, 'Mot de passe', Icons.lock_outline, () => context.push('/password-change')),
         ],
       ),
     );
@@ -186,50 +90,41 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppTheme.primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
-  Widget _buildSettingItem(
+  Widget _buildSettingTile(
     BuildContext context,
     String title,
-    String subtitle,
     IconData icon,
     VoidCallback onTap, {
     bool isDestructive = false,
   }) {
-    return Card(
-      elevation: 0,
-      color: AppTheme.dividerColor.withOpacity(0.3),
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+    return ListTile(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      leading: Icon(
+        icon,
+        color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        leading: Icon(
-          icon,
-          color: isDestructive ? AppTheme.errorColor : AppTheme.primaryColor,
-          size: 28,
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
+          fontWeight: FontWeight.w500,
         ),
-        title: Text(
-          title,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
-          ),
-        ),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
       ),
+      trailing: const Icon(Icons.chevron_right),
     );
   }
 }

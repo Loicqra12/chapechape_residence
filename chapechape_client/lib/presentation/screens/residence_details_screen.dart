@@ -1133,7 +1133,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          // Bouton Réserver (rouge) ou Se connecter (or)
+          // Bouton Réserver (couleur principale) ou Se connecter (or)
           GestureDetector(
             onTap: r.id.isEmpty ? null : () => _goBooking(r),
             child: _isAuth()
@@ -1141,9 +1141,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 28, vertical: 14),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF385C), Color(0xFFE31C5F)],
-                      ),
+                      color: AppTheme.primaryColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text('Réserver',

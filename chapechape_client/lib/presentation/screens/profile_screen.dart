@@ -18,6 +18,7 @@ import 'package:chapechape_client/core/models/phone_number.dart';
 import 'package:chapechape_client/presentation/widgets/skeletons/profile_skeleton.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,6 +44,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isPhoneValid = false;
   
   final ImagePicker _picker = ImagePicker();
+
+  /// Ouvre l'application partenaire si installée, sinon la fiche Play Store.
+  Future<void> _openPartnerAppOrStore() async {
+    const String androidPackage = 'com.chapechape.chapechape_partner';
+
+    // Schéma Play Store natif
+    final Uri marketUri = Uri.parse('market://details?id=$androidPackage');
+    // Fallback Web Play Store
+    final Uri webUri = Uri.parse(
+      'https://play.google.com/store/apps/details?id=$androidPackage',
+    );
+
+    try {
+      // Essayer d'abord l'app Play Store
+      if (await canLaunchUrl(marketUri)) {
+        await launchUrl(
+          marketUri,
+          mode: LaunchMode.externalApplication,
+        );
+        return;
+      }
+
+      // Sinon, ouvrir dans le navigateur
+      if (await canLaunchUrl(webUri)) {
+        await launchUrl(
+          webUri,
+          mode: LaunchMode.externalApplication,
+        );
+        return;
+      }
+
+      // Si rien ne fonctionne, informer l'utilisateur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Impossible d\'ouvrir la page de l\'application partenaire pour le moment.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Une erreur est survenue lors de l\'ouverture de l\'application partenaire.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
 
   /// Normalise un numéro de téléphone au format E.164
   String _normalizeToE164(String phoneNumber, String countryCode) {
@@ -237,9 +293,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil'),
-      ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, authState) {
           if (authState is Unauthenticated) {
@@ -289,59 +342,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // En-tête du profil avec photo
-          Container(
-            padding: EdgeInsets.only(top: AppSpacing.xxl40 + AppSpacing.xxs, bottom: AppSpacing.lg),
-            decoration: const BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              ),
+          // En-tête du profil simplifié (carte blanche avec avatar, nom, email, bouton Modifier)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.sm,
             ),
-            child: Column(
-              children: [
-                // Photo de profil
-                Stack(
-                  alignment: Alignment.bottomRight,
+            child: Card(
+              elevation: 1.5,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.lg20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundImage: user.profilePicture != null
-                          ? NetworkImage(AppConfigManager.getProfileImageUrl(user.profilePicture!))
-                          : NetworkImage(AppAssets.getDefaultAvatar(
-                              name: '${user.firstName} ${user.lastName}',
-                              size: 200,
-                            )),
+                    // Avatar centré
+                    InkWell(
+                      onTap: _pickImage,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundImage: user.profilePicture != null
+                                ? NetworkImage(AppConfigManager.getProfileImageUrl(user.profilePicture!))
+                                : NetworkImage(
+                                    AppAssets.getDefaultAvatar(
+                                      name: '${user.firstName} ${user.lastName}',
+                                      size: 128,
+                                    ),
+                                  ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            padding: EdgeInsets.all(AppSpacing.xs),
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 14,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppTheme.textLight,
-                      child: IconButton(
-                        icon: Icon(Icons.camera_alt, size: 20, color: AppTheme.textPrimary),
-                        onPressed: _pickImage,
+                    SizedBox(height: AppSpacing.md),
+                    // Nom centré
+                    Text(
+                      '${user.firstName} ${user.lastName}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: AppSpacing.xs5),
+                    // Email centré, sur 2 lignes max (moins de troncature)
+                    Text(
+                      user.email,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: AppSpacing.md),
+                    // Bouton Modifier plein largeur (format vertical)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _toggleEdit,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        child: Text(
+                          _isEditing ? 'Annuler' : 'Modifier',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: AppSpacing.md15), // 15px pour espacement spécifique
-                // Nom complet
-                Text(
-                  '${user.firstName} ${user.lastName}',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                SizedBox(height: AppSpacing.xs5), // 5px pour espacement spécifique
-                // Email
-                Text(
-                  user.email,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                AppSpacing.verticalLg,
-              ],
+              ),
             ),
           ),
 
@@ -489,11 +600,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                   SizedBox(height: AppSpacing.xl30), // 30px pour espacement spécifique
                   
-                  // Boutons d'action
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_isEditing) ...[
+                  // Bouton d'action principal (uniquement en mode édition)
+                  if (_isEditing)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         Expanded(
                           child: ElevatedButton(
                             onPressed: _saveProfile,
@@ -507,46 +618,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Text(
                               'Enregistrer',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textLight,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.sm10), // 10px pour espacement spécifique
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _toggleEdit,
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                              ),
-                            ),
-                            child: const Text('Annuler'),
-                          ),
-                        ),
-                      ] else ...[
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _toggleEdit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md15), // 15px
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                              ),
-                            ),
-                            child: Text(
-                              'Modifier le profil',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textLight,
-                              ),
+                                    color: AppTheme.textLight,
+                                  ),
                             ),
                           ),
                         ),
                       ],
-                    ],
-                  ),
+                    ),
                   
                   AppSpacing.verticalLg,
                   
@@ -579,7 +657,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.history,
                     title: 'Historique des réservations',
                     onTap: () {
-                      context.read<UserBloc>().add(const LoadBookingHistory());
                       context.push('/bookings');
                     },
                   ),
@@ -588,8 +665,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.favorite,
                     title: 'Résidences favorites',
                     onTap: () {
-                      context.read<UserBloc>().add(const LoadFavoriteResidences());
-                      context.go('/favorites');
+                      context.push('/favorites');
                     },
                   ),
                   
@@ -613,13 +689,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.home_work,
                     title: 'Inscrire votre résidence',
                     onTap: () {
-                      // À compléter avec le lien vers l'application partenaire
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fonctionnalité en cours de développement. Disponible prochainement!'),
-                          duration: Duration(seconds: 3),
-                        ),
-                      );
+                      _openPartnerAppOrStore();
                     },
                   ),
                   

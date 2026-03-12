@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
-import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/onesignal_service.dart';
 import 'package:chapechape_client/core/services/error_message_service.dart';
 
@@ -102,207 +103,177 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Paramètres de notifications'),
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: AppSpacing.cardPadding,
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: _saveNotificationPreferences,
-              tooltip: 'Sauvegarder',
-            ),
-        ],
-      ),
       body: _isLoading && _pushNotificationsEnabled == true
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: AppSpacing.cardPadding,
+              padding: AppSpacing.pagePadding.copyWith(
+                bottom: AppSpacing.pagePadding.bottom + safeBottom + 8,
+              ),
               children: [
-                // Section Notifications générales
-                _buildSectionHeader('Notifications générales'),
+                _buildSectionHeader(context, 'Notifications générales'),
                 _buildSwitchTile(
+                  context,
                   'Notifications push',
-                  'Recevoir des notifications push sur cet appareil',
                   _pushNotificationsEnabled,
                   (value) => setState(() => _pushNotificationsEnabled = value),
                   icon: Icons.notifications,
                 ),
                 _buildSwitchTile(
+                  context,
                   'Notifications email',
-                  'Recevoir des notifications par email',
                   _emailNotificationsEnabled,
                   (value) => setState(() => _emailNotificationsEnabled = value),
                   icon: Icons.email,
                 ),
-                
                 AppSpacing.verticalLg,
-                
-                // Section Types de notifications
-                _buildSectionHeader('Types de notifications'),
+                _buildSectionHeader(context, 'Types de notifications'),
                 _buildSwitchTile(
+                  context,
                   'Réservations',
-                  'Notifications pour les réservations et modifications',
                   _bookingNotifications,
                   (value) => setState(() => _bookingNotifications = value),
                   icon: Icons.calendar_today,
                   enabled: _pushNotificationsEnabled,
                 ),
                 _buildSwitchTile(
+                  context,
                   'Messages',
-                  'Notifications pour les nouveaux messages',
                   _chatNotifications,
                   (value) => setState(() => _chatNotifications = value),
                   icon: Icons.chat,
                   enabled: _pushNotificationsEnabled,
                 ),
                 _buildSwitchTile(
+                  context,
                   'Paiements',
-                  'Notifications pour les paiements et remboursements',
                   _paymentNotifications,
                   (value) => setState(() => _paymentNotifications = value),
                   icon: Icons.payment,
                   enabled: _pushNotificationsEnabled,
                 ),
                 _buildSwitchTile(
+                  context,
                   'Promotions',
-                  'Notifications pour les offres et promotions',
                   _promotionNotifications,
                   (value) => setState(() => _promotionNotifications = value),
                   icon: Icons.local_offer,
                   enabled: _pushNotificationsEnabled,
                 ),
-                
                 AppSpacing.verticalLg,
-                
-                // Section Paramètres avancés
-                _buildSectionHeader('Paramètres avancés'),
+                _buildSectionHeader(context, 'Paramètres avancés'),
                 _buildSwitchTile(
+                  context,
                   'Son',
-                  'Jouer un son lors de la réception de notifications',
                   _soundEnabled,
                   (value) => setState(() => _soundEnabled = value),
                   icon: Icons.volume_up,
                   enabled: _pushNotificationsEnabled,
                 ),
                 _buildSwitchTile(
+                  context,
                   'Vibration',
-                  'Vibrer lors de la réception de notifications',
                   _vibrationEnabled,
                   (value) => setState(() => _vibrationEnabled = value),
                   icon: Icons.vibration,
                   enabled: _pushNotificationsEnabled,
                 ),
-                
-                AppSpacing.verticalXl,
-                
-                // Bouton de test
+                AppSpacing.verticalLg,
                 if (_pushNotificationsEnabled)
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.send, color: Colors.blue),
-                      title: const Text('Tester les notifications'),
-                      subtitle: const Text('Envoyer une notification de test'),
-                      onTap: _sendTestNotification,
+                  ListTile(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _sendTestNotification();
+                    },
+                    leading: Icon(Icons.send, color: AppTheme.textPrimary),
+                    title: Text(
+                      'Tester les notifications',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                    trailing: const Icon(Icons.chevron_right),
                   ),
-                
                 AppSpacing.verticalMd,
-                
-                // Informations
-                Card(
-                  color: Colors.blue.shade50,
-                  child: Padding(
-                    padding: AppSpacing.cardPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.info, color: Colors.blue.shade700),
-                            SizedBox(width: AppSpacing.sm),
-                            Text(
-                              'Information',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        AppSpacing.verticalSm,
-                        Text(
-                          'Les notifications push nécessitent une connexion internet. '
-                          'Vous pouvez modifier ces paramètres à tout moment.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.blue.shade600,
-                          ),
-                        ),
-                      ],
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  child: Text(
+                    'Les notifications push nécessitent une connexion internet. '
+                    'Vous pouvez modifier ces paramètres à tout moment.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
                     ),
                   ),
+                ),
+                ListTile(
+                  onTap: _isLoading ? null : () {
+                    HapticFeedback.lightImpact();
+                    _saveNotificationPreferences();
+                  },
+                  leading: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.save, color: AppTheme.textPrimary),
+                  title: Text(
+                    'Sauvegarder',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
                 ),
               ],
             ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).primaryColor,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
   Widget _buildSwitchTile(
+    BuildContext context,
     String title,
-    String subtitle,
     bool value,
     ValueChanged<bool> onChanged, {
     required IconData icon,
     bool enabled = true,
   }) {
-    return Card(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
-      child: SwitchListTile(
-        secondary: Icon(
-          icon,
-          color: enabled ? Theme.of(context).primaryColor : Colors.grey,
-        ),
-        title: Text(
-          title,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: enabled ? null : Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: enabled ? Colors.grey[600] : Colors.grey,
-          ),
-        ),
-        value: value,
-        onChanged: enabled ? onChanged : null,
-        activeColor: Theme.of(context).primaryColor,
+    return SwitchListTile(
+      secondary: Icon(
+        icon,
+        color: enabled ? AppTheme.textPrimary : Colors.grey,
       ),
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: enabled ? AppTheme.textPrimary : Colors.grey,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      value: value,
+      onChanged: enabled
+          ? (v) {
+              HapticFeedback.lightImpact();
+              onChanged(v);
+            }
+          : null,
+      activeColor: AppTheme.primaryColor,
     );
   }
 

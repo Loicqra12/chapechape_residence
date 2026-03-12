@@ -17,6 +17,10 @@ import '../../core/models/city.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/blocs/user/user_bloc.dart';
+import '../../core/blocs/user/user_state.dart';
+import '../../core/config/app_config_manager.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/services/optimized_connectivity_service.dart';
 import '../../core/blocs/notification/notification_bloc.dart';
 import '../../core/blocs/notification/notification_state.dart';
@@ -80,6 +84,73 @@ class _MainScreenState extends State<MainScreen> {
     return 0;
   }
 
+  /// True si on est sur une sous-route (Paramètres, Portefeuille, etc.) → afficher retour
+  /// Les onglets racine de la bottom bar (home, favoris, notifications, chat, profil)
+  /// n'affichent PAS de flèche par défaut ; on utilisera canPop pour détecter
+  /// les accès via push (depuis Profil, cloche, etc.).
+  bool _isSubRoute(String location) {
+    if (location == '/home' ||
+        location == '/' ||
+        location == '/favorites' ||
+        location == '/notifications' ||
+        location == '/chat' ||
+        location == '/profile') {
+      return false;
+    }
+    return true;
+  }
+
+  /// True si la pile de navigation permet de revenir en arrière (écran ouvert via push)
+  bool _canPop(BuildContext context) {
+    return GoRouter.of(context).canPop();
+  }
+
+  /// Titre de l'AppBar selon la route (header simple, sans bandeau)
+  Widget? _buildAppBarTitle(BuildContext context, String location) {
+    final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      color: Colors.black87,
+    );
+    if (location.startsWith('/favorites')) return Text('Favoris', style: titleStyle);
+    if (location.startsWith('/notifications')) return Text('Notifications', style: titleStyle);
+    if (location.startsWith('/chat')) return Text('Messages', style: titleStyle);
+    if (location == '/profile') return Text('Profil', style: titleStyle);
+    if (location.startsWith('/profile/settings/temperature')) return Text('Température', style: titleStyle);
+    if (location.startsWith('/profile/settings/display')) return Text('Affichage', style: titleStyle);
+    if (location.startsWith('/profile/settings/storage')) return Text('Stockage et cache', style: titleStyle);
+    if (location.startsWith('/profile/settings/about')) return Text('À propos', style: titleStyle);
+    if (location.startsWith('/profile/settings')) return Text('Paramètres', style: titleStyle);
+    if (location.startsWith('/profile/wallet')) return Text('Portefeuille et récompenses', style: titleStyle);
+    if (location.startsWith('/profile/payment-methods')) return Text('Moyens de paiement', style: titleStyle);
+    if (location.startsWith('/profile/help')) return Text('Aide et support', style: titleStyle);
+    if (location.startsWith('/bookings')) return Text('Mes réservations', style: titleStyle);
+    if (location.startsWith('/faq')) return Text('FAQ', style: titleStyle);
+    if (location.startsWith('/nearby')) return Text('Autour de moi', style: titleStyle);
+    if (location.startsWith('/reviews')) return Text('Avis', style: titleStyle);
+    if (_selectedCity != null) {
+      return InkWell(
+        onTap: () => _showLocationMenu(context),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on, size: 16, color: AppTheme.primaryColor),
+            SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                'À ${_selectedCity!.name}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[800], fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+                semanticsLabel: 'Localisation: ${_selectedCity!.name}',
+              ),
+            ),
+            Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
+          ],
+        ),
+      );
+    }
+    return null;
+  }
+
   void _onItemTapped(int index, BuildContext context) {
     final routes = [
       '/home',
@@ -109,11 +180,14 @@ class _MainScreenState extends State<MainScreen> {
     
     final location = GoRouterState.of(context).uri.path;
     final isHomeScreen = location.startsWith('/home') || location == '/';
+    // L'écran Historique des réservations gère déjà sa propre AppBar + TabBar.
+    // On masque donc la barre du MainScreen pour éviter le double header.
+    final isStandaloneScreen = location.startsWith('/bookings');
 
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: false,
-      appBar: isHomeScreen
+      appBar: isHomeScreen || isStandaloneScreen
           ? null
           : AppBar(
               backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white,
@@ -124,10 +198,23 @@ class _MainScreenState extends State<MainScreen> {
               leading: Container(
                 margin: EdgeInsets.all(AppSpacing.sm),
                 child: IconButton(
-                  icon: const Icon(Icons.menu),
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
-                  onPressed: () => _showLocationMenu(context),
-                  tooltip: 'Menu',
+                  icon: Icon(
+                    (_isSubRoute(location) || _canPop(context))
+                        ? Icons.arrow_back
+                        : Icons.menu,
+                  ),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black87,
+                  onPressed: () {
+                    if (_isSubRoute(location) || _canPop(context)) {
+                      context.pop();
+                    } else {
+                      _showLocationMenu(context);
+                    }
+                  },
+                  tooltip:
+                      (_isSubRoute(location) || _canPop(context)) ? 'Retour' : 'Menu',
                   padding: EdgeInsets.zero,
                 ),
               ),
@@ -155,30 +242,7 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 const NotificationButton(),
               ],
-              title: _selectedCity != null
-                  ? InkWell(
-                      onTap: () => _showLocationMenu(context),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on, size: 16, color: AppTheme.primaryColor),
-                          SizedBox(width: AppSpacing.xs),
-                          Flexible(
-                            child: Text(
-                              'À ${_selectedCity!.name}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[800],
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              semanticsLabel: 'Localisation: ${_selectedCity!.name}',
-                            ),
-                          ),
-                          Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
-                        ],
-                      ),
-                    )
-                  : null,
+              title: _buildAppBarTitle(context, location),
               centerTitle: false,
             ),
       body: Stack(
@@ -254,7 +318,7 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     NavigationDestination(
                       icon: const Icon(Icons.favorite_outline),
-                      selectedIcon: Icon(Icons.favorite, color: Theme.of(context).primaryColor),
+                      selectedIcon: Icon(Icons.favorite, color: AppTheme.primaryColor, size: 26),
                       label: 'Favoris',
                     ),
                     NavigationDestination(
@@ -296,8 +360,8 @@ class _MainScreenState extends State<MainScreen> {
                       label: 'Messages',
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person, color: Theme.of(context).primaryColor),
+                      icon: _buildProfileNavIcon(context, isSelected: false),
+                      selectedIcon: _buildProfileNavIcon(context, isSelected: true),
                       label: 'Profil',
                     ),
                   ],
@@ -310,6 +374,49 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
   
+  /// Icône de profil dans la bottom bar : avatar/initiales si connecté, sinon icône par défaut.
+  Widget _buildProfileNavIcon(BuildContext context, {required bool isSelected}) {
+    final Color borderColor = isSelected
+        ? Theme.of(context).primaryColor.withOpacity(0.2)
+        : Colors.transparent;
+
+    return BlocBuilder<UserBloc, UserState>(
+      builder: (context, state) {
+        String? avatarUrl;
+        String? fullName;
+
+        if (state is UserProfileLoaded) {
+          fullName = '${state.user.firstName} ${state.user.lastName}';
+          avatarUrl = state.user.profilePicture != null
+              ? AppConfigManager.getProfileImageUrl(state.user.profilePicture!)
+              : AppAssets.getDefaultAvatar(name: fullName, size: 64);
+        }
+
+        if (avatarUrl == null || fullName == null) {
+          // Utilisateur non chargé : icône standard
+          return Icon(
+            isSelected ? Icons.person : Icons.person_outline,
+            color: isSelected
+                ? Theme.of(context).primaryColor
+                : Colors.black87,
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 2),
+          ),
+          child: CircleAvatar(
+            radius: 12,
+            backgroundImage: NetworkImage(avatarUrl),
+          ),
+        );
+      },
+    );
+  }
+
   /// Barre du haut en overlay sur l'écran d'accueil : même visuel que l'ancienne AppBar, animée au scroll.
   Widget _buildHomeOverlayAppBar(BuildContext context) {
     return IconTheme(

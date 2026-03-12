@@ -33,9 +33,6 @@ class ChatScreen extends StatelessWidget {
         return chatBloc;
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Messages'),
-        ),
         body: BlocBuilder<chat.ChatBloc, chat.ChatState>(
           builder: (context, state) {
             if (state is chat.ChatLoading) {

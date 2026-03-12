@@ -85,30 +85,32 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Aide et Support'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.black,
-          labelColor: Colors.black,
-          unselectedLabelColor: Colors.black54,
-          tabs: const [
-            Tab(text: 'FAQ'),
-            Tab(text: 'Contact'),
-            Tab(text: 'Litiges'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildFaqTab(),
-          _buildContactTab(),
-          _buildDisputeTab(),
+          Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.black,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.black54,
+              tabs: const [
+                Tab(text: 'FAQ'),
+                Tab(text: 'Contact'),
+                Tab(text: 'Litiges'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildFaqTab(),
+                _buildContactTab(),
+                _buildDisputeTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );

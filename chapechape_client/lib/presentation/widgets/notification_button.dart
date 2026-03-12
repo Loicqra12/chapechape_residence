@@ -49,7 +49,7 @@ class NotificationButton extends StatelessWidget {
             ],
           ),
           onPressed: () {
-            context.goNamed('notifications');
+            context.pushNamed('notifications');
             context.read<NotificationBloc>().add(const MarkAllNotificationsAsRead());
           },
           tooltip: 'Notifications',

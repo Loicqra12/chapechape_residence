@@ -107,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.textPrimary,
+      backgroundColor: Colors.black,
       body: Center(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -119,24 +119,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Image.asset(
-                        'assets/logos/splash_logo.png',
-                        width: 180,
-                        height: 180,
-                      ),
+                    Image.asset(
+                      'assets/logos/splash_logo.png',
+                      width: 220,
+                      height: 220,
+                      fit: BoxFit.contain,
                     ),
                     AppSpacing.verticalLg,
                     Text(

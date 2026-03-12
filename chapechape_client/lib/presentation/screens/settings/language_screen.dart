@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
-import 'package:chapechape_client/core/theme/text_styles.dart';
 import 'package:chapechape_client/core/services/shared_preferences_service.dart';
 
 class LanguageScreen extends StatefulWidget {
@@ -85,142 +85,59 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Langue'),
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: AppSpacing.pagePadding,
+              padding: AppSpacing.pagePadding.copyWith(
+                bottom: AppSpacing.pagePadding.bottom + safeBottom + 8,
+              ),
               children: [
                 Padding(
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Choisissez la langue de l\'application.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-                  ),
-                ),
-                
-                // Carte d'information sur la langue
-                Card(
-                  color: AppTheme.dividerColor.withOpacity(0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: Padding(
-                    padding: AppSpacing.pagePadding,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(AppSpacing.smd),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.info_outline,
-                            color: AppTheme.primaryColor,
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        const Expanded(
-                          child: Text(
-                            'Changer la langue modifiera tous les textes dans l\'application, mais nécessitera un redémarrage pour être appliquée complètement.',
-                            style: AppTextStyles.body,
-                          ),
-                        ),
-                      ],
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
                     ),
                   ),
                 ),
-                
-                AppSpacing.verticalLg,
-                
-                // Liste des langues
-                for (var language in _languages)
-                  _buildLanguageCard(language),
+                for (var language in _languages) _buildLanguageTile(context, language),
               ],
             ),
     );
   }
 
-  Widget _buildLanguageCard(Map<String, dynamic> language) {
+  Widget _buildLanguageTile(BuildContext context, Map<String, dynamic> language) {
     final bool isSelected = _selectedLanguage == language['code'];
-    
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.smd),
-      child: Card(
-        elevation: isSelected ? 2 : 0,
-        color: isSelected ? AppTheme.primaryColor.withOpacity(0.2) : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: isSelected
-              ? const BorderSide(color: AppTheme.primaryColor, width: 2)
-              : const BorderSide(color: AppTheme.dividerColor, width: 1),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          onTap: () => _saveLanguage(language['code']),
-          child: Padding(
-                    padding: AppSpacing.cardPadding,
-            child: Row(
-              children: [
-                // Drapeau
-                Text(
-                  language['flag'],
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                SizedBox(width: AppSpacing.md),
-                
-                // Information sur la langue
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        language['name'],
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        language['native'],
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      if (language['isRTL'] == true)
-                        Padding(
-                          padding: EdgeInsets.only(top: AppSpacing.xs),
-                          child: Text(
-                            'Écriture de droite à gauche',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppTheme.textSecondary,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                
-                // Indicateur de sélection
-                if (isSelected)
-                  const Icon(
-                    Icons.check_circle,
-                    color: AppTheme.primaryColor,
-                    size: 24.0,
-                  ),
-              ],
-            ),
-          ),
+    return ListTile(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _saveLanguage(language['code']);
+      },
+      leading: Text(
+        language['flag'],
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+      title: Text(
+        language['name'],
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppTheme.textPrimary,
+          fontWeight: FontWeight.w500,
         ),
       ),
+      subtitle: language['native'] != null
+          ? Text(
+              language['native'],
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
+              ),
+            )
+          : null,
+      trailing: isSelected
+          ? Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 22)
+          : const Icon(Icons.chevron_right),
     );
   }
 } 

@@ -110,40 +110,53 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Réserver'),
+        backgroundColor: Colors.white,
         elevation: 0,
-      ),
-      body: LoadingOverlay(
-        isLoading: _isLoadingState(context),
-        child: SingleChildScrollView(
-          padding: AppSpacing.pagePadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Informations sur la résidence
-              _buildResidenceInfo(),
-              
-              AppSpacing.verticalLg,
-              
-              // Formulaire de réservation
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildDateSelectionSection(),
-                    AppSpacing.verticalLg,
-                    _buildReservationModeSection(),
-                    AppSpacing.verticalMd,
-                    _buildGuestsField(),
-                    AppSpacing.verticalLg,
-                    _buildPriceSection(),
-                    AppSpacing.verticalLg,
-                    _buildBookingButton(),
-                  ],
-                ),
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+        title: Text(
+          'Réserver',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
               ),
-            ],
+        ),
+      ),
+      body: SafeArea(
+        bottom: true,
+        child: LoadingOverlay(
+          isLoading: _isLoadingState(context),
+          child: SingleChildScrollView(
+            padding: AppSpacing.pagePadding.copyWith(
+              bottom: AppSpacing.pagePadding.bottom + AppSpacing.lg,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Informations sur la résidence
+                _buildResidenceInfo(),
+                
+                AppSpacing.verticalLg,
+                
+                // Formulaire de réservation
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildDateSelectionSection(),
+                      AppSpacing.verticalLg,
+                      _buildReservationModeSection(),
+                      AppSpacing.verticalMd,
+                      _buildGuestsField(),
+                      AppSpacing.verticalLg,
+                      _buildPriceSection(),
+                      AppSpacing.verticalLg,
+                      _buildBookingButton(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -284,10 +297,22 @@ class _BookingScreenState extends State<BookingScreen> {
               HapticFeedback.lightImpact();
               _checkAvailability();
             },
-            child: const Text('Vérifier la disponibilité'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+            ),
+            child: const Text(
+              'Vérifier la disponibilité',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
-                // Afficher le résultat de la vérification de disponibilité
+        // Afficher le résultat de la vérification de disponibilité
         BlocListener<BookingBloc, booking_states.BookingState>(
           listener: (context, state) {
             if (state is booking_states.ResidenceAvailabilityChecked) {
@@ -406,7 +431,23 @@ class _BookingScreenState extends State<BookingScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
+          labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+            borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+          ),
         ),
         child: Text(
           date != null
@@ -458,9 +499,26 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget _buildGuestsField() {
     return TextFormField(
       controller: _guestsController,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Nombre de personnes',
-        border: OutlineInputBorder(),
+        labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+        prefixIcon: const Icon(Icons.people_outline, color: AppTheme.textSecondary),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
+        ),
       ),
       keyboardType: TextInputType.number,
       validator: (value) {
@@ -470,6 +528,10 @@ class _BookingScreenState extends State<BookingScreen> {
         final guests = int.tryParse(value);
         if (guests == null || guests < 1) {
           return 'Le nombre de personnes doit être au moins 1';
+        }
+        final maxGuests = _residence?.maxOccupancy;
+        if (maxGuests != null && guests > maxGuests) {
+          return 'Capacité maximale: $maxGuests personnes';
         }
         return null;
       },
@@ -558,9 +620,20 @@ class _BookingScreenState extends State<BookingScreen> {
           _handleSubmit();
         } : null,
         style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.black,
+          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.4),
+          disabledForegroundColor: Colors.black.withOpacity(0.6),
+          elevation: 0,
           padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          ),
         ),
-        child: const Text('Réserver maintenant'),
+        child: const Text(
+          'Réserver maintenant',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
