@@ -270,11 +270,12 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
   
   // Widget de chargement avec shimmer effect
   Widget _buildLoadingState(bool isDarkMode) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Shimmer.fromColors(
-        baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-        highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+        baseColor: scheme.surfaceContainerHighest,
+        highlightColor: scheme.surface,
         child: GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -288,7 +289,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
           itemBuilder: (context, index) {
             return Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: scheme.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
             );
@@ -309,14 +310,14 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
               Icon(
                 Icons.category_outlined,
                 size: 20,
-                color: const Color(0xFF1A1A1A),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   widget.title,
                   semanticsLabel: 'Titre de section: ${widget.title}',
-                  style: AppTextStyles.title,
+                  style: AppTextStyles.title.copyWith(color: Theme.of(context).colorScheme.onSurface),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -330,7 +331,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
               semanticsLabel: 'Description: ${widget.subtitle}',
               style: TextStyle(
                 fontSize: context.responsiveFontSize(14),
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
           ],
@@ -370,9 +371,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Material(
-              color: isDarkMode
-                  ? Colors.grey[850]
-                  : Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               elevation: 1,
               shadowColor: Colors.black.withOpacity(0.06),
@@ -405,7 +404,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
-                          color: isDarkMode ? Colors.white : const Color(0xFF1A1A1A),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -416,7 +415,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                         _getCountForCategory(index, category),
                         style: TextStyle(
                           fontSize: 10,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -513,11 +512,9 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
         child: PremiumCard(
           borderRadius: 20,
           elevation: isHovered ? 8 : 4,
-          backgroundColor: isDarkMode 
-            ? AppTheme.primaryColor.withOpacity(0.1) 
-            : Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           border: Border.all(
-            color: isDarkMode ? Colors.white.withOpacity(0.1) : AppTheme.primaryColor.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
             width: 1,
           ),
           child: Stack(
@@ -660,9 +657,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
       child: PremiumCard(
         borderRadius: 20,
         elevation: isActive ? 10 : 4,
-        backgroundColor: isDarkMode
-          ? AppTheme.primaryColor.withOpacity(isActive ? 0.25 : 0.15)
-          : Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         border: Border.all(
           color: isActive ? AppTheme.primaryColor : Colors.transparent,
           width: isActive ? 2 : 0,
@@ -792,9 +787,9 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
           height: 80,
           borderRadius: 12,
           elevation: isHovered ? 8 : 4,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           border: Border.all(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
             width: 1,
           ),
           child: Row(
@@ -830,10 +825,10 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                           children: [
                             Text(
                               category['title'],
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
-                                color: Colors.black87,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -841,7 +836,7 @@ class _PopularCategoriesWidgetState extends State<PopularCategoriesWidget> with 
                               category['description'],
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                               ),
                             ),
                           ],

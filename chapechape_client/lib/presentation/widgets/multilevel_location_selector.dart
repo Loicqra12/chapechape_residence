@@ -314,7 +314,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -323,14 +323,14 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                   child: Text(
                     _getDisplayText(),
                     style: TextStyle(
-                      color: _hasSelection() ? Colors.black : Colors.grey[600],
+                      color: _hasSelection() ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontSize: context.responsiveFontSize(14),
                     ),
                   ),
                 ),
                 Icon(
                   _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ],
             ),
@@ -373,7 +373,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
       padding: const EdgeInsets.all(16),
       constraints: const BoxConstraints(maxHeight: 300),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -411,7 +411,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                   : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
             ),
@@ -439,14 +439,14 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _currentLevel == 0 ? AppTheme.primaryColor : Colors.grey[200],
+              color: _currentLevel == 0 ? AppTheme.primaryColor : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               _selectedCountry?.name ?? 'Pays',
               style: TextStyle(
                 fontSize: 12,
-                color: _currentLevel == 0 ? Colors.white : Colors.black,
+                color: _currentLevel == 0 ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -455,7 +455,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         
         // Flèche
         if (_selectedCountry != null)
-          const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+          Icon(Icons.chevron_right, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
         
         // Région
         if (_selectedCountry != null)
@@ -464,14 +464,14 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _currentLevel == 1 ? AppTheme.primaryColor : Colors.grey[200],
+                color: _currentLevel == 1 ? AppTheme.primaryColor : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 _selectedRegion ?? 'Région',
                 style: TextStyle(
                   fontSize: 12,
-                  color: _currentLevel == 1 ? Colors.white : Colors.black,
+                  color: _currentLevel == 1 ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -480,7 +480,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         
         // Flèche
         if (_selectedRegion != null)
-          const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+          Icon(Icons.chevron_right, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
         
         // Ville
         if (_selectedRegion != null)
@@ -489,14 +489,14 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _currentLevel == 2 ? AppTheme.primaryColor : Colors.grey[200],
+                color: _currentLevel == 2 ? AppTheme.primaryColor : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 _selectedCity?.name ?? 'Ville',
                 style: TextStyle(
                   fontSize: 12,
-                  color: _currentLevel == 2 ? Colors.white : Colors.black,
+                  color: _currentLevel == 2 ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -505,7 +505,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         
         // Flèche
         if (_selectedCity != null)
-          const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+          Icon(Icons.chevron_right, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
         
         // Quartier
         if (_selectedCity != null)
@@ -514,14 +514,14 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _currentLevel == 3 ? AppTheme.primaryColor : Colors.grey[200],
+                color: _currentLevel == 3 ? AppTheme.primaryColor : Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 _selectedNeighborhood ?? 'Quartier',
                 style: TextStyle(
                   fontSize: 12,
-                  color: _currentLevel == 3 ? Colors.white : Colors.black,
+                  color: _currentLevel == 3 ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -559,11 +559,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 32, color: Colors.grey[400]),
+            Icon(Icons.search_off, size: 32, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             const SizedBox(height: 8),
             Text(
               'Aucun pays trouvé',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
             ),
           ],
         ),
@@ -587,11 +587,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
           onTap: () => _selectCountry(country),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: isSelected 
                   ? Border.all(color: AppTheme.primaryColor) 
-                  : Border.all(color: Colors.grey[300]!),
+                  : Border.all(color: Theme.of(context).colorScheme.outline),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -606,7 +606,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                    color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -633,11 +633,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 32, color: Colors.grey[400]),
+            Icon(Icons.search_off, size: 32, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             const SizedBox(height: 8),
             Text(
               'Aucune région trouvée',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
             ),
           ],
         ),
@@ -661,11 +661,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
           onTap: () => _selectRegion(region),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: isSelected 
                   ? Border.all(color: AppTheme.primaryColor) 
-                  : Border.all(color: Colors.grey[300]!),
+                  : Border.all(color: Theme.of(context).colorScheme.outline),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -673,7 +673,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                 Icon(
                   Icons.location_city,
                   size: 20,
-                  color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -681,7 +681,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                    color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -708,11 +708,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 32, color: Colors.grey[400]),
+            Icon(Icons.search_off, size: 32, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             const SizedBox(height: 8),
             Text(
               'Aucune ville trouvée',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
             ),
           ],
         ),
@@ -736,11 +736,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
           onTap: () => _selectCity(city),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: isSelected 
                   ? Border.all(color: AppTheme.primaryColor) 
-                  : Border.all(color: Colors.grey[300]!),
+                  : Border.all(color: Theme.of(context).colorScheme.outline),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -748,7 +748,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                 Icon(
                   Icons.location_city,
                   size: 20,
-                  color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -756,7 +756,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                    color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -783,13 +783,13 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 32, color: Colors.grey[400]),
+            Icon(Icons.search_off, size: 32, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             const SizedBox(height: 8),
             Text(
               _availableNeighborhoods.isEmpty 
                   ? 'Aucun quartier disponible pour cette ville'
                   : 'Aucun quartier ne correspond à votre recherche',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -814,11 +814,11 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
           onTap: () => _selectNeighborhood(neighborhood),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey[100],
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: isSelected 
                   ? Border.all(color: AppTheme.primaryColor) 
-                  : Border.all(color: Colors.grey[300]!),
+                  : Border.all(color: Theme.of(context).colorScheme.outline),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -826,7 +826,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                 Icon(
                   Icons.location_on,
                   size: 20,
-                  color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -834,7 +834,7 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppTheme.primaryColor : Colors.black,
+                    color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -857,9 +857,9 @@ class _MultilevelLocationSelectorState extends State<MultilevelLocationSelector>
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.8,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
             ),

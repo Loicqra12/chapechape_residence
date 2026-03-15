@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
         // Le BlocConsumer s'occupera de la navigation en cas de succès
       } catch (e) {
-        ErrorMessageService.showError(
+        ErrorMessageService.showErrorDialog(
           context,
           e,
           contextType: 'login',
@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
             'Connexion réussie !',
           );
         } else if (state is AuthError) {
-          ErrorMessageService.showError(
+          ErrorMessageService.showErrorDialog(
             context,
             state.message,
             contextType: 'login',
@@ -89,11 +89,13 @@ class _LoginScreenState extends State<LoginScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const SizedBox.shrink(),
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(Icons.close),
               onPressed: () => context.go('/home'),
+              tooltip: 'Fermer',
             ),
           ),
           body: SafeArea(
@@ -157,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         'Bienvenue sur ChapeChape',
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -165,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Connectez-vous pour accéder à votre compte',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -191,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _isPasswordVisible
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                           onPressed: _togglePasswordVisibility,
                         ),
@@ -394,9 +396,9 @@ class _LoginScreenState extends State<LoginScreen> {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.textPrimary,
-          backgroundColor: Colors.white,
-          side: BorderSide(color: Colors.grey.shade300),
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          side: BorderSide(color: Theme.of(context).colorScheme.outline),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

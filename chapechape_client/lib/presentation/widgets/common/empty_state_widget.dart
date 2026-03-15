@@ -24,9 +24,9 @@ class EmptyStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : const Color(0xFF2C3E50);
-    final subtitleColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = scheme.onSurface;
+    final subtitleColor = scheme.onSurface.withOpacity(0.7);
     
     Widget content = SingleChildScrollView(
       padding: padding,
@@ -41,7 +41,7 @@ class EmptyStateWidget extends StatelessWidget {
             errorBuilder: (_, __, ___) => Icon(
               fallbackIcon ?? Icons.image_not_supported_outlined,
               size: imageHeight * 0.5,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
           const SizedBox(height: 32),

@@ -91,9 +91,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             color: Theme.of(context).scaffoldBackgroundColor,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: Colors.black,
-              labelColor: Colors.black,
-              unselectedLabelColor: Colors.black54,
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              labelColor: Theme.of(context).colorScheme.onSurface,
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               tabs: const [
                 Tab(text: 'FAQ'),
                 Tab(text: 'Contact'),
@@ -133,7 +133,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             'Trouvez rapidement des réponses aux questions les plus courantes',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: context.responsiveFontSize(16),
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           AppSpacing.verticalLg,
@@ -153,7 +153,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
           // Pas trouvé votre réponse ?
           Card(
             elevation: 2,
-            color: Colors.grey[100],
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
@@ -240,7 +240,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             child: Text(
               answer,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[700],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
               ),
             ),
           ),
@@ -266,7 +266,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             'Notre équipe est à votre disposition pour vous aider',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: context.responsiveFontSize(16),
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           AppSpacing.verticalLg,
@@ -419,7 +419,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
             'Signalez un problème avec une réservation ou un paiement',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: context.responsiveFontSize(16),
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           AppSpacing.verticalLg,
@@ -516,7 +516,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
           // Informations sur le processus
           Card(
             elevation: 1,
-            color: Colors.grey[100],
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
             child: Padding(
               padding: AppSpacing.cardPadding,
               child: Column(
@@ -572,7 +572,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> with SingleTicker
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                 ],

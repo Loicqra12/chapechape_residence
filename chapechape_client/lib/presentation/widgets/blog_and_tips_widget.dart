@@ -173,7 +173,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
         margin: const EdgeInsets.only(right: 16, bottom: 8),
         borderRadius: 16,
         elevation: 4,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Column(
@@ -217,7 +217,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: _getCategoryColor(blogPost.category).withOpacity(0.8),
+                              color: _getCategoryColor(context, blogPost.category).withOpacity(0.8),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: Colors.white.withOpacity(0.2),
@@ -271,7 +271,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                             blogPost.summary!,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[700],
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -311,7 +311,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                                   _formatDate(blogPost.publishedDate),
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: Colors.grey[600],
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -324,7 +324,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: Theme.of(context).colorScheme.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Row(
@@ -333,14 +333,14 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                                 Icon(
                                   Icons.access_time_rounded,
                                   size: 10,
-                                  color: Colors.grey[700],
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
                                   '${blogPost.readTimeMinutes ?? 3} min',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: Colors.grey[700],
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -366,11 +366,11 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
     
     if (imageUrl == null || imageUrl.isEmpty) {
       return Container(
-        color: Colors.grey[200],
-        child: const Center(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        child: Center(
           child: Icon(
             Icons.image_not_supported_outlined,
-            color: Colors.grey,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             size: 32,
           ),
         ),
@@ -383,18 +383,18 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
         imageUrl: imageUrl,
         fit: BoxFit.cover,
         placeholder: (context, url) => Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
+          baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          highlightColor: Theme.of(context).colorScheme.surface,
           child: Container(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
           ),
         ),
         errorWidget: (context, url, error) => Container(
-          color: Colors.grey[200],
-          child: const Center(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          child: Center(
             child: Icon(
               Icons.error_outline,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               size: 32,
             ),
           ),
@@ -404,11 +404,11 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
     
     // Sinon, c'est un asset local (nous utilisons désormais des URLs en ligne)
     return Container(
-      color: Colors.grey[200],
-      child: const Center(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: Center(
         child: Icon(
           Icons.image_not_supported_outlined,
-          color: Colors.grey,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           size: 32,
         ),
       ),
@@ -440,14 +440,14 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
           Icon(
             Icons.article_outlined,
             size: 48,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
             widget.emptyStateMessage,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           const SizedBox(height: 16),
@@ -455,7 +455,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
             onPressed: _loadBlogPosts,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: AppTheme.textLight,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -479,8 +479,8 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
             width: 280,
             margin: const EdgeInsets.only(right: 16),
             child: Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
+              baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              highlightColor: Theme.of(context).colorScheme.surface,
               child: Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -492,7 +492,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                     // Image placeholder
                     Container(
                       height: 130,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     
                     // Content placeholder
@@ -505,13 +505,13 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                           Container(
                             width: double.infinity,
                             height: 16,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           const SizedBox(height: 4),
                           Container(
                             width: 200,
                             height: 16,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           const SizedBox(height: 8),
                           
@@ -519,13 +519,13 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                           Container(
                             width: double.infinity,
                             height: 12,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           const SizedBox(height: 4),
                           Container(
                             width: 150,
                             height: 12,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           const SizedBox(height: 16),
                           
@@ -535,9 +535,9 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                               Container(
                                 width: 24,
                                 height: 24,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.surface,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -547,13 +547,13 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                                   Container(
                                     width: 100,
                                     height: 12,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.surface,
                                   ),
                                   const SizedBox(height: 4),
                                   Container(
                                     width: 80,
                                     height: 10,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.surface,
                                   ),
                                 ],
                               ),
@@ -561,7 +561,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
                               Container(
                                 width: 50,
                                 height: 20,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.surface,
                               ),
                             ],
                           ),
@@ -616,8 +616,8 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
     }
   }
 
-  Color _getCategoryColor(String? category) {
-    if (category == null) return Colors.grey;
+  Color _getCategoryColor(BuildContext context, String? category) {
+    if (category == null) return Theme.of(context).colorScheme.onSurface;
     
     switch (category.toLowerCase()) {
       case 'tips':
@@ -631,7 +631,7 @@ class _BlogAndTipsWidgetState extends State<BlogAndTipsWidget> {
       case 'lifestyle':
         return Colors.teal;
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface;
     }
   }
 }

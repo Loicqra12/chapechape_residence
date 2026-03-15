@@ -64,6 +64,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('Avis'),
       ),
       body: _buildBody(),
@@ -166,7 +168,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   Text(
                     '$numberOfReviews avis',
                     style: AppTextStyles.body.copyWith(
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -198,7 +200,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       children: [
         Text(
           'Avis des clients',
-          style: AppTextStyles.title.copyWith(color: AppTheme.textPrimary),
+          style: AppTextStyles.title.copyWith(color: Theme.of(context).colorScheme.onSurface),
         ),
         AppSpacing.verticalMd,
         ...reviews.map((review) => _buildReviewCard(review)).toList(),
@@ -271,7 +273,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                       Text(
                         DateFormat('dd/MM/yyyy').format(reviewDate),
                         style: AppTextStyles.caption.copyWith(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                       ),
                   ],
@@ -284,7 +286,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   Text(
                     overallRating.toStringAsFixed(1),
                     style: AppTextStyles.caption.copyWith(
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       fontWeight: FontWeight.bold,
                     ),
                   ),

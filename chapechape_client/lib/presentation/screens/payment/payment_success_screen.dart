@@ -53,6 +53,8 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('Paiement réussi'),
         elevation: 0,
       ),
@@ -340,7 +342,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
               Text(
                 description,
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   fontSize: 14,
                 ),
               ),

@@ -186,15 +186,15 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                       HapticFeedback.lightImpact();
                       _sendTestNotification();
                     },
-                    leading: Icon(Icons.send, color: AppTheme.textPrimary),
+                    leading: Icon(Icons.send, color: Theme.of(context).colorScheme.onSurface),
                     title: Text(
                       'Tester les notifications',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
                 AppSpacing.verticalMd,
                 Padding(
@@ -218,15 +218,15 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           height: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Icon(Icons.save, color: AppTheme.textPrimary),
+                      : Icon(Icons.save, color: Theme.of(context).colorScheme.onSurface),
                   title: Text(
                     'Sauvegarder',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                 ),
               ],
             ),
@@ -254,15 +254,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     required IconData icon,
     bool enabled = true,
   }) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return SwitchListTile(
       secondary: Icon(
         icon,
-        color: enabled ? AppTheme.textPrimary : Colors.grey,
+        color: enabled ? onSurface : onSurface.withOpacity(0.5),
       ),
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: enabled ? AppTheme.textPrimary : Colors.grey,
+          color: enabled ? onSurface : onSurface.withOpacity(0.5),
           fontWeight: FontWeight.w500,
         ),
       ),

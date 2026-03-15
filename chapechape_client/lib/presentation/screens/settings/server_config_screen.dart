@@ -147,6 +147,8 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('Configuration du serveur'),
         actions: [
           IconButton(
@@ -228,7 +230,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                     controller: _ipController,
                     decoration: InputDecoration(
                       labelText: 'Adresse IP du serveur',
-                      hintText: '192.168.1.82',
+                      hintText: '192.168.1.77',
                       border: OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.computer),
                     ),

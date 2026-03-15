@@ -268,6 +268,8 @@ class _PaymentScreenState extends State<PaymentScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('Paiement'),
         elevation: 0,
         leading: IconButton(
@@ -410,8 +412,11 @@ class _PaymentScreenState extends State<PaymentScreen>
   }
 
   Widget _buildPaymentForm() {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
-      padding: AppSpacing.cardPadding,
+      padding: AppSpacing.cardPadding.copyWith(
+        bottom: AppSpacing.md + bottomPadding,
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -758,17 +763,18 @@ class _PaymentScreenState extends State<PaymentScreen>
       isDisabled = !_isPhoneValid;
     }
     
+    final scheme = Theme.of(context).colorScheme;
     return ElevatedButton(
       onPressed: isDisabled ? null : _confirmPayment,
       style: ElevatedButton.styleFrom(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-        backgroundColor: isDisabled ? Colors.grey : AppTheme.primaryColor,
+        backgroundColor: isDisabled ? scheme.surfaceContainerHighest : AppTheme.primaryColor,
       ),
       child: Text(
         isDisabled ? 'Numéro de téléphone requis' : 'Confirmer le paiement',
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.bold,
-          color: isDisabled ? Colors.grey[600] : Colors.white,
+          color: isDisabled ? scheme.onSurface.withOpacity(0.7) : AppTheme.textLight,
         ),
       ),
     );

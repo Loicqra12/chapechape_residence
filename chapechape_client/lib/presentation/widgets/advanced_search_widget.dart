@@ -212,7 +212,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: AppTheme.softShadow,
       ),
@@ -254,7 +254,12 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Où ?', style: AppTextStyles.title),
+        Text(
+          'Où ?',
+          style: AppTextStyles.title.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         const SizedBox(height: 12),
         InkWell(
           onTap: () async {
@@ -275,12 +280,12 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
             decoration: BoxDecoration(
               color: hasDestination
                   ? AppTheme.primaryColor.withOpacity(0.06)
-                  : Colors.grey[100],
+                  : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: hasDestination
                     ? AppTheme.primaryColor
-                    : Colors.grey[300]!,
+                    : Theme.of(context).colorScheme.outline,
                 width: hasDestination ? 1.5 : 1,
               ),
             ),
@@ -293,7 +298,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
                   size: 20,
                   color: hasDestination
                       ? AppTheme.primaryColor
-                      : Colors.grey[500],
+                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -304,8 +309,8 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
                     style: TextStyle(
                       fontSize: 14,
                       color: hasDestination
-                          ? AppTheme.textPrimary
-                          : AppTheme.textSecondary,
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       fontWeight: hasDestination
                           ? FontWeight.w600
                           : FontWeight.normal,
@@ -317,11 +322,11 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
                   GestureDetector(
                     onTap: () =>
                         setState(() => _selectedDestination = null),
-                    child: Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
+                    child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   )
                 else
                   Icon(Icons.arrow_forward_ios,
-                      size: 14, color: Colors.grey[400]),
+                      size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ],
             ),
           ),
@@ -366,7 +371,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         Text(
           'Type de résidence',
           style: TextStyle(
-            color: Colors.grey[800],
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
             fontSize: context.responsiveFontSize(16),
           ),
@@ -421,7 +426,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         Text(
           'Fourchette de prix (FCFA)',
           style: TextStyle(
-            color: Colors.grey[800],
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
             fontSize: context.responsiveFontSize(16),
           ),
@@ -442,13 +447,13 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         SliderTheme(
           data: SliderThemeData(
             activeTrackColor: AppTheme.primaryColor,
-            inactiveTrackColor: Colors.grey.shade200,
+            inactiveTrackColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             thumbColor: AppTheme.primaryColor,
             overlayColor: AppTheme.primaryColor.withOpacity(0.2),
             valueIndicatorColor: AppTheme.primaryColor,
             showValueIndicator: ShowValueIndicator.always,
-            valueIndicatorTextStyle: const TextStyle(
-              color: Colors.white,
+            valueIndicatorTextStyle: TextStyle(
+              color: AppTheme.textLight,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -485,7 +490,7 @@ class _AdvancedSearchWidgetState extends State<AdvancedSearchWidget> {
         onPressed: _executeSearch,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: AppTheme.textLight,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

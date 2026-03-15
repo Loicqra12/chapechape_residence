@@ -50,7 +50,9 @@ class MessageBubble extends StatelessWidget {
                 Text(
                   DateFormatter.formatMessageTime(message.createdAt),
                   style: TextStyle(
-                    color: isMe ? Colors.white70 : Colors.black54,
+                    color: isMe
+                        ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.9)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -59,7 +61,7 @@ class MessageBubble extends StatelessWidget {
                   Icon(
                     message.isRead ? Icons.done_all : Icons.done,
                     size: 16,
-                    color: Colors.white70,
+                    color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.9),
                   ),
                 ],
               ],
@@ -76,7 +78,9 @@ class MessageBubble extends StatelessWidget {
       return Text(
         message.content,
         style: TextStyle(
-          color: isMe ? Colors.white : Colors.black,
+          color: isMe
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurface,
           fontSize: 16,
         ),
       );
@@ -108,7 +112,9 @@ class MessageBubble extends StatelessWidget {
                 child: Text(
                   message.content,
                   style: TextStyle(
-                    color: isMe ? Colors.white : Colors.black,
+                    color: isMe
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -137,7 +143,7 @@ class MessageBubble extends StatelessWidget {
                 errorBuilder: (context, error, stackTrace) => Container(
                   width: 200,
                   height: 200,
-                  color: Colors.grey.shade300,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -146,7 +152,9 @@ class MessageBubble extends StatelessWidget {
                       Text(
                         "Impossible de charger l'image",
                         style: TextStyle(
-                          color: isMe ? Colors.white70 : Colors.black54,
+                          color: isMe
+                              ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.9)
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 12,
                         ),
                         textAlign: TextAlign.center,
@@ -172,7 +180,9 @@ class MessageBubble extends StatelessWidget {
             child: Text(
               message.content,
               style: TextStyle(
-                color: isMe ? Colors.white : Colors.black,
+                color: isMe
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurface,
                 decoration: TextDecoration.underline,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -187,7 +197,9 @@ class MessageBubble extends StatelessWidget {
       return Text(
         message.content,
         style: TextStyle(
-          color: isMe ? Colors.white : Colors.black,
+          color: isMe
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurface,
           fontSize: 16,
         ),
       );

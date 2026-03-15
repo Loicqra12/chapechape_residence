@@ -240,8 +240,8 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
                       Icon(
                         Icons.arrow_drop_down,
                         color: widget.enabled && !widget.readOnly 
-                            ? AppTheme.textSecondary 
-                            : AppTheme.textSecondary.withOpacity(0.5),
+? Theme.of(context).colorScheme.onSurface.withOpacity(0.8)
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         size: 20,
                       ),
                     ],

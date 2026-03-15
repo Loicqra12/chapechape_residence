@@ -408,9 +408,9 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
                       top: false,
                       child: Container(
                         width: double.infinity,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                         ),
                         child: Column(
                           children: [
@@ -420,7 +420,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
                                 width: 40,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[300],
+                                  color: Theme.of(context).colorScheme.outline,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
@@ -475,14 +475,14 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
       padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
       child: Row(
         children: [
-          const Text('Filtres',
+          Text('Filtres',
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A1A))),
+                  color: Theme.of(context).colorScheme.onSurface)),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.close, color: Color(0xFF1A1A1A)),
+            icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -560,7 +560,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
         SliderTheme(
           data: SliderThemeData(
             activeTrackColor: AppTheme.primaryColor,
-            inactiveTrackColor: Colors.grey[200],
+            inactiveTrackColor: Theme.of(context).colorScheme.outline,
             thumbColor: AppTheme.primaryColor,
             overlayColor: AppTheme.primaryColor.withOpacity(0.15),
             trackHeight: 3,
@@ -643,7 +643,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -719,12 +719,12 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: selected ? const Color(0xFF1A1A1A) : Colors.white,
+              color: selected ? AppTheme.primaryColor : Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
                 color: selected
-                    ? const Color(0xFF1A1A1A)
-                    : Colors.grey[300]!,
+                    ? AppTheme.primaryColor
+                    : Theme.of(context).colorScheme.outline,
               ),
             ),
             child: Text(
@@ -732,8 +732,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color:
-                    selected ? Colors.white : const Color(0xFF1A1A1A),
+                color: selected ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -750,8 +749,8 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(20, 12, 20, safeBottom + 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline)),
       ),
       child: Row(
         children: [
@@ -766,12 +765,12 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
                 padding: EdgeInsets.zero,
                 alignment: Alignment.centerLeft,
               ),
-              child: const Text(
+              child: Text(
                 'Tout effacer',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -783,8 +782,8 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).pop(_filters),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A1A1A),
-                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: AppTheme.textLight,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -813,10 +812,10 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A1A))),
+                  color: Theme.of(context).colorScheme.onSurface)),
           const SizedBox(height: 14),
           content,
         ],
@@ -825,7 +824,7 @@ class _SearchFiltersPageState extends State<_SearchFiltersPage> {
   }
 
   Widget _divider() =>
-      Divider(height: 1, color: Colors.grey[200]);
+      Divider(height: 1, color: Theme.of(context).colorScheme.outline);
 }
 
 // ---------------------------------------------------------------------------
@@ -852,11 +851,10 @@ class _PillChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1A1A1A) : Colors.white,
+          color: selected ? AppTheme.primaryColor : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color:
-                selected ? const Color(0xFF1A1A1A) : Colors.grey[300]!,
+            color: selected ? AppTheme.primaryColor : Theme.of(context).colorScheme.outline,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -865,14 +863,14 @@ class _PillChip extends StatelessWidget {
           children: [
             Icon(icon,
                 size: 16,
-                color: selected ? Colors.white : Colors.grey[600]),
+                color: selected ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : const Color(0xFF1A1A1A),
+                color: selected ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -905,8 +903,8 @@ class _CounterRow extends StatelessWidget {
       children: [
         Expanded(
           child: Text(label,
-              style: const TextStyle(
-                  fontSize: 15, color: Color(0xFF1A1A1A))),
+              style: TextStyle(
+                  fontSize: 15, color: Theme.of(context).colorScheme.onSurface)),
         ),
         _CountBtn(
           icon: Icons.remove,
@@ -917,10 +915,10 @@ class _CounterRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             value == 0 ? displayZeroAs : displayValueAs(value),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A)),
+                color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
         _CountBtn(
@@ -951,11 +949,11 @@ class _CountBtn extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-              color: enabled ? Colors.grey[400]! : Colors.grey[200]!),
+              color: Theme.of(context).colorScheme.outline),
         ),
         child: Icon(icon,
             size: 18,
-            color: enabled ? const Color(0xFF1A1A1A) : Colors.grey[300]),
+            color: enabled ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
       ),
     );
   }
@@ -972,20 +970,20 @@ class _PriceBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+              style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8))),
           const SizedBox(height: 2),
           Text(value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A1A))),
+                  color: Theme.of(context).colorScheme.onSurface)),
         ],
       ),
     );

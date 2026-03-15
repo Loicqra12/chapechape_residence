@@ -4,6 +4,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:chapechape_client/core/config/app_config_manager.dart';
+import 'package:chapechape_client/core/config/google_auth_config.dart';
+import 'package:chapechape_client/core/config/environment.dart';
 import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
 
@@ -70,17 +73,14 @@ class AuthService {
       // Logs limités au debug (pas en prod)
       debugPrint('Tentative de connexion');
       
-      // Format exact comme dans Postman
+      // Format attendu par l'API : email + password uniquement.
+      // Ne pas envoyer rememberMe : le backend ne l'utilise pas et ça peut faire
+      // échouer la connexion (validation stricte). La case reste pour usage local futur.
       final Map<String, dynamic> loginData = {
         'email': email,
         'password': password,
       };
-      
-      // Ajouter rememberMe si nécessaire
-      if (rememberMe) {
-        loginData['rememberMe'] = true;
-      }
-      
+
       // Utiliser le chemin complet avec /api
       final response = await _apiService.post('/auth/login', data: loginData);
 
@@ -237,11 +237,15 @@ class AuthService {
   // Connexion avec Google
   Future<User> signInWithGoogle() async {
     try {
-      // Démarrer le processus de connexion avec Google avec serverClientId
+      // En dev : Web Client ID du projet google-services.json (certificat debug).
+      // En prod : Web Client ID du projet Firebase de production.
+      final isProd = AppConfigManager.environment == Environment.prod;
+      final serverClientId = isProd
+          ? GoogleAuthConfig.webClientIdProd
+          : GoogleAuthConfig.webClientIdDev;
       final GoogleSignIn googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
-        // ✅ CORRECTION: Utiliser le bon serverClientId pour obtenir idToken
-        serverClientId: '39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com',
+        serverClientId: serverClientId,
       );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       

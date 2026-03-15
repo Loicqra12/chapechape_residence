@@ -63,7 +63,7 @@ class FavoritesScreen extends StatelessWidget {
                         state.message,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                       ),
                     ),
@@ -249,13 +249,13 @@ class FavoritesScreen extends StatelessWidget {
                     if (residence.location != null)
                       Row(
                         children: [
-                        const Icon(Icons.location_on, size: 16, color: AppTheme.textSecondary),
+                        Icon(Icons.location_on, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                         SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
                             residence.location!.displayAddress,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

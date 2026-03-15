@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 /// Widget pour afficher et gérer les QR codes de check-in/check-out
 /// Supporte la génération, l'affichage, le partage et la régénération
@@ -101,7 +102,7 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
 
   Color get _primaryColor {
     if (!BookingHelpers.hasCheckInQR(widget.booking)) {
-      return Colors.grey;
+      return Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     }
     return Theme.of(context).primaryColor;
   }
@@ -155,10 +156,11 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
       return _buildEmptyQRCode();
     }
 
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -175,8 +177,8 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
             width: widget.size,
             height: widget.size,
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black, width: 2),
+              color: scheme.surface,
+              border: Border.all(color: scheme.onSurface, width: 2),
             ),
             child: Stack(
               children: [
@@ -190,7 +192,7 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    color: Colors.white,
+                    color: scheme.surface,
                     child: Text(
                       'QR CODE\n(Placeholder)',
                       textAlign: TextAlign.center,
@@ -211,17 +213,17 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: scheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               _qrData!.length > 20 
                   ? '${_qrData!.substring(0, 20)}...'
                   : _qrData!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 12,
-                color: Colors.grey,
+                color: scheme.onSurface.withOpacity(0.7),
               ),
             ),
           ),
@@ -231,13 +233,14 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
   }
 
   Widget _buildEmptyQRCode() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: scheme.outline),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -245,13 +248,13 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
           Icon(
             Icons.qr_code_2,
             size: widget.size * 0.3,
-            color: Colors.grey[400],
+            color: scheme.onSurface.withOpacity(0.6),
           ),
           const SizedBox(height: 8),
           Text(
             'QR Code non disponible',
             style: TextStyle(
-              color: Colors.grey[600],
+              color: scheme.onSurface.withOpacity(0.8),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -260,7 +263,7 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
           Text(
             'Sera généré après confirmation',
             style: TextStyle(
-              color: Colors.grey[500],
+              color: scheme.onSurface.withOpacity(0.6),
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -379,7 +382,7 @@ class _QRCodeDisplayWidgetState extends State<QRCodeDisplayWidget>
       label: Text(_isLoading ? 'Génération...' : 'Générer QR Code'),
       style: ElevatedButton.styleFrom(
         backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppTheme.textLight,
       ),
     );
   }
@@ -484,12 +487,12 @@ class CompactQRCodeWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: hasQR 
               ? Theme.of(context).primaryColor.withOpacity(0.1)
-              : Colors.grey[100],
+              : Theme.of(context).colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: hasQR 
                 ? Theme.of(context).primaryColor.withOpacity(0.3)
-                : Colors.grey[300]!,
+                : Theme.of(context).colorScheme.outline,
           ),
         ),
         child: Row(
@@ -499,7 +502,7 @@ class CompactQRCodeWidget extends StatelessWidget {
               hasQR ? Icons.qr_code_2 : Icons.qr_code_2_outlined,
               color: hasQR 
                   ? Theme.of(context).primaryColor
-                  : Colors.grey[400],
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               size: 20,
             ),
             const SizedBox(width: 4),
@@ -508,7 +511,7 @@ class CompactQRCodeWidget extends StatelessWidget {
               style: TextStyle(
                 color: hasQR 
                     ? Theme.of(context).primaryColor
-                    : Colors.grey[600],
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

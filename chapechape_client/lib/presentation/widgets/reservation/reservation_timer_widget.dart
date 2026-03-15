@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart';
 
 /// Types de timers supportés par le widget
 enum TimerType {
@@ -270,7 +271,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
             child: CircularProgressIndicator(
               value: _progress,
               strokeWidth: 8.0,
-              backgroundColor: Colors.grey[300],
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(_config.primaryColor),
             ),
           ),
@@ -319,7 +320,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
             _config.message,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -342,7 +343,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
               onPressed: widget.onPrimaryAction,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _config.primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppTheme.textLight,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -378,13 +379,14 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
   }
 
   Widget _buildExpiredState(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16.0),
       margin: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.grey[400]!),
+        border: Border.all(color: scheme.outline),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -392,7 +394,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
           Icon(
             Icons.timer_off,
             size: widget.size * 0.4,
-            color: Colors.grey[500],
+            color: scheme.onSurface.withOpacity(0.6),
           ),
           const SizedBox(height: 16),
           Text(
@@ -400,7 +402,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -410,7 +412,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget>
                 : "Le délai de paiement est dépassé",
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: scheme.onSurface.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),

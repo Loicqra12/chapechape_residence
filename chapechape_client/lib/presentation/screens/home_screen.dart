@@ -132,11 +132,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   final isDark = Theme.of(context).brightness == Brightness.dark;
                   final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     letterSpacing: -0.3,
                   );
                   final subtitleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppTheme.textSecondary : AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     height: 1.35,
                   );
                   String title;
@@ -155,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     opacity: _heroFade,
                     child: Container(
                       width: double.infinity,
+                      constraints: const BoxConstraints(minHeight: 120),
                       decoration: BoxDecoration(
                         image: const DecorationImage(
                           image: AssetImage(AppAssets.homescreenPlan),
@@ -193,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
+                                softWrap: true,
                               ),
                             ],
                           ),

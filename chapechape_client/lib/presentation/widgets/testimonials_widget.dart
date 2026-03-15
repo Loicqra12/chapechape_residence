@@ -52,7 +52,7 @@ class TestimonialsWidget extends StatelessWidget {
               'Découvrez les expériences de nos clients satisfaits',
               style: TextStyle(
                 fontSize: context.responsiveFontSize(16),
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
             const SizedBox(height: 24),

@@ -27,7 +27,7 @@ class ChapeWatermarkWidget extends StatelessWidget {
                   fontSize: 10,
                 )
             : Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.black54,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   fontSize: 10,
                 );
 

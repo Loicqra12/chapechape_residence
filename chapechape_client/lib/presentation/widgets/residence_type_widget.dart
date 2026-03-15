@@ -166,7 +166,7 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.textPrimary.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
                     ),
@@ -193,7 +193,7 @@ class _ResidenceTypeWidgetState extends State<ResidenceTypeWidget> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.textPrimary.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
                     ),

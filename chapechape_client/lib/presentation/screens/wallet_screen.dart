@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
+import 'package:chapechape_client/core/utils/responsive_utils.dart';
 
 /// Écran Portefeuille & Récompenses (version store : simplifié, conforme aux normes Google)
 class WalletScreen extends StatefulWidget {
@@ -112,23 +113,23 @@ class _WalletScreenState extends State<WalletScreen> {
                 Icon(
                   Icons.account_balance_wallet_outlined,
                   size: 80,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Aucune transaction',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: context.responsiveFontSize(16),
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Vos transactions apparaîtront ici',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: context.responsiveFontSize(14),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -157,7 +158,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 Text(
                   'Points de fidélité',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 AppSpacing.verticalSm,
@@ -182,7 +183,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 Text(
                   '1 point = 10 FCFA de réduction',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ],

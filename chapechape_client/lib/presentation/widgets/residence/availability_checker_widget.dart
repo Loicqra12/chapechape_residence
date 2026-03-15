@@ -61,7 +61,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -196,20 +196,20 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
                 ),
               ),
               child: _isChecking
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : Text(
                       _hasChecked ? 'Vérifier à nouveau' : 'Vérifier disponibilité',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
             ),
@@ -235,7 +235,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: theme.colorScheme.outline),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -244,7 +244,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
             const SizedBox(height: 6),
@@ -275,7 +275,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: theme.colorScheme.outline),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -284,7 +284,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
           Text(
             'Nombre d\'invités',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -309,7 +309,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
                 icon: const Icon(Icons.remove_circle_outline),
                 color: _numberOfGuests > 1
                     ? theme.colorScheme.primary
-                    : Colors.grey[400],
+                    : theme.colorScheme.onSurface.withOpacity(0.5),
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -328,7 +328,7 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
                 icon: const Icon(Icons.add_circle_outline),
                 color: _numberOfGuests < _maxGuests
                     ? theme.colorScheme.primary
-                    : Colors.grey[400],
+                    : theme.colorScheme.onSurface.withOpacity(0.5),
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -351,9 +351,8 @@ class _AvailabilityCheckerWidgetState extends State<AvailabilityCheckerWidget> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Theme.of(context).colorScheme.primary,
-              onPrimary: Colors.white,
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              onPrimary: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
           child: child!,

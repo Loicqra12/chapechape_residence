@@ -154,9 +154,10 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: Icon(Icons.arrow_back_ios_new, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => context.pop(),
         ),
         systemOverlayStyle: SystemUiOverlayStyle.dark,
@@ -250,7 +251,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                             Text(
                               'Créez un mot de passe fort pour sécuriser votre compte',
                               style: AppTheme.bodyMedium.copyWith(
-                                color: AppTheme.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                               ),
                             ),
                             AppSpacing.verticalLg,
@@ -333,7 +334,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                           borderRadius: BorderRadius.circular(AppSpacing.xs),
                                           child: LinearProgressIndicator(
                                             value: _passwordStrength,
-                                            backgroundColor: Colors.grey.shade200,
+                                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                                             valueColor: AlwaysStoppedAnimation<Color>(_strengthColor),
                                             minHeight: 6,
                                           ),
@@ -342,7 +343,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
                                         Text(
                                           'Utilisez au moins 8 caractères avec des lettres majuscules, minuscules, des chiffres et des caractères spéciaux',
                                           style: AppTheme.labelSmall.copyWith(
-                                            color: AppTheme.textSecondary,
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                           ),
                                         ),
                                       ],
@@ -429,10 +430,10 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
       decoration: InputDecoration(
         labelText: labelText,
         labelStyle: AppTheme.bodyMedium.copyWith(
-          color: AppTheme.textSecondary,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).colorScheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide.none,
@@ -440,7 +441,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           borderSide: BorderSide(
-            color: Colors.grey.shade200,
+            color: Theme.of(context).colorScheme.outline,
             width: 1,
           ),
         ),
@@ -465,14 +466,14 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> with Single
             width: 2,
           ),
         ),
-        prefixIcon: const Icon(
+        prefixIcon: Icon(
           Icons.lock_outline,
-          color: AppTheme.textSecondary,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
         suffixIcon: IconButton(
           icon: Icon(
             obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-            color: AppTheme.textSecondary,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
           ),
           onPressed: toggleVisibility,
         ),

@@ -4,6 +4,38 @@ import '../utils/error_mapper.dart';
 
 /// Service pour afficher des messages d'erreur contextuels à l'utilisateur
 class ErrorMessageService {
+  /// Affiche une boîte de dialogue d'erreur (titre + message + OK), comme sur les apps modernes.
+  /// L'utilisateur ferme avec OK — pas de bannière rouge persistante.
+  static void showErrorDialog(
+    BuildContext context,
+    dynamic error, {
+    String contextType = 'generic',
+    VoidCallback? onRetry,
+  }) {
+    final message = ErrorMapper.mapGenericError(error, contextType);
+    final title = ErrorMapper.getErrorTitle(contextType);
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Text(message),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              if (onRetry != null) onRetry();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Affiche un message d'erreur contextuel avec un SnackBar
   static void showError(
     BuildContext context,

@@ -125,7 +125,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                       Tab(text: 'Dates flexibles'),
                     ],
                     labelColor: AppTheme.primaryColor,
-                    unselectedLabelColor: Colors.grey,
+                    unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     indicatorColor: AppTheme.primaryColor,
                   ),
                   
@@ -146,10 +146,10 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
                           spreadRadius: 1,
                           blurRadius: 5,
                           offset: const Offset(0, -3),
@@ -210,7 +210,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
+                              foregroundColor: AppTheme.textLight,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(5),
@@ -317,15 +317,15 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
               mainAxisSize: MainAxisSize.min,
               children: _flexibilityOptions.map((option) {
                 final isSelected = _selectedFlexibility == option;
-                final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                final scheme = Theme.of(context).colorScheme;
                 final primaryColor = Theme.of(context).primaryColor;
-                final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
+                final borderColor = scheme.outline;
                 final backgroundColor = isSelected 
                     ? primaryColor.withOpacity(0.1) 
-                    : (isDarkMode ? Colors.grey[800] : Colors.white);
+                    : scheme.surfaceContainerLow;
                 final textColor = isSelected 
                     ? primaryColor 
-                    : (isDarkMode ? Colors.white70 : Colors.black87);
+                    : scheme.onSurface.withOpacity(0.85);
                     
                 return GestureDetector(
                   onTap: () {
@@ -339,7 +339,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isSelected ? primaryColor : borderColor!,
+                        color: isSelected ? primaryColor : borderColor,
                         width: 1,
                       ),
                       borderRadius: BorderRadius.circular(25),
@@ -377,12 +377,12 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
     });
 
     // Thème et couleurs
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     final primaryColor = Theme.of(context).primaryColor;
-    final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
-    final backgroundColor = isDarkMode ? Colors.grey[800] : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black87;
-    final headingColor = isDarkMode ? Colors.white : Colors.black;
+    final borderColor = scheme.outline;
+    final backgroundColor = scheme.surfaceContainerLow;
+    final textColor = scheme.onSurface;
+    final headingColor = scheme.onSurface;
 
     return SingleChildScrollView(
       child: Padding(
@@ -417,7 +417,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isSelected ? primaryColor : borderColor!,
+                          color: isSelected ? primaryColor : borderColor,
                           width: 1,
                         ),
                         borderRadius: BorderRadius.circular(25),
@@ -487,7 +487,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isSelected ? primaryColor : borderColor!,
+                            color: isSelected ? primaryColor : borderColor,
                             width: 1,
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -521,7 +521,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
       height: 5,
       width: 60,
       decoration: BoxDecoration(
-        color: Colors.grey[300],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(2.5),
       ),
     );
@@ -551,16 +551,13 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
 
   @override
   Widget build(BuildContext context) {
-    // Détecter le mode sombre
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     final primaryColor = Theme.of(context).primaryColor;
-    
-    // Couleurs adaptatives selon le mode
-    final borderColor = isDarkMode ? Colors.grey[700] : Colors.grey[300];
-    final textColor = isDarkMode 
-        ? (_selectedDateRange != null ? Colors.white : Colors.grey[400])
-        : (_selectedDateRange != null ? Colors.black : Colors.grey[600]);
-    final backgroundColor = isDarkMode ? Colors.grey[850] : Colors.white;
+    final borderColor = scheme.outline;
+    final textColor = _selectedDateRange != null
+        ? scheme.onSurface
+        : scheme.onSurface.withOpacity(0.7);
+    final backgroundColor = scheme.surface;
     
     return Material(
       color: Colors.transparent,
@@ -570,7 +567,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            border: Border.all(color: borderColor!),
+            border: Border.all(color: borderColor),
             borderRadius: BorderRadius.circular(10),
             color: backgroundColor,
           ),
@@ -604,7 +601,7 @@ class _DateRangePickerWidgetState extends State<DateRangePickerWidget> with Sing
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(4.0),
-                    child: Icon(Icons.clear, size: 16, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                    child: Icon(Icons.clear, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   ),
                 ),
             ],

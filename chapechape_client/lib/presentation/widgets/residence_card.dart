@@ -249,13 +249,13 @@ class ResidenceCard extends StatelessWidget {
                         onTap: onFavoritePressed,
                         child: Container(
                           padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             residence.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: residence.isFavorite ? AppTheme.primaryColor : AppTheme.textSecondary,
+                            color: residence.isFavorite ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             size: 14,
                           ),
                         ),
@@ -267,10 +267,10 @@ class ResidenceCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               displayName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -278,12 +278,12 @@ class ResidenceCard extends StatelessWidget {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textSecondary),
+                Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     displayAddress,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -296,23 +296,17 @@ class ResidenceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFeature(IconData icon, String text) {
+  Widget _buildFeature(BuildContext context, IconData icon, String text) {
+    final onSurfaceMuted = Theme.of(context).colorScheme.onSurface.withOpacity(0.8);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          color: AppTheme.textSecondary,
-          size: 16,
-        ),
+        Icon(icon, color: onSurfaceMuted, size: 16),
         const SizedBox(width: 2),
         Flexible(
           child: Text(
             text,
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: onSurfaceMuted, fontSize: 12),
             overflow: TextOverflow.ellipsis,
           ),
         ),

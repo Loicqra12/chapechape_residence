@@ -158,6 +158,8 @@ class _BookingModifyScreenState extends State<BookingModifyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('Modifier la réservation'),
         elevation: 0,
       ),

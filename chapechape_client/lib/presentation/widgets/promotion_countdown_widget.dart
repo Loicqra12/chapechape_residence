@@ -112,11 +112,11 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
     return Container(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.smd, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: _isUrgent ? AppTheme.errorColor : AppTheme.textPrimary.withOpacity(0.8),
+        color: _isUrgent ? AppTheme.errorColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         boxShadow: [
           BoxShadow(
-            color: (_isUrgent ? AppTheme.errorColor : AppTheme.textPrimary).withOpacity(0.3),
+            color: (_isUrgent ? AppTheme.errorColor : Theme.of(context).colorScheme.onSurface).withOpacity(0.3),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -179,7 +179,7 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
     return Container(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: _isUrgent ? AppTheme.errorColor.withOpacity(0.9) : AppTheme.textPrimary.withOpacity(0.7),
+        color: _isUrgent ? AppTheme.errorColor.withOpacity(0.9) : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
       ),
       child: Row(
@@ -217,7 +217,7 @@ class _PromotionCountdownWidgetState extends State<PromotionCountdownWidget> wit
     return Container(
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: AppTheme.textSecondary.withOpacity(0.8),
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         borderRadius: BorderRadius.circular(AppSpacing.smd / 2),
       ),
       child: Row(

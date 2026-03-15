@@ -34,6 +34,8 @@ class PaymentFailedScreen extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           title: Text(isExpired ? 'Paiement expiré' : 'Paiement échoué'),
           elevation: 0,
           automaticallyImplyLeading: false, // Pas de bouton retour

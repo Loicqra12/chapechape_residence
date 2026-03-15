@@ -41,6 +41,8 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurfaceMuted = colorScheme.onSurface.withOpacity(0.8);
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
@@ -54,28 +56,30 @@ class CustomTextField extends StatelessWidget {
       minLines: minLines,
       autofocus: autofocus,
       focusNode: focusNode,
-      style: const TextStyle(fontSize: 16),
+      enableInteractiveSelection: true,
+      cursorColor: colorScheme.primary,
+      style: TextStyle(fontSize: 16, color: colorScheme.onSurface, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
         prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: AppTheme.textSecondary, size: 22)
+            ? Icon(prefixIcon, color: onSurfaceMuted, size: 22)
             : null,
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: colorScheme.surfaceContainerLow,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -85,18 +89,9 @@ class CustomTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
-        labelStyle: TextStyle(
-          color: AppTheme.textSecondary,
-          fontSize: 16,
-        ),
-        hintStyle: TextStyle(
-          color: AppTheme.textSecondary.withOpacity(0.7),
-          fontSize: 14,
-        ),
-        errorStyle: const TextStyle(
-          color: Colors.red,
-          fontSize: 12,
-        ),
+        labelStyle: TextStyle(color: onSurfaceMuted, fontSize: 16),
+        hintStyle: TextStyle(color: onSurfaceMuted.withOpacity(0.85), fontSize: 14),
+        errorStyle: const TextStyle(color: Colors.red, fontSize: 12),
       ),
     );
   }

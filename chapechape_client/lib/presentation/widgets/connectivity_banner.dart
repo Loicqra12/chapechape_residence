@@ -164,32 +164,50 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   }
 
   Widget _buildOfflineBanner(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Container(
         width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 72),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.lightGold,
-              Color(0xFFFFFBF5),
-            ],
-          ),
+          gradient: isDark
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).colorScheme.surfaceContainerHigh,
+                    Theme.of(context).colorScheme.surface,
+                  ],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.lightGold,
+                    Color(0xFFFFFBF5),
+                  ],
+                ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.4),
+            color: AppTheme.primaryColor.withOpacity(isDark ? 0.5 : 0.4),
             width: 1,
           ),
           boxShadow: [
-            ...AppTheme.softShadow,
-            BoxShadow(
-              color: AppTheme.primaryColor.withOpacity(0.12),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+            if (!isDark) ...AppTheme.softShadow,
+            if (isDark)
+              BoxShadow(
+                color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )
+            else
+              BoxShadow(
+                color: AppTheme.primaryColor.withOpacity(0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
         child: Row(
@@ -198,7 +216,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.15),
+                color: AppTheme.primaryColor.withOpacity(isDark ? 0.25 : 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -210,23 +228,30 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
             const SizedBox(width: 14),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Vous êtes hors ligne',
                     style: TextStyle(
-                      color: AppTheme.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     'Certaines fonctionnalités limitées sont disponibles',
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                       fontSize: 12,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.fade,
+                    softWrap: true,
                   ),
                 ],
               ),
@@ -249,21 +274,30 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   }
 
   Widget _buildSyncButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF6E5),
+          color: isDark
+              ? Theme.of(context).colorScheme.surfaceContainerHigh
+              : const Color(0xFFFFF6E5),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.35),
+            color: AppTheme.primaryColor.withOpacity(isDark ? 0.5 : 0.35),
             width: 1,
           ),
-          boxShadow: [
-            ...AppTheme.softShadow,
-          ],
+          boxShadow: isDark
+              ? [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [...AppTheme.softShadow],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -282,21 +316,21 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Text(
                         'Connexion rétablie',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
                         'Synchronisation des données disponible',
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],

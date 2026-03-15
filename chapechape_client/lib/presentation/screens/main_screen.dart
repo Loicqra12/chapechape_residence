@@ -109,7 +109,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget? _buildAppBarTitle(BuildContext context, String location) {
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontWeight: FontWeight.w600,
-      color: Colors.black87,
+      color: Theme.of(context).colorScheme.onSurface,
     );
     if (location.startsWith('/favorites')) return Text('Favoris', style: titleStyle);
     if (location.startsWith('/notifications')) return Text('Notifications', style: titleStyle);
@@ -138,12 +138,12 @@ class _MainScreenState extends State<MainScreen> {
             Flexible(
               child: Text(
                 'À ${_selectedCity!.name}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[800], fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
                 semanticsLabel: 'Localisation: ${_selectedCity!.name}',
               ),
             ),
-            Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey[600]),
+            Icon(Icons.arrow_drop_down, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
           ],
         ),
       );
@@ -180,20 +180,17 @@ class _MainScreenState extends State<MainScreen> {
     
     final location = GoRouterState.of(context).uri.path;
     final isHomeScreen = location.startsWith('/home') || location == '/';
-    // L'écran Historique des réservations gère déjà sa propre AppBar + TabBar.
-    // On masque donc la barre du MainScreen pour éviter le double header.
-    final isStandaloneScreen = location.startsWith('/bookings');
-
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: false,
-      appBar: isHomeScreen || isStandaloneScreen
+      appBar: isHomeScreen
           ? null
           : AppBar(
-              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12 : Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               elevation: 0,
               iconTheme: IconThemeData(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               leading: Container(
                 margin: EdgeInsets.all(AppSpacing.sm),
@@ -203,9 +200,7 @@ class _MainScreenState extends State<MainScreen> {
                         ? Icons.arrow_back
                         : Icons.menu,
                   ),
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                   onPressed: () {
                     if (_isSubRoute(location) || _canPop(context)) {
                       context.pop();
@@ -283,7 +278,7 @@ class _MainScreenState extends State<MainScreen> {
           duration: const Duration(milliseconds: 200),
           opacity: _isNavBarVisible ? 1.0 : 0.0,
           child: Container(
-            margin: EdgeInsets.only(bottom: AppSpacing.lg, left: AppSpacing.lg, right: AppSpacing.lg),
+            margin: EdgeInsets.only(bottom: AppSpacing.lg, left: AppSpacing.sm, right: AppSpacing.sm),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.smd),
               boxShadow: [
@@ -298,19 +293,30 @@ class _MainScreenState extends State<MainScreen> {
               borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.smd),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: NavigationBar(
-                  selectedIndex: _calculateSelectedIndex(context),
-                  onDestinationSelected: (index) => _onItemTapped(index, context),
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.black.withOpacity(0.6) 
-                      : Colors.white.withOpacity(0.8),
-                  indicatorColor: Theme.of(context).brightness == Brightness.dark 
-                      ? AppTheme.primaryColor.withOpacity(0.2) 
-                      : AppTheme.primaryColor.withOpacity(0.15),
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  height: 56,
-                  elevation: 0,
-                  destinations: [
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    navigationBarTheme: NavigationBarThemeData(
+                      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                        return TextStyle(
+                          fontSize: 10,
+                          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
+                        );
+                      }),
+                    ),
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: _calculateSelectedIndex(context),
+                    onDestinationSelected: (index) => _onItemTapped(index, context),
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.black.withOpacity(0.6) 
+                        : Colors.white.withOpacity(0.8),
+                    indicatorColor: Theme.of(context).brightness == Brightness.dark 
+                        ? AppTheme.primaryColor.withOpacity(0.2) 
+                        : AppTheme.primaryColor.withOpacity(0.15),
+                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                    height: 64,
+                    elevation: 0,
+                    destinations: [
                     NavigationDestination(
                       icon: const Icon(Icons.home_outlined),
                       selectedIcon: Icon(Icons.home, color: Theme.of(context).primaryColor),
@@ -365,6 +371,7 @@ class _MainScreenState extends State<MainScreen> {
                       label: 'Profil',
                     ),
                   ],
+                  ),
                 ),
               ),
             ),
@@ -398,7 +405,7 @@ class _MainScreenState extends State<MainScreen> {
             isSelected ? Icons.person : Icons.person_outline,
             color: isSelected
                 ? Theme.of(context).primaryColor
-                : Colors.black87,
+                : Theme.of(context).colorScheme.onSurface,
           );
         }
 
@@ -510,14 +517,14 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: AppSpacing.cardPadding,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(20),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
+              color: Theme.of(context).colorScheme.shadow.withOpacity(0.15),
               blurRadius: 10,
               spreadRadius: 1,
             ),
@@ -532,7 +539,7 @@ class _MainScreenState extends State<MainScreen> {
               height: 4,
               margin: EdgeInsets.only(bottom: AppSpacing.md),
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Theme.of(context).colorScheme.outline,
                 borderRadius: BorderRadius.circular(AppSpacing.xs / 2),
               ),
             ),
@@ -541,13 +548,13 @@ class _MainScreenState extends State<MainScreen> {
               padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 children: [
-                  Icon(Icons.language, color: Colors.grey[700]),
+                  Icon(Icons.language, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
                       'Langue',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[800],
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -562,7 +569,7 @@ class _MainScreenState extends State<MainScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.location_on, color: Colors.grey[700]),
+                  Icon(Icons.location_on, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -571,7 +578,7 @@ class _MainScreenState extends State<MainScreen> {
                         Text(
                           'Localisation',
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Colors.grey[800],
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         AppSpacing.verticalSm,

@@ -261,6 +261,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         if (state is chat.ChatError && state is! chat.ChatLoaded) {
           return Scaffold(
             appBar: AppBar(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               title: const Text('Erreur'),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -292,6 +294,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
         return Scaffold(
           appBar: AppBar(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

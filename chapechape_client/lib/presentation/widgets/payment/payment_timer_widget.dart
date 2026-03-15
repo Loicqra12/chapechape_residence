@@ -108,7 +108,7 @@ class _PaymentTimerWidgetState extends State<PaymentTimerWidget>
   }
 
   Color get _backgroundColor {
-    return widget.backgroundColor ?? Colors.grey[300]!;
+    return widget.backgroundColor ?? Theme.of(context).colorScheme.surfaceContainerHighest;
   }
 
   double get _progress {

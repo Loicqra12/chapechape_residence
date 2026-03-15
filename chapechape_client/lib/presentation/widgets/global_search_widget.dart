@@ -124,10 +124,10 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
               Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _focusNode.hasFocus ? AppTheme.primaryColor : Colors.grey[300]!,
+                    color: _focusNode.hasFocus ? AppTheme.primaryColor : Theme.of(context).colorScheme.outline,
                     width: 1,
                   ),
                 ),
@@ -138,7 +138,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
                   decoration: InputDecoration(
                     hintText: 'Rechercher une résidence...',
                     hintStyle: TextStyle(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontSize: 14,
                     ),
                     prefixIcon: _isSearching
@@ -157,7 +157,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
                           )
                         : Icon(
                             Icons.search,
-                            color: Colors.grey[600],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             size: 20,
                           ),
                     suffixIcon: IconButton(
@@ -213,7 +213,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
                       maxHeight: 300,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -253,18 +253,18 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
                   residence.images.first,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[200],
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
                     child: Icon(
                       Icons.home,
-                      color: Colors.grey[400],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
                 )
               : Container(
-                  color: Colors.grey[200],
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                   child: Icon(
                     Icons.home,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
         ),
@@ -287,7 +287,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           const SizedBox(height: 2),
@@ -305,7 +305,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
       trailing: Icon(
         Icons.arrow_forward_ios,
         size: 14,
-        color: Colors.grey[400],
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
       ),
     );
   }

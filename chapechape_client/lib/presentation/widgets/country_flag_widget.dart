@@ -72,7 +72,7 @@ class CountryFlagWidget extends StatelessWidget {
           Icon(
             Icons.arrow_drop_down,
             size: size * 0.75,
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
+            color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ],
       ],

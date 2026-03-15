@@ -44,26 +44,29 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     return BlocBuilder<BookingBloc, BookingState>(
       builder: (context, state) {
         return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('Historique des réservations'),
-              bottom: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                indicatorColor: Colors.black,
-                labelColor: Colors.black,
-                unselectedLabelColor: Colors.black54,
-                tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-              ),
-            ),
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildBookingList(state, null), // Toutes
-                _buildBookingList(state, 'upcoming'), // À venir
-                _buildBookingList(state, 'past'), // Passées
-                _buildBookingList(state, 'cancelled'), // Annulées
-              ],
-            ),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Theme.of(context).colorScheme.onSurface,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildBookingList(state, null), // Toutes
+          _buildBookingList(state, 'upcoming'), // À venir
+          _buildBookingList(state, 'past'), // Passées
+          _buildBookingList(state, 'cancelled'), // Annulées
+        ],
+      ),
         );
       },
     );
@@ -180,14 +183,14 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
           Icon(
             icon,
             size: 80,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
           AppSpacing.verticalMd,
           Text(
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           AppSpacing.verticalMd,

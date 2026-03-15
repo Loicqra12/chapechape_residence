@@ -151,6 +151,8 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
       },
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           title: const Text('Paiement en cours'),
           elevation: 0,
           actions: [
@@ -256,7 +258,7 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
               Text(
                 'Temps restant',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     ),
               ),
               const SizedBox(height: 8),
@@ -751,7 +753,7 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
               Text(
                 description,
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   fontSize: 14,
                 ),
               ),
@@ -799,7 +801,7 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 fontSize: 14,
               ),
             ),

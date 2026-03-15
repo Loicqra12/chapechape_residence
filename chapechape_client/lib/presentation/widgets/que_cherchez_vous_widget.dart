@@ -22,9 +22,10 @@ class QueCherchezVousWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
-    final subColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final textColor = scheme.onSurface;
+    final subColor = scheme.onSurface.withOpacity(0.8);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -106,8 +107,8 @@ class _ContinueSearchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : AppTheme.textPrimary;
-    final subColor = isDark ? Colors.grey[400]! : AppTheme.textSecondary;
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    final subColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.8);
 
     return Material(
       color: Colors.transparent,
@@ -120,7 +121,7 @@ class _ContinueSearchCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.08) : Colors.white,
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: AppTheme.primaryColor.withOpacity(0.5),

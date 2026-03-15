@@ -68,7 +68,7 @@ class ReviewWidget extends StatelessWidget {
                         Text(
                           date,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                         ),
                       ],

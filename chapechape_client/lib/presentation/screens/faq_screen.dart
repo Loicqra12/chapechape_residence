@@ -253,7 +253,7 @@ class _FaqScreenState extends State<FaqScreen> {
               child: Text(
                 faq['answer'],
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[700],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
                   height: 1.5,
                 ),
               ),

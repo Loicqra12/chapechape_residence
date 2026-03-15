@@ -37,7 +37,7 @@ class BottomNavBar extends StatelessWidget {
         // Couleurs personnalisées basées sur l'état actif/inactif
         final color = isActive 
             ? AppTheme.primaryColor
-            : AppTheme.textSecondary;
+            : Theme.of(context).colorScheme.onSurface.withOpacity(0.8);
             
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -73,11 +73,11 @@ class BottomNavBar extends StatelessWidget {
       rightCornerRadius: 12,
       elevation: 8,
       onTap: onTap,
-      shadow: const BoxShadow(
-        offset: Offset(0, 1),
+      shadow: BoxShadow(
+        offset: const Offset(0, 1),
         blurRadius: 8,
         spreadRadius: 1,
-        color: Colors.black12,
+        color: Theme.of(context).colorScheme.shadow.withOpacity(0.15),
       ),
     );
   }

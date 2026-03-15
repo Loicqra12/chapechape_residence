@@ -114,6 +114,8 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: Text(_getPaymentMethodTitle()),
         elevation: 0,
         leading: IconButton(
@@ -155,7 +157,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
                     Text(
                       'Vous allez être redirigé vers ${_getPaymentMethodTitle()}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                     ),
                   ],
@@ -191,7 +193,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
               _errorMessage ?? 'Une erreur est survenue',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
             ),
             const SizedBox(height: 24),

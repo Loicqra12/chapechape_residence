@@ -425,13 +425,18 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           title: const Text('Confirmation de réservation'),
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              // Navigation normale au lieu de forcer l'accueil
-              Navigator.of(context).pop();
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/bookings');
+              }
             },
           ),
         ),
@@ -503,8 +508,11 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   }
 
   Widget _buildBookingConfirmation() {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
-      padding: AppSpacing.cardPadding,
+      padding: AppSpacing.cardPadding.copyWith(
+        bottom: AppSpacing.md + bottomPadding,
+      ),
       child: _showPhoneVerification
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

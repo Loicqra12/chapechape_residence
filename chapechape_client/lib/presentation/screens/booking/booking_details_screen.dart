@@ -206,6 +206,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -280,7 +282,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             _buildDetailRow(
                               'Statut',
                               _getStatusText(booking.status),
-                              _getStatusColor(booking.status),
+                              _getStatusColor(context, booking.status),
                             ),
                             _buildDetailRow(
                               'Date d\'arrivée',
@@ -380,7 +382,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
           ),
@@ -426,7 +428,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(BuildContext context, String status) {
     switch (status) {
       case 'pending':
         return Colors.orange;
@@ -445,9 +447,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       case 'rejected':
         return Colors.red[700]!;
       case 'expired':
-        return Colors.grey[600]!;
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
       default:
-        return Colors.grey;
+        return Theme.of(context).colorScheme.onSurface;
     }
   }
 } 

@@ -9,8 +9,9 @@ class FooterWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDarkMode ? const Color(0xFF1A1A1A) : Colors.grey[50];
-    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final scheme = Theme.of(context).colorScheme;
+    final backgroundColor = scheme.surface;
+    final textColor = scheme.onSurface;
     final iconColor = const Color(0xFFD4AF37); // Gold
 
     return Container(
@@ -24,40 +25,40 @@ class FooterWidget extends StatelessWidget {
             context,
             title: 'À propos',
             children: [
-              _buildFooterLink('Qui sommes-nous ?', isDarkMode: isDarkMode),
-              _buildFooterLink('Notre mission', isDarkMode: isDarkMode),
-              _buildFooterLink('Nos partenaires', isDarkMode: isDarkMode),
-              _buildFooterLink('Blog', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Qui sommes-nous ?', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Notre mission', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Nos partenaires', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Blog', isDarkMode: isDarkMode),
             ],
             isDarkMode: isDarkMode,
           ),
-          _buildDivider(isDarkMode),
+          _buildDivider(context),
           
           _buildExpansionTile(
             context,
             title: 'Aide',
             children: [
-              _buildFooterLink('Centre d\'aide', isDarkMode: isDarkMode),
-              _buildFooterLink('FAQ', isDarkMode: isDarkMode),
-              _buildFooterLink('Nous contacter', isDarkMode: isDarkMode),
-              _buildFooterLink('Signaler un problème', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Centre d\'aide', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'FAQ', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Nous contacter', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Signaler un problème', isDarkMode: isDarkMode),
             ],
             isDarkMode: isDarkMode,
           ),
-          _buildDivider(isDarkMode),
+          _buildDivider(context),
 
           _buildExpansionTile(
             context,
             title: 'Légal',
             children: [
-              _buildFooterLink('Conditions d\'utilisation', isDarkMode: isDarkMode),
-              _buildFooterLink('Politique de confidentialité', isDarkMode: isDarkMode),
-              _buildFooterLink('Mentions légales', isDarkMode: isDarkMode),
-              _buildFooterLink('Cookies', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Conditions d\'utilisation', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Politique de confidentialité', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Mentions légales', isDarkMode: isDarkMode),
+              _buildFooterLink(context, 'Cookies', isDarkMode: isDarkMode),
             ],
             isDarkMode: isDarkMode,
           ),
-          _buildDivider(isDarkMode),
+          _buildDivider(context),
 
           const SizedBox(height: 32),
 
@@ -77,6 +78,7 @@ class FooterWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     _buildCompactContactButton(
+                      context,
                       icon: FontAwesomeIcons.whatsapp,
                       label: 'WhatsApp',
                       onTap: _launchWhatsApp,
@@ -85,6 +87,7 @@ class FooterWidget extends StatelessWidget {
                     ),
                     const SizedBox(width: 24),
                     _buildCompactContactButton(
+                      context,
                       icon: Icons.email_outlined,
                       label: 'Email',
                       onTap: _launchEmail,
@@ -93,6 +96,7 @@ class FooterWidget extends StatelessWidget {
                     ),
                     const SizedBox(width: 24),
                     _buildCompactContactButton(
+                      context,
                       icon: Icons.chat_bubble_outline,
                       label: 'Chat',
                       onTap: _openChat,
@@ -121,12 +125,14 @@ class FooterWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildCompactStoreButton(
+                  context,
                   icon: FontAwesomeIcons.appStore,
                   onTap: () {},
                   isDarkMode: isDarkMode,
                 ),
                 const SizedBox(width: 16),
                 _buildCompactStoreButton(
+                  context,
                   icon: FontAwesomeIcons.googlePlay,
                   onTap: () {},
                   isDarkMode: isDarkMode,
@@ -142,7 +148,7 @@ class FooterWidget extends StatelessWidget {
             child: Text(
               '© 2025 ChapeChape Résidences',
               style: TextStyle(
-                color: isDarkMode ? Colors.grey[600] : Colors.grey[500],
+                color: scheme.onSurface.withOpacity(0.7),
                 fontSize: 12,
               ),
             ),
@@ -165,11 +171,11 @@ class FooterWidget extends StatelessWidget {
           title,
           style: AppTextStyles.title.copyWith(
             fontSize: 16,
-            color: const Color(0xFF1A1A1A),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         iconColor: const Color(0xFFD4AF37),
-        collapsedIconColor: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+        collapsedIconColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         childrenPadding: const EdgeInsets.only(bottom: 16, left: 16),
         children: children.map((child) => Align(
           alignment: Alignment.centerLeft,
@@ -179,14 +185,14 @@ class FooterWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildDivider(bool isDarkMode) {
+  Widget _buildDivider(BuildContext context) {
     return Divider(
       height: 1,
-      color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+      color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
     );
   }
 
-  Widget _buildFooterLink(String text, {required bool isDarkMode}) {
+  Widget _buildFooterLink(BuildContext context, String text, {required bool isDarkMode}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       child: InkWell(
@@ -194,7 +200,7 @@ class FooterWidget extends StatelessWidget {
         child: Text(
           text,
           style: TextStyle(
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             fontSize: 14,
           ),
         ),
@@ -202,23 +208,25 @@ class FooterWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactContactButton({
+  Widget _buildCompactContactButton(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
     required Color color,
     required bool isDarkMode,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
+          color: scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+            color: scheme.outline.withOpacity(0.3),
           ),
         ),
         child: Icon(icon, size: 20, color: color),
@@ -284,20 +292,22 @@ class FooterWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactStoreButton({
+  Widget _buildCompactStoreButton(
+    BuildContext context, {
     required IconData icon,
     required VoidCallback onTap,
     required bool isDarkMode,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black,
+          color: scheme.inverseSurface,
           borderRadius: BorderRadius.circular(30),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: Icon(icon, color: scheme.onInverseSurface, size: 18),
       ),
     );
   }

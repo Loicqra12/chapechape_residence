@@ -217,7 +217,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       Text(
                         notification.message,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[700],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -226,7 +226,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       Text(
                         _formatTimestamp(notification.timestamp),
                         style: AppTextStyles.caption.copyWith(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                       ),
                     ],

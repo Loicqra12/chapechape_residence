@@ -103,13 +103,13 @@ class _ResidenceTypeSelectorWidgetState
   }
 
   Widget _buildCategoriesSelector() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDarkMode ? Colors.grey[800] : AppTheme.textLight;
-    final textColor = isDarkMode ? Colors.white70 : AppTheme.textPrimary;
-    final selectedTextColor = isDarkMode ? AppTheme.textLight : AppTheme.textLight;
-    final iconColor = isDarkMode ? Colors.white70 : AppTheme.primaryColor;
-    final selectedIconColor = isDarkMode ? AppTheme.textLight : AppTheme.textLight;
-    final borderColor = isDarkMode ? Colors.grey[700] : AppTheme.dividerColor;
+    final scheme = Theme.of(context).colorScheme;
+    final cardColor = scheme.surfaceContainerLow;
+    final textColor = scheme.onSurface;
+    final selectedTextColor = AppTheme.textLight;
+    final iconColor = scheme.onSurface.withOpacity(0.9);
+    final selectedIconColor = AppTheme.textLight;
+    final borderColor = scheme.outline;
 
     return Container(
       height: 130, // Hauteur augmentée pour correspondre au sélecteur de type
@@ -149,12 +149,12 @@ class _ResidenceTypeSelectorWidgetState
                   color: isSelected ? AppTheme.primaryColor : cardColor,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
-                    color: isSelected ? AppTheme.primaryColor : borderColor!,
+                    color: isSelected ? AppTheme.primaryColor : borderColor,
                     width: 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.textPrimary.withOpacity(0.05),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 1),
                     ),
@@ -191,15 +191,16 @@ class _ResidenceTypeSelectorWidgetState
   }
 
   Widget _buildTypesSelector() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      height: 132, // Augmenté de 2 pixels pour résoudre le débordement
-      clipBehavior: Clip.hardEdge, // Ajouté pour éviter tout débordement visuel
+      height: 132,
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: AppTheme.textLight,
+        color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.textPrimary.withOpacity(0.05),
+            color: scheme.shadow.withOpacity(0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -228,12 +229,12 @@ class _ResidenceTypeSelectorWidgetState
                 width: 100,
                 padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : AppTheme.textLight,
+                  color: isSelected ? AppTheme.primaryColor : scheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(
                     color: isSelected
                         ? AppTheme.primaryColor
-                        : AppTheme.dividerColor,
+                        : scheme.outline,
                   ),
                 ),
                 child: Column(
@@ -251,7 +252,7 @@ class _ResidenceTypeSelectorWidgetState
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.caption.copyWith(
-                        color: isSelected ? AppTheme.textLight : AppTheme.textPrimary,
+                        color: isSelected ? AppTheme.textLight : scheme.onSurface,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
