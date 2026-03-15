@@ -252,7 +252,7 @@ class _MultiLevelLocationSelectorState extends State<MultiLevelLocationSelector>
   Widget build(BuildContext context) {
     return Container(
       decoration: widget.showBorder ? BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
         borderRadius: BorderRadius.circular(8),
       ) : null,
       padding: const EdgeInsets.all(16),
@@ -480,10 +480,10 @@ class _MultiLevelLocationSelectorState extends State<MultiLevelLocationSelector>
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey.shade100,
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+                color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.outline,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -493,7 +493,7 @@ class _MultiLevelLocationSelectorState extends State<MultiLevelLocationSelector>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? AppTheme.primaryColor : Colors.black,
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -596,7 +596,7 @@ class _MultiLevelLocationSelectorState extends State<MultiLevelLocationSelector>
                   }
                 },
                 selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                backgroundColor: Colors.grey.shade100,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
               );
             }).toList(),
           ),
@@ -657,10 +657,10 @@ class _MultiLevelLocationSelectorState extends State<MultiLevelLocationSelector>
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey.shade100,
+              color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+                color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.outline,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -670,7 +670,7 @@ class _MultiLevelLocationSelectorState extends State<MultiLevelLocationSelector>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? AppTheme.primaryColor : Colors.black,
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),

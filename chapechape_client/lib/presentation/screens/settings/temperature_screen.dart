@@ -63,7 +63,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Choisissez votre unité de température préférée. Cette unité sera utilisée partout dans l\'application.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   ),
                 ),
                 
@@ -122,7 +122,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                           '• 0°C = 32°F (Point de congélation de l\'eau)\n'
                           '• 20°C = 68°F (Température ambiante confortable)\n'
                           '• 37°C = 98.6°F (Température corporelle normale)',
-                          style: AppTextStyles.body.copyWith(color: AppTheme.textSecondary),
+                          style: AppTextStyles.body.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                         ),
                       ],
                     ),
@@ -161,7 +161,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
               Container(
                 padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.white,
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -183,7 +183,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                     ),
                     Text(
                       subtitle,
-                      style: AppTextStyles.body.copyWith(color: AppTheme.textSecondary),
+                      style: AppTextStyles.body.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                     ),
                   ],
                 ),
@@ -191,7 +191,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
               Text(
                 example,
                 style: AppTextStyles.subtitle.copyWith(
-                  color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
               SizedBox(width: AppSpacing.sm),

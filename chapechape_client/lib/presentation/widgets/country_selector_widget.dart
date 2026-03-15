@@ -106,7 +106,7 @@ class _CountrySelectorWidgetState extends State<CountrySelectorWidget> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -127,7 +127,7 @@ class _CountrySelectorWidgetState extends State<CountrySelectorWidget> {
                     width: 60,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: Theme.of(context).colorScheme.outline,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -160,11 +160,11 @@ class _CountrySelectorWidgetState extends State<CountrySelectorWidget> {
                         prefixIcon: const Icon(Icons.search),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                       ),
@@ -263,10 +263,10 @@ class _CountrySelectorWidgetState extends State<CountrySelectorWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
             decoration: BoxDecoration(
               border: widget.showBorder
-                  ? Border.all(color: Colors.grey[300]!)
+                  ? Border.all(color: Theme.of(context).colorScheme.outline)
                   : null,
               borderRadius: BorderRadius.circular(10),
-              color: _isSelecting ? Colors.grey[100] : Colors.white,
+              color: Theme.of(context).colorScheme.surface,
             ),
             child: Row(
               children: [

@@ -110,14 +110,15 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
         title: Text(
           'Réserver',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
         ),
       ),
@@ -432,17 +433,17 @@ class _BookingScreenState extends State<BookingScreen> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: Theme.of(context).colorScheme.surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline, width: 1),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline, width: 1),
           ),
           focusedBorder: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -473,7 +474,7 @@ class _BookingScreenState extends State<BookingScreen> {
         Text(
           'Mode de réservation défini par le partenaire',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
           ),
         ),
         AppSpacing.verticalMd,
@@ -502,18 +503,18 @@ class _BookingScreenState extends State<BookingScreen> {
       decoration: InputDecoration(
         labelText: 'Nombre de personnes',
         labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
-        prefixIcon: const Icon(Icons.people_outline, color: AppTheme.textSecondary),
+        prefixIcon: Icon(Icons.people_outline, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Theme.of(context).colorScheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.outline, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.outline, width: 1),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),

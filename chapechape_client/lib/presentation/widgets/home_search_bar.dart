@@ -39,10 +39,10 @@ class HomeSearchBar extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFBF5),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.45),
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
             width: 1.2,
           ),
           boxShadow: AppTheme.softShadow,
@@ -57,19 +57,19 @@ class HomeSearchBar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.search, color: AppTheme.textPrimary, size: 24),
+                Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85), size: 24),
                 const SizedBox(width: AppSpacing.smd),
                 Expanded(
                   child: Text(
                     'Commencer ma recherche',
                     style: AppTextStyles.body.copyWith(
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
                       fontSize: 17,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                Icon(Icons.tune, color: AppTheme.textSecondary, size: 22),
+                Icon(Icons.tune, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85), size: 22),
               ],
             ),
           ),
@@ -108,11 +108,11 @@ class _SearchOverlayPage extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                   boxShadow: AppTheme.softShadow,
                 ),
-                child: Icon(Icons.close, size: 18, color: AppTheme.textPrimary),
+                child: Icon(Icons.close, size: 18, color: Theme.of(context).colorScheme.onSurface),
               ),
             ),
           ),

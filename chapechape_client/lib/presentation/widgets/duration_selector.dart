@@ -134,7 +134,7 @@ class _DurationSelectorState extends State<DurationSelector> {
             Text(
               'Combien de temps ?',
               style: TextStyle(
-                color: Colors.grey[800],
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -168,14 +168,14 @@ class _DurationSelectorState extends State<DurationSelector> {
             padding: const EdgeInsets.only(top: 12),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.blue[600]),
+                Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Durée sélectionnée : ${_selectedDuration!.label.toLowerCase()}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue[600],
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -202,10 +202,10 @@ class _DurationSelectorState extends State<DurationSelector> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor : Colors.white,
+          color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+            color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.outline,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -224,7 +224,7 @@ class _DurationSelectorState extends State<DurationSelector> {
             Icon(
               duration.icon,
               size: 24,
-              color: isSelected ? Colors.white : AppTheme.primaryColor,
+              color: isSelected ? AppTheme.textLight : AppTheme.primaryColor,
             ),
             const SizedBox(height: 6),
             Text(
@@ -235,7 +235,7 @@ class _DurationSelectorState extends State<DurationSelector> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.grey[800],
+                color: isSelected ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
                 height: 1.2,
               ),
             ),
@@ -248,8 +248,8 @@ class _DurationSelectorState extends State<DurationSelector> {
               style: TextStyle(
                 fontSize: 11,
                 color: isSelected
-                    ? Colors.white.withOpacity(0.9)
-                    : Colors.grey[600],
+                    ? AppTheme.textLight.withOpacity(0.9)
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 height: 1.2,
               ),
             ),

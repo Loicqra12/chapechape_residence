@@ -20,20 +20,6 @@ import '../../core/services/recently_viewed_service.dart';
 import '../screens/booking_screen.dart';
 import '../widgets/skeletons/residence_details_skeleton.dart';
 
-// ── Palette (délégée à AppTheme) ───────────────────────────────────────────────
-const _kBg        = Colors.white;
-
-// ── Typographie commune ───────────────────────────────────────────────────────
-const _kSectionTitle = TextStyle(
-  fontSize: 18,
-  fontWeight: FontWeight.w600,
-  color: AppTheme.textPrimary,
-  letterSpacing: -0.2,
-);
-
-final _kBody = TextStyle(fontSize: 14, color: AppTheme.textPrimary, height: 1.55);
-final _kCaption = TextStyle(fontSize: 12, color: AppTheme.textSecondary);
-
 // ─────────────────────────────────────────────────────────────────────────────
 class ResidenceDetailsScreen extends StatefulWidget {
   final String residenceId;
@@ -48,6 +34,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
   final _commentCtrl    = TextEditingController();
 
   int    _currentPhoto  = 0;
+
+  Color get _surface => Theme.of(context).colorScheme.surface;
+  Color get _onSurface => Theme.of(context).colorScheme.onSurface;
+  Color get _onSurfaceMuted => Theme.of(context).colorScheme.onSurface.withOpacity(0.8);
+  TextStyle get _sectionTitleStyle => TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _onSurface, letterSpacing: -0.2);
+  TextStyle get _bodyStyle => TextStyle(fontSize: 14, color: _onSurface, height: 1.55);
+  TextStyle get _captionStyle => TextStyle(fontSize: 12, color: _onSurfaceMuted);
+
   int    _reviewKey     = 0;
   double _myRating      = 5.0;
   bool   _showAllAmenities = false;
@@ -90,14 +84,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         return true;
       },
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: _surface,
         body: BlocBuilder<ResidenceBloc, ResidenceState>(
           builder: (ctx, state) {
             if (state is ResidenceLoading) return const ResidenceDetailsSkeleton();
             if (state is ResidenceDetailsLoaded) return _buildBody(state.residence);
             if (state is ResidenceError) {
               return Center(
-                child: Text(state.message, style: _kBody),
+                child: Text(state.message, style: _bodyStyle),
               );
             }
             return const SizedBox.shrink();
@@ -147,8 +141,8 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     if (r.images.isEmpty) {
       return Container(
         color: const Color(0xFFF0F0F0),
-        child: const Center(
-          child: Icon(Icons.image_not_supported_outlined, size: 56, color: AppTheme.textSecondary),
+        child: Center(
+          child: Icon(Icons.image_not_supported_outlined, size: 56, color: _onSurfaceMuted),
         ),
       );
     }
@@ -251,7 +245,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     _showAuthDialog();
                   }
                 },
-                iconColor: r.isFavorite ? AppTheme.primaryColor : AppTheme.textPrimary,
+                iconColor: r.isFavorite ? AppTheme.primaryColor : _onSurface,
               ),
             ),
           ]),
@@ -260,19 +254,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     );
   }
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap, {Color iconColor = AppTheme.textPrimary}) {
+  Widget _circleBtn(IconData icon, VoidCallback onTap, {Color? iconColor}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 40, height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _surface,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 8),
+            BoxShadow(color: Theme.of(context).colorScheme.shadow.withOpacity(0.2), blurRadius: 8),
           ],
         ),
-        child: Icon(icon, size: 20, color: iconColor),
+        child: Icon(icon, size: 20, color: iconColor ?? _onSurface),
       ),
     );
   }
@@ -325,7 +319,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
   Widget _sep({EdgeInsets padding = const EdgeInsets.symmetric(vertical: 24)}) {
     return Padding(
       padding: padding,
-      child: const Divider(height: 1, thickness: 1, color: AppTheme.dividerColor),
+      child: Divider(height: 1, thickness: 1, color: _onSurface.withOpacity(0.12)),
     );
   }
 
@@ -339,44 +333,44 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         // Type · Ville
         Text(
           '${r.type.displayName} · ${_shortCity(r)}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13, fontWeight: FontWeight.w400,
-            color: AppTheme.textSecondary, letterSpacing: 0.1,
+            color: _onSurfaceMuted, letterSpacing: 0.1,
           ),
         ),
         const SizedBox(height: 6),
         // Titre
-        Text(r.title, style: const TextStyle(
+        Text(r.title, style: TextStyle(
           fontSize: 22, fontWeight: FontWeight.w600,
-          color: AppTheme.textPrimary, height: 1.25,
+          color: _onSurface, height: 1.25,
         )),
         const SizedBox(height: 12),
         // Note + avis + adresse courte
         Row(
           children: [
-            const Icon(Icons.star, size: 14, color: AppTheme.textPrimary),
+            Icon(Icons.star, size: 14, color: _onSurface),
             const SizedBox(width: 4),
             Text(
               r.rating > 0 ? r.rating.toStringAsFixed(1) : 'Nouveau',
-              style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+              style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600, color: _onSurface),
             ),
             if (r.reviewCount > 0) ...[
               Text(
                 '  ·  ${r.reviewCount} avis',
-                style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary,
+                style: TextStyle(
+                  fontSize: 13, color: _onSurfaceMuted,
                   decoration: TextDecoration.underline),
               ),
             ],
             const Spacer(),
-            const Icon(Icons.location_on_outlined, size: 13, color: AppTheme.textSecondary),
+            Icon(Icons.location_on_outlined, size: 13, color: _onSurfaceMuted),
             const SizedBox(width: 2),
             Flexible(
               child: Text(
                 _shortLocation(r),
-                style: const TextStyle(
-                  fontSize: 12, color: AppTheme.textSecondary,
+                style: TextStyle(
+                  fontSize: 12, color: _onSurfaceMuted,
                   decoration: TextDecoration.underline),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -420,12 +414,12 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: AppTheme.textPrimary),
+          Icon(icon, size: 22, color: _onSurface),
           const SizedBox(height: 6),
-          Text(value, style: const TextStyle(
-            fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          Text(value, style: TextStyle(
+            fontSize: 15, fontWeight: FontWeight.w700, color: _onSurface)),
           const SizedBox(height: 2),
-          Text(label, style: _kCaption, textAlign: TextAlign.center),
+          Text(label, style: _captionStyle, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -483,19 +477,19 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Description', style: _kSectionTitle),
+        Text('Description', style: _sectionTitleStyle),
         const SizedBox(height: 14),
         ExpandableText(
           r.description,
           expandText: 'Lire plus',
           collapseText: 'Réduire',
           maxLines: 4,
-          linkColor: AppTheme.textPrimary,
-          linkStyle: const TextStyle(
+          linkColor: _onSurface,
+          linkStyle: TextStyle(
             fontSize: 14, fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimary, decoration: TextDecoration.underline,
+            color: _onSurface, decoration: TextDecoration.underline,
           ),
-          style: _kBody,
+          style: _bodyStyle,
         ),
       ],
     );
@@ -556,18 +550,22 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Ce que propose ce logement', style: _kSectionTitle),
+        Text('Ce que propose ce logement', style: _sectionTitleStyle),
         const SizedBox(height: 16),
         ...preview.map((a) {
           final key = a.toLowerCase();
+          final isSecurity = key == 'alarm_system' || key == 'cctv' || key == 'security_guard';
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
               children: [
                 Icon(_amenityIcons[key] ?? Icons.check_circle_outline,
-                    size: 22, color: AppTheme.textPrimary),
+                    size: 22,
+                    color: isSecurity
+                        ? Theme.of(context).colorScheme.primary
+                        : _onSurface),
                 const SizedBox(width: 16),
-                Text(_amenityLabels[key] ?? a, style: _kBody),
+                Text(_amenityLabels[key] ?? a, style: _bodyStyle),
               ],
             ),
           );
@@ -597,23 +595,23 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Tarification', style: _kSectionTitle),
+        Text('Tarification', style: _sectionTitleStyle),
         const SizedBox(height: 16),
         _rateRow('Tarif principal',
             fmt.format(r.price), _fmtPeriod(r.pricePeriod)),
         if (r.hourlyRate > 0) ...[
           const SizedBox(height: 16),
-          const Text('Tarifs horaires',
+          Text('Tarifs horaires',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary)),
+                  color: _onSurfaceMuted)),
           const SizedBox(height: 10),
           _rateRow('1 heure', fmt.format(r.hourlyRate), ''),
         ],
         if (r.halfDayRate > 0 || r.fullDayRate > 0 || r.weekendRate > 0) ...[
           const SizedBox(height: 16),
-          const Text('Tarifs journaliers',
+          Text('Tarifs journaliers',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary)),
+                  color: _onSurfaceMuted)),
           const SizedBox(height: 10),
           if (r.halfDayRate > 0)
             _rateRow('Demi-journée', fmt.format(r.halfDayRate), ''),
@@ -631,12 +629,12 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Text(label, style: _kBody),
+          Text(label, style: _bodyStyle),
           const Spacer(),
           Text(
             suffix.isNotEmpty ? '$amount $suffix' : amount,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w600, color: _onSurface),
           ),
         ],
       ),
@@ -650,7 +648,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Règles du logement', style: _kSectionTitle),
+        Text('Règles du logement', style: _sectionTitleStyle),
         const SizedBox(height: 16),
         _ruleRow(Icons.pets_outlined, 'Animaux de compagnie', r.allowsPets),
         _ruleRow(Icons.smoke_free, 'Fumeurs', r.allowsSmoking),
@@ -664,9 +662,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
-          Icon(icon, size: 22, color: AppTheme.textPrimary),
+          Icon(icon, size: 22, color: _onSurface),
           const SizedBox(width: 16),
-          Expanded(child: Text(label, style: _kBody)),
+          Expanded(child: Text(label, style: _bodyStyle)),
           Row(
             children: [
               Icon(
@@ -674,14 +672,14 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     ? Icons.check_circle_outline
                     : Icons.cancel_outlined,
                 size: 17,
-                color: allowed ? AppTheme.successColor : AppTheme.textSecondary,
+                color: allowed ? AppTheme.successColor : AppTheme.errorColor,
               ),
               const SizedBox(width: 5),
               Text(
                 allowed ? 'Autorisé' : 'Non autorisé',
                 style: TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w500,
-                  color: allowed ? AppTheme.successColor : AppTheme.textSecondary,
+                  color: allowed ? AppTheme.successColor : AppTheme.errorColor,
                 ),
               ),
             ],
@@ -714,7 +712,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Paiement accepté', style: _kSectionTitle),
+        Text('Paiement accepté', style: _sectionTitleStyle),
         const SizedBox(height: 16),
         Wrap(
           spacing: 10, runSpacing: 10,
@@ -722,20 +720,20 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F7F7),
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.dividerColor),
+                border: Border.all(color: _onSurface.withOpacity(0.12)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(_paymentIcons[m] ?? Icons.payments_outlined,
-                      size: 18, color: AppTheme.textPrimary),
+                      size: 18, color: _onSurface),
                   const SizedBox(width: 8),
                   Text(_paymentLabels[m] ?? m,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w500,
-                          color: AppTheme.textPrimary)),
+                          color: _onSurface)),
                 ],
               ),
             );
@@ -772,7 +770,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-          child: const Text('Localisation', style: _kSectionTitle),
+          child: Text('Localisation', style: _sectionTitleStyle),
         ),
         // Carte pleine largeur
         if (lat != null && lng != null)
@@ -803,21 +801,21 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 18, color: AppTheme.textSecondary),
+                    Icon(Icons.location_on_outlined,
+                        size: 18, color: _onSurfaceMuted),
                     const SizedBox(width: 8),
                     Expanded(child: Text(addr,
-                        style: const TextStyle(
-                            fontSize: 14, color: AppTheme.textSecondary, height: 1.4))),
+                        style: TextStyle(
+                            fontSize: 14, color: _onSurfaceMuted, height: 1.4))),
                   ],
                 ),
               if (distanceText != null) ...[
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.near_me_outlined, size: 16, color: AppTheme.textSecondary),
+                    Icon(Icons.near_me_outlined, size: 16, color: _onSurfaceMuted),
                     const SizedBox(width: 8),
-                    Text(distanceText, style: _kCaption),
+                    Text(distanceText, style: _captionStyle),
                   ],
                 ),
               ],
@@ -846,18 +844,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
         // En-tête note globale
         Row(
           children: [
-            const Icon(Icons.star, size: 20, color: AppTheme.textPrimary),
+            Icon(Icons.star, size: 20, color: _onSurface),
             const SizedBox(width: 6),
             Text(
               r.rating > 0 ? r.rating.toStringAsFixed(1) : 'Nouveau',
-              style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w700, color: _onSurface),
             ),
             if (r.reviewCount > 0)
               Text(
                 '  ·  ${r.reviewCount} avis',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w600, color: _onSurface),
               ),
           ],
         ),
@@ -874,11 +872,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           future: _loadReviews(r.id),
           builder: (_, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(
+              return Center(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: AppTheme.textPrimary),
+                      strokeWidth: 2, color: _onSurface),
                 ),
               );
             }
@@ -889,7 +887,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text('Aucun avis pour le moment',
-                      style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                      style: TextStyle(fontSize: 14, color: _onSurfaceMuted)),
                 ),
               );
             }
@@ -928,16 +926,16 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               width: 40, height: 40,
               decoration: const BoxDecoration(
                 color: Color(0xFFF0F0F0), shape: BoxShape.circle),
-              child: const Icon(Icons.person_outline, color: AppTheme.textSecondary, size: 20),
+              child: Icon(Icons.person_outline, color: _onSurfaceMuted, size: 20),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Connectez-vous pour laisser un avis',
-                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                style: TextStyle(fontSize: 14, color: _onSurfaceMuted),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: AppTheme.textSecondary),
+            Icon(Icons.chevron_right, size: 20, color: _onSurfaceMuted),
           ],
         ),
       ),
@@ -954,9 +952,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Votre note',
+          Text('Votre note',
               style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                  fontSize: 13, fontWeight: FontWeight.w600, color: _onSurfaceMuted)),
           const SizedBox(height: 10),
           Row(
             children: List.generate(5, (i) => GestureDetector(
@@ -965,7 +963,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                 padding: const EdgeInsets.only(right: 4),
                 child: Icon(
                   i < _myRating ? Icons.star : Icons.star_border,
-                  size: 30, color: AppTheme.textPrimary,
+                  size: 30, color: _onSurface,
                 ),
               ),
             )),
@@ -974,13 +972,13 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           TextField(
             controller: _commentCtrl,
             maxLines: 3,
-            style: _kBody,
+            style: _bodyStyle,
             decoration: InputDecoration(
               hintText: 'Partagez votre expérience…',
-              hintStyle: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+              hintStyle: TextStyle(fontSize: 14, color: _onSurfaceMuted),
               contentPadding: const EdgeInsets.all(14),
               filled: true,
-              fillColor: const Color(0xFFFAFAFA),
+              fillColor: _surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: AppTheme.dividerColor),
@@ -991,7 +989,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppTheme.textPrimary, width: 1.5),
+                borderSide: BorderSide(color: _onSurface, width: 1.5),
               ),
             ),
           ),
@@ -1003,7 +1001,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.textPrimary,
+                  color: _onSurface,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text('Publier',
@@ -1038,9 +1036,9 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: const Color(0xFFF0F0F0),
-                child: Text(initial, style: const TextStyle(
+                child: Text(initial, style: TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
+                    color: _onSurface)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1048,28 +1046,28 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(name.isNotEmpty ? name : 'Utilisateur',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary)),
-                    Text(date, style: _kCaption),
+                            color: _onSurface)),
+                    Text(date, style: _captionStyle),
                   ],
                 ),
               ),
               Row(
                 children: [
-                  const Icon(Icons.star, size: 13, color: AppTheme.textPrimary),
+                  Icon(Icons.star, size: 13, color: _onSurface),
                   const SizedBox(width: 3),
                   Text(score.toStringAsFixed(1),
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary)),
+                          color: _onSurface)),
                 ],
               ),
             ],
           ),
           if (comment.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(comment, style: _kBody),
+            Text(comment, style: _bodyStyle),
           ],
         ],
       ),
@@ -1086,11 +1084,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(top: BorderSide(color: AppTheme.dividerColor, width: 1)),
+        color: _surface,
+        border: Border(top: BorderSide(color: _onSurface.withOpacity(0.12), width: 1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
             blurRadius: 12, offset: const Offset(0, -3)),
         ],
       ),
@@ -1109,15 +1107,15 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                     children: [
                       TextSpan(
                         text: fmt.format(r.price),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary),
+                          color: _onSurface),
                       ),
                       TextSpan(
                         text: ' ${_fmtPeriod(r.pricePeriod)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w400,
-                          color: AppTheme.textSecondary),
+                          color: _onSurfaceMuted),
                       ),
                     ],
                   ),
@@ -1127,7 +1125,7 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                   r.reservationMode == 'instant'
                       ? '⚡ Confirmation immédiate'
                       : '⏳ Sur approbation',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  style: TextStyle(fontSize: 12, color: _onSurfaceMuted),
                 ),
               ],
             ),
@@ -1157,11 +1155,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
                       gradient: AppTheme.goldGradient,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('Se connecter',
+                    child: Text('Se connecter',
                         style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary)),
+                            color: _onSurface)),
                   ),
           ),
         ],
@@ -1178,18 +1176,18 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.textPrimary, width: 1.2),
+          border: Border.all(color: _onSurface, width: 1.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 17, color: AppTheme.textPrimary),
+              Icon(icon, size: 17, color: _onSurface),
               const SizedBox(width: 8),
             ],
-            Text(label, style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+            Text(label, style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w600, color: _onSurface)),
           ],
         ),
       ),
@@ -1253,15 +1251,15 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Connexion requise',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-        content: const Text(
+        content: Text(
           'Connectez-vous pour réserver ou mettre cette résidence en favoris.',
-          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          style: TextStyle(fontSize: 14, color: _onSurfaceMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text('Annuler',
+                style: TextStyle(color: _onSurfaceMuted)),
           ),
           ElevatedButton(
             onPressed: () { Navigator.pop(context); context.go('/login'); },

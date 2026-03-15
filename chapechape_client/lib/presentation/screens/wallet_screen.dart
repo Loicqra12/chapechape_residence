@@ -22,11 +22,11 @@ class WalletScreen extends StatelessWidget {
             children: [
               Material(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                child: const TabBar(
-                  indicatorColor: Colors.black,
-                  labelColor: Colors.black,
-                  unselectedLabelColor: Colors.black54,
-                  tabs: [
+                child: TabBar(
+                  indicatorColor: Theme.of(context).colorScheme.primary,
+                  labelColor: Theme.of(context).colorScheme.onSurface,
+                  unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  tabs: const [
                     Tab(text: 'Portefeuille'),
                     Tab(text: 'Récompenses'),
                   ],
@@ -133,7 +133,7 @@ class _WalletTab extends StatelessWidget {
                 Icon(
                   Icons.account_balance_wallet_outlined,
                   size: 80,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 ),
                 AppSpacing.verticalMd,
                 Text(
@@ -141,7 +141,7 @@ class _WalletTab extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: context.responsiveFontSize(16),
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                 ),
                 AppSpacing.verticalSm,
@@ -149,7 +149,7 @@ class _WalletTab extends StatelessWidget {
                   'Vos transactions apparaîtront ici',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: context.responsiveFontSize(14),
-                        color: Colors.grey[500],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       ),
                 ),
               ],
@@ -195,7 +195,7 @@ class _RewardsTab extends StatelessWidget {
                 Text(
                   'Points de fidélité',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                 ),
                 AppSpacing.verticalSm,
@@ -219,7 +219,7 @@ class _RewardsTab extends StatelessWidget {
                 Text(
                   '1 point = 10 FCFA de réduction',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.black54,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                 ),
               ],

@@ -33,7 +33,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   'Gérez vos moyens de paiement pour faciliter vos réservations',
                   style: TextStyle(
                     fontSize: context.responsiveFontSize(16),
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
               ),
@@ -125,7 +125,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               style: TextStyle(
                 fontSize: context.responsiveFontSize(16),
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -133,7 +133,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               'Ajoutez une carte ou un compte mobile money pour faciliter vos paiements',
               style: TextStyle(
                 fontSize: context.responsiveFontSize(14),
-                color: Colors.grey[500],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -197,7 +197,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.surface,
                 radius: 24,
                 child: Icon(icon, color: iconColor),
               ),
@@ -217,7 +217,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: Colors.grey[700],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         fontSize: 14,
                       ),
                     ),

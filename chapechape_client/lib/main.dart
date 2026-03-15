@@ -10,6 +10,8 @@ import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/locale/locale_cubit.dart';
 import 'package:chapechape_client/core/blocs/locale/locale_state.dart';
+import 'package:chapechape_client/core/blocs/theme/theme_cubit.dart';
+import 'package:chapechape_client/core/services/app_settings_service.dart';
 import 'package:chapechape_client/core/blocs/residence/residence_bloc.dart';
 import 'package:chapechape_client/core/blocs/chat/chat_bloc.dart';
 import 'package:chapechape_client/core/blocs/user/user_bloc.dart';
@@ -115,6 +117,9 @@ void main() async {
     apiServiceInstance: apiService,
   );
 
+  // Charger le thème sauvegardé (Paramètres → Affichage)
+  final initialTheme = await sl<AppSettingsService>().getThemeMode();
+
   // Configurer la barre de navigation système Android pour une meilleure visibilité
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -144,6 +149,9 @@ void main() async {
               authService: authService,
             )..add(AuthCheckRequested()),
           ),
+        BlocProvider<ThemeCubit>(
+          create: (_) => ThemeCubit(initialTheme),
+        ),
         BlocProvider<LocaleCubit>(
           create: (context) => LocaleCubit(
             defaultLocale: const Locale('fr'), // Utiliser une valeur par défaut directe
@@ -189,29 +197,42 @@ void main() async {
         ],
         child: BlocBuilder<LocaleCubit, LocaleState>(
           builder: (context, localeState) {
-            return Directionality(
-              textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
-              child: FlutterEasyLoading(
-                child: MaterialApp.router(
-                  title: AppConfig.appName,
-                  debugShowCheckedModeBanner: false,
-                  theme: AppTheme.lightTheme,
-                  darkTheme: AppTheme.darkTheme,
-                  themeMode: ThemeMode.system,
-                  locale: localeState?.locale ?? const Locale('fr'),
-                  routerConfig: AppRouter.router,
-                  localizationsDelegates: const [
-                    GlobalMaterialLocalizations.delegate,
-                    GlobalWidgetsLocalizations.delegate,
-                    GlobalCupertinoLocalizations.delegate,
-                  ],
-                  supportedLocales: const [
-                    Locale('fr', ''),
-                    Locale('en', ''),
-                  ],
-                  builder: EasyLoading.init(), // Initialiser EasyLoading
-                ),
-              ),
+            return BlocBuilder<ThemeCubit, ThemeMode>(
+              builder: (context, themeMode) {
+                final locale = localeState?.locale ?? const Locale('fr');
+                return Directionality(
+                  textDirection: TextDirection.ltr, // Utiliser ltr pour les langages LTR comme le français
+                  child: Localizations(
+                    locale: locale,
+                    delegates: const [
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    child: FlutterEasyLoading(
+                      child: MaterialApp.router(
+                        title: AppConfig.appName,
+                        debugShowCheckedModeBanner: false,
+                        theme: AppTheme.lightTheme,
+                        darkTheme: AppTheme.darkTheme,
+                        themeMode: themeMode,
+                        locale: locale,
+                        routerConfig: AppRouter.router,
+                        localizationsDelegates: const [
+                          GlobalMaterialLocalizations.delegate,
+                          GlobalWidgetsLocalizations.delegate,
+                          GlobalCupertinoLocalizations.delegate,
+                        ],
+                        supportedLocales: const [
+                          Locale('fr', ''),
+                          Locale('en', ''),
+                        ],
+                        builder: EasyLoading.init(), // Initialiser EasyLoading
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           }
         ),

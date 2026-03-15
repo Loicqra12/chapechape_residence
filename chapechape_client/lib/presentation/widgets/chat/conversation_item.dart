@@ -58,7 +58,9 @@ class ConversationItem extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: unreadCount > 0 ? Colors.black87 : Colors.black54,
+                color: unreadCount > 0
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           if (conversation.residenceName != null && conversation.residenceName!.isNotEmpty)

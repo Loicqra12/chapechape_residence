@@ -77,7 +77,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: AppTheme.textPrimary,
+        backgroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
       backgroundColor: Colors.black,

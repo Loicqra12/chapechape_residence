@@ -126,7 +126,7 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -138,9 +138,7 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
               border: Border.all(
                 color: _isFocused 
                   ? AppTheme.primaryColor 
-                  : _isHovered 
-                    ? Colors.grey.shade300 
-                    : Colors.grey.shade200,
+                  : Theme.of(context).colorScheme.outline,
                 width: 1.5,
               ),
             ),
@@ -150,14 +148,14 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
               decoration: InputDecoration(
                 hintText: widget.hint,
                 hintStyle: TextStyle(
-                  color: Colors.grey.shade400,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   fontWeight: FontWeight.w400,
                 ),
                 prefixIcon: Icon(
                   widget.prefixIcon,
                   color: _isFocused 
                     ? AppTheme.primaryColor 
-                    : Colors.grey.shade500,
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -186,7 +184,7 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
                             widget.onChanged!('');
                           }
                         },
-                        color: Colors.grey.shade500,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         splashRadius: 20,
                       ),
                   ],
@@ -216,7 +214,7 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
@@ -232,7 +230,7 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
               itemCount: _suggestions.length,
               separatorBuilder: (context, index) => Divider(
                 height: 1,
-                color: Colors.grey.shade200,
+                color: Theme.of(context).colorScheme.outline,
               ),
               itemBuilder: (context, index) {
                 final suggestion = _suggestions[index];
@@ -258,14 +256,14 @@ class _AnimatedSearchFieldState extends State<AnimatedSearchField> with SingleTi
                           Icon(
                             Icons.history,
                             size: 16,
-                            color: Colors.grey.shade500,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               suggestion,
                               style: TextStyle(
-                                color: Colors.grey.shade800,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),

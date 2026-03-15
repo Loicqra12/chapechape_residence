@@ -116,13 +116,15 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                     Icon(
                       Icons.thumb_up_outlined,
                       size: 20,
-                      color: const Color(0xFF1A1A1A),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         widget.title,
-                        style: AppTextStyles.title,
+                        style: AppTextStyles.title.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -133,7 +135,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                 Text(
                   widget.subtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -215,9 +217,9 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                             : 'assets/images/placeholders/residence_premium.jpg',
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(color: Colors.white),
+                          baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          highlightColor: Theme.of(context).colorScheme.surface,
+                          child: Container(color: Theme.of(context).colorScheme.surface),
                         ),
                         errorWidget: (context, url, error) => Image.asset(
                           AppAssets.placeholderImage,
@@ -294,10 +296,10 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
               const SizedBox(height: 6),
               Text(
                 StringUtils.toTitleCase(residence.title),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -305,12 +307,12 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                  Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   const SizedBox(width: 2),
                   Expanded(
                     child: Text(
                       locationStr,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -331,13 +333,13 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
         Icon(
           icon,
           size: 16,
-          color: Colors.grey[600], // Icône grise fine
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
         const SizedBox(width: 4),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -355,14 +357,14 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
           Icon(
             Icons.home_outlined,
             size: 48,
-            color: AppTheme.textSecondary.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8).withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
             widget.emptyStateMessage,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           const SizedBox(height: 16),
@@ -370,7 +372,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
             onPressed: _loadRecommendations,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: AppTheme.textLight,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -408,17 +410,17 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
           borderRadius: BorderRadius.circular(12),
         ),
         child: Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
+          baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          highlightColor: Theme.of(context).colorScheme.surface,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 height: 140,
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
                   ),
@@ -432,13 +434,13 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                     Container(
                       height: 16,
                       width: double.infinity,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     const SizedBox(height: 8),
                     Container(
                       height: 12,
                       width: cardWidth * 0.7,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -448,7 +450,7 @@ class _RecommendedResidencesWidgetState extends State<RecommendedResidencesWidge
                         (index) => Container(
                           height: 12,
                           width: 50,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                         ),
                       ),
                     ),

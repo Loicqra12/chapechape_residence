@@ -65,14 +65,19 @@ class TopRatedSectionWidget extends StatelessWidget {
       padding: padding,
       child: Row(
         children: [
-          Icon(Icons.star_rounded, size: 20, color: const Color(0xFF1A1A1A)),
+          Icon(Icons.star_rounded, size: 20, color: Theme.of(context).colorScheme.onSurface),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('Mieux notées', style: AppTextStyles.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+            child: Text(
+              'Mieux notées',
+              style: AppTextStyles.title.copyWith(color: Theme.of(context).colorScheme.onSurface),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           IconButton(
             onPressed: () => context.push('/search'),
-            icon: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1A1A1A)),
+            icon: Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurface),
             style: IconButton.styleFrom(minimumSize: const Size(40, 40), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
             tooltip: 'Voir tout',
           ),
@@ -201,14 +206,19 @@ class _RecentlyViewedSectionWidgetState extends State<RecentlyViewedSectionWidge
       padding: widget.padding,
       child: Row(
         children: [
-          const Icon(Icons.history, size: 20, color: Color(0xFF1A1A1A)),
+          Icon(Icons.history, size: 20, color: Theme.of(context).colorScheme.onSurface),
           const SizedBox(width: 8),
           Expanded(
-            child: Text('Récemment consultées', style: AppTextStyles.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+            child: Text(
+              'Récemment consultées',
+              style: AppTextStyles.title.copyWith(color: Theme.of(context).colorScheme.onSurface),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           IconButton(
             onPressed: () => context.push('/search'),
-            icon: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1A1A1A)),
+            icon: Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurface),
             style: IconButton.styleFrom(minimumSize: const Size(40, 40), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
             tooltip: 'Voir tout',
           ),
@@ -275,7 +285,7 @@ class _CompactResidenceCard extends StatelessWidget {
                   SizedBox(
                     height: 120,
                     width: double.infinity,
-                    child: _buildImage(imageUrl),
+                    child: _buildImage(context, imageUrl),
                   ),
                   if (badge != null) Positioned(top: 6, right: 6, child: badge!),
                   Positioned(
@@ -321,10 +331,10 @@ class _CompactResidenceCard extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               StringUtils.toTitleCase(title),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -332,12 +342,12 @@ class _CompactResidenceCard extends StatelessWidget {
             const SizedBox(height: 1),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     location,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -350,7 +360,7 @@ class _CompactResidenceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImage(String? imageUrl) {
+  Widget _buildImage(BuildContext context, String? imageUrl) {
     if (imageUrl == null) {
       return Image.asset(AppAssets.placeholderImage, fit: BoxFit.cover);
     }
@@ -359,13 +369,13 @@ class _CompactResidenceCard extends StatelessWidget {
         imageUrl: imageUrl,
         fit: BoxFit.cover,
         placeholder: (_, __) => Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
-          child: Container(color: Colors.white),
+          baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          highlightColor: Theme.of(context).colorScheme.surface,
+          child: Container(color: Theme.of(context).colorScheme.surface),
         ),
         errorWidget: (_, __, ___) => Container(
-          color: Colors.grey[200],
-          child: Icon(Icons.home_outlined, color: Colors.grey[400], size: 28),
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          child: Icon(Icons.home_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
         ),
       );
     }
@@ -373,8 +383,8 @@ class _CompactResidenceCard extends StatelessWidget {
       imageUrl,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
-        color: Colors.grey[200],
-        child: Icon(Icons.home_outlined, color: Colors.grey[400], size: 28),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        child: Icon(Icons.home_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
       ),
     );
   }
@@ -388,12 +398,13 @@ class _CompactResidenceCard extends StatelessWidget {
 class _ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: 176,
       margin: const EdgeInsets.only(right: 10),
       child: Shimmer.fromColors(
-        baseColor: Colors.grey[300]!,
-        highlightColor: Colors.grey[100]!,
+        baseColor: scheme.surfaceContainerHighest,
+        highlightColor: scheme.surface,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,13 +413,13 @@ class _ShimmerCard extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: Colors.white,
+                color: scheme.surface,
               ),
             ),
             const SizedBox(height: 5),
-            Container(height: 14, width: 140, color: Colors.white),
+            Container(height: 14, width: 140, color: scheme.surface),
             const SizedBox(height: 1),
-            Container(height: 10, width: 100, color: Colors.white),
+            Container(height: 10, width: 100, color: scheme.surface),
           ],
         ),
       ),

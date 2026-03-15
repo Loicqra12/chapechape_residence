@@ -199,7 +199,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget> {
                     Text(
                       _getTimerDescription(),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       ),
                     ),
                   ],

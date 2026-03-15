@@ -106,10 +106,11 @@ class _QRCodeScreenState extends State<QRCodeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: const Text('QR Codes'),
-        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
@@ -203,7 +204,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
       margin: AppSpacing.pagePadding,
       padding: EdgeInsets.all(AppSpacing.lg20), // 20px
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         boxShadow: [
           BoxShadow(
@@ -289,12 +290,12 @@ class _QRCodeScreenState extends State<QRCodeScreen>
   }) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         SizedBox(width: AppSpacing.sm),
         Text(
           '$label:',
           style: AppTextStyles.body.copyWith(
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
         SizedBox(width: AppSpacing.sm),
@@ -314,7 +315,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.xs),
       ),
       child: TabBar(
@@ -324,8 +325,8 @@ class _QRCodeScreenState extends State<QRCodeScreen>
           borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.xs),
           color: Theme.of(context).primaryColor,
         ),
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey[600],
+        labelColor: AppTheme.textLight,
+        unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         dividerColor: Colors.transparent,
         tabs: const [
           Tab(
@@ -502,7 +503,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
     return Container(
       padding: AppSpacing.cardPadding,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -530,7 +531,7 @@ class _QRCodeScreenState extends State<QRCodeScreen>
               label: const Text('Mes Réservations'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppTheme.textLight,
               ),
             ),
           ),

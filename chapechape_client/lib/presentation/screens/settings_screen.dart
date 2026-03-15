@@ -94,7 +94,7 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-          color: Colors.grey[600],
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -115,16 +115,16 @@ class SettingsScreen extends StatelessWidget {
       },
       leading: Icon(
         icon,
-        color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
+        color: isDestructive ? AppTheme.errorColor : Theme.of(context).colorScheme.onSurface,
       ),
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
+          color: isDestructive ? AppTheme.errorColor : Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.w500,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
     );
   }
 }

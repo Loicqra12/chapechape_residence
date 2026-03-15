@@ -9,8 +9,8 @@ class ApiConfig {
 
   factory ApiConfig.development() {
     return const ApiConfig(
-      baseUrl: 'http://192.168.1.67:4000/api',
-      wsUrl: 'ws://192.168.1.67:4000/ws',
+      baseUrl: 'http://192.168.1.77:4000/api',
+      wsUrl: 'ws://192.168.1.77:4000/ws',
     );
   }
 

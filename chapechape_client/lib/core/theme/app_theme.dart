@@ -462,7 +462,7 @@ class AppTheme {
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: primaryColor,
+        backgroundColor: const Color(0xFF2C2C2C),
         foregroundColor: textLight,
         elevation: 0,
         centerTitle: true,

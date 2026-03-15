@@ -498,13 +498,15 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                           Icon(
                             Icons.location_on_outlined,
                             size: 20,
-                            color: const Color(0xFF1A1A1A),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               widget.title,
-                              style: AppTextStyles.title,
+                              style: AppTextStyles.title.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -515,7 +517,10 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                         const SizedBox(height: 4),
                         Text(
                           widget.subtitle!,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ],
@@ -529,7 +534,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   tooltip: 'Recherche avancée',
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.transparent,
-                    foregroundColor: const Color(0xFF1A1A1A),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -566,16 +571,16 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
     return Container(
       height: 250,
       alignment: Alignment.center,
-      child: const Column(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
           Text(
             'Recherche des résidences à proximité...',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -596,7 +601,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           Icon(
             Icons.location_off,
             size: 48,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -611,7 +616,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           Text(
             'Pour découvrir les résidences à proximité, veuillez activer la localisation dans les paramètres de votre appareil.',
             style: TextStyle(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -658,7 +663,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
             _errorMessage,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -684,7 +689,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           Icon(
             Icons.search_off,
             size: 48,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -699,7 +704,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           Text(
             'Essayez d\'élargir votre rayon de recherche ou d\'explorer d\'autres quartiers.',
             style: TextStyle(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -811,7 +816,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                     label: Text(
                       category['name'],
                       style: TextStyle(
-                        color: isSelected ? AppTheme.textLight : AppTheme.textPrimary,
+                        color: isSelected ? AppTheme.textLight : Theme.of(context).colorScheme.onSurface,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
@@ -827,7 +832,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                     selectedColor: AppTheme.primaryColor,
                     checkmarkColor: AppTheme.textLight,
                     side: BorderSide(
-                      color: isSelected ? AppTheme.darkGold : Colors.grey.shade400,
+                      color: isSelected ? AppTheme.darkGold : Theme.of(context).colorScheme.outline,
                       width: 1,
                     ),
                   ),
@@ -933,9 +938,15 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
       onTap: () => context.pushNamed('residence_details', pathParameters: {'id': residence.id}),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.shadow.withOpacity(0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -952,8 +963,8 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                     ? Image.network(residence.photos!.first,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            Container(color: Colors.grey[200], child: const Icon(Icons.home, color: Colors.grey)))
-                    : Container(color: Colors.grey[200], child: const Icon(Icons.home, color: Colors.grey)),
+                            Container(color: Theme.of(context).colorScheme.surfaceContainerLow, child: Icon(Icons.home, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))))
+                    : Container(color: Theme.of(context).colorScheme.surfaceContainerLow, child: Icon(Icons.home, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
               ),
             ),
             // Infos
@@ -966,20 +977,27 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                   children: [
                     Text(
                       residence.title,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       residence.type.displayName,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       residence.formattedPrice,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFD4AF37)),
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primaryColor),
                     ),
                   ],
                 ),
@@ -988,9 +1006,9 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
             // Bouton fermer
             GestureDetector(
               onTap: () => setState(() => _selectedMarkerResidence = null),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(Icons.close, size: 16, color: Colors.grey),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               ),
             ),
           ],
@@ -1092,11 +1110,11 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
           constraints: const BoxConstraints(minHeight: 260, maxHeight: 380),
           margin: const EdgeInsets.only(right: 16, bottom: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isHovered ? 0.15 : 0.08),
+                color: Theme.of(context).colorScheme.shadow.withOpacity(isHovered ? 0.2 : 0.12),
                 blurRadius: isHovered ? 12 : 8,
                 offset: Offset(0, isHovered ? 6 : 4),
               ),
@@ -1209,10 +1227,10 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                     children: [
                       Text(
                         residence.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1237,17 +1255,17 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                       ),
                       Row(
                         children: [
-                          Icon(Icons.king_bed_outlined, size: 14, color: Colors.grey[600]),
+                          Icon(Icons.king_bed_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                           const SizedBox(width: 2),
-                          Text('${residence.bedrooms}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          Text('${residence.bedrooms}', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8))),
                           const SizedBox(width: 6),
-                          Icon(Icons.bathtub_outlined, size: 14, color: Colors.grey[600]),
+                          Icon(Icons.bathtub_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                           const SizedBox(width: 2),
-                          Text('${residence.bathrooms}', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          Text('${residence.bathrooms}', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8))),
                           const SizedBox(width: 6),
-                          Icon(Icons.square_foot, size: 14, color: Colors.grey[600]),
+                          Icon(Icons.square_foot, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                           const SizedBox(width: 2),
-                          Text('${residence.squareMeters.toStringAsFixed(0)}m²', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                          Text('${residence.squareMeters.toStringAsFixed(0)}m²', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8))),
                         ],
                       ),
                       const SizedBox(height: 1),
@@ -1256,7 +1274,7 @@ class _AroundMeWidgetState extends State<AroundMeWidget> with SingleTickerProvid
                         style: TextStyle(
                           fontSize: 11,
                           height: 1.1,
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

@@ -67,15 +67,20 @@ class _FavoriteIconState extends State<_FavoriteIcon>
           child: Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
+                  blurRadius: 4,
+                ),
+              ],
             ),
             child: Icon(
               widget.isFavorite ? Icons.favorite : Icons.favorite_border,
               size: 18,
-              color: widget.isFavorite ? AppTheme.primaryColor : AppTheme.textPrimary,
+              color: widget.isFavorite ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -155,12 +160,12 @@ class _PhotoCarouselState extends State<_PhotoCarousel> {
                         height: active ? 7 : 5,
                         decoration: BoxDecoration(
                           color: active
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.55),
+                              ? Theme.of(context).colorScheme.surface
+                              : Theme.of(context).colorScheme.surface.withOpacity(0.85),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
+                              color: Theme.of(context).colorScheme.shadow.withOpacity(0.3),
                               blurRadius: 2,
                             ),
                           ],
@@ -177,9 +182,9 @@ class _PhotoCarouselState extends State<_PhotoCarousel> {
   }
 
   Widget _placeholder() => Container(
-        color: AppTheme.dividerColor,
-        child: const Center(
-          child: Icon(Icons.image_outlined, size: 40, color: AppTheme.textSecondary),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: Center(
+          child: Icon(Icons.image_outlined, size: 40, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
         ),
       );
 }
@@ -307,10 +312,14 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4))
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.shadow.withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -328,8 +337,14 @@ class _SearchScreenState extends State<SearchScreen> {
                     ? Image.network(r.images.first,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            Container(color: AppTheme.dividerColor, child: const Icon(Icons.home)))
-                    : Container(color: AppTheme.dividerColor, child: const Icon(Icons.home)),
+                            Container(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              child: Icon(Icons.home, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                            ))
+                    : Container(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Icon(Icons.home, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                      ),
               ),
             ),
             // Infos
@@ -343,8 +358,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     // Type + Ville
                     Text(
                       '${r.type.displayName} · ${_shortLocation(r)}',
-                      style: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -352,8 +367,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     // Titre
                     Text(
                       r.title,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -362,11 +377,15 @@ class _SearchScreenState extends State<SearchScreen> {
                     if (r.rating > 0)
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, size: 13, color: AppTheme.textPrimary),
+                          Icon(Icons.star_rounded, size: 13, color: Theme.of(context).colorScheme.onSurface),
                           const SizedBox(width: 3),
                           Text(
                             r.rating.toStringAsFixed(1),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
                         ],
                       ),
@@ -374,7 +393,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     // Prix
                     RichText(
                       text: TextSpan(
-                        style: const TextStyle(color: AppTheme.textPrimary),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         children: [
                           TextSpan(
                             text: _formatPrice(r.price),
@@ -403,8 +422,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                      color: AppTheme.dividerColor, shape: BoxShape.circle),
-                  child: Icon(Icons.close, size: 14, color: AppTheme.textSecondary),
+                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.close, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 ),
               ),
             ),
@@ -481,7 +502,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: BlocConsumer<ResidenceBloc, ResidenceState>(
         listener: (context, state) {
           if (state is ResidencesLoaded) {
@@ -523,7 +544,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Material(
                       elevation: 4,
                       borderRadius: BorderRadius.circular(14),
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 6),
@@ -531,8 +552,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           children: [
                             // Retour
                             IconButton(
-                              icon: const Icon(Icons.arrow_back,
-                                  color: AppTheme.textPrimary, size: 22),
+                              icon: Icon(Icons.arrow_back,
+                                  color: Theme.of(context).colorScheme.onSurface, size: 22),
                               onPressed: () => context.go('/home'),
                             ),
                             // Résumé des filtres
@@ -543,10 +564,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                 children: [
                                   Text(
                                     _buildFilterSummary(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
-                                      color: AppTheme.textPrimary,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -555,7 +576,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                       '${residences.length} résidence${residences.length > 1 ? 's' : ''}',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: AppTheme.textSecondary,
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                       ),
                                     ),
                                 ],
@@ -570,22 +591,22 @@ class _SearchScreenState extends State<SearchScreen> {
                                 decoration: BoxDecoration(
                                   border: Border.all(
                                     color: _activeFilters.isEmpty
-                                        ? AppTheme.dividerColor
-                                        : AppTheme.textPrimary,
+                                        ? Theme.of(context).colorScheme.outline
+                                        : Theme.of(context).colorScheme.onSurface,
                                     width: _activeFilters.isEmpty ? 1 : 1.5,
                                   ),
                                   borderRadius: BorderRadius.circular(10),
                                   color: _activeFilters.isEmpty
-                                      ? Colors.white
-                                      : AppTheme.textPrimary,
+                                      ? Theme.of(context).colorScheme.surface
+                                      : Theme.of(context).colorScheme.onSurface,
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.tune,
                                         color: _activeFilters.isEmpty
-                                            ? AppTheme.textPrimary
-                                            : Colors.white,
+                                            ? Theme.of(context).colorScheme.primary
+                                            : AppTheme.textLight,
                                         size: 18),
                                     if (!_activeFilters.isEmpty) ...[
                                       const SizedBox(width: 4),
@@ -637,15 +658,15 @@ class _SearchScreenState extends State<SearchScreen> {
                 snapSizes: const [0.10, 0.45, 1.0],
                 builder: (context, scrollController) {
                   return DecoratedBox(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
+                          const BorderRadius.vertical(top: Radius.circular(20)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black12,
+                          color: Theme.of(context).colorScheme.shadow.withOpacity(0.15),
                           blurRadius: 12,
-                          offset: Offset(0, -4),
+                          offset: const Offset(0, -4),
                         ),
                       ],
                     ),
@@ -668,7 +689,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                   width: 40,
                                   height: 4,
                                   decoration: BoxDecoration(
-                                    color: AppTheme.dividerColor,
+                                    color: Theme.of(context).colorScheme.outline,
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
@@ -690,10 +711,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                           residences.isEmpty
                                               ? 'Aucune résidence trouvée'
                                               : 'Plus de ${residences.length} résidence${residences.length > 1 ? 's' : ''}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w700,
-                                            color: AppTheme.textPrimary,
+                                            color: Theme.of(context).colorScheme.onSurface,
                                           ),
                                         ),
                                       ),
@@ -786,10 +807,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     Expanded(
                       child: Text(
                         '${residence.type.displayName} · ${_shortLocation(residence)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -797,16 +818,16 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     if (residence.rating > 0) ...[
                       const SizedBox(width: 6),
-                      const Icon(Icons.star_rounded,
-                          size: 13, color: AppTheme.textPrimary),
+                      Icon(Icons.star_rounded,
+                          size: 13, color: Theme.of(context).colorScheme.onSurface),
                       const SizedBox(width: 2),
                       Text(
                         '${residence.rating.toStringAsFixed(1)}'
                         '${residence.reviewCount > 0 ? ' (${residence.reviewCount})' : ''}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -818,10 +839,10 @@ class _SearchScreenState extends State<SearchScreen> {
                 // Ligne 2 : Titre de la résidence
                 Text(
                   residence.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -832,7 +853,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 // Ligne 3 : Surface m² · Chambres · Salles de bain
                 Text(
                   _buildPropertyInfo(residence),
-                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 ),
 
                 const SizedBox(height: 7),
@@ -843,8 +864,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: const TextStyle(
-                              fontSize: 14, color: AppTheme.textPrimary),
+                          style: TextStyle(
+                              fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                           children: [
                             TextSpan(
                               text: _formatPrice(residence.price),
@@ -930,9 +951,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _imagePlaceholder() {
     return Container(
-      color: AppTheme.dividerColor,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Center(
-        child: Icon(Icons.apartment, size: 48, color: AppTheme.textSecondary),
+        child: Icon(Icons.apartment, size: 48, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
       ),
     );
   }

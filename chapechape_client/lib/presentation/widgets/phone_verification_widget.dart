@@ -325,7 +325,7 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
                           Text(
                             'Expire dans: ${_formatTime(_remainingSeconds)}',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppTheme.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             ),
                           )
                         else

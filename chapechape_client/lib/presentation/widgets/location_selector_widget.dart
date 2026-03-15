@@ -203,11 +203,11 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
               ),
@@ -262,7 +262,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                       style: TextStyle(
                         fontSize: context.responsiveFontSize(14),
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -274,7 +274,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                         onTap: () => _onCitySelected(city),
                         child: Chip(
                           label: Text(city.name),
-                          backgroundColor: Colors.grey[200],
+                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
                         ),
                       );
                     }).toList(),
@@ -290,7 +290,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                       style: TextStyle(
                         fontSize: context.responsiveFontSize(14),
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -324,7 +324,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
     
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -339,7 +339,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                 width: 60,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Theme.of(context).colorScheme.outline,
                   borderRadius: BorderRadius.circular(5),
                 ),
               ),
@@ -411,7 +411,7 @@ class _LocationSelectorWidgetState extends State<LocationSelectorWidget> {
                     height: 4,
                     width: 40,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: Theme.of(context).colorScheme.outline,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

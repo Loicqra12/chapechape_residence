@@ -137,7 +137,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           Text(
             error,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           AppSpacing.verticalLg,
@@ -164,7 +164,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
         children: [
           Icon(
             Icons.search_off,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             size: 60,
           ),
           AppSpacing.verticalMd,
@@ -255,7 +255,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                               Text(
                                 'Valable du ${DateFormat('dd/MM/yyyy').format(promotion.startDate)} au ${DateFormat('dd/MM/yyyy').format(promotion.endDate)}',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[800],
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               if (promotion.isLastMinute) ...[
@@ -286,7 +286,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                   Text(
                     promotion.description,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[800],
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.5,
                     ),
                   ),
@@ -305,10 +305,10 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                       child: Container(
                         padding: AppSpacing.cardPadding,
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
+                          color: Theme.of(context).colorScheme.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           border: Border.all(
-                            color: Colors.grey[300]!,
+                            color: Theme.of(context).colorScheme.outline,
                           ),
                         ),
                         child: Row(
@@ -346,7 +346,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                     Text(
                       'Cliquez pour copier le code à utiliser lors de votre réservation',
                       style: AppTextStyles.body.copyWith(
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -364,7 +364,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                       onTap: () => context.push('/residences/${promotion.residenceId}'),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           boxShadow: [
                             BoxShadow(
@@ -390,14 +390,14 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                 fit: BoxFit.cover,
                                 placeholder: (context, url) => Container(
                                   height: 160,
-                                  color: Colors.grey[200],
+                                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                                   child: const Center(
                                     child: CircularProgressIndicator(),
                                   ),
                                 ),
                                 errorWidget: (context, url, error) => Container(
                                   height: 160,
-                                  color: Colors.grey[200],
+                                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                                   child: const Center(
                                     child: Icon(Icons.broken_image),
                                   ),
@@ -423,14 +423,14 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                       Icon(
                                         Icons.location_on,
                                         size: 16,
-                                        color: Colors.grey[600],
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                       ),
                                       SizedBox(width: AppSpacing.xs),
                                       Expanded(
                                         child: Text(
                                           promotion.residence!.location['displayAddress'] ?? 'Emplacement inconnu',
                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Colors.grey[600],
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -446,7 +446,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                         '${NumberFormat.currency(symbol: '', decimalDigits: 0).format(promotion.residence!.price)} FCFA',
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           decoration: TextDecoration.lineThrough,
-                                          color: Colors.grey[600],
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                         ),
                                       ),
                                       SizedBox(width: AppSpacing.sm),
@@ -462,7 +462,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                                       Text(
                                         '/nuit',
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Colors.grey[600],
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                         ),
                                       ),
                                     ],
@@ -491,7 +491,7 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
                     Text(
                       promotion.termsAndConditions!,
                       style: AppTextStyles.body.copyWith(
-                        color: Colors.grey[700],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
                       ),
                     ),
                     AppSpacing.verticalLg,
@@ -567,18 +567,18 @@ class _PromotionDetailScreenState extends State<PromotionDetailScreen> {
           fit: BoxFit.cover,
           placeholder: (context, url) => Container(
             height: 200,
-            color: Colors.grey[200],
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
             child: const Center(
               child: CircularProgressIndicator(),
             ),
           ),
           errorWidget: (context, url, error) => Container(
             height: 200,
-            color: Colors.grey[200],
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
             child: Center(
               child: Icon(
                 Icons.broken_image,
-                color: Colors.grey[400],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 size: 60,
               ),
             ),

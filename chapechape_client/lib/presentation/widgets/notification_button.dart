@@ -10,18 +10,21 @@ class NotificationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = IconTheme.of(context).color ?? Theme.of(context).colorScheme.onSurface;
+
     return BlocBuilder<NotificationBloc, NotificationState>(
       builder: (context, state) {
         int unreadCount = 0;
-        
+
         if (state is NotificationLoaded) {
           unreadCount = state.notifications.where((n) => !n.isRead).length;
         }
-        
-        return IconButton(
+
+        final button = IconButton(
           icon: Stack(
             children: [
-              const Icon(Icons.notifications, color: Colors.black),
+              Icon(Icons.notifications, color: iconColor),
               if (unreadCount > 0)
                 Positioned(
                   right: 0,
@@ -54,6 +57,22 @@ class NotificationButton extends StatelessWidget {
           },
           tooltip: 'Notifications',
         );
+
+        if (isDark) {
+          return Container(
+            margin: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: button,
+          );
+        }
+        return button;
       },
     );
   }

@@ -34,7 +34,7 @@ class ErrorView extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
           ),
           const SizedBox(height: 24),

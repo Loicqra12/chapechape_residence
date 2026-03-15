@@ -107,7 +107,7 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -167,20 +167,15 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: isDarkMode
-                    ? [
-                        Color(0xFF2D2D2D),
-                        Color(0xFF1F1F1F),
-                      ]
-                    : [
-                        Colors.white,
-                        Colors.grey.shade50,
-                      ],
+                colors: [
+                  Theme.of(context).colorScheme.surface,
+                  Theme.of(context).colorScheme.surfaceContainerLow,
+                ],
               ),
               border: Border.all(
                 color: isSelected 
                     ? accentColor 
-                    : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200),
+                    : Theme.of(context).colorScheme.outline,
                 width: isSelected ? 2.5 : 1,
               ),
               boxShadow: [
@@ -234,7 +229,7 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       height: 1.2,
-                      color: isDarkMode ? Colors.white : Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],

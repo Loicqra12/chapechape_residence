@@ -151,7 +151,7 @@ class _StorageScreenState extends State<StorageScreen> {
                     padding: EdgeInsets.only(bottom: AppSpacing.md),
                     child: Text(
                       'Gérez l\'espace de stockage utilisé par l\'application.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                     ),
                   ),
                   
@@ -215,7 +215,7 @@ class _StorageScreenState extends State<StorageScreen> {
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     child: LinearProgressIndicator(
                       value: 0.7,
-                      backgroundColor: Colors.grey[300],
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                       color: AppTheme.primaryColor,
                       minHeight: 20,
                     ),
@@ -259,7 +259,7 @@ class _StorageScreenState extends State<StorageScreen> {
             ),
             Text(
               size,
-              style: AppTextStyles.caption.copyWith(color: Colors.grey[600]),
+              style: AppTextStyles.caption.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
             ),
           ],
         ),
@@ -290,7 +290,7 @@ class _StorageScreenState extends State<StorageScreen> {
                 const Spacer(),
                 Text(
                   _cacheSize,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 ),
               ],
             ),
@@ -306,7 +306,7 @@ class _StorageScreenState extends State<StorageScreen> {
                 onPressed: _isClearingCache ? null : _clearCache,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppTheme.textLight,
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -321,7 +321,7 @@ class _StorageScreenState extends State<StorageScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 3,
-                              color: Colors.white,
+                              color: AppTheme.textLight,
                             ),
                           ),
                           SizedBox(width: AppSpacing.sm),
@@ -360,7 +360,7 @@ class _StorageScreenState extends State<StorageScreen> {
                 const Spacer(),
                 Text(
                   _appSize,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 ),
               ],
             ),

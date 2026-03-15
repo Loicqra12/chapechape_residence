@@ -106,7 +106,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                 Icon(
                   Icons.home_outlined,
                   size: 20,
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -124,7 +124,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             onPressed: widget.onSeeAllPressed ?? () {
               context.push(widget.routePath);
             },
-            icon: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1A1A1A)),
+            icon: Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurface),
             style: IconButton.styleFrom(minimumSize: const Size(40, 40), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
             tooltip: 'Voir tout',
           ),
@@ -143,7 +143,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
         widget.subtitle,
         style: TextStyle(
           fontSize: context.responsiveFontSize(14),
-          color: Colors.grey[600],
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
       ),
     );
@@ -253,10 +253,10 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             // Texte en dessous de la card (pas dans la card)
             Text(
               StringUtils.toTitleCase(title),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -264,12 +264,12 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     location ?? '—',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -436,11 +436,11 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: Colors.grey[600]),
+        Icon(icon, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
         const SizedBox(width: 2),
         Text(
           isArea ? '${value}m²' : '$value',
-          style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -454,11 +454,11 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
         const SizedBox(width: 4),
         Text(
           '$value $label',
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF1A1A1A)),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
         ),
       ],
     );
@@ -503,7 +503,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
       builder: (context, snapshot) {
         // Afficher un placeholder pendant le chargement du token
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildImagePlaceholder();
+          return _buildImagePlaceholder(context);
         }
         
         final token = snapshot.data;
@@ -516,19 +516,19 @@ class _FeaturedListingsState extends State<FeaturedListings> {
           fit: BoxFit.cover,
           // Ajouter le token d'authentification aux headers si disponible
           httpHeaders: token != null ? {'Authorization': 'Bearer $token'} : null,
-          placeholder: (context, url) => _buildImagePlaceholder(),
+          placeholder: (context, url) => _buildImagePlaceholder(context),
           errorWidget: (context, url, error) => _buildImageErrorWithFallback(url),
         );
       }
     );
   }
 
-  Widget _buildImagePlaceholder() {
+  Widget _buildImagePlaceholder(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
+      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      highlightColor: Theme.of(context).colorScheme.surface,
       child: Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
       ),
     );
   }
@@ -546,7 +546,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     // Si l'URL est null, afficher le widget d'erreur par défaut
     if (url == null) {
       _logger.warning('URL d\'image nulle');
-      return _buildDefaultErrorWidget();
+      return _buildDefaultErrorWidget(context);
     }
     
     // Si c'est un asset local, utiliser Image.asset
@@ -577,7 +577,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
       return CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.cover,
-        placeholder: (context, url) => _buildImagePlaceholder(),
+        placeholder: (context, url) => _buildImagePlaceholder(context),
         errorWidget: (context, url, error) {
           _logger.warning('Erreur de chargement d\'URL externe: $error ($url)');
           
@@ -587,15 +587,15 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             return CachedNetworkImage(
               imageUrl: alternativeUrl,
               fit: BoxFit.cover,
-              placeholder: (context, url) => _buildImagePlaceholder(),
+              placeholder: (context, url) => _buildImagePlaceholder(context),
               errorWidget: (context, url, error) {
                 _logger.error('Erreur aussi avec l\'URL alternative: $error');
-                return _buildDefaultErrorWidget();
+                return _buildDefaultErrorWidget(context);
               },
             );
           }
           
-          return _buildDefaultErrorWidget();
+          return _buildDefaultErrorWidget(context);
         },
       );
     }
@@ -610,7 +610,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
       return CachedNetworkImage(
         imageUrl: fullUrl,
         fit: BoxFit.cover,
-        placeholder: (context, url) => _buildImagePlaceholder(),
+        placeholder: (context, url) => _buildImagePlaceholder(context),
         errorWidget: (context, url, error) {
           _logger.warning('Erreur de chargement après conversion: $error ($fullUrl)');
           
@@ -627,10 +627,10 @@ class _FeaturedListingsState extends State<FeaturedListings> {
           return CachedNetworkImage(
             imageUrl: alternativeUrl,
             fit: BoxFit.cover,
-            placeholder: (context, url) => _buildImagePlaceholder(),
+            placeholder: (context, url) => _buildImagePlaceholder(context),
             errorWidget: (context, url, error) {
               _logger.error('Erreur également avec le chemin alternatif: $error');
-              return _buildDefaultErrorWidget();
+              return _buildDefaultErrorWidget(context);
             },
           );
         },
@@ -645,13 +645,13 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     );
   }
 
-  Widget _buildDefaultErrorWidget() {
+  Widget _buildDefaultErrorWidget(BuildContext context) {
     return Container(
-      color: Colors.grey[200],
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       child: Center(
         child: Icon(
           Icons.broken_image_outlined,
-          color: Colors.grey[400],
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         ),
       ),
     );
@@ -668,14 +668,14 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             Icon(
               Icons.home_work_outlined,
               size: 48,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
             const SizedBox(height: 16),
             Text(
               widget.emptyStateMessage,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -697,8 +697,8 @@ class _FeaturedListingsState extends State<FeaturedListings> {
             width: 280,
             margin: const EdgeInsets.only(right: 16),
             child: Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
+              baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              highlightColor: Theme.of(context).colorScheme.surface,
               child: Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -708,7 +708,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                   children: [
                     Container(
                       height: 160,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -718,13 +718,13 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                           Container(
                             width: 150,
                             height: 16,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           const SizedBox(height: 8),
                           Container(
                             width: 100,
                             height: 12,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                           ),
                           const SizedBox(height: 16),
                           Row(
@@ -734,7 +734,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
                               (i) => Container(
                                 width: 60,
                                 height: 24,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.surface,
                               ),
                             ),
                           ),

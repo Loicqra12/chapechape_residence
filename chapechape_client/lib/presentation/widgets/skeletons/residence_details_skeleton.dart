@@ -7,11 +7,11 @@ class ResidenceDetailsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
-    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
-    final containerColor = isDarkMode ? Colors.grey[700] : Colors.white;
-    final bgColor = isDarkMode ? Colors.grey[900] : Colors.grey[300];
+    final scheme = Theme.of(context).colorScheme;
+    final baseColor = scheme.surfaceContainerHighest;
+    final highlightColor = scheme.surface;
+    final containerColor = scheme.surface;
+    final bgColor = scheme.surfaceContainerLow;
 
     return Scaffold(
       body: CustomScrollView(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:chapechape_client/core/blocs/theme/theme_cubit.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/core/theme/text_styles.dart';
@@ -40,7 +42,15 @@ class _DisplayScreenState extends State<DisplayScreen> {
     setState(() {
       _selectedTheme = theme;
     });
-    
+    // Appliquer le thème immédiatement dans toute l'app
+    if (mounted) {
+      final themeMode = theme == 'light'
+          ? ThemeMode.light
+          : theme == 'dark'
+              ? ThemeMode.dark
+              : ThemeMode.system;
+      context.read<ThemeCubit>().setTheme(themeMode);
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -81,7 +91,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                   padding: EdgeInsets.only(bottom: AppSpacing.md),
                   child: Text(
                     'Personnalisez l\'apparence de l\'application selon vos préférences.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   ),
                 ),
                 
@@ -183,9 +193,9 @@ class _DisplayScreenState extends State<DisplayScreen> {
                         Container(
                           padding: EdgeInsets.all(AppSpacing.smd),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                            border: Border.all(color: AppTheme.dividerColor),
+                            border: Border.all(color: Theme.of(context).colorScheme.outline),
                           ),
                           child: Text(
                             'Voici un exemple de texte avec la taille sélectionnée.',
@@ -208,7 +218,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
       padding: EdgeInsets.symmetric(vertical: AppSpacing.smd),
       child: Text(
         title,
-        style: AppTextStyles.subtitle.copyWith(color: AppTheme.textPrimary),
+        style: AppTextStyles.subtitle.copyWith(color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }
@@ -240,7 +250,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
               Container(
                 padding: EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.white,
+                  color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -263,7 +273,7 @@ class _DisplayScreenState extends State<DisplayScreen> {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       ),
                     ),
                   ],

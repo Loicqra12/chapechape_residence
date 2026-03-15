@@ -88,7 +88,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
               primary: AppTheme.primaryColor,
               onPrimary: AppTheme.textLight,
               surface: AppTheme.textLight,
-              onSurface: AppTheme.textPrimary,
+              onSurface: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           child: child!,
@@ -120,7 +120,7 @@ class _AdvancedSearchFiltersState extends State<AdvancedSearchFilters> {
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.textPrimary.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

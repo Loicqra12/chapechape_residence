@@ -251,6 +251,8 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           title: const Text('Paiement en cours'),
           elevation: 0,
           actions: [

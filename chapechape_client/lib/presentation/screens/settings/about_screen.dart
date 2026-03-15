@@ -121,7 +121,7 @@ class _AboutScreenState extends State<AboutScreen> {
             Text(
               'Version $_appVersion',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
             
@@ -164,7 +164,7 @@ class _AboutScreenState extends State<AboutScreen> {
             Text(
               '© ${DateTime.now().year} ChapeChape Group. Tous droits réservés.',
               style: AppTextStyles.body.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -238,7 +238,7 @@ class _AboutScreenState extends State<AboutScreen> {
             child: Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
           ),
@@ -350,7 +350,8 @@ class _LegalDocumentScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       body: Padding(
         padding: AppSpacing.pagePadding,

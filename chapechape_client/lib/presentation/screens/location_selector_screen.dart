@@ -124,15 +124,13 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Choisir une localisation', 
           semanticsLabel: 'Écran de sélection de localisation'),
         elevation: 0,
-        backgroundColor: isDarkMode ? Colors.black12 : Colors.white,
-        foregroundColor: isDarkMode ? Colors.white : Colors.black,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         actions: [
           if (_selectedLocation != null && _selectedLocation!.isNotEmpty)
             TextButton(
@@ -172,7 +170,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                 semanticsLabel: 'Section des localisations les plus recherchées',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               
@@ -235,7 +233,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
           Text(
             'Vérifiez votre connexion et réessayez',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -247,7 +245,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: AppTheme.textLight,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
             ),
             child: const Text('Réessayer'),
@@ -272,7 +270,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
           width: 2,
         ),
       ),
-      color: isDarkMode ? Colors.grey[850] : Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       child: InkWell(
         onTap: () => _selectPopularLocation(location),
         borderRadius: BorderRadius.circular(AppSpacing.smd),
@@ -282,7 +280,7 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
             children: [
               Icon(
                 Icons.location_on,
-                color: isSelected ? AppTheme.primaryColor : Colors.grey[600],
+                color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 size: 24,
               ),
               SizedBox(width: AppSpacing.smd),
@@ -294,14 +292,14 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                       location.name,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? AppTheme.primaryColor : isDarkMode ? Colors.white : Colors.black,
+                        color: isSelected ? AppTheme.primaryColor : Theme.of(context).colorScheme.onSurface,
                       ),
                       semanticsLabel: 'Localisation: ${location.name}',
                     ),
                     Text(
                       location.fullAddress,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -313,14 +311,14 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[700] : Colors.grey[200],
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(AppSpacing.smd),
                 ),
                 child: Text(
                   '${location.searchCount}+',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.grey[700],
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   semanticsLabel: '${location.searchCount} recherches',
                 ),

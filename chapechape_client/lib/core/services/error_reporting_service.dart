@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:chapechape_client/core/utils/logger.dart';
 
@@ -16,14 +17,22 @@ class ErrorReportingService {
   Future<void> initialize() async {
     if (_isInitialized) return;
     
-    // Intercepter les erreurs Flutter non gérées
+    // Intercepter les erreurs Flutter (widgets, build, etc.)
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       reportError(details.exception, details.stack ?? StackTrace.current);
     };
     
+    // CRUCIAL : intercepter les erreurs qui échappent à la Zone (ex: callbacks
+    // moteur Flutter). Sans cela, l'exception est envoyée au natif et Android
+    // tue l'app (sur Xiaomi : "Failed to mkdir /data/miuilog/stability/hprof/").
+    // Retourner true = erreur gérée → l'app ne crashe pas.
+    ui.PlatformDispatcher.instance.onError = (Object error, StackTrace stackTrace) {
+      reportError(error, stackTrace);
+      return true;
+    };
+    
     // Intercepter les erreurs Zone non gérées
-    // Cela attrape les erreurs qui se produisent en dehors de Flutter
     runZonedGuarded(() {
       _logger.info('Service de rapport d\'erreurs initialisé');
     }, (error, stackTrace) {

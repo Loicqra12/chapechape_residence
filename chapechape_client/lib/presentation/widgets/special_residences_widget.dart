@@ -87,13 +87,13 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
                 Icon(
                   Icons.star_outline,
                   size: 20,
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     widget.title,
-                    style: AppTextStyles.title,
+                    style: AppTextStyles.title.copyWith(color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -106,7 +106,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
               context.push('/residences');
             },
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF1A1A1A),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -135,7 +135,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
         widget.subtitle,
         style: TextStyle(
           fontSize: context.responsiveFontSize(14),
-          color: Colors.grey[600],
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
       ),
     );
@@ -343,10 +343,10 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
             const SizedBox(height: 6),
             Text(
               StringUtils.toTitleCase(title),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -354,12 +354,12 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     location ?? '—',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -383,7 +383,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
         Icon(
           icon,
           size: 14,
-          color: Colors.grey[600], // Gris foncé
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
         const SizedBox(width: 4),
         Text(
@@ -391,7 +391,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF1A1A1A),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -481,21 +481,21 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
 
   Widget _buildImagePlaceholder() {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
+      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      highlightColor: Theme.of(context).colorScheme.surface,
       child: Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
       ),
     );
   }
 
   Widget _buildImageError() {
     return Container(
-      color: Colors.grey[200],
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       child: Center(
         child: Icon(
           Icons.home_outlined,
-          color: Colors.grey[400],
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           size: 32,
         ),
       ),
@@ -513,14 +513,14 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
             Icon(
               Icons.villa_outlined,
               size: 48,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
               widget.emptyStateMessage,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -533,7 +533,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
               label: const Text('Explorer toutes les résidences'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppTheme.textLight,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -558,8 +558,8 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
             width: 230,
             margin: const EdgeInsets.only(right: 12),
             child: Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
+              baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              highlightColor: Theme.of(context).colorScheme.surface,
               child: Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -570,7 +570,7 @@ class _SpecialResidencesWidgetState extends State<SpecialResidencesWidget> {
                     // Image placeholder
                     Container(
                       height: 150,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     Padding(
                       padding: const EdgeInsets.all(16),

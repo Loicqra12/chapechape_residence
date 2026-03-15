@@ -99,7 +99,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   child: Text(
                     'Choisissez la langue de l\'application.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                 ),
@@ -123,7 +123,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
       title: Text(
         language['name'],
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppTheme.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -131,7 +131,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
           ? Text(
               language['native'],
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
             )
           : null,

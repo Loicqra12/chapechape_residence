@@ -50,6 +50,8 @@ allprojects {
     // Ajouter des configurations pour tous les sous-projets y compris les plugins
     configurations.all {
         resolutionStrategy {
+            // Éviter NoSuchMethodError: setStylusHandwritingEnabled (clavier / TextInput)
+            force 'androidx.core:core:1.13.1'
             // Forcer la version du plugin problématique
             force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
             // Forcer les versions Kotlin

@@ -212,15 +212,17 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: _buildAppBar(),
       body: _buildBody(),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final colorScheme = Theme.of(context).colorScheme;
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
+      foregroundColor: colorScheme.onSurface,
       elevation: 0,
       automaticallyImplyLeading: false,
       titleSpacing: 0,
@@ -229,9 +231,9 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
         child: Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.dividerColor, width: 1.5),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.5), width: 1.5),
           ),
           child: Row(
             children: [
@@ -239,10 +241,10 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
               GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
                 behavior: HitTestBehavior.opaque,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Icon(Icons.arrow_back,
-                      size: 20, color: AppTheme.textPrimary),
+                      size: 20, color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
               // Séparateur vertical
@@ -253,13 +255,13 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
                   controller: _controller,
                   focusNode: _focusNode,
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 15,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Rechercher une résidence...',
                     hintStyle:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+                        TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), fontSize: 15),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -286,11 +288,11 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
-                        color: AppTheme.dividerColor,
+                        color: Theme.of(context).colorScheme.surfaceContainerHigh,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.close,
-                          size: 14, color: AppTheme.textPrimary),
+                          size: 14, color: Theme.of(context).colorScheme.onSurface),
                     ),
                   ),
                 ),
@@ -374,7 +376,7 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
               child: Text(
                 'Effacer',
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   fontSize: 13,
                 ),
               ),
@@ -383,7 +385,7 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
           ..._recentSearches.map((r) => _buildTile(
                 icon: Icons.history,
                 iconBg: AppTheme.dividerColor,
-                iconColor: AppTheme.textSecondary,
+                iconColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 title: r.split(',').first.trim(),
                 subtitle: r,
                 onTap: () => _selectRecent(r),
@@ -395,7 +397,7 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
         ..._localPlaces.take(10).map((p) => _buildTile(
               icon: Icons.location_city_outlined,
               iconBg: AppTheme.dividerColor,
-              iconColor: AppTheme.textSecondary,
+              iconColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               title: p.label,
               subtitle: p.sub,
               onTap: () => _selectLocal(p),
@@ -410,7 +412,7 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
         padding: const EdgeInsets.all(40),
         child: Text(
           'Aucun résultat pour "$query"',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), fontSize: 15),
           textAlign: TextAlign.center,
         ),
       ),
@@ -428,7 +430,7 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
           children: [
             _iconBox(
               Icons.location_on_outlined,
-              Colors.grey[100]!,
+              Theme.of(context).colorScheme.surfaceContainerLow,
               AppTheme.primaryColor,
             ),
             const SizedBox(width: 14),
@@ -437,16 +439,16 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _highlightText(p.mainText, query,
-                      baseStyle: const TextStyle(
+                      baseStyle: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       )),
                   if (p.secondaryText.isNotEmpty)
                     Text(
                       p.secondaryText,
                       style:
-                          TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
@@ -469,8 +471,8 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
           children: [
             _iconBox(
               Icons.location_on_outlined,
-              Colors.grey[100]!,
-              AppTheme.textSecondary,
+              Theme.of(context).colorScheme.surfaceContainerLow,
+              Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -478,14 +480,14 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _highlightText(p.label, query,
-                      baseStyle: const TextStyle(
+                      baseStyle: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       )),
                   Text(
                     p.sub,
-                    style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                   ),
                 ],
               ),
@@ -519,14 +521,14 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary)),
+                          color: Theme.of(context).colorScheme.onSurface)),
                   const SizedBox(height: 2),
                   Text(subtitle,
                       style:
-                          TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                          TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                       overflow: TextOverflow.ellipsis),
                 ],
               ),
@@ -547,7 +549,7 @@ class _SearchDestinationScreenState extends State<SearchDestinationScreen> {
         children: [
           Text(title,
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,

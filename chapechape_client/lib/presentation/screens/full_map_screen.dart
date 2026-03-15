@@ -512,6 +512,8 @@ class _FullMapScreenState extends State<FullMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: Text(widget.title ?? 'Carte des résidences'),
         actions: [
           if (_userLocation != null)
@@ -660,8 +662,8 @@ class _FullMapScreenState extends State<FullMapScreen> {
                     FloatingActionButton(
                       heroTag: 'layers',
                       mini: true,
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black54,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       child: const Icon(Icons.layers),
                       onPressed: _showLayersPopup,
                     ),
@@ -669,8 +671,8 @@ class _FullMapScreenState extends State<FullMapScreen> {
                     FloatingActionButton(
                       heroTag: 'target',
                       mini: true,
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black54,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       child: const Icon(Icons.gps_fixed),
                       onPressed: () async {
                         if (_userLocation != null && _mapController != null) {
@@ -722,14 +724,14 @@ class _FullMapScreenState extends State<FullMapScreen> {
                     return FilterChip(
                       avatar: Icon(c.$3,
                           size: 16,
-                          color: isOn ? Colors.white : AppTheme.textSecondary),
+                          color: isOn ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                       label: Text(c.$2),
                       selected: isOn,
                       selectedColor: AppTheme.primaryColor,
                       checkmarkColor: Colors.white,
                       backgroundColor: AppTheme.dividerColor,
                       labelStyle: TextStyle(
-                          color: isOn ? Colors.white : AppTheme.textPrimary,
+                          color: isOn ? Colors.white : Theme.of(context).colorScheme.onSurface,
                           fontWeight: isOn ? FontWeight.w600 : FontWeight.normal),
                       onSelected: (v) {
                         setSt(() {
@@ -783,7 +785,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
               ListTile(
-                leading: Icon(Icons.map_outlined, color: AppTheme.textPrimary),
+                leading: Icon(Icons.map_outlined, color: Theme.of(context).colorScheme.onSurface),
                 title: const Text('Standard'),
                 onTap: () {
                   Navigator.pop(context);
@@ -791,7 +793,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.satellite_alt_outlined, color: AppTheme.textPrimary),
+                leading: Icon(Icons.satellite_alt_outlined, color: Theme.of(context).colorScheme.onSurface),
                 title: const Text('Satellite'),
                 onTap: () {
                   Navigator.pop(context);
@@ -799,7 +801,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.terrain_outlined, color: AppTheme.textPrimary),
+                leading: Icon(Icons.terrain_outlined, color: Theme.of(context).colorScheme.onSurface),
                 title: const Text('Hybride'),
                 onTap: () {
                   Navigator.pop(context);
@@ -879,11 +881,11 @@ class _FullMapScreenState extends State<FullMapScreen> {
       child: Container(
         margin: AppSpacing.pagePadding,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.shadow.withOpacity(0.12),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1016,7 +1018,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
                               ? residence.location.displayAddress 
                               : 'Adresse non disponible',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1028,13 +1030,13 @@ class _FullMapScreenState extends State<FullMapScreen> {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                           decoration: BoxDecoration(
-                            color: AppTheme.dividerColor,
+                            color: Theme.of(context).colorScheme.surfaceContainerHigh,
                             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                           ),
                           child: Text(
                             residence.type.displayName,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1055,12 +1057,12 @@ class _FullMapScreenState extends State<FullMapScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(amenityIcon, size: 12, color: AppTheme.textSecondary),
+                                    Icon(amenityIcon, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                                     const SizedBox(width: 2),
                                     Text(
                                       _getAmenityLabel(amenity),
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.textSecondary,
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                         fontSize: 11,
                                       ),
                                     ),
@@ -1274,18 +1276,18 @@ class _FullMapScreenState extends State<FullMapScreen> {
     return FilterChip(
       avatar: Icon(icon,
           size: 15,
-          color: isSelected ? Colors.white : AppTheme.textSecondary),
+          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
       label: Text(label),
       selected: isSelected,
       checkmarkColor: Colors.white,
       selectedColor: AppTheme.primaryColor,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       side: BorderSide(
         color: isSelected ? AppTheme.primaryColor : AppTheme.dividerColor,
       ),
       labelStyle: TextStyle(
         fontSize: 12,
-        color: isSelected ? Colors.white : AppTheme.textPrimary,
+        color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
       ),
       onSelected: (bool selected) {

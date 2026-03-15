@@ -78,7 +78,7 @@ class _TendancesWidgetState extends State<TendancesWidget> {
                 const SizedBox(height: 4),
                 Expanded(
                   child: isLoading
-                      ? _buildLoadingSkeleton()
+                      ? _buildLoadingSkeleton(context)
                       : hasError || list.isEmpty
                           ? _buildEmptyState(context)
                           : _buildItemsList(context, list),
@@ -103,13 +103,15 @@ class _TendancesWidgetState extends State<TendancesWidget> {
                 Icon(
                   Icons.trending_up,
                   size: 20,
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _buildTitle(),
-                    style: AppTextStyles.title,
+                    style: AppTextStyles.title.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -119,7 +121,7 @@ class _TendancesWidgetState extends State<TendancesWidget> {
           ),
           IconButton(
             onPressed: () => context.push('/search'),
-            icon: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1A1A1A)),
+            icon: Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurface),
             style: IconButton.styleFrom(minimumSize: const Size(40, 40), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
             tooltip: 'Voir tout',
           ),
@@ -232,10 +234,10 @@ class _TendancesWidgetState extends State<TendancesWidget> {
             const SizedBox(height: 6),
             Text(
               StringUtils.toTitleCase(title),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A1A),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -243,12 +245,12 @@ class _TendancesWidgetState extends State<TendancesWidget> {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]),
+                Icon(Icons.location_on_outlined, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     location,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -309,30 +311,30 @@ class _TendancesWidgetState extends State<TendancesWidget> {
       return CachedNetworkImage(
         imageUrl: imageUrl,
         fit: BoxFit.cover,
-        placeholder: (context, url) => _buildImagePlaceholder(),
-        errorWidget: (context, url, error) => _buildImageError(),
+        placeholder: (context, url) => _buildImagePlaceholder(context),
+        errorWidget: (context, url, error) => _buildImageError(context),
       );
     }
     return Image.asset(
       imageUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _buildImageError(),
+      errorBuilder: (context, error, stackTrace) => _buildImageError(context),
     );
   }
 
-  Widget _buildImagePlaceholder() {
+  Widget _buildImagePlaceholder(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(color: Colors.white),
+      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      highlightColor: Theme.of(context).colorScheme.surface,
+      child: Container(color: Theme.of(context).colorScheme.surface),
     );
   }
 
-  Widget _buildImageError() {
+  Widget _buildImageError(BuildContext context) {
     return Container(
-      color: Colors.grey[200],
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       child: Center(
-        child: Icon(Icons.home_outlined, color: Colors.grey[400], size: 32),
+        child: Icon(Icons.home_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 32),
       ),
     );
   }
@@ -350,11 +352,11 @@ class _TendancesWidgetState extends State<TendancesWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.trending_up, size: 48, color: Colors.grey[400]),
+            Icon(Icons.trending_up, size: 48, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             const SizedBox(height: 16),
             Text(
               'Aucune tendance disponible pour le moment.',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -364,7 +366,7 @@ class _TendancesWidgetState extends State<TendancesWidget> {
               label: const Text('Explorer les résidences'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: AppTheme.textLight,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -377,7 +379,7 @@ class _TendancesWidgetState extends State<TendancesWidget> {
     );
   }
 
-  Widget _buildLoadingSkeleton() {
+  Widget _buildLoadingSkeleton(BuildContext context) {
     return SizedBox(
       height: 350,
       child: ListView.builder(
@@ -392,22 +394,22 @@ class _TendancesWidgetState extends State<TendancesWidget> {
             width: 176,
             margin: const EdgeInsets.only(right: 10),
             child: Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
+              baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              highlightColor: Theme.of(context).colorScheme.surface,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     height: 120,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Container(height: 14, width: 140, color: Colors.white),
+                  Container(height: 14, width: 140, color: Theme.of(context).colorScheme.surface),
                   const SizedBox(height: 2),
-                  Container(height: 12, width: 100, color: Colors.white),
+                  Container(height: 12, width: 100, color: Theme.of(context).colorScheme.surface),
                 ],
               ),
             ),

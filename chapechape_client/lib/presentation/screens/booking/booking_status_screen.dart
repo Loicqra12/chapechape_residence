@@ -126,10 +126,11 @@ class BookingStatusScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('État de la réservation'),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -179,7 +180,7 @@ class BookingStatusScreen extends StatelessWidget {
               Text(
                 message,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey[700],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -202,7 +203,7 @@ class BookingStatusScreen extends StatelessWidget {
                 icon: const Icon(Icons.home),
                 label: const Text('Retour à l\'accueil'),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
+                  foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
               ),
             ],

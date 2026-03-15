@@ -50,6 +50,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
             
             // Nom de la politique
             _buildInfoRow(
+              context,
               'Type de politique',
               policy.name,
               Icons.label,
@@ -58,6 +59,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
             // Description
             if (policy.description.isNotEmpty)
               _buildInfoRow(
+                context,
                 'Description',
                 policy.description,
                 Icons.description,
@@ -75,7 +77,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             
-            ...policy.rules.map((rule) => _buildRuleItem(rule)),
+            ...policy.rules.map((rule) => _buildRuleItem(context, rule)),
             
             const SizedBox(height: 16),
             
@@ -163,7 +165,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
     return totalPrice - refundAmount;
   }
 
-  Widget _buildInfoRow(String title, String value, IconData icon) {
+  Widget _buildInfoRow(BuildContext context, String title, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: IntrinsicHeight(
@@ -173,7 +175,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -185,7 +187,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -208,16 +210,16 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildRuleItem(CancellationRule rule) {
+  Widget _buildRuleItem(BuildContext context, CancellationRule rule) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
         ),
       ),
       child: IntrinsicHeight(
@@ -226,7 +228,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
             Icon(
               Icons.check_circle_outline,
               size: 20,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -238,7 +240,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
                     '${rule.refundPercentage}% de remboursement',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -246,7 +248,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
                     '${rule.timeBeforeCheckIn} heures avant le check-in',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     ),
                   ),
                   if (rule.description != null) ...[
@@ -255,7 +257,7 @@ class CancellationPolicyDetailsWidget extends StatelessWidget {
                       rule.description!,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[500],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 2,

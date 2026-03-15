@@ -214,7 +214,7 @@ class _LocationFilterWidgetState extends State<LocationFilterWidget> {
       return Text(
         'Aucune localisation sélectionnée',
         style: AppTextStyles.body.copyWith(
-          color: AppTheme.textSecondary,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
           fontStyle: FontStyle.italic,
         ),
       );

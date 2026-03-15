@@ -72,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final isLastPage = _currentPage == _pages.length - 1;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.md + AppSpacing.xs),
@@ -86,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back_rounded),
-                      color: AppTheme.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       onPressed: _currentPage == 0
                           ? null
                           : _goBack,
@@ -103,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             Text(
                               'Passer',
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: AppTheme.textSecondary,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                     fontWeight: FontWeight.w500,
                                   ),
                             ),
@@ -111,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             Icon(
                               Icons.arrow_forward_rounded,
                               size: 18,
-                              color: AppTheme.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             ),
                           ],
                         ),
@@ -142,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Text(
                       _pages[_currentPage]['title']!,
                       style: AppTextStyles.headline.copyWith(
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         letterSpacing: 0.5,
                       ),
                       textAlign: TextAlign.center,
@@ -154,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Text(
                       _pages[_currentPage]['description']!,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             height: 1.5,
                           ),
                       textAlign: TextAlign.center,

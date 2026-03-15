@@ -14,8 +14,8 @@ class ShimmerResidenceCard extends StatelessWidget {
       elevation: 3,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Shimmer.fromColors(
-        baseColor: Colors.grey[300]!,
-        highlightColor: Colors.grey[100]!,
+        baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        highlightColor: Theme.of(context).colorScheme.surface,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -23,7 +23,7 @@ class ShimmerResidenceCard extends StatelessWidget {
             Container(
               height: 160,
               width: 280, // Largeur fixe pour éviter le débordement
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
             ),
             
             // Content placeholders
@@ -37,7 +37,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                     height: 18,
                     width: 150,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -48,7 +48,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                     height: 12,
                     width: 200,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -62,7 +62,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                         height: 12,
                         width: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -71,7 +71,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                         height: 12,
                         width: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -80,7 +80,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                         height: 12,
                         width: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -97,7 +97,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                           height: 16,
                           width: 100,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -106,7 +106,7 @@ class ShimmerResidenceCard extends StatelessWidget {
                         height: 16,
                         width: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),

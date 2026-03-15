@@ -86,9 +86,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.textPrimary,
-          backgroundColor: Colors.white,
-          side: BorderSide(color: Colors.grey.shade300),
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          side: BorderSide(color: Theme.of(context).colorScheme.outline),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -143,11 +143,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const SizedBox.shrink(),
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go('/home'),
+              onPressed: () => context.go('/login'),
+              tooltip: 'Retour à la connexion',
             ),
           ),
           body: SafeArea(
@@ -214,7 +216,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         'Créer un compte',
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -222,7 +224,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text(
                         'Rejoignez ChapeChape pour trouver votre logement idéal',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -317,7 +319,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             _isPasswordVisible
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                           onPressed: _togglePasswordVisibility,
                         ),
@@ -335,7 +337,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             _isConfirmPasswordVisible
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.grey,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                           onPressed: _toggleConfirmPasswordVisibility,
                         ),
@@ -459,7 +461,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: Text(
                               'Ou inscrivez-vous avec',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                               ),
                             ),
                           ),

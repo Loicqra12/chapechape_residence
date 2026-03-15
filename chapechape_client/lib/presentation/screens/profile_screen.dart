@@ -385,10 +385,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.surface,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.12),
+                                  color: Theme.of(context).colorScheme.shadow.withOpacity(0.12),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -405,23 +405,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     SizedBox(height: AppSpacing.md),
-                    // Nom centré
+                    // Nom centré (couleur du thème pour rester lisible en clair et sombre)
                     Text(
                       '${user.firstName} ${user.lastName}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: AppSpacing.xs5),
-                    // Email centré, sur 2 lignes max (moins de troncature)
+                    // Email centré (couleur du thème)
                     Text(
                       user.email,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -445,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _isEditing ? 'Annuler' : 'Modifier',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                         ),
                       ),
@@ -468,7 +468,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppSpacing.verticalMd,
                     Text(
                       'Vérification du numéro de téléphone',
-                      style: AppTextStyles.subtitle,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                     ),
                     AppSpacing.verticalSm,
                     Text(
@@ -484,7 +487,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppSpacing.verticalMd,
                     Text(
                       'Informations personnelles',
-                      style: AppTextStyles.subtitle,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                     ),
                   AppSpacing.verticalLg,
                   
@@ -584,7 +590,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.phone, color: AppTheme.textSecondary),
+                          Icon(Icons.phone, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
                           SizedBox(width: AppSpacing.smd),
                           Expanded(
                             child: Text(
@@ -716,24 +722,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isDestructive = false,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final contentColor = isDestructive ? AppTheme.errorColor : colorScheme.onSurface;
     return ListTile(
       onTap: () {
         HapticFeedback.lightImpact();
         onTap();
       },
-      leading: Icon(
-        icon,
-        color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
-      ),
+      leading: Icon(icon, color: contentColor),
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isDestructive ? AppTheme.errorColor : AppTheme.textPrimary,
+          color: contentColor,
           fontWeight: FontWeight.w500,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right),
-      // onTap handled in ListTile property above
+      trailing: Icon(Icons.chevron_right, color: colorScheme.onSurface.withOpacity(0.6)),
     );
   }
 }

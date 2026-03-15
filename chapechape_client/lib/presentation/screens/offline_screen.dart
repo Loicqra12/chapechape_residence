@@ -87,8 +87,8 @@ class _OfflineScreenState extends State<OfflineScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mode Hors Ligne'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         actions: [
           StreamBuilder<bool>(
@@ -191,7 +191,7 @@ class _OfflineScreenState extends State<OfflineScreen> {
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerLow,
         ),
       ),
     );
@@ -282,7 +282,7 @@ class _OfflineScreenState extends State<OfflineScreen> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ],

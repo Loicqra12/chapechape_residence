@@ -124,7 +124,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         Icon(
           Icons.local_offer_outlined,
           size: 20,
-          color: const Color(0xFF1A1A1A),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         
         SizedBox(width: AppSpacing.smd),
@@ -136,7 +136,9 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             children: [
               Text(
                 widget.title,
-                style: AppTextStyles.title,
+                style: AppTextStyles.title.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -146,7 +148,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                   widget.subtitle!,
                   style: AppTextStyles.body.copyWith(
                     fontSize: context.responsiveFontSize(14),
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -156,7 +158,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         
         IconButton(
           onPressed: () => context.push('/promotions'),
-          icon: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1A1A1A)),
+          icon: Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).colorScheme.onSurface),
           style: IconButton.styleFrom(minimumSize: const Size(40, 40), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
           tooltip: 'Voir tout',
         ),
@@ -176,7 +178,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
           Text(
             'Chargement des promotions...',
             style: AppTextStyles.body.copyWith(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               fontSize: context.responsiveFontSize(14),
             ),
           ),
@@ -200,7 +202,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             'Impossible de charger les promotions',
             style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(16),
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           SizedBox(height: AppSpacing.sm),
@@ -208,7 +210,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             'Veuillez réessayer plus tard',
             style: AppTextStyles.body.copyWith(
               fontSize: context.responsiveFontSize(14),
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
           ),
           SizedBox(height: AppSpacing.md),
@@ -236,7 +238,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         children: [
           Icon(
             Icons.local_offer_outlined,
-            color: AppTheme.textSecondary,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             size: 48,
           ),
           SizedBox(height: AppSpacing.md),
@@ -244,7 +246,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             'Aucune promotion disponible',
             style: AppTextStyles.title.copyWith(
               fontSize: context.responsiveFontSize(16),
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           SizedBox(height: AppSpacing.sm),
@@ -252,7 +254,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
             'Revenez bientôt pour découvrir nos offres',
             style: AppTextStyles.body.copyWith(
               fontSize: context.responsiveFontSize(14),
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -362,7 +364,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                           promotion.description,
                           style: AppTextStyles.body.copyWith(
                             fontSize: context.responsiveFontSize(14),
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
@@ -384,7 +386,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                               'Code: ',
                               style: AppTextStyles.body.copyWith(
                                 fontSize: context.responsiveFontSize(14),
-                                color: AppTheme.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                               ),
                             ),
                             Text(
@@ -406,14 +408,14 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                           Icon(
                             Icons.event,
                             size: 16,
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                           ),
                           SizedBox(width: AppSpacing.smd / 2),
                           Text(
                             'Valable jusqu\'au ${DateFormat('dd/MM/yyyy').format(promotion.endDate)}',
                             style: AppTextStyles.caption.copyWith(
                               fontSize: context.responsiveFontSize(12),
-                              color: AppTheme.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                             ),
                           ),
                         ],
@@ -533,7 +535,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
                       promotion.description,
                       style: AppTextStyles.body.copyWith(
                         fontSize: context.responsiveFontSize(12),
-                        color: AppTheme.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -636,7 +638,7 @@ class _ExclusivePromotionsWidgetState extends State<ExclusivePromotionsWidget> {
         child: Center(
           child: Icon(
             Icons.broken_image,
-            color: AppTheme.textSecondary,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
           ),
         ),
       ),

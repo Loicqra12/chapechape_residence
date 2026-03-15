@@ -84,7 +84,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined),
                     onPressed: () => context.push('/notifications'),
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   Positioned(
                     right: 8,
@@ -102,7 +102,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                       child: Text(
                         '0',
                         style: AppTextStyles.caption.copyWith(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 10,
                         ),
                         textAlign: TextAlign.center,
@@ -114,7 +114,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
               IconButton(
                 icon: const Icon(Icons.search),
                 onPressed: () => context.push('/search'),
-                color: AppTheme.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               if (state is Authenticated)
                 PopupMenuButton<String>(
@@ -137,7 +137,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                       value: 'profile',
                       child: Row(
                         children: [
-                          Icon(Icons.person, color: AppTheme.textPrimary),
+                          Icon(Icons.person, color: Theme.of(context).colorScheme.onSurface),
                           SizedBox(width: AppSpacing.sm),
                           const Text('Mon profil'),
                         ],
@@ -147,7 +147,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                       value: 'settings',
                       child: Row(
                         children: [
-                          Icon(Icons.settings, color: AppTheme.textPrimary),
+                          Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
                           SizedBox(width: AppSpacing.sm),
                           const Text('Paramètres'),
                         ],
@@ -157,7 +157,7 @@ class CustomNavigationBar extends StatelessWidget implements PreferredSizeWidget
                       value: 'logout',
                       child: Row(
                         children: [
-                          Icon(Icons.logout, color: AppTheme.textPrimary),
+                          Icon(Icons.logout, color: Theme.of(context).colorScheme.onSurface),
                           SizedBox(width: AppSpacing.sm),
                           const Text('Déconnexion'),
                         ],

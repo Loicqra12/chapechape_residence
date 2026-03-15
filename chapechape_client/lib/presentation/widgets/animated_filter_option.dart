@@ -79,7 +79,7 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
     final backgroundColor = widget.isActive 
         ? color.withOpacity(0.12) 
         : _isHovered 
-            ? AppTheme.textSecondary.withOpacity(0.12) 
+            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.12) 
             : Colors.transparent;
     
     final borderColor = widget.isActive 
@@ -91,8 +91,8 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
     final iconColor = widget.isActive 
         ? color 
         : _isHovered 
-            ? AppTheme.textPrimary 
-            : AppTheme.textSecondary;
+            ? Theme.of(context).colorScheme.onSurface 
+            : Theme.of(context).colorScheme.onSurface.withOpacity(0.8);
     
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -145,7 +145,7 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
                     Text(
                       widget.label,
                       style: AppTextStyles.body.copyWith(
-                        color: widget.isActive ? color : AppTheme.textPrimary,
+                        color: widget.isActive ? color : Theme.of(context).colorScheme.onSurface,
                         fontWeight: widget.isActive ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
@@ -155,7 +155,7 @@ class _AnimatedFilterOptionState extends State<AnimatedFilterOption> with Single
                       Text(
                         widget.subtitle!,
                         style: AppTextStyles.caption.copyWith(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                         ),
                       ),
                   ],

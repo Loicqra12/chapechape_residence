@@ -44,31 +44,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(
-          color: AppTheme.textPrimary,
-        ),
-        title: Text(
-          'Mes réservations',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/profile');
-            }
-          },
-        ),
-        bottom: TabBar(
+    return Column(
+      children: [
+        TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.primaryColor,
           labelColor: AppTheme.primaryColor,
@@ -98,63 +76,51 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
             _loadBookings();
           },
         ),
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: true,
-        child: BlocConsumer<BookingBloc, booking_states.BookingState>(
-        listener: (context, state) {
-          setState(() {
-            _isLoading = state is booking_states.BookingLoading;
-          });
+        Expanded(
+          child: BlocConsumer<BookingBloc, booking_states.BookingState>(
+            listener: (context, state) {
+              setState(() {
+                _isLoading = state is booking_states.BookingLoading;
+              });
 
-          if (state is booking_states.BookingError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
-          } else if (state is booking_states.BookingApproved ||
-                     state is booking_states.BookingRejected ||
-                     state is booking_states.BookingExpired) {
-            // Recharger la liste des réservations pour refléter les changements temps réel
-            _loadBookings();
-          }
-        },
-        builder: (context, state) {
-          if (state is booking_states.BookingLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+              if (state is booking_states.BookingError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.message)),
+                );
+              } else if (state is booking_states.BookingApproved ||
+                         state is booking_states.BookingRejected ||
+                         state is booking_states.BookingExpired) {
+                _loadBookings();
+              }
+            },
+            builder: (context, state) {
+              if (state is booking_states.BookingLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
 
-          if (state is booking_states.UserBookingsLoaded) {
-            return LoadingOverlay(
-              isLoading: _isLoading,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        // Onglet "Toutes"
-                        _buildBookingList(state, null),
-                        // Onglet "À venir"
-                        _buildBookingList(state, 'upcoming'),
-                        // Onglet "Passées"
-                        _buildBookingList(state, 'past'),
-                      ],
-                    ),
+              if (state is booking_states.UserBookingsLoaded) {
+                return LoadingOverlay(
+                  isLoading: _isLoading,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildBookingList(state, null),
+                      _buildBookingList(state, 'upcoming'),
+                      _buildBookingList(state, 'past'),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
+                );
+              }
 
-          return const Center(
-            child: Text('Chargement des réservations...'),
-          );
-        },
-      ),
-      ),
+              return const Center(
+                child: Text('Chargement des réservations...'),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -468,11 +434,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     return bookings;
   }
 
-  String _getFilterText(String? filter) {
-    if (filter == 'upcoming') return 'à venir';
-    if (filter == 'past') return 'passée';
-    return 'trouvée';
-  }
+
 
   String _getStatusText(String status) {
     switch (status) {
@@ -504,26 +466,5 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     }
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 140,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
+
 } 

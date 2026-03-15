@@ -37,7 +37,7 @@ class PriceRangeSliderWidget extends StatelessWidget {
       values: values,
       divisions: divisions ?? (max ~/ 1000).toInt(),
       activeColor: AppTheme.primaryColor,
-      inactiveColor: Colors.grey[300],
+      inactiveColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       labels: RangeLabels(
         _formatPrice(values.start),
         _formatPrice(values.end),
@@ -69,7 +69,7 @@ class PriceRangeSliderWidget extends StatelessWidget {
       values: normalizedValues,
       divisions: 100, // Plus de divisions pour plus de précision
       activeColor: AppTheme.primaryColor,
-      inactiveColor: Colors.grey[300],
+      inactiveColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       labels: RangeLabels(
         _formatPrice(values.start),
         _formatPrice(values.end),
