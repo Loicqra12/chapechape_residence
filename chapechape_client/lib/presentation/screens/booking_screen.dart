@@ -181,7 +181,10 @@ class _BookingScreenState extends State<BookingScreen> {
           _residence = state.residence;
           
           // Mettre à jour le prix estimé
-          if (_residence != null && _checkInDate != null && _checkOutDate != null && !_isAvailabilityChecked) {
+          // Calculer le prix par défaut SEULEMENT si aucun pricing flexible n'est déjà défini
+          // (évite d'écraser le prix horaire/hebdo sélectionné par FlexibleBookingDateSelector)
+          if (_residence != null && _checkInDate != null && _checkOutDate != null &&
+              !_isAvailabilityChecked && _pricingDetails.isEmpty) {
             _estimatedPrice = _residence!.estimateTotalPrice(_checkInDate!, _checkOutDate!);
             _checkAvailability();
           }
@@ -568,7 +571,7 @@ class _BookingScreenState extends State<BookingScreen> {
               Padding(
                 padding: EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
-                  'Pour ${_checkOutDate!.difference(_checkInDate!).inDays} nuits',
+                  _buildDurationLabel(),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -639,6 +642,36 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
   
+  /// Retourne le libellé de durée adapté au type de r\u00e9servation
+  String _buildDurationLabel() {
+    if (_pricingDetails.isNotEmpty) {
+      // Utiliser les infos du pricing flexible si disponibles
+      final type = _pricingDetails['type'] ?? _selectedBookingType;
+      final quantity = _pricingDetails['quantity'] ?? 1;
+      switch (type) {
+        case 'hour':
+          return 'Pour $quantity heure${quantity > 1 ? 's' : ''}';
+        case 'week':
+          return 'Pour $quantity semaine${quantity > 1 ? 's' : ''}';
+        case 'month':
+          return 'Pour $quantity mois';
+        case 'day':
+        default:
+          return 'Pour $quantity nuit${quantity > 1 ? 's' : ''}';
+      }
+    }
+    // Fallback : calcul en jours
+    if (_checkInDate != null && _checkOutDate != null) {
+      final nights = _checkOutDate!.difference(_checkInDate!).inDays;
+      if (_selectedBookingType == 'hour') {
+        final hours = _checkOutDate!.difference(_checkInDate!).inHours;
+        return 'Pour $hours heure${hours > 1 ? 's' : ''}';
+      }
+      return 'Pour $nights nuit${nights > 1 ? 's' : ''}';
+    }
+    return '';
+  }
+
   @override
   void dispose() {
     _guestsController.dispose();
