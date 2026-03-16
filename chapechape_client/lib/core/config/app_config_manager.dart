@@ -198,7 +198,7 @@ class AppConfigManager {
               'apiVersion': 'v1',
               'apiTimeout': 30000,
               'wsReconnectInterval': 5000,
-              'appVersion': '1.10.0',
+              'appVersion': '1.11.0',
               'environment': 'production',
               'proxyUrl': null,
             };
