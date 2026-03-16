@@ -3,8 +3,9 @@ const User = require('../models/user.model');
 const apiError = require('../utils/apiError');
 const jwt = require('../utils/jwt');
 
-// ID client Google
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '150162865149-m6q57o1f68t73o8lfiumb0671qcj55da.apps.googleusercontent.com';
+// ID client Google — doit correspondre au serverClientId passé à GoogleSignIn() côté Flutter.
+// Les deux utilisent le projet Firebase chapchapresi (39884732136).
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com';
 
 // Créer un client OAuth2 avec configuration complète
 const client = new OAuth2Client({
