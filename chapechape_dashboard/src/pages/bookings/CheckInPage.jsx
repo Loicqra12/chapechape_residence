@@ -71,7 +71,7 @@ const CheckInPage = () => {
         filters: {
           startDate: format(today, 'yyyy-MM-dd'),
           endDate: format(today, 'yyyy-MM-dd'),
-          status: 'confirmed'
+          status: ['confirmed', 'in_stay']
         }
       });
       setBookings(bookings);
@@ -86,12 +86,26 @@ const CheckInPage = () => {
   const handleCheckIn = async (bookingId, clientName) => {
     try {
       setActionLoading({ id: bookingId, type: 'checkin' });
-      await bookingService.completeBooking(bookingId);
+      await bookingService.checkInReservation(bookingId);
       await loadTodayBookings();
       toast.success(`Check-in effectué pour ${clientName}`);
     } catch (error) {
       console.error('Erreur lors du check-in:', error);
       toast.error('Erreur lors du check-in');
+    } finally {
+      setActionLoading({ id: null, type: null });
+    }
+  };
+
+  const handleCheckOut = async (bookingId, clientName) => {
+    try {
+      setActionLoading({ id: bookingId, type: 'checkout' });
+      await bookingService.completeBooking(bookingId);
+      await loadTodayBookings();
+      toast.success(`Check-out effectué pour ${clientName}`);
+    } catch (error) {
+      console.error('Erreur lors du check-out:', error);
+      toast.error('Erreur lors du check-out');
     } finally {
       setActionLoading({ id: null, type: null });
     }
@@ -216,26 +230,50 @@ const CheckInPage = () => {
 
                     <Grid item xs={12} sm={3}>
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                        <Button
-                          variant="contained"
-                          color="success"
-                          startIcon={actionLoading.id === booking._id && actionLoading.type === 'checkin' ?
-                            <CircularProgress size={20} color="inherit" /> :
-                            <CheckCircleIcon />
-                          }
-                          onClick={() => handleCheckIn(booking._id, booking.client?.name || 'Client')}
-                          disabled={!!actionLoading.id}
-                          sx={{
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            boxShadow: 'none',
-                            '&:hover': {
-                              boxShadow: 2
+                        {booking.status === 'confirmed' && (
+                          <Button
+                            variant="contained"
+                            color="success"
+                            startIcon={actionLoading.id === booking._id && actionLoading.type === 'checkin' ?
+                              <CircularProgress size={20} color="inherit" /> :
+                              <CheckCircleIcon />
                             }
-                          }}
-                        >
-                          Check-in
-                        </Button>
+                            onClick={() => handleCheckIn(booking._id, booking.client?.name || 'Client')}
+                            disabled={!!actionLoading.id}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              boxShadow: 'none',
+                              '&:hover': {
+                                boxShadow: 2
+                              }
+                            }}
+                          >
+                            Check-in
+                          </Button>
+                        )}
+                        {booking.status === 'in_stay' && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={actionLoading.id === booking._id && actionLoading.type === 'checkout' ?
+                              <CircularProgress size={20} color="inherit" /> :
+                              <CheckCircleIcon />
+                            }
+                            onClick={() => handleCheckOut(booking._id, booking.client?.name || 'Client')}
+                            disabled={!!actionLoading.id}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              boxShadow: 'none',
+                              '&:hover': {
+                                boxShadow: 2
+                              }
+                            }}
+                          >
+                            Terminer
+                          </Button>
+                        )}
                         <IconButton
                           color="error"
                           onClick={() => handleCancel(booking._id, booking.client?.name || 'Client')}

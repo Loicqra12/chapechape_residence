@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/residence_model.dart';
+import '../../../core/theme/app_theme.dart';
 
 /// Widget pour sélection flexible des dates selon la résidence
 /// Supporte : horaire (1h, 2h, 3h+), journalier (demi-journée, jour, weekend)
@@ -33,7 +34,14 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
   void initState() {
     super.initState();
     _initializeFromResidence();
-    _selectedDate = widget.initialCheckIn ?? DateTime.now().add(Duration(days: 1));
+    _selectedDate = widget.initialCheckIn ?? DateTime.now().add(const Duration(days: 1));
+    if (_selectedBookingType == 'hour' && _startTime == null) {
+      _startTime = const TimeOfDay(hour: 10, minute: 0);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateSelection();
+    });
   }
 
   /// Initialiser le type de réservation selon la résidence
@@ -174,6 +182,40 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
     }
   }
 
+  /// Même or (`AppTheme.primaryColor`) + texte noir que les boutons de réservation (évite le jaune vif du thème).
+  Widget _goldFilterChip({
+    required BuildContext context,
+    required String label,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: selected ? Colors.black : cs.onSurface,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+        ),
+      ),
+      selected: selected,
+      onSelected: onSelected,
+      showCheckmark: true,
+      checkmarkColor: Colors.black,
+      color: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return AppTheme.primaryColor;
+        }
+        return cs.surface;
+      }),
+      side: BorderSide(
+        color: selected
+            ? AppTheme.primaryColor
+            : cs.outline.withOpacity(0.45),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -223,13 +265,18 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
         Wrap(
           spacing: 8,
           children: availableTypes.entries.map((entry) {
-            return FilterChip(
-              label: Text(entry.value),
-              selected: _selectedBookingType == entry.key,
+            final sel = _selectedBookingType == entry.key;
+            return _goldFilterChip(
+              context: context,
+              label: entry.value,
+              selected: sel,
               onSelected: (selected) {
                 if (selected) {
                   setState(() {
                     _selectedBookingType = entry.key;
+                    if (_selectedBookingType == 'hour' && _startTime == null) {
+                      _startTime = const TimeOfDay(hour: 10, minute: 0);
+                    }
                     _updateSelection();
                   });
                 }
@@ -353,8 +400,9 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
         Wrap(
           spacing: 8,
           children: [
-            FilterChip(
-              label: const Text('Demi-journée'),
+            _goldFilterChip(
+              context: context,
+              label: 'Demi-journée',
               selected: _selectedDayType == 'half',
               onSelected: (selected) {
                 if (selected) {
@@ -365,8 +413,9 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
                 }
               },
             ),
-            FilterChip(
-              label: const Text('Journée complète'),
+            _goldFilterChip(
+              context: context,
+              label: 'Journée complète',
               selected: _selectedDayType == 'full',
               onSelected: (selected) {
                 if (selected) {
@@ -377,8 +426,9 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
                 }
               },
             ),
-            FilterChip(
-              label: const Text('Weekend'),
+            _goldFilterChip(
+              context: context,
+              label: 'Weekend',
               selected: _selectedDayType == 'weekend',
               onSelected: (selected) {
                 if (selected) {
@@ -400,7 +450,7 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: AppTheme.primaryColor.withOpacity(0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -414,7 +464,7 @@ class _FlexibleBookingDateSelectorState extends State<FlexibleBookingDateSelecto
           Text(
             '${NumberFormat.currency(locale: 'fr_FR', symbol: 'F CFA', decimalDigits: 0).format(price)}',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).primaryColor,
+              color: AppTheme.primaryColor,
               fontWeight: FontWeight.bold,
             ),
           ),

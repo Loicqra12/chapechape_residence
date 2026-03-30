@@ -34,10 +34,17 @@ class PaymentFailedScreen extends StatelessWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           foregroundColor: Theme.of(context).colorScheme.onSurface,
-          title: Text(isExpired ? 'Paiement expiré' : 'Paiement échoué'),
           elevation: 0,
+          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
+          title: Text(
+            isExpired ? 'Paiement expiré' : 'Paiement échoué',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+          ),
           automaticallyImplyLeading: false, // Pas de bouton retour
         ),
         body: SingleChildScrollView(

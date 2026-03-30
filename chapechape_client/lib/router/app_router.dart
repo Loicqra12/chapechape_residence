@@ -8,7 +8,6 @@ import 'package:chapechape_client/presentation/screens/auth/login_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/register_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/chat_conversation_screen.dart';
-import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment_methods_screen.dart';
 import '../core/models/chat_model.dart';
 import '../core/services/chat_service.dart';
@@ -39,7 +38,20 @@ import 'package:chapechape_client/presentation/screens/settings_screen.dart';
 import 'package:chapechape_client/presentation/screens/full_map_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_waiting_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_failed_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_history_screen.dart';
 import 'package:chapechape_client/presentation/screens/search_criteria_screen.dart';
+
+DateTime _parsePaymentWaitingExpiresAt(dynamic value) {
+  if (value == null) {
+    return DateTime.now().add(const Duration(minutes: 15));
+  }
+  if (value is DateTime) return value;
+  if (value is String) {
+    return DateTime.tryParse(value) ??
+        DateTime.now().add(const Duration(minutes: 15));
+  }
+  return DateTime.now().add(const Duration(minutes: 15));
+}
 
 class AppRouter {
   static late final ApiService _apiService;
@@ -84,6 +96,11 @@ class AppRouter {
     initialLocation: '/splash',
     debugLogDiagnostics: true, // Activer les logs de diagnostic
     routes: [
+      // Racine : l’app n’expose pas de page sur `/` (accueil = `/home` dans le ShellRoute).
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/home',
+      ),
       GoRoute(
         path: '/splash',
         name: 'splash',
@@ -311,11 +328,14 @@ class AppRouter {
               ),
               GoRoute(
                 path: 'wallet',
-                name: 'wallet',
+                redirect: (context, state) => '/profile/payments',
+              ),
+              GoRoute(
+                path: 'payments',
+                name: 'profile_payments',
                 builder: (context, state) {
-                  // Vérifier l'authentification pour le portefeuille
                   if (_isAuthenticated(context)) {
-                    return const WalletScreen();
+                    return const PaymentHistoryScreen();
                   } else {
                     _redirectToLogin(context);
                     return const SizedBox();
@@ -562,15 +582,13 @@ class AppRouter {
           if (_isAuthenticated(context)) {
             final extra = state.extra as Map<String, dynamic>? ?? {};
             return PaymentWaitingScreen(
-              method: extra['method'] ?? '',
-              transactionId: extra['transactionId'] ?? '',
-              paymentUrl: extra['paymentUrl'],
-              expiresAt: extra['expiresAt'] is String
-                  ? DateTime.tryParse(extra['expiresAt']) ??
-                      DateTime.now().add(const Duration(minutes: 15))
-                  : extra['expiresAt'] ??
-                      DateTime.now().add(const Duration(minutes: 15)),
-              phoneNumber: extra['phoneNumber'],
+              method: extra['method']?.toString() ?? '',
+              transactionId: extra['transactionId']?.toString() ?? '',
+              paymentUrl: extra['paymentUrl']?.toString(),
+              expiresAt: _parsePaymentWaitingExpiresAt(extra['expiresAt']),
+              phoneNumber: extra['phoneNumber']?.toString(),
+              reservationId: extra['reservationId']?.toString(),
+              paymentId: extra['paymentId']?.toString(),
             );
           } else {
             _redirectToLogin(context);

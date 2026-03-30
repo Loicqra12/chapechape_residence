@@ -1,15 +1,32 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:async';
 
 import 'package:chapechape_client/core/blocs/payment/payment_bloc.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_event.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_state.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
-import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/config/theme.dart';
+import 'package:chapechape_client/core/theme/app_theme.dart' as chape_theme;
+
+/// Bleu proche des flows Wave / concurrents (CTA « ouvrir Wave »).
+const Color _kWaveBrandBlue = Color(0xFF0055D4);
+const Color _kWaveLogoDisk = Color(0xFFE8F4FF);
+
+String _userFacingPaymentError(String raw) {
+  final t = raw.toLowerCase();
+  if (t.contains('null') && t.contains('subtype')) {
+    return 'Une erreur technique est survenue. Réessayez ou vérifiez le statut du paiement.';
+  }
+  if (t.contains('socket') || t.contains('timeout')) {
+    return 'Problème de connexion. Vérifiez le réseau et réessayez.';
+  }
+  return raw;
+}
 
 class PaymentWaitingScreen extends StatefulWidget {
   final String method;
@@ -17,6 +34,10 @@ class PaymentWaitingScreen extends StatefulWidget {
   final String? paymentUrl;
   final DateTime expiresAt;
   final String? phoneNumber;
+  /// Retour cible : `/payment/:reservationId` (flux réservation).
+  final String? reservationId;
+  /// Retour cible : `/payment/:paymentId` (flux consultation paiement).
+  final String? paymentId;
 
   const PaymentWaitingScreen({
     Key? key,
@@ -25,6 +46,8 @@ class PaymentWaitingScreen extends StatefulWidget {
     this.paymentUrl,
     required this.expiresAt,
     this.phoneNumber,
+    this.reservationId,
+    this.paymentId,
   }) : super(key: key);
 
   @override
@@ -124,14 +147,73 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
             reason: 'Annulation utilisateur',
           ),
         );
-    context.pop();
+    _navigateBackFromWaiting();
   }
 
-  void _launchExternalApp() async {
-    if (widget.paymentUrl != null) {
-      final uri = Uri.parse(widget.paymentUrl!);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// Après confirmation : pile si possible, sinon écran paiement de la même réservation / même id, sinon accueil.
+  void _navigateBackFromWaiting() {
+    if (!mounted) return;
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    final rid = widget.reservationId?.trim();
+    if (rid != null && rid.isNotEmpty) {
+      context.go('/payment/$rid');
+      return;
+    }
+    final pid = widget.paymentId?.trim();
+    if (pid != null && pid.isNotEmpty) {
+      context.go('/payment/$pid');
+      return;
+    }
+    context.go('/home');
+  }
+
+  Future<void> _handleBack() async {
+    final confirm = await _showExitConfirmDialog();
+    if (confirm != true || !mounted) return;
+    _navigateBackFromWaiting();
+  }
+
+  Future<bool> _onWillPop() async {
+    final confirm = await _showExitConfirmDialog();
+    if (confirm != true || !mounted) return false;
+    _navigateBackFromWaiting();
+    return false;
+  }
+
+  Future<void> _launchExternalApp() async {
+    final url = widget.paymentUrl;
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lien de paiement indisponible.')),
+        );
+      }
+      return;
+    }
+    try {
+      var ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) {
+        ok = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Impossible d\'ouvrir le lien. Copiez l\'URL depuis les détails ou utilisez votre navigateur.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ouverture impossible : ${e.toString()}')),
+        );
       }
     }
   }
@@ -145,19 +227,31 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: () async {
-        final confirm = await _showExitConfirmDialog();
-        return confirm ?? false;
-      },
+      onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           foregroundColor: Theme.of(context).colorScheme.onSurface,
-          title: const Text('Paiement en cours'),
           elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: 'Retour',
+            onPressed: _handleBack,
+          ),
+          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
+          title: Text(
+            'Paiement en cours',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+          ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
+              color: Theme.of(context).colorScheme.onSurface,
               onPressed: () => context.read<PaymentBloc>().add(
                     CheckPaymentStatus(paymentId: widget.transactionId),
                   ),
@@ -165,7 +259,10 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
             ),
           ],
         ),
-        body: BlocConsumer<PaymentBloc, PaymentState>(
+        body: SafeArea(
+          top: false,
+          maintainBottomViewPadding: true,
+          child: BlocConsumer<PaymentBloc, PaymentState>(
           listener: (context, state) {
             if (state is PaymentStatusChecked) {
               if (state.payment.status == PaymentStatus.succeeded) {
@@ -180,36 +277,31 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
               }
             } else if (state is PaymentError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
+                SnackBar(
+                  content: Text(_userFacingPaymentError(state.message)),
+                ),
               );
             }
           },
           builder: (context, state) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Animation et countdown
-                  _buildAnimationSection(),
-
-                  const SizedBox(height: 32),
-
-                  // Instructions spécifiques au provider
-                  _buildMethodSpecificInstructions(),
-
-                  const SizedBox(height: 32),
-
-                  // Détails du paiement
-                  _buildPaymentDetails(),
-
-                  const SizedBox(height: 32),
-
-                  // Actions
-                  _buildActionButtons(),
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+              child: widget.method == 'wave'
+                  ? _buildWaveWaitingLayout()
+                  : Column(
+                      children: [
+                        _buildAnimationSection(),
+                        const SizedBox(height: 32),
+                        _buildMethodSpecificInstructions(),
+                        const SizedBox(height: 32),
+                        _buildPaymentDetails(),
+                        const SizedBox(height: 32),
+                        _buildActionButtons(),
+                      ],
+                    ),
             );
           },
+        ),
         ),
       ),
     );
@@ -283,6 +375,284 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
           ],
         ),
       ),
+    );
+  }
+
+  /// Flux Wave : hiérarchie type app concurrente (logo + arc, message, CTA flèche, pied de page).
+  Widget _buildWaveWaitingLayout() {
+    final theme = Theme.of(context);
+    final subtle = theme.colorScheme.onSurface.withOpacity(0.72);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildWaveHeroCard(),
+        const SizedBox(height: 28),
+        Text(
+          'Validez depuis l’application Wave',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Vous pouvez aussi ouvrir le lien dans votre navigateur pour finaliser le paiement.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(color: subtle, height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Après validation, patientez quelques instants. Vous serez informé du statut de votre paiement.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(color: subtle, height: 1.45),
+        ),
+        const SizedBox(height: 28),
+        if (widget.paymentUrl != null && widget.paymentUrl!.isNotEmpty)
+          _buildWaveOpenButton()
+        else
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.35),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Lien Wave indisponible. Utilisez « Vérifier le statut » ou contactez le support.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(color: subtle),
+            ),
+          ),
+        const SizedBox(height: 24),
+        _buildWaveQuickSteps(),
+        const SizedBox(height: 28),
+        _buildPaymentDetails(),
+        const SizedBox(height: 28),
+        _buildActionButtons(),
+      ],
+    );
+  }
+
+  Widget _buildWaveHeroCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 158,
+              height: 158,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AnimatedBuilder(
+                    animation: _rotationController,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        size: const Size(158, 158),
+                        painter: _WaveWaitingArcPainter(
+                          progress: _rotationController.value,
+                          color: _isExpired ? Colors.red : _kWaveBrandBlue,
+                        ),
+                      );
+                    },
+                  ),
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: 1.0 + (_pulseController.value * 0.05),
+                        child: _buildWaveLogoCore(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (!_isExpired) ...[
+              Text(
+                'Temps restant',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.75),
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _formatTime(_remainingSeconds),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      color: _remainingSeconds < 60
+                          ? Colors.red
+                          : _kWaveBrandBlue,
+                    ),
+              ),
+            ] else
+              Text(
+                'Temps expiré',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaveLogoCore() {
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: _kWaveLogoDisk,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.center,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Image.asset(
+          'assets/images/payment/wave_money.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Image.asset(
+              'assets/icons/wave.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, e, st) {
+                return Icon(Icons.waves_rounded, size: 44, color: _kWaveBrandBlue);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaveOpenButton() {
+    return Material(
+      color: _kWaveBrandBlue,
+      borderRadius: BorderRadius.circular(14),
+      elevation: 0,
+      child: InkWell(
+        onTap: _launchExternalApp,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(Icons.smartphone_rounded, color: Colors.white, size: 26),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Ouvrir Wave',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaveQuickSteps() {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: _kWaveBrandBlue, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  'Rappel',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _buildWaveStepLine(
+              '1',
+              'Ouvrez votre application Wave ou le lien dans le navigateur.',
+            ),
+            const SizedBox(height: 10),
+            _buildWaveStepLine(
+              '2',
+              'Validez le paiement avec votre code PIN Wave.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaveStepLine(String index, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: _kWaveBrandBlue,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            index,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.4),
+          ),
+        ),
+      ],
     );
   }
 
@@ -734,8 +1104,12 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, size: 20, color: AppTheme.primaryColor),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(icon, size: 20, color: AppTheme.primaryColor),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -743,8 +1117,10 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        height: 1.3,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: 3,
+                      softWrap: true,
                     ),
                   ),
                 ],
@@ -823,6 +1199,7 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
   }
 
   Widget _buildActionButtons() {
+    final waveChapeGold = widget.method == 'wave';
     return Column(
       children: [
         if (!_isExpired) ...[
@@ -830,10 +1207,16 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _retryPayment,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('Vérifier le statut'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: waveChapeGold
+                    ? chape_theme.AppTheme.primaryColor
+                    : null,
+                foregroundColor: waveChapeGold
+                    ? chape_theme.AppTheme.textPrimary
+                    : null,
               ),
             ),
           ),
@@ -847,6 +1230,12 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
               label: const Text('Réessayer le paiement'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: waveChapeGold
+                    ? chape_theme.AppTheme.primaryColor
+                    : null,
+                foregroundColor: waveChapeGold
+                    ? chape_theme.AppTheme.textPrimary
+                    : null,
               ),
             ),
           ),
@@ -856,8 +1245,21 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
           width: double.infinity,
           child: TextButton.icon(
             onPressed: _cancelPayment,
-            icon: const Icon(Icons.cancel),
-            label: const Text('Annuler le paiement'),
+            icon: Icon(
+              Icons.cancel_outlined,
+              color: waveChapeGold
+                  ? chape_theme.AppTheme.darkGold
+                  : null,
+            ),
+            label: Text(
+              'Annuler le paiement',
+              style: waveChapeGold
+                  ? TextStyle(
+                      color: chape_theme.AppTheme.darkGold,
+                      fontWeight: FontWeight.w600,
+                    )
+                  : null,
+            ),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
@@ -939,4 +1341,39 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
     _rotationController.dispose();
     super.dispose();
   }
+}
+
+/// Arc animé autour du logo (effet « en cours », proche des apps de référence Wave).
+class _WaveWaitingArcPainter extends CustomPainter {
+  _WaveWaitingArcPainter({
+    required this.progress,
+    required this.color,
+  });
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    final r = size.shortestSide / 2 - 4;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+    const start = -math.pi * 0.88;
+    final sweep = math.pi * 1.76 * (0.32 + 0.68 * progress);
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: r),
+      start,
+      sweep,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaveWaitingArcPainter old) =>
+      old.progress != progress || old.color != color;
 }

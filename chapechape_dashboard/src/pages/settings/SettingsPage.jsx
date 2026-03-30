@@ -40,6 +40,25 @@ const SettingsPage = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
+  const isNonEmptyObject = (obj) => !!obj && typeof obj === 'object' && Object.keys(obj).length > 0;
+  const defaultGeneralSettings = {
+    siteName: 'ChapeChape Residence',
+    siteDescription: 'Plateforme de réservation de résidences de luxe',
+    contactEmail: 'contact@chapechape.fr',
+    supportPhone: '+33 1 23 45 67 89',
+    language: 'fr',
+    currency: 'EUR',
+    timezone: 'Europe/Paris',
+    bookingAutoConfirm: false,
+    emailNotifications: true,
+    smsNotifications: true,
+    maintenanceMode: false,
+    defaultCommission: 10,
+    maxBookingsPerDay: 50,
+    maxImagesPerProperty: 20,
+    maxFileSize: 10
+  };
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -49,7 +68,7 @@ const SettingsPage = () => {
       setLoading(true);
       const response = await settingsService.getSettings('general');
 
-      if (response.success && response.data.general) {
+      if (response.success && isNonEmptyObject(response.data.general)) {
         // Convert settings object to flat structure
         const flatSettings = {};
         Object.entries(response.data.general).forEach(([key, setting]) => {
@@ -58,27 +77,13 @@ const SettingsPage = () => {
         setSettings(flatSettings);
       } else {
         // Use default values if no settings found
-        setSettings({
-          siteName: 'ChapeChape Residence',
-          siteDescription: 'Plateforme de réservation de résidences de luxe',
-          contactEmail: 'contact@chapechape.fr',
-          supportPhone: '+33 1 23 45 67 89',
-          language: 'fr',
-          currency: 'EUR',
-          timezone: 'Europe/Paris',
-          bookingAutoConfirm: false,
-          emailNotifications: true,
-          smsNotifications: true,
-          maintenanceMode: false,
-          defaultCommission: 10,
-          maxBookingsPerDay: 50,
-          maxImagesPerProperty: 20,
-          maxFileSize: 10,
-        });
+        setSettings(defaultGeneralSettings);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
       toast.error('Erreur lors du chargement des paramètres');
+      // Fallback UI si l'API échoue (ex: 403/500)
+      setSettings(defaultGeneralSettings);
     } finally {
       setLoading(false);
     }

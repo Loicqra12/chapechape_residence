@@ -30,7 +30,7 @@ class DashboardApiService {
         if (error.response?.status === 401) {
           // Token expiré ou invalide
           localStorage.removeItem('token');
-          window.location.href = '/auth/login';
+          window.location.href = '/login';
         }
         return Promise.reject(error);
       }
@@ -60,38 +60,54 @@ class DashboardApiService {
   }
 
   formatOverviewData(data) {
+    const totalBookings = data.bookings?.total || 0;
+    const confirmed = data.bookings?.confirmed || 0;
+    const completed = data.bookings?.completed || 0;
+    const cancelled = data.bookings?.cancelled || 0;
+    const refunded = data.bookings?.refunded || 0;
+
+    const conversionRate = totalBookings > 0 ? ((confirmed + completed) / totalBookings) * 100 : 0;
+    const cancellationRate = totalBookings > 0 ? ((cancelled + refunded) / totalBookings) * 100 : 0;
+
+    const avgHours = data.communication_stats?.average_response_time_hours || 0;
+    const averageResponseTime = `${Math.round(avgHours * 10) / 10}h`;
+
+    const averageRating = data.performance?.average_rating || 0;
+    const satisfactionRate = averageRating > 0 ? (averageRating / 5) * 100 : 0;
+
     return {
       bookingStats: {
-        totalBookings: data.bookings?.total || 0,
-        confirmedBookings: data.bookings?.confirmed || 0,
+        totalBookings,
+        confirmedBookings: confirmed,
         pendingBookings: data.bookings?.pending || 0,
-        completedBookings: data.bookings?.completed || 0,
-        cancelledBookings: data.bookings?.cancelled || 0,
-        refundedBookings: data.bookings?.refunded || 0,
-        conversionRate: data.occupancy_rate || 0,
-        averageDuration: '4.2j', // À calculer depuis le backend
-        monthlyBookings: this.generateMonthlyData(data.bookings?.total || 0)
+        completedBookings: completed,
+        cancelledBookings: cancelled,
+        refundedBookings: refunded,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+        cancellationRate: Math.round(cancellationRate * 10) / 10,
+        averageDuration: `${Math.round(data.performance?.average_duration_days || 0)}j`,
+        monthlyBookings: data.monthly_bookings || Array(12).fill(0)
       },
       revenueData: {
         totalRevenue: data.performance?.total_revenue || 0,
-        monthlyData: this.generateMonthlyRevenue(data.performance?.total_revenue || 0)
+        monthlyData: data.monthly_revenue || Array(12).fill(0)
       },
       residenceStats: {
         totalResidences: data.total_residences || 0,
-        available: Math.floor((data.total_residences || 0) * 0.7),
-        occupied: Math.floor((data.total_residences || 0) * 0.3),
+        available: data.residence_stats?.available || 0,
+        occupied: Math.round((data.total_residences || 0) * (data.occupancy_rate || 0) / 100),
         occupancyRate: data.occupancy_rate || 0,
-        averageRating: data.performance?.average_rating || 0,
-        averagePrice: 87500 // À récupérer depuis le backend
+        averageRating: averageRating,
+        averagePrice: data.residence_stats?.average_price || 0
       },
       communicationStats: {
-        totalMessages: data.new_messages || 0,
-        averageResponseTime: '2.4h',
-        satisfactionRate: data.response_rate || 0,
-        activeSupport: 12,
+        totalMessages: data.communication_stats?.total_messages || 0,
+        averageResponseTime: averageResponseTime,
+        satisfactionRate: Math.round(satisfactionRate * 10) / 10,
+        activeSupport: data.communication_stats?.active_support || 0,
         messages: {
-          unread: data.new_messages || 0,
-          total: data.new_messages * 4 || 0
+          unread: data.communication_stats?.new_messages || 0,
+          total: data.communication_stats?.total_messages || 0
         }
       }
     };
@@ -190,25 +206,6 @@ class DashboardApiService {
         error: error.response?.data?.message || error.message || 'Erreur de connexion au serveur'
       };
     }
-  }
-
-  // ============ UTILITY METHODS ============
-  generateMonthlyData(total) {
-    // Génère des données mensuelles basées sur le total
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return months.map((month, index) => {
-      const variation = 0.8 + (Math.random() * 0.4); // Variation de ±20%
-      return Math.floor((total / 12) * variation);
-    });
-  }
-
-  generateMonthlyRevenue(total) {
-    // Génère des revenus mensuels basés sur le total
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return months.map((month, index) => {
-      const variation = 0.7 + (Math.random() * 0.6); // Variation de ±30%
-      return Math.floor((total / 12) * variation);
-    });
   }
 
   // ============ CACHE MANAGEMENT ============

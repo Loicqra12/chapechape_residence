@@ -62,7 +62,24 @@ export const logout = () => {
 export const getCurrentUser = () => {
   try {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    const token = localStorage.getItem('token');
+    const decoded = token ? (() => { try { return jwtDecode(token); } catch { return null; } })() : null;
+
+    if (!userStr) {
+      // Si user en localStorage est absent, on reconstruit minimalement à partir du JWT.
+      if (decoded?.role) {
+        return { id: decoded.id, role: decoded.role, permissions: [] };
+      }
+      return null;
+    }
+
+    const parsed = JSON.parse(userStr);
+    // Synchroniser le rôle avec le JWT (localStorage peut être stale).
+    if (decoded?.role && parsed?.role && parsed.role !== decoded.role) {
+      parsed.role = decoded.role;
+      localStorage.setItem('user', JSON.stringify(parsed));
+    }
+    return parsed;
   } catch (error) {
     logout();
     return null;
@@ -71,9 +88,7 @@ export const getCurrentUser = () => {
 
 export const isAuthenticated = () => {
   const token = localStorage.getItem('token');
-  const user = getCurrentUser();
-  
-  if (!token || !user) return false;
+  if (!token) return false;
   
   try {
     const decoded = jwtDecode(token);
@@ -92,14 +107,21 @@ export const isAuthenticated = () => {
 };
 
 export const hasRole = (requiredRole) => {
-  const user = getCurrentUser();
-  if (!user) return false;
-  
-  // Normalisation des rôles pour la comparaison
-  const userRole = user.role.toLowerCase();
-  const requiredRoleNormalized = requiredRole.toLowerCase().replace('_', '');
-  
-  return userRole === requiredRoleNormalized;
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  try {
+    const decoded = jwtDecode(token);
+    const userRole = decoded?.role;
+    if (!userRole) return false;
+
+    const userRoleNormalized = String(userRole).toLowerCase().replace('_', '');
+    const requiredRoleNormalized = requiredRole.toLowerCase().replace('_', '');
+
+    return userRoleNormalized === requiredRoleNormalized;
+  } catch {
+    return false;
+  }
 };
 
 export const isAdmin = () => hasRole('admin');

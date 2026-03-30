@@ -413,46 +413,107 @@ const ReportsPage = () => {
   };
 
   const getFinancialMetrics = () => {
-    const totalRevenue = payments.reduce((sum, p) => p.status === 'completed' ? sum + (p.amount || 0) : sum, 0);
-    const totalTransactions = payments.length;
-    const completedTransactions = payments.filter(p => p.status === 'completed').length;
-    const avgTransactionValue = completedTransactions > 0 ? totalRevenue / completedTransactions : 0;
-    const successRate = totalTransactions > 0 ? (completedTransactions / totalTransactions) * 100 : 0;
+    const msDay = 24 * 60 * 60 * 1000;
+    const currStart = dateRange?.startDate ? new Date(dateRange.startDate) : null;
+    const currEnd = dateRange?.endDate ? new Date(dateRange.endDate) : null;
+    if (!currStart || !currEnd) {
+      return [];
+    }
+
+    const durationDays = Math.max(1, Math.round((currEnd.getTime() - currStart.getTime()) / msDay) + 1);
+    const prevStart = new Date(currStart.getTime() - durationDays * msDay);
+    const prevEnd = new Date(currEnd.getTime() - durationDays * msDay);
+    const prevEndInclusive = new Date(prevEnd.getTime() + msDay - 1);
+    const currEndInclusive = new Date(currEnd.getTime() + msDay - 1);
+
+    const inRange = (createdAt, start, endInclusive) => {
+      if (!createdAt) return false;
+      const d = new Date(createdAt);
+      return d >= start && d <= endInclusive;
+    };
+
+    const currentPayments = payments.filter(p => inRange(p.createdAt, currStart, currEndInclusive));
+    const prevPayments = payments.filter(p => inRange(p.createdAt, prevStart, prevEndInclusive));
+
+    const totalRevenueCurrent = currentPayments.reduce(
+      (sum, p) => p.status === 'completed' ? sum + (p.amount || 0) : sum,
+      0
+    );
+    const totalRevenuePrev = prevPayments.reduce(
+      (sum, p) => p.status === 'completed' ? sum + (p.amount || 0) : sum,
+      0
+    );
+
+    const totalTransactionsCurrent = currentPayments.length;
+    const completedTransactionsCurrent = currentPayments.filter(p => p.status === 'completed').length;
+    const avgTransactionValueCurrent = completedTransactionsCurrent > 0
+      ? totalRevenueCurrent / completedTransactionsCurrent
+      : 0;
+    const successRateCurrent = totalTransactionsCurrent > 0
+      ? (completedTransactionsCurrent / totalTransactionsCurrent) * 100
+      : 0;
+
+    const totalTransactionsPrev = prevPayments.length;
+    const completedTransactionsPrev = prevPayments.filter(p => p.status === 'completed').length;
+    const avgTransactionValuePrev = completedTransactionsPrev > 0
+      ? totalRevenuePrev / completedTransactionsPrev
+      : 0;
+    const successRatePrev = totalTransactionsPrev > 0
+      ? (completedTransactionsPrev / totalTransactionsPrev) * 100
+      : 0;
+
+    const pctDelta = (current, prev) => {
+      if (!prev) return 0;
+      return ((current - prev) / prev) * 100;
+    };
+
+    const successRateDelta = successRateCurrent - successRatePrev;
+    const revenueTrendPct = pctDelta(totalRevenueCurrent, totalRevenuePrev);
+    const transactionsTrendPct = pctDelta(totalTransactionsCurrent, totalTransactionsPrev);
+    const avgValueTrendPct = pctDelta(avgTransactionValueCurrent, avgTransactionValuePrev);
+
+    const formatSignedPct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+
+    const revenuePositive = revenueTrendPct >= 0;
+    const transactionsPositive = transactionsTrendPct >= 0;
+    const successRatePositive = successRateDelta >= 0;
+    const avgValuePositive = avgValueTrendPct >= 0;
 
     return [
       {
         icon: DollarSign,
         title: 'Chiffre d\'Affaires Total',
-        value: formatCurrency(totalRevenue),
-        subtitle: `${completedTransactions} transactions complétées`,
-        trend: { positive: true, value: '+12.5%' },
+        value: formatCurrency(totalRevenueCurrent),
+        subtitle: `${completedTransactionsCurrent} transactions complétées`,
+        trend: { positive: revenuePositive, value: formatSignedPct(revenueTrendPct) },
         bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
         iconColor: 'text-green-600'
       },
       {
         icon: Activity,
         title: 'Total Transactions',
-        value: totalTransactions.toString(),
+        value: totalTransactionsCurrent.toString(),
         subtitle: 'Toutes périodes confondues',
-        trend: { positive: true, value: '+8.3%' },
+        trend: { positive: transactionsPositive, value: formatSignedPct(transactionsTrendPct) },
         bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-50',
         iconColor: 'text-blue-600'
       },
       {
         icon: Target,
         title: 'Taux de Succès',
-        value: `${successRate.toFixed(1)}%`,
+        value: `${successRateCurrent.toFixed(1)}%`,
         subtitle: 'Transactions réussies',
-        trend: { positive: successRate > 85, value: `${successRate > 85 ? '+' : '-'}2.1%` },
+        // Delta en points de pourcentage (et non ratio)
+        trend: { positive: successRatePositive, value: `${successRateDelta >= 0 ? '+' : ''}${successRateDelta.toFixed(1)}pp` },
         bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50',
         iconColor: 'text-purple-600'
       },
       {
         icon: TrendingUp,
         title: 'Valeur Moyenne',
-        value: formatCurrency(avgTransactionValue),
+        value: formatCurrency(avgTransactionValueCurrent),
         subtitle: 'Par transaction',
-        trend: { positive: true, value: '+5.7%' },
+        trend: { positive: avgValuePositive, value: formatSignedPct(avgValueTrendPct) },
         bgColor: 'bg-gradient-to-br from-orange-50 to-amber-50',
         iconColor: 'text-orange-600'
       }

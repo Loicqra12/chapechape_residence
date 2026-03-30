@@ -161,13 +161,11 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = widget.themeColor ?? theme.primaryColor;
     final countryInfo = _getCountryInfo(_selectedCountryCode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Libellé
         if (widget.label.isNotEmpty)
           Padding(
             padding: EdgeInsets.only(bottom: AppSpacing.sm),
@@ -190,126 +188,198 @@ class _AdvancedPhoneInputWidgetState extends State<AdvancedPhoneInputWidget> {
             ),
           ),
 
-        // Champ de saisie avec sélecteur de pays
+        /// Pays sur une ligne, numéro sur la ligne suivante en pleine largeur
+        /// (évite le champ trop étroit + scroll horizontal à 10 chiffres).
         ValueListenableBuilder<bool>(
           valueListenable: _isValidNotifier,
-          builder: (context, isValid, child) {
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                border: Border.all(
-                  color: isValid
-                      ? AppTheme.successColor
-                      : (_phoneController.text.isNotEmpty ? AppTheme.errorColor : AppTheme.dividerColor),
-                  width: isValid || (_phoneController.text.isNotEmpty && !isValid) ? 2.0 : 1.0,
-            ),
-          ),
-          child: Row(
-            children: [
-              // Sélecteur de pays
-              InkWell(
-                onTap: widget.enabled && !widget.readOnly ? _showCountryPicker : null,
-                child: Container(
-                  padding: AppSpacing.inputPadding,
+          builder: (context, isValid, _) {
+            return ListenableBuilder(
+              listenable: _phoneController,
+              builder: (context, _) {
+                final hasText = _phoneController.text.isNotEmpty;
+                final borderColor = isValid && hasText
+                    ? AppTheme.successColor
+                    : (hasText && !isValid
+                        ? AppTheme.errorColor
+                        : AppTheme.dividerColor);
+                final borderWidth =
+                    (isValid && hasText) || (hasText && !isValid) ? 2.0 : 1.0;
+
+                return Container(
                   decoration: BoxDecoration(
-                    border: Border(
-                      right: BorderSide(color: AppTheme.dividerColor),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    border: Border.all(
+                      color: borderColor,
+                      width: borderWidth,
                     ),
                   ),
-                  child: Row(
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        countryInfo['flag']!,
-                        style: AppTextStyles.bodyLarge.copyWith(fontSize: 20),
-                      ),
-                      SizedBox(width: AppSpacing.xs),
-                      Text(
-                        countryInfo['dial']!,
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          fontWeight: FontWeight.w500,
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: widget.enabled && !widget.readOnly
+                              ? _showCountryPicker
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  countryInfo['flag']!,
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    fontSize: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  countryInfo['dial']!,
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_drop_down_rounded,
+                                  color: widget.enabled && !widget.readOnly
+                                      ? theme.colorScheme.onSurface
+                                          .withOpacity(0.75)
+                                      : theme.colorScheme.onSurface
+                                          .withOpacity(0.45),
+                                  size: 26,
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'Pays',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.45),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      SizedBox(width: AppSpacing.xs),
-                      Icon(
-                        Icons.arrow_drop_down,
-                        color: widget.enabled && !widget.readOnly 
-? Theme.of(context).colorScheme.onSurface.withOpacity(0.8)
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                        size: 20,
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppTheme.dividerColor.withOpacity(0.9),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+                        child: Text(
+                          'Numéro local uniquement — l’indicatif ${countryInfo['dial']} est déjà choisi.',
+                          style: AppTextStyles.caption.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            height: 1.25,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _phoneController,
+                                enabled: widget.enabled,
+                                readOnly: widget.readOnly,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.4,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: widget.hint,
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 14,
+                                  ),
+                                ),
+                                onChanged: _onPhoneChanged,
+                              ),
+                            ),
+                            if (hasText)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: Icon(
+                                  isValid
+                                      ? Icons.check_circle_rounded
+                                      : Icons.error_rounded,
+                                  color: isValid
+                                      ? AppTheme.successColor
+                                      : AppTheme.errorColor,
+                                  size: 26,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-              // Champ de saisie du numéro
-              Expanded(
-                child: TextFormField(
-                  controller: _phoneController,
-                  enabled: widget.enabled,
-                  readOnly: widget.readOnly,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  decoration: InputDecoration(
-                    hintText: widget.hint,
-                    border: InputBorder.none,
-                    contentPadding: AppSpacing.inputPadding,
-                    suffixIcon: _phoneController.text.isNotEmpty
-                        ? Icon(
-                            isValid ? Icons.check_circle : Icons.error,
-                            color: isValid ? AppTheme.successColor : AppTheme.errorColor,
-                          )
-                        : null,
-                  ),
-                  onChanged: _onPhoneChanged,
-                ),
-              ),
-            ],
-          ),
+                );
+              },
             );
           },
         ),
 
-        // Informations supplémentaires
-        if (_phoneController.text.isNotEmpty) 
-          ValueListenableBuilder<bool>(
-            valueListenable: _isValidNotifier,
-            builder: (context, isValid, child) {
-              return Column(
-                children: [
-                  SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Icon(
-                        isValid ? Icons.check_circle : Icons.error,
-                        size: 16,
-                        color: isValid ? AppTheme.successColor : AppTheme.errorColor,
-                      ),
-                      SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          isValid 
-                              ? 'Numéro valide • ${PhoneNumber(
-                                  isoCode: _selectedCountryCode,
-                                  phoneNumber: _phoneController.text,
-                                  dialCode: _getDialCode(_selectedCountryCode),
-                                ).operatorName}'
-                              : 'Format de numéro invalide pour ${countryInfo['name']}',
-                          style: AppTextStyles.caption.copyWith(
-                            color: isValid ? AppTheme.successColor : AppTheme.errorColor,
+        ListenableBuilder(
+          listenable: _phoneController,
+          builder: (context, _) {
+            if (_phoneController.text.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return ValueListenableBuilder<bool>(
+              valueListenable: _isValidNotifier,
+              builder: (context, isValid, _) {
+                return Column(
+                  children: [
+                    SizedBox(height: AppSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          isValid ? Icons.check_circle : Icons.error,
+                          size: 16,
+                          color: isValid
+                              ? AppTheme.successColor
+                              : AppTheme.errorColor,
+                        ),
+                        SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            isValid
+                                ? 'Format du numéro correct.'
+                                : 'Format de numéro invalide pour ${countryInfo['name']}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: isValid
+                                  ? AppTheme.successColor
+                                  : AppTheme.errorColor,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ],
     );
   }

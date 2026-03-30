@@ -707,7 +707,8 @@ exports.performCheckin = asyncHandler(async (req, res) => {
     }
 
     // Effectuer le check-in
-    reservation.status = 'confirmed'; // Statut confirmé après check-in
+    // Statut après check-in réel (phase 1 : séjour en cours)
+    reservation.status = 'in_stay';
     reservation.actualCheckIn = now;
     await reservation.save();
 
@@ -749,7 +750,7 @@ exports.performCheckout = asyncHandler(async (req, res) => {
     }
 
     // Vérifier que la réservation peut être check-out
-    if (reservation.status !== 'confirmed' || !reservation.actualCheckIn) {
+    if (!['confirmed', 'in_stay'].includes(reservation.status) || !reservation.actualCheckIn) {
         throw new ApiError('Cette réservation ne peut pas être check-out (doit être confirmée avec check-in effectué)', 400);
     }
 

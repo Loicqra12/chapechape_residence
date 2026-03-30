@@ -251,13 +251,21 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           foregroundColor: Theme.of(context).colorScheme.onSurface,
-          title: const Text('Paiement en cours'),
           elevation: 0,
+          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
+          title: Text(
+            'Paiement en cours',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
+              color: Theme.of(context).colorScheme.onSurface,
               onPressed: () {
                 _resetPollingLimits();
                 _checkPaymentStatus();

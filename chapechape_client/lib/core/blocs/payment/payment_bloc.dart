@@ -307,6 +307,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
             transactionId: result.transactionId ?? '',
             expiresAt: result.expiresAt ?? DateTime.now().add(Duration(minutes: 30)),
             phoneNumber: event.phoneNumber,
+            reservationId: event.reservationId,
           ));
           break;
           
@@ -326,6 +327,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
             transactionId: result.transactionId ?? '',
             expiresAt: result.expiresAt ?? DateTime.now().add(Duration(minutes: 30)),
             phoneNumber: event.phoneNumber,
+            reservationId: event.reservationId,
           ));
           break;
           

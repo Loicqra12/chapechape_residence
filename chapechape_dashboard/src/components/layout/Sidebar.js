@@ -122,7 +122,7 @@ const Sidebar = () => {
     ];
 
     // Ajouter les menus d'administration pour les super admins
-    if (isSuperAdmin) {
+    if (typeof isSuperAdmin === 'function' ? isSuperAdmin() : isSuperAdmin) {
       baseMenuItems.push({
         name: 'Administration',
         icon: ShieldCheckIcon,

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, isAuthenticated } from '../services/auth';
+import { getCurrentUser, isAuthenticated, hasRole } from '../services/auth';
 
 const AuthContext = createContext(null);
 
@@ -22,11 +22,12 @@ export const AuthProvider = ({ children }) => {
 
   const checkPermission = (permission) => {
     if (!user) return false;
-    return user.permissions?.includes(permission) || user.role === 'superadmin';
+    return user.permissions?.includes(permission) || hasRole('superadmin');
   };
 
-  const isSuperAdmin = () => user?.role === 'superadmin';
-  const isAdmin = () => user?.role === 'admin' || user?.role === 'superadmin';
+  // On s'appuie sur le JWT pour éviter les incohérences localStorage (role stale).
+  const isSuperAdmin = () => hasRole('superadmin');
+  const isAdmin = () => hasRole('admin') || hasRole('superadmin');
 
   const value = {
     user,

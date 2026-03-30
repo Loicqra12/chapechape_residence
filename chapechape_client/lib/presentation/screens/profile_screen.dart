@@ -644,10 +644,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   
                   _buildOptionTile(
-                    icon: Icons.account_balance_wallet,
-                    title: 'Portefeuille et récompenses',
+                    icon: Icons.receipt_long,
+                    title: 'Mes paiements et justificatifs',
                     onTap: () {
-                      context.push('/profile/wallet');
+                      context.push('/profile/payments');
                     },
                   ),
                   

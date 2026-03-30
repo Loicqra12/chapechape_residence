@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -22,19 +22,54 @@ import {
 import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
 
-const PropertyCard = ({ property, onValidate, onReject, onDelete, onVerify }) => {
+/** Icônes par code backend (catalogue meta) — défaut : BuildingOfficeIcon */
+const TYPE_ICON_COMPONENTS = {
+  apartment: BuildingOfficeIcon,
+  house: HomeIcon,
+  villa: HomeModernIcon,
+  studio: BuildingOfficeIcon,
+  appartement_meuble: BuildingOfficeIcon,
+  studio_meuble: BuildingOfficeIcon,
+  villa_meublee: HomeModernIcon,
+  penthouse: HomeModernIcon,
+  loft: HomeModernIcon,
+  grenier: HomeIcon,
+  hotel: BuildingOfficeIcon,
+  hotel_passage: BuildingOfficeIcon,
+  motel: BuildingOfficeIcon,
+  boutique_hotel: BuildingOfficeIcon,
+  hotel_luxe: HomeModernIcon,
+  guest_house: HomeIcon,
+  residence_hoteliere: BuildingOfficeIcon,
+  bungalow: HomeIcon,
+  lodge: HomeIcon,
+  case_traditionnelle: HomeIcon,
+  maison_flottante: HomeModernIcon,
+  campement_touristique: HomeIcon,
+  chambre_colocation: BuildingOfficeIcon,
+  coliving: BuildingOfficeIcon,
+  maison_hotes: HomeIcon,
+  residence_universitaire: BuildingOfficeIcon,
+  cite_dortoir: BuildingOfficeIcon,
+  appartement_vide: BuildingOfficeIcon,
+  villa_vide: HomeModernIcon,
+  immeuble: BuildingOfficeIcon,
+  cour_commune: HomeIcon,
+  maison_hotes_economique: HomeIcon,
+  residence_familiale: HomeIcon,
+  chambres_passage: HomeIcon,
+  room: HomeIcon,
+  other: HomeIcon
+};
+
+const PropertyCard = ({ property, typeLabel, onValidate, onReject, onDelete, onVerify }) => {
   const statusColors = {
     available: 'bg-green-100 text-green-800',
     unavailable: 'bg-red-100 text-red-800',
     maintenance: 'bg-yellow-100 text-yellow-800'
   };
 
-  const typeIcons = {
-    apartment: <BuildingOfficeIcon className="w-5 h-5" />,
-    house: <HomeIcon className="w-5 h-5" />,
-    villa: <HomeModernIcon className="w-5 h-5" />,
-    studio: <BuildingOfficeIcon className="w-5 h-5" />
-  };
+  const TypeIcon = TYPE_ICON_COMPONENTS[property.type] || BuildingOfficeIcon;
 
   return (
     <motion.div
@@ -46,7 +81,7 @@ const PropertyCard = ({ property, onValidate, onReject, onDelete, onVerify }) =>
     >
       <div className="relative aspect-[16/9] overflow-hidden">
         <img
-          src={property.images[0] || '/placeholder-property.jpg'}
+          src={property.images?.[0] || '/placeholder-property.jpg'}
           alt={property.title}
           className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300"
         />
@@ -70,9 +105,12 @@ const PropertyCard = ({ property, onValidate, onReject, onDelete, onVerify }) =>
             </div>
           </div>
           <div className="flex items-center">
-            {typeIcons[property.type]}
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400 capitalize">
-              {property.type}
+            <TypeIcon className="w-5 h-5" />
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+              {typeLabel ||
+                (property.type
+                  ? String(property.type).replace(/_/g, ' ')
+                  : '—')}
             </span>
           </div>
         </div>
@@ -186,6 +224,7 @@ const PropertySkeleton = () => (
 const Properties = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [residenceTypeOptions, setResidenceTypeOptions] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     type: '',
@@ -202,6 +241,27 @@ const Properties = () => {
     pages: 0
   });
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await adminService.getAllPropertyTypes();
+      if (!cancelled && res.success && Array.isArray(res.data)) {
+        setResidenceTypeOptions(res.data);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const typeLabelsByCode = useMemo(() => {
+    const map = {};
+    residenceTypeOptions.forEach((t) => {
+      if (t.id) map[t.id] = t.name;
+    });
+    return map;
+  }, [residenceTypeOptions]);
 
   const fetchProperties = useCallback(async () => {
     try {
@@ -409,10 +469,11 @@ const Properties = () => {
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm dark:bg-gray-700 dark:border-gray-600"
                 >
                   <option value="">Tous</option>
-                  <option value="apartment">Appartement</option>
-                  <option value="house">Maison</option>
-                  <option value="villa">Villa</option>
-                  <option value="studio">Studio</option>
+                  {residenceTypeOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -514,7 +575,8 @@ const Properties = () => {
           <AnimatePresence>
             {properties.map(property => (
               <PropertyCard 
-                key={property._id || property.id} 
+                key={property._id || property.id}
+                typeLabel={typeLabelsByCode[property.type]}
                 property={property}
                 onValidate={handleValidateProperty}
                 onReject={handleRejectProperty}

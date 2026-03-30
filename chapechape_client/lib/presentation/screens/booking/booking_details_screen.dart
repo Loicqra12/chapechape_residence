@@ -200,12 +200,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        // Même fond que le scaffold (thème clair : gris très léger), pas `surface` blanc pur
+        // — évite la bande blanche qui tranche avec le reste de l’écran.
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: onSurface,
+        elevation: 0,
+        iconTheme: IconThemeData(color: onSurface),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          color: onSurface,
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -215,7 +222,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             }
           },
         ),
-        title: const Text('Détails de la réservation'),
+        title: Text(
+          'Détails de la réservation',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: onSurface,
+          ),
+        ),
         actions: [
           if (_booking?.status == 'pending' || _booking?.status == 'confirmed')
             IconButton(

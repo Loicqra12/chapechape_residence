@@ -126,6 +126,8 @@ class PaymentExternalLaunched extends PaymentState {
   final String transactionId;
   final DateTime expiresAt;
   final String? phoneNumber;
+  /// Réservation concernée (retour écran paiement).
+  final String reservationId;
 
   const PaymentExternalLaunched({
     required this.method,
@@ -133,10 +135,12 @@ class PaymentExternalLaunched extends PaymentState {
     required this.transactionId,
     required this.expiresAt,
     this.phoneNumber,
+    this.reservationId = '',
   });
 
   @override
-  List<Object?> get props => [method, paymentUrl, transactionId, expiresAt, phoneNumber];
+  List<Object?> get props =>
+      [method, paymentUrl, transactionId, expiresAt, phoneNumber, reservationId];
 }
 
 // État d'erreur de paiement

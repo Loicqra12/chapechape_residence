@@ -2,9 +2,14 @@ import axios from 'axios';
 import { API_URL } from '../config';
 
 class AdminService {
+  getAuthConfig() {
+    const token = localStorage.getItem('token');
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  }
+
   async getAdministrators() {
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/administrators`);
+      const response = await axios.get(`${API_URL}/superadmin/administrators`, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -19,7 +24,7 @@ class AdminService {
 
   async getRoles() {
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/roles`);
+      const response = await axios.get(`${API_URL}/superadmin/roles`, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -34,7 +39,7 @@ class AdminService {
 
   async getPermissions() {
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/permissions`);
+      const response = await axios.get(`${API_URL}/superadmin/permissions`, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -262,8 +267,14 @@ class AdminService {
   // === GESTION DES RÉSIDENCES/PROPERTIES ===
   async getAllProperties(queryParams = {}) {
     try {
-      const params = new URLSearchParams(queryParams).toString();
-      const response = await axios.get(`${API_URL}/admin/residences${params ? `?${params}` : ''}`, {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value);
+        }
+      });
+      const qs = params.toString();
+      const response = await axios.get(`${API_URL}/admin/residences${qs ? `?${qs}` : ''}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -450,7 +461,10 @@ class AdminService {
 
   async getLogs(filters = {}) {
     try {
-      const response = await axios.get(`${API_URL}/api/superadmin/logs`, { params: filters });
+      const response = await axios.get(
+        `${API_URL}/superadmin/logs`,
+        { ...this.getAuthConfig(), params: filters }
+      );
       return {
         success: true,
         data: response.data
@@ -466,7 +480,7 @@ class AdminService {
   // Gestion des administrateurs
   async createAdministrator(adminData) {
     try {
-      const response = await axios.post(`${API_URL}/api/superadmin/administrators`, adminData);
+      const response = await axios.post(`${API_URL}/superadmin/administrators`, adminData, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -481,7 +495,7 @@ class AdminService {
 
   async updateAdministrator(id, adminData) {
     try {
-      const response = await axios.put(`${API_URL}/api/superadmin/administrators/${id}`, adminData);
+      const response = await axios.put(`${API_URL}/superadmin/administrators/${id}`, adminData, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -496,7 +510,7 @@ class AdminService {
 
   async deleteAdministrator(id) {
     try {
-      await axios.delete(`${API_URL}/api/superadmin/administrators/${id}`);
+      await axios.delete(`${API_URL}/superadmin/administrators/${id}`, this.getAuthConfig());
       return {
         success: true
       };
@@ -511,7 +525,7 @@ class AdminService {
   // Gestion des rôles
   async createRole(roleData) {
     try {
-      const response = await axios.post(`${API_URL}/api/superadmin/roles`, roleData);
+      const response = await axios.post(`${API_URL}/superadmin/roles`, roleData, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -526,7 +540,7 @@ class AdminService {
 
   async updateRole(id, roleData) {
     try {
-      const response = await axios.put(`${API_URL}/api/superadmin/roles/${id}`, roleData);
+      const response = await axios.put(`${API_URL}/superadmin/roles/${id}`, roleData, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -541,7 +555,7 @@ class AdminService {
 
   async deleteRole(id) {
     try {
-      await axios.delete(`${API_URL}/api/superadmin/roles/${id}`);
+      await axios.delete(`${API_URL}/superadmin/roles/${id}`, this.getAuthConfig());
       return {
         success: true
       };
@@ -556,7 +570,7 @@ class AdminService {
   // Gestion des permissions
   async createPermission(permissionData) {
     try {
-      const response = await axios.post(`${API_URL}/api/superadmin/permissions`, permissionData);
+      const response = await axios.post(`${API_URL}/superadmin/permissions`, permissionData, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -571,7 +585,7 @@ class AdminService {
 
   async updatePermission(id, permissionData) {
     try {
-      const response = await axios.put(`${API_URL}/api/superadmin/permissions/${id}`, permissionData);
+      const response = await axios.put(`${API_URL}/superadmin/permissions/${id}`, permissionData, this.getAuthConfig());
       return {
         success: true,
         data: response.data
@@ -586,7 +600,7 @@ class AdminService {
 
   async deletePermission(id) {
     try {
-      await axios.delete(`${API_URL}/api/superadmin/permissions/${id}`);
+      await axios.delete(`${API_URL}/superadmin/permissions/${id}`, this.getAuthConfig());
       return {
         success: true
       };
@@ -676,15 +690,43 @@ class AdminService {
 
   // ===== GESTION DES PROPERTY TYPES =====
   
+  /**
+   * Catalogue canonique des types (GET /api/meta/residence-types).
+   * Les routes /admin/property-types n’existent pas sur ce backend : lecture seule.
+   */
   async getAllPropertyTypes() {
     try {
-      const response = await this.makeRequest('/admin/property-types', {
-        method: 'GET'
-      });
-      return response;
+      const response = await axios.get(`${API_URL}/meta/residence-types`);
+      const payload = response.data;
+      if (payload?.success && Array.isArray(payload.data)) {
+        const data = payload.data.map((row) => ({
+          id: row.code,
+          name: row.label,
+          description: row.category
+            ? `Catégorie : ${row.category.replace(/_/g, ' ')}`
+            : '',
+          features: [],
+          color: 'blue',
+          icon: null,
+          catalogReadOnly: true,
+        }));
+        return { success: true, data, catalogReadOnly: true };
+      }
+      return {
+        success: false,
+        data: [],
+        error: 'Réponse meta/residence-types invalide',
+      };
     } catch (error) {
       console.error('Erreur lors de la récupération des types de propriétés:', error);
-      throw error;
+      return {
+        success: false,
+        data: [],
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          'Erreur lors de la récupération des types',
+      };
     }
   }
 

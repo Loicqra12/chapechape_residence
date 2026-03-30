@@ -260,7 +260,7 @@ class _PhoneVerificationWidgetState extends State<PhoneVerificationWidget> {
               
               AdvancedPhoneInputWidget(
                 label: 'Numéro de téléphone',
-                hint: 'Ex: +225 XX XX XX XX',
+                hint: 'Ex : 07 XX XX XX XX',
                 isRequired: true,
                 initialPhoneNumber: _selectedPhoneNumber,
                 readOnly: _codeSent,

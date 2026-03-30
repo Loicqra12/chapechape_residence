@@ -36,17 +36,35 @@ class WaveService {
         'phoneNumber': phoneNumber ?? '', // Utiliser le phoneNumber fourni
       });
 
-      final data = response.data;
-      
-      // Vérifier que la réponse contient les données Wave nécessaires
-      if (data['success'] == true && data['data']['paymentUrl'] != null) {
-        final paymentData = data['data'];
+      final data = _mapFrom(response.data);
+      if (data == null) {
+        throw Exception('Réponse API invalide');
+      }
+
+      final paymentData = _mapFrom(data['data']);
+      final success = data['success'] == true;
+      final paymentUrl = _stringFrom(paymentData?['paymentUrl']) ??
+          _stringFrom(_mapFrom(paymentData?['providerResponse'])?['paymentUrl']);
+
+      if (success && paymentUrl != null && paymentUrl.isNotEmpty) {
+        final provider = _mapFrom(paymentData?['providerResponse']);
+        final paymentToken = _stringFrom(paymentData?['paymentToken']) ??
+            _stringFrom(provider?['paymentToken']) ??
+            _stringFrom(paymentData?['transactionId']);
+
+        DateTime? expiresAt;
+        final rawExpiry = paymentData?['expiresAt'];
+        if (rawExpiry != null) {
+          expiresAt = DateTime.tryParse(rawExpiry.toString());
+        }
+        expiresAt ??= DateTime.now().add(const Duration(minutes: 30));
+
         return WavePaymentResult(
           success: true,
-          transactionId: paymentData['transactionId'],
-          paymentUrl: paymentData['paymentUrl'] ?? paymentData['providerResponse']['paymentUrl'],
-          paymentToken: paymentData['paymentToken'] ?? paymentData['providerResponse']['paymentToken'],
-          expiresAt: DateTime.now().add(Duration(minutes: 30)), // 30min par défaut
+          transactionId: _stringFrom(paymentData?['transactionId']),
+          paymentUrl: paymentUrl,
+          paymentToken: paymentToken,
+          expiresAt: expiresAt,
         );
       } else {
         throw Exception(data['message'] ?? 'Erreur lors de l\'initiation du paiement Wave');
@@ -61,18 +79,27 @@ class WaveService {
 
   /// Lancer le paiement Wave dans le navigateur externe
   Future<bool> launchPaymentInBrowser(String paymentUrl) async {
+    final uri = Uri.parse(paymentUrl);
+    if (!uri.hasScheme ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      throw WaveException('URL de paiement invalide');
+    }
     try {
-      final uri = Uri.parse(paymentUrl);
-      
-      if (await canLaunchUrl(uri)) {
-        return await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        );
-      } else {
+      // Sur Android 11+, sans <queries> https dans le manifeste, [canLaunchUrl] est souvent false
+      // alors qu’un navigateur existe — on tente [launchUrl] directement.
+      var launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+      if (!launched) {
         throw WaveException('Impossible d\'ouvrir l\'URL de paiement Wave');
       }
+      return launched;
     } catch (e) {
+      if (e is WaveException) rethrow;
       throw WaveException('Erreur lors du lancement du paiement Wave: $e');
     }
   }
@@ -196,6 +223,19 @@ class WaveService {
     }
     
     return clean;
+  }
+
+  static Map<String, dynamic>? _mapFrom(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  static String? _stringFrom(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString();
+    return s.isEmpty ? null : s;
   }
 }
 

@@ -339,12 +339,16 @@ class Payment {
   
   /// Crée un paiement à partir d'un objet JSON
   factory Payment.fromJson(Map<String, dynamic> json) {
+    final bookingRaw = json['bookingId'] ?? json['reservationId'];
+    final bookingId = bookingRaw?.toString() ?? '';
+    final userId = json['userId']?.toString() ?? 'unknown';
+    final methodRaw = (json['method'] ?? json['paymentMethod'])?.toString();
     return Payment(
-      id: json['id'] as String,
-      bookingId: json['bookingId'] ?? json['reservationId'] as String,
-      userId: json['userId'] as String,
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      bookingId: bookingId,
+      userId: userId,
       amount: (json['amount'] as num).toDouble(),
-      method: _parsePaymentMethod(json['method']),
+      method: _parsePaymentMethod(methodRaw ?? ''),
       status: _parsePaymentStatus(json['status']),
       transactionId: json['transactionId'] as String?,
       receiptUrl: json['receiptUrl'] as String?,
@@ -362,12 +366,26 @@ class Payment {
 
   /// Crée un paiement à partir de la réponse backend
   factory Payment.fromBackendJson(Map<String, dynamic> json) {
+    final reservationRaw = json['reservation'];
+    String bookingId = '';
+    if (reservationRaw is String) {
+      bookingId = reservationRaw;
+    } else if (reservationRaw is Map<String, dynamic>) {
+      bookingId = reservationRaw['_id']?.toString() ?? '';
+    } else if (reservationRaw is Map) {
+      bookingId = reservationRaw['_id']?.toString() ?? '';
+    }
+
+    final userRaw = json['user'];
+    final reservationUserRaw = reservationRaw is Map ? reservationRaw['user'] : null;
+    final userId = userRaw?.toString() ?? reservationUserRaw?.toString() ?? 'unknown';
+    final methodRaw = (json['paymentMethod'] ?? json['method'])?.toString();
     return Payment(
-      id: json['_id'] ?? json['paymentId'] as String,
-      bookingId: json['reservation'] as String,
-      userId: json['user'] ?? 'unknown',
+      id: json['_id']?.toString() ?? json['paymentId']?.toString() ?? '',
+      bookingId: bookingId,
+      userId: userId,
       amount: (json['amount'] as num).toDouble(),
-      method: _parsePaymentMethod(json['paymentMethod'] ?? json['method']),
+      method: _parsePaymentMethod(methodRaw ?? ''),
       status: _parsePaymentStatus(json['status']),
       transactionId: json['transactionId'] as String?,
       receiptUrl: json['receiptUrl'] as String?,

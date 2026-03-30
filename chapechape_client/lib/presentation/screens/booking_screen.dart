@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart' as booking_events;
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as booking_states;
@@ -106,8 +107,49 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  void _onBookingBlocListen(BuildContext context, booking_states.BookingState state) {
+    if (state is booking_states.BookingCreated) {
+      context.go('/booking-confirmation/${state.booking.id}');
+    } else if (state is booking_states.BookingError) {
+      String errorMessage = state.message;
+      if (errorMessage.contains('n\'est pas disponible pour ces dates')) {
+        errorMessage =
+            'Cette résidence n\'est plus disponible pour les dates sélectionnées. Veuillez essayer d\'autres dates.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: AppTheme.errorColor,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+      if (errorMessage.contains('disponible')) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _isAvailabilityChecked = false;
+            });
+          }
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showSticky = _residence != null;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    // Espace pour la barre (~56px bouton + paddings 14*2) + safe area
+    const stickyBarContentHeight = 72.0;
+    final scrollBottomPad = AppSpacing.pagePadding.bottom +
+        AppSpacing.lg +
+        (showSticky ? stickyBarContentHeight + 28 + safeBottom : 0);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -122,43 +164,54 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
         ),
       ),
-      body: SafeArea(
-        bottom: true,
-        child: LoadingOverlay(
-          isLoading: _isLoadingState(context),
-          child: SingleChildScrollView(
-            padding: AppSpacing.pagePadding.copyWith(
-              bottom: AppSpacing.pagePadding.bottom + AppSpacing.lg,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Informations sur la résidence
-                _buildResidenceInfo(),
-                
-                AppSpacing.verticalLg,
-                
-                // Formulaire de réservation
-                Form(
-                  key: _formKey,
+      body: BlocListener<BookingBloc, booking_states.BookingState>(
+        listenWhen: (prev, next) =>
+            next is booking_states.BookingCreated || next is booking_states.BookingError,
+        listener: _onBookingBlocListen,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            SafeArea(
+              bottom: !showSticky,
+              child: LoadingOverlay(
+                isLoading: _isLoadingState(context),
+                child: SingleChildScrollView(
+                  padding: AppSpacing.pagePadding.copyWith(
+                    bottom: scrollBottomPad,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildDateSelectionSection(),
+                      _buildResidenceInfo(),
                       AppSpacing.verticalLg,
-                      _buildReservationModeSection(),
-                      AppSpacing.verticalMd,
-                      _buildGuestsField(),
-                      AppSpacing.verticalLg,
-                      _buildPriceSection(),
-                      AppSpacing.verticalLg,
-                      _buildBookingButton(),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildDateSelectionSection(),
+                            AppSpacing.verticalLg,
+                            _buildReservationModeSection(),
+                            AppSpacing.verticalMd,
+                            _buildGuestsField(),
+                            AppSpacing.verticalLg,
+                            _buildPriceSection(),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            if (showSticky)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _buildStickyBookingBar(context),
+              ),
+          ],
         ),
       ),
     );
@@ -189,25 +242,76 @@ class _BookingScreenState extends State<BookingScreen> {
             _checkAvailability();
           }
           
+          final theme = Theme.of(context);
           return Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.10)),
+            ),
             child: Padding(
               padding: AppSpacing.pagePadding,
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _residence!.name,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  AppSpacing.verticalSm,
-                  Text(
-                    _residence!.address,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  AppSpacing.verticalMd,
-                  Text(
-                    _residence!.shortDescription,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  _ResidenceThumb(imageUrl: _residence!.imageUrl),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _residence!.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                'Réserver',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        AppSpacing.verticalSm,
+                        Text(
+                          _residence!.address,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.55),
+                          ),
+                        ),
+                        AppSpacing.verticalSm,
+                        Text(
+                          _residence!.shortDescription,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.35,
+                            color: theme.colorScheme.onSurface.withOpacity(0.85),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -581,93 +685,131 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
   
-  // Construire le bouton de réservation
-  Widget _buildBookingButton() {
-    return BlocListener<BookingBloc, booking_states.BookingState>(
-      listener: (context, state) {
-        if (state is booking_states.BookingCreated) {
-          // Rediriger vers l'écran de paiement ou de confirmation
-          context.go('/booking-confirmation/${state.booking.id}');
-        } else if (state is booking_states.BookingError) {
-          // Afficher une erreur plus détaillée
-          String errorMessage = state.message;
-          
-          // Traiter les messages d'erreur spécifiques
-          if (errorMessage.contains('n\'est pas disponible pour ces dates')) {
-            errorMessage = 'Cette résidence n\'est plus disponible pour les dates sélectionnées. Veuillez essayer d\'autres dates.';
-          }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: AppTheme.errorColor,
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'OK',
-                textColor: Colors.white,
-                onPressed: () {},
+  /// Barre bas fixe (comme la fiche résidence) : prix seul + CTA or/noir.
+  Widget _buildStickyBookingBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final safe = MediaQuery.paddingOf(context).bottom;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: onSurface.withOpacity(0.12), width: 1),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.shadow.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.fromLTRB(24, 14, 24, safe + 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${_estimatedPrice.toStringAsFixed(0)} FCFA',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface,
+                  height: 1.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          );
-          
-          // Si l'erreur concerne la disponibilité, on réinitialise le check
-          if (errorMessage.contains('disponible')) {
-            setState(() {
-              _isAvailabilityChecked = false;
-            });
-          }
-        }
-      },
-      child: ElevatedButton(
-        onPressed: _isAvailable ? () {
-          HapticFeedback.heavyImpact();
-          _handleSubmit();
-        } : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.black,
-          disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.4),
-          disabledForegroundColor: Colors.black.withOpacity(0.6),
-          elevation: 0,
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          ),
-        ),
-        child: const Text(
-          'Réserver maintenant',
-          style: TextStyle(fontWeight: FontWeight.w600),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: _isAvailable
+                  ? () {
+                      HapticFeedback.heavyImpact();
+                      _handleSubmit();
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.black,
+                disabledBackgroundColor: AppTheme.primaryColor.withOpacity(0.4),
+                disabledForegroundColor: Colors.black.withOpacity(0.6),
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                minimumSize: const Size(0, 48),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                ),
+              ),
+              child: const Text(
+                'Réserver maintenant',
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w600, height: 1.2),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-  
-  /// Retourne le libellé de durée adapté au type de r\u00e9servation
+
+  /// Libellé durée aligné sur `bookingType` + `details` du sélecteur flexible.
   String _buildDurationLabel() {
+    Map<String, dynamic>? details;
+    var bookingType = _selectedBookingType;
+
     if (_pricingDetails.isNotEmpty) {
-      // Utiliser les infos du pricing flexible si disponibles
-      final type = _pricingDetails['type'] ?? _selectedBookingType;
-      final quantity = _pricingDetails['quantity'] ?? 1;
-      switch (type) {
+      final bt = _pricingDetails['bookingType'];
+      if (bt is String && bt.isNotEmpty) {
+        bookingType = bt;
+      }
+      final raw = _pricingDetails['details'];
+      if (raw is Map<String, dynamic>) {
+        details = raw;
+      }
+
+      switch (bookingType) {
         case 'hour':
-          return 'Pour $quantity heure${quantity > 1 ? 's' : ''}';
-        case 'week':
-          return 'Pour $quantity semaine${quantity > 1 ? 's' : ''}';
-        case 'month':
-          return 'Pour $quantity mois';
+          final h = details?['hours'] as int?;
+          if (h != null && h > 0) {
+            return 'Pour $h heure${h > 1 ? 's' : ''}';
+          }
+          break;
         case 'day':
+          final dayType = details?['dayType'] as String?;
+          if (dayType == 'half') return 'Pour une demi-journée';
+          if (dayType == 'weekend') return 'Pour le weekend';
+          if (dayType == 'full') return 'Pour une journée complète';
+          return 'Pour une journée complète';
+        case 'week':
+          return 'Pour 1 semaine';
+        case 'month':
+          return 'Pour 1 mois';
         default:
-          return 'Pour $quantity nuit${quantity > 1 ? 's' : ''}';
+          break;
       }
     }
-    // Fallback : calcul en jours
+
     if (_checkInDate != null && _checkOutDate != null) {
-      final nights = _checkOutDate!.difference(_checkInDate!).inDays;
-      if (_selectedBookingType == 'hour') {
+      if (bookingType == 'hour') {
         final hours = _checkOutDate!.difference(_checkInDate!).inHours;
-        return 'Pour $hours heure${hours > 1 ? 's' : ''}';
+        if (hours > 0) {
+          return 'Pour $hours heure${hours > 1 ? 's' : ''}';
+        }
       }
-      return 'Pour $nights nuit${nights > 1 ? 's' : ''}';
+      if (bookingType == 'day') {
+        return 'Pour une journée complète';
+      }
+      final nights = _checkOutDate!.difference(_checkInDate!).inDays;
+      if (nights > 0) {
+        return 'Pour $nights nuit${nights > 1 ? 's' : ''}';
+      }
     }
     return '';
   }
@@ -676,5 +818,63 @@ class _BookingScreenState extends State<BookingScreen> {
   void dispose() {
     _guestsController.dispose();
     super.dispose();
+  }
+}
+
+class _ResidenceThumb extends StatelessWidget {
+  final String imageUrl;
+
+  const _ResidenceThumb({required this.imageUrl});
+
+  bool get _isNetwork =>
+      imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 56.0;
+    final radius = BorderRadius.circular(12);
+    if (_isNetwork) {
+      return ClipRRect(
+        borderRadius: radius,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(
+            width: size,
+            height: size,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+          errorWidget: (_, __, ___) => _fallback(context, size, radius),
+        ),
+      );
+    }
+    return _fallback(context, size, radius);
+  }
+
+  Widget _fallback(BuildContext context, double size, BorderRadius radius) {
+    return ClipRRect(
+      borderRadius: radius,
+      child: Container(
+        width: size,
+        height: size,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: imageUrl.startsWith('assets/')
+            ? Image.asset(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(Icons.home_work_outlined),
+              )
+            : const Icon(Icons.broken_image_outlined),
+      ),
+    );
   }
 }

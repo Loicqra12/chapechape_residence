@@ -112,19 +112,30 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        title: Text(_getPaymentMethodTitle()),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: onSurface,
         elevation: 0,
+        iconTheme: IconThemeData(color: onSurface),
+        title: Text(
+          _getPaymentMethodTitle(),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: onSurface,
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          color: onSurface,
           onPressed: () => _showCancelDialog(),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
+            color: onSurface,
             onPressed: () => _controller.reload(),
           ),
         ],
