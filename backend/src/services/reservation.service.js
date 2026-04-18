@@ -365,7 +365,11 @@ const createReservation = async (reservationBody) => {
         emailPromises.push(emailService.sendPartnerNotification(partner, 'new_booking', {
           checkIn: reservation[0].checkIn,
           checkOut: reservation[0].checkOut,
-          guests: reservation[0].numberOfGuests
+          guests: reservation[0].numberOfGuests,
+          price: reservation[0].totalPrice,
+          clientName: user ? user.firstName : 'Un client',
+          residenceName: residence.title || 'Votre résidence',
+          location: residence.city || ''
         }));
       } else {
         console.log('ATTENTION: Impossible d\'envoyer l\'email au partenaire - partenaire manquant');
@@ -488,7 +492,12 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
       emailService.sendBookingCancellation(user.email, reservation),
       emailService.sendPartnerNotification(partner, 'booking_cancelled', {
         checkIn: reservation.checkIn,
-        checkOut: reservation.checkOut
+        checkOut: reservation.checkOut,
+        guests: reservation.numberOfGuests,
+        price: reservation.totalPrice,
+        clientName: user ? user.firstName : 'Un client',
+        residenceName: reservation.residence.title || 'Votre résidence',
+        location: reservation.residence.city || ''
       })
     ]);
 
@@ -633,6 +642,11 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       emailService.sendPartnerNotification(partner, 'booking_modified', {
         checkIn: reservation.checkIn,
         checkOut: reservation.checkOut,
+        guests: reservation.numberOfGuests,
+        price: reservation.totalPrice,
+        clientName: user ? user.firstName : 'Un client',
+        residenceName: reservation.residence.title || 'Votre résidence',
+        location: reservation.residence.city || '',
         modifications: modification.changes
       })
     ]);

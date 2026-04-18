@@ -5,6 +5,13 @@ const notificationService = require('../services/notification.service');
 const { NOTIFICATION_TYPES } = require('../utils/constants');
 const apiError = require('../utils/apiError');
 
+const getPartnerId = (partner) => {
+  if (!partner) return null;
+  if (typeof partner === 'string') return partner;
+  if (partner._id) return partner._id.toString();
+  return partner.toString ? partner.toString() : null;
+};
+
 // @desc    Envoyer un SMS simple
 // @route   POST /api/sms/send
 // @access  Private (Admin et Partenaire uniquement)
@@ -46,7 +53,8 @@ exports.sendBookingNotification = asyncHandler(async (req, res) => {
   }
   
   // Vérifier l'autorisation (seul le partenaire associé ou un admin peut envoyer)
-  if (reservation.partner && reservation.partner.toString() !== req.user.id && req.user.role !== 'admin') {
+  const partnerId = getPartnerId(reservation.partner);
+  if (partnerId && partnerId !== req.user.id && req.user.role !== 'admin') {
     throw new apiError('Non autorisé à envoyer des notifications pour cette réservation', 403);
   }
   
@@ -54,16 +62,15 @@ exports.sendBookingNotification = asyncHandler(async (req, res) => {
   
   // Créer également une notification dans le système
   if (reservation.user && reservation.user._id) {
-    await notificationService.createNotification({
-      recipient: reservation.user._id,
-      type: NOTIFICATION_TYPES.BOOKING_UPDATE,
-      title: `Mise à jour de votre réservation`,
-      message: `Votre réservation pour "${reservation.residence.title}" a été mise à jour.`,
-      data: {
+    await notificationService.createNotification(
+      reservation.user._id,
+      NOTIFICATION_TYPES.BOOKING_UPDATE,
+      `Votre réservation pour "${reservation.residence.title}" a été mise à jour.`,
+      {
         bookingId: reservation._id,
         updateType: notificationType
       }
-    });
+    );
   }
   
   res.status(200).json({
@@ -104,7 +111,8 @@ exports.sendPaymentInstructions = asyncHandler(async (req, res) => {
   }
   
   // Vérifier l'autorisation (seul le partenaire associé ou un admin peut envoyer)
-  if (reservation.partner && reservation.partner.toString() !== req.user.id && req.user.role !== 'admin') {
+  const partnerId = getPartnerId(reservation.partner);
+  if (partnerId && partnerId !== req.user.id && req.user.role !== 'admin') {
     throw new apiError('Non autorisé à envoyer des instructions de paiement pour cette réservation', 403);
   }
   
@@ -112,16 +120,15 @@ exports.sendPaymentInstructions = asyncHandler(async (req, res) => {
   
   // Créer également une notification dans le système
   if (reservation.user && reservation.user._id) {
-    await notificationService.createNotification({
-      recipient: reservation.user._id,
-      type: NOTIFICATION_TYPES.PAYMENT_REQUIRED,
-      title: `Instructions de paiement`,
-      message: `Veuillez finaliser le paiement pour votre réservation à "${reservation.residence.title}".`,
-      data: {
+    await notificationService.createNotification(
+      reservation.user._id,
+      NOTIFICATION_TYPES.PAYMENT_REQUIRED,
+      `Veuillez finaliser le paiement pour votre réservation à "${reservation.residence.title}".`,
+      {
         bookingId: reservation._id,
         paymentMethod
       }
-    });
+    );
   }
   
   res.status(200).json({

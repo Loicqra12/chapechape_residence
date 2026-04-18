@@ -2,6 +2,7 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/user.model');
 const apiError = require('../utils/apiError');
 const jwt = require('../utils/jwt');
+const emailService = require('./email.service');
 
 // ID client Google — doit correspondre au serverClientId passé à GoogleSignIn() côté Flutter.
 // Les deux utilisent le projet Firebase chapchapresi (39884732136).
@@ -121,6 +122,9 @@ const authenticateWithGoogle = async (idToken) => {
         password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8), // Mot de passe aléatoire
         role: 'client'
       });
+
+      // Envoyer l'email de bienvenue après la création du compte via Google
+      emailService.sendWelcome(user).catch(e => console.error("Erreur envoi bienvenue (Google Auth):", e?.message));
     } else if (!user.googleId) {
       // Si l'utilisateur existe mais n'a pas de googleId, le mettre à jour
       user.googleId = googleUserInfo.googleId;

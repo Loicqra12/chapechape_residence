@@ -94,7 +94,7 @@ class OneSignalService {
                 'en': title,
                 'fr': title
             },
-            include_player_ids: [playerId],
+            include_subscription_ids: [playerId],
             data
         });
     }
@@ -122,7 +122,7 @@ class OneSignalService {
                 'en': title,
                 'fr': title
             },
-            include_player_ids: playerIds,
+            include_subscription_ids: playerIds,
             data
         });
     }

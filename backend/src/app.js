@@ -196,6 +196,41 @@ app.get("/health", (req, res) => {
   });
 });
 
+// ====================================================================
+// ANDROID APP LINKS — .well-known/assetlinks.json (optionnel sur l’hôte API)
+// La vérification Android utilise le MÊME domaine que l’URL du lien email
+// (souvent presentation.* = site statique chapechape_sitepresentation, pas ce serveur).
+// Le fichier canonique est : chapechape_sitepresentation/public/.well-known/assetlinks.json
+// Gardez APP_CLIENT_SHA256_FINGERPRINT / APP_PARTNER_SHA256_FINGERPRINT dans .env si vous
+// proxy ce chemin vers l’API ou pour cohérence locale.
+// ====================================================================
+app.get("/.well-known/assetlinks.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "com.chapechape.client",
+        sha256_cert_fingerprints: [
+          process.env.APP_CLIENT_SHA256_FINGERPRINT || "REMPLACER_PAR_VOTRE_SHA256_CLIENT"
+        ]
+      }
+    },
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "com.chapechape.chapechape_partner",
+        sha256_cert_fingerprints: [
+          process.env.APP_PARTNER_SHA256_FINGERPRINT || "REMPLACER_PAR_VOTRE_SHA256_PARTNER"
+        ]
+      }
+    }
+  ]);
+});
+
 // Import des routes de health checks avancés
 const healthRoutes = require("./routes/health.routes");
 const pingRoutes = require("./routes/ping.routes");

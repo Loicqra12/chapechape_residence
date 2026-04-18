@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.chapechape.client",
+      "sha256_cert_fingerprints": [
+        "6D:5B:4E:42:39:C1:55:2B:24:D3:EC:BA:63:B4:FD:BC:1E:10:C8:8B:31:AF:50:FD:CA:55:D8:B4:83:5C:86:8A"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.chapechape.chapechape_partner",
+      "sha256_cert_fingerprints": [
+        "6D:5B:4E:42:39:C1:55:2B:24:D3:EC:BA:63:B4:FD:BC:1E:10:C8:8B:31:AF:50:FD:CA:55:D8:B4:83:5C:86:8A"
+      ]
+    }
+  }
+]

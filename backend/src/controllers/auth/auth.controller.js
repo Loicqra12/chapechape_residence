@@ -7,6 +7,7 @@ const asyncHandler = require('../../middlewares/async.middleware');
 const apiError = require('../../utils/apiError');
 const notificationService = require('../../services/notification.service');
 const auditService = require('../../services/audit.service');
+const emailService = require('../../services/email.service');
 const LoginAttempt = require('../../models/loginAttempt.model');
 const logger = require('../../utils/logger');
 
@@ -42,6 +43,9 @@ exports.register = asyncHandler(async (req, res) => {
         // Générer le token de rafraîchissement
         const refreshToken = jwt.generateRefreshToken(user._id);
 
+        // Envoyer l'email de bienvenue de façon non-bloquante
+        emailService.sendWelcome(user).catch(e => console.error("Erreur envoi email bienvenue:", e?.message));
+
         res.status(201).json({
             success: true,
             token: accessToken,
@@ -55,6 +59,9 @@ exports.register = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
         throw new apiError('Erreur lors de l\'inscription', 500);
     }
 });
@@ -99,6 +106,9 @@ exports.registerPartner = asyncHandler(async (req, res) => {
 
         // Générer le token de rafraîchissement
         const refreshToken = jwt.generateRefreshToken(user._id);
+
+        // Envoyer l'email de bienvenue de façon non-bloquante
+        emailService.sendWelcome(user).catch(e => console.error("Erreur envoi email bienvenue (partenaire):", e?.message));
 
         res.status(201).json({
             success: true,
@@ -337,6 +347,9 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
             throw new apiError('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.', 500);
         }
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
         throw new apiError('Erreur lors de la réinitialisation du mot de passe', 500);
     }
 });
@@ -372,6 +385,9 @@ exports.resetPassword = asyncHandler(async (req, res) => {
             message: 'Mot de passe réinitialisé avec succès'
         });
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
         throw new apiError('Erreur lors de la réinitialisation du mot de passe', 500);
     }
 });
@@ -418,6 +434,9 @@ exports.refreshToken = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
         throw new apiError('Erreur lors du rafraîchissement du token', 500);
     }
 });
@@ -438,6 +457,9 @@ exports.logout = asyncHandler(async (req, res) => {
             message: 'Déconnexion réussie'
         });
     } catch (error) {
+        if (error instanceof apiError) {
+            throw error;
+        }
         throw new apiError('Erreur lors de la déconnexion', 500);
     }
 });
@@ -551,6 +573,32 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         console.error('Erreur updateProfile:', error);
         throw new apiError('Erreur lors de la mise à jour du profil', 500);
     }
+});
+
+// @desc    Change user password
+// @route   PUT /api/auth/password
+// @access  Private
+exports.changePassword = asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+        throw new apiError('Utilisateur non trouvé', 404);
+    }
+
+    const isCurrentPasswordValid = await user.matchPassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+        throw new apiError('Mot de passe actuel incorrect', 400);
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Mot de passe mis à jour avec succès'
+    });
 });
 
 // Fonction utilitaire pour normaliser les numéros de téléphone

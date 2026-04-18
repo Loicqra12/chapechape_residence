@@ -154,10 +154,34 @@ const uploadLimiter = rateLimit({
   }
 });
 
+/**
+ * Rate limiter pour requêtes OTP Twilio/WhatsApp (3 req/15min par IP/Numéro)
+ */
+const otpLimiter = rateLimit({
+  store: createStore('otp'),
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Si la requête contient le numéro de téléphone, on limite par numéro, sinon par IP
+    return req.body && req.body.phoneNumber ? req.body.phoneNumber : req.ip;
+  },
+  handler: (req, res) => {
+    logger.warn(`OTP rate limit exceeded: ${req.ip} / ${req.body?.phoneNumber}`);
+    res.status(429).json({
+      success: false,
+      message: 'Trop de requêtes de code. Réessayez dans 15 minutes.',
+      retryAfter: 900
+    });
+  }
+});
+
 module.exports = {
   globalLimiter,
   authLimiter,
   paymentLimiter,
   userLimiter,
-  uploadLimiter
+  uploadLimiter,
+  otpLimiter
 };

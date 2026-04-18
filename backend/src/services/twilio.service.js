@@ -46,18 +46,10 @@ class TwilioService {
       // Formatage international du numéro si nécessaire
       let formattedNumber = to;
       if (!to.startsWith('+')) {
-        // Nettoyer le numéro (supprimer espaces et autres caractères)
+        logger.warn(`Attention: Format E.164 manquant pour le numéro: ${to}. Veuillez normaliser vos numéros dans le contrôleur avec utils/phone.util.js avant d'appeler twilio.service.`);
+        // Nettoyage basique en cas d'oubli, mais on ajoute le "+"
         let cleanNumber = to.replace(/\s+/g, '').replace(/[^\d]/g, '');
-        
-        // Si le numéro commence par 0, le remplacer par le préfixe international
-        if (cleanNumber.startsWith('0')) {
-          cleanNumber = cleanNumber.substring(1); // Supprimer le 0
-        }
-        
-        // Ajouter le préfixe international pour la Côte d'Ivoire
-        formattedNumber = `+225${cleanNumber}`;
-        
-        logger.info(`Numéro formaté: "${to}" → "${formattedNumber}"`);
+        formattedNumber = `+${cleanNumber}`;
       }
 
       const message = await this.client.messages.create({
@@ -88,11 +80,11 @@ class TwilioService {
     }
 
     try {
-      // Formatage international du numéro si nécessaire
       let formattedNumber = to;
       if (!to.startsWith('+')) {
-        // Ajout du préfixe international pour les pays d'Afrique de l'Ouest si absent
-        formattedNumber = `+225${to}`; 
+        logger.warn(`Attention: Format E.164 WhatsApp manquant pour le numéro: ${to}.`);
+        let cleanNumber = to.replace(/\s+/g, '').replace(/[^\d]/g, '');
+        formattedNumber = `+${cleanNumber}`;
       }
 
       const message = await this.client.messages.create({
