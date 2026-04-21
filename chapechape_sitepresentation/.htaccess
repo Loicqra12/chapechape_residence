@@ -2,11 +2,15 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
+
+  # Android Digital Asset Links : ne jamais envoyer cette URL vers index.html (SPA).
+  # Sinon le navigateur peut afficher du HTML + du JSON mélangé (réponse invalide).
+  RewriteRule ^\.well-known/assetlinks\.json$ - [L]
+
   # Ne pas appliquer la règle à des fichiers ou dossiers existants
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  
+
   # Rediriger toutes les requêtes vers index.html
   RewriteRule ^(.*)$ index.html [QSA,L]
 </IfModule>

@@ -311,7 +311,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         case 'payment_received':
         case 'payment_failed':
         case 'payment_refunded':
-          context.push('/payments');
+          context.push('/profile/payments');
           break;
         case 'favorite_added':
         case 'favorite_price_changed':

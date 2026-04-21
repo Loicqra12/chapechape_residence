@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Payment = require('./payment.model');
 
 const bookingSchema = new mongoose.Schema({
     residence: {
@@ -192,18 +193,63 @@ bookingSchema.methods.addReview = async function(rating, comment) {
     return this;
 };
 
-// Méthode pour enregistrer un paiement
+// Méthode pour enregistrer un paiement (vérifie le document Payment en base)
 bookingSchema.methods.registerPayment = async function(paymentId, method, amount) {
+    if (!paymentId || !mongoose.Types.ObjectId.isValid(paymentId)) {
+        const err = new Error('Identifiant de paiement invalide');
+        err.name = 'ValidationError';
+        throw err;
+    }
+
+    const payment = await Payment.findById(paymentId).lean();
+    if (!payment) {
+        const err = new Error('Paiement introuvable');
+        err.name = 'ValidationError';
+        throw err;
+    }
+
+    const paidStatuses = ['paid', 'completed'];
+    if (!paidStatuses.includes(payment.status)) {
+        const err = new Error(`Paiement non validé (statut: ${payment.status})`);
+        err.name = 'ValidationError';
+        throw err;
+    }
+
+    const expectedAmount = Number(payment.amount);
+    const paid = Number(amount);
+    if (!Number.isFinite(expectedAmount) || !Number.isFinite(paid)) {
+        const err = new Error('Montant de paiement invalide');
+        err.name = 'ValidationError';
+        throw err;
+    }
+    if (Math.abs(expectedAmount - paid) > 0.01) {
+        const err = new Error('Le montant ne correspond pas au paiement enregistré');
+        err.name = 'ValidationError';
+        throw err;
+    }
+
+    let linkedBookingId;
+    const meta = payment.metadata;
+    if (meta && typeof meta.get === 'function') {
+        linkedBookingId = meta.get('bookingId');
+    } else if (meta && typeof meta === 'object') {
+        linkedBookingId = meta.bookingId;
+    }
+    if (linkedBookingId && linkedBookingId !== this._id.toString()) {
+        const err = new Error('Ce paiement ne correspond pas à cette réservation');
+        err.name = 'ValidationError';
+        throw err;
+    }
+
     this.paymentId = paymentId;
     this.paymentMethod = method;
-    this.paidAmount = amount;
+    this.paidAmount = paid;
     this.paymentStatus = 'completed';
-    
-    // Si le montant payé est égal ou supérieur au prix total, confirmer la réservation
-    if (amount >= this.totalPrice) {
+
+    if (paid >= this.totalPrice) {
         this.status = 'confirmed';
     }
-    
+
     await this.save();
     return this;
 };

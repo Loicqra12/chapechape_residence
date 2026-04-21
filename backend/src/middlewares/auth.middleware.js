@@ -50,13 +50,18 @@ exports.protect = async (req, res, next) => {
                 role: user.role 
             });
             
-            // Vérification du changement de mot de passe désactivée temporairement
-            // car la méthode hasPasswordChangedAfter n'existe pas dans le modèle User
-            // if (user.hasPasswordChangedAfter(decoded.iat)) {
-            //     return next(
-            //         new apiError('L\'utilisateur a récemment changé de mot de passe, veuillez vous reconnecter', 401)
-            //     );
-            // }
+            // Invalider les tokens JWT émis avant un changement de mot de passe.
+            if (typeof user.hasPasswordChangedAfter === 'function' && user.hasPasswordChangedAfter(decoded.iat)) {
+                return next(
+                    new apiError('L\'utilisateur a récemment changé de mot de passe, veuillez vous reconnecter', 401)
+                );
+            }
+
+            if (user.isActive === false) {
+                return next(
+                    new apiError('Ce compte a été désactivé', 403)
+                );
+            }
 
             // Tout est OK, passer l'utilisateur dans la requête
             req.user = user;
@@ -118,6 +123,12 @@ exports.validateRefreshToken = async (req, res, next) => {
             if (!user) {
                 return next(
                     new apiError('Utilisateur non trouvé', 401)
+                );
+            }
+
+            if (user.isActive === false) {
+                return next(
+                    new apiError('Ce compte a été désactivé', 403)
                 );
             }
             

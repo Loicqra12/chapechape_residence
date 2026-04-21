@@ -81,6 +81,7 @@ class UserService {
       await _apiService.put('/auth/password', data: {
         'currentPassword': currentPassword,
         'newPassword': newPassword,
+        'confirmPassword': newPassword,
       });
     } on DioException catch (e) {
       throw _handleDioError(e);

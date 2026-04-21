@@ -69,7 +69,7 @@ class ApiService {
       maxRetries: 3,
       initialDelay: const Duration(milliseconds: 500),
       maxDelay: const Duration(seconds: 30),
-      retryStatusCodes: [408, 429, 500, 502, 503, 504],
+      retryStatusCodes: [408, 500, 502, 503, 504],
     ));
     
     // 3. Ajouter l'intercepteur d'authentification

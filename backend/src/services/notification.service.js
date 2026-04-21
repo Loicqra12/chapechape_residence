@@ -34,6 +34,17 @@ class NotificationService {
             if (user.deviceTokens && user.deviceTokens.length &&
                 (!user.notificationSettings || user.notificationSettings.pushEnabled !== false)) {
                 try {
+                    const pushType = notificationTypes.getPushTypeByNotificationType(type);
+                    const deepLink = notificationTypes.getDeepLinkByNotificationType(type, data);
+                    const entityId =
+                        data.conversationId ||
+                        data.chatId ||
+                        data.bookingId ||
+                        data.reservationId ||
+                        data.paymentId ||
+                        data.payoutId ||
+                        null;
+
                     await oneSignalService.sendToMultipleUsers(
                         user.deviceTokens,
                         'ChapeChape Notification',
@@ -41,6 +52,9 @@ class NotificationService {
                         {
                             notificationId: notification._id.toString(),
                             type,
+                            pushType,
+                            deepLink,
+                            entityId,
                             ...data
                         }
                     );

@@ -192,7 +192,7 @@ class BookingService {
         // essayer l'endpoint alternatif user-bookings
         debugPrint('🔄 Première tentative échouée, essai avec l\'endpoint alternatif...');
         
-        final alternativeResponse = await _apiService.get('reservations/user-bookings');
+        final alternativeResponse = await _apiService.get('reservations/my-reservations');
         
         if (alternativeResponse.statusCode == 200 && alternativeResponse.data != null) {
           final List<dynamic> bookingsJson = alternativeResponse.data['data'] ?? [];
@@ -355,7 +355,7 @@ class BookingService {
         'x-mobile-app': 'true'  // Contourne la protection CSRF
       });
       
-      final response = await _apiService.put(
+      final response = await _apiService.patch(
         'reservations/$id',
         data: {
           if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
@@ -365,7 +365,9 @@ class BookingService {
         options: options
       );
 
-      return Booking.fromJson(response.data);
+      final responseData = response.data as Map<String, dynamic>;
+      final data = responseData['data'] ?? responseData;
+      return Booking.fromJson(data as Map<String, dynamic>);
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
       final responseData = e.response?.data;
@@ -420,29 +422,12 @@ class BookingService {
     required int numberOfGuests,
   }) async {
     try {
-      // Vérifier que l'ID de résidence n'est pas un ID temporaire
-      if (residenceId.startsWith('temp_')) {
-        // MODE TEST: Permettre les IDs temporaires pour les tests
-        debugPrint('⚠️ ATTENTION: Utilisation d\'un ID temporaire pour le calcul du prix');
-        // Utiliser l'ID de résidence qui fonctionne dans Postman
-        residenceId = "67cb2f6acb3b4423a99c32c8"; // ID valide de MongoDB qui fonctionne dans Postman
-      }
-      
-      // Formater les dates au format YYYY-MM-DD sans heure
+      // Formater les dates au format YYYY-MM-DD
       final formattedCheckIn = "${checkIn.year}-${checkIn.month.toString().padLeft(2, '0')}-${checkIn.day.toString().padLeft(2, '0')}";
       final formattedCheckOut = "${checkOut.year}-${checkOut.month.toString().padLeft(2, '0')}-${checkOut.day.toString().padLeft(2, '0')}";
-      
-      // Obtenir les détails de la résidence (à implémenter)
-      // Cette méthode calculera le prix côté client en attendant l'endpoint
-      
-      // Exemple simple: prix journalier * nombre de jours
-      // À remplacer par votre propre logique de calcul
-      const prixJournalier = 15000.0; // Prix par défaut
-      final differenceEnJours = checkOut.difference(checkIn).inDays;
-      
-      return prixJournalier * differenceEnJours;
-      
-      /* Lorsque l'API sera disponible, utiliser:
+
+      debugPrint('💰 Calcul du prix via API: $residenceId | $formattedCheckIn → $formattedCheckOut | $numberOfGuests invités');
+
       final response = await _apiService.post(
         'reservations/calculate-price',
         data: {
@@ -453,8 +438,12 @@ class BookingService {
         },
       );
 
-      return response.data['totalPrice'];
-      */
+      final data = response.data['data'] ?? response.data;
+      final price = data['totalPrice'] ?? data['price'] ?? data['total'];
+      if (price == null) {
+        throw Exception('Prix non trouvé dans la réponse du serveur');
+      }
+      return (price as num).toDouble();
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -468,10 +457,8 @@ class BookingService {
   }) async {
     try {
       // Vérifier que l'ID de résidence n'est pas un ID temporaire
-      if (residenceId.startsWith('temp_')) {
-        debugPrint('⚠️ ATTENTION: Utilisation d\'un ID temporaire pour la vérification de disponibilité');
-        // Utiliser l'ID valide qui fonctionne dans Postman
-        residenceId = "67cb2f6acb3b4423a99c32c8";
+      if (residenceId.isEmpty || residenceId.startsWith('temp_')) {
+        throw Exception('ID de résidence invalide pour la vérification de disponibilité');
       }
       
       // ✅ CORRECTION RÉSERVATIONS HORAIRES : Envoyer datetime complet avec heures
@@ -660,7 +647,7 @@ class BookingService {
     required double modificationFee,
   }) async {
     try {
-      final response = await _apiService.put(
+      final response = await _apiService.patch(
         'reservations/$id',
         data: {
           'checkIn': checkIn.toIso8601String(),

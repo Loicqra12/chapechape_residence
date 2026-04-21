@@ -379,13 +379,30 @@ exports.handleStripeWebhook = async (req, res) => {
 // Webhook pour les événements de paiement CinetPay
 exports.handleCinetPayWebhook = async (req, res) => {
     try {
-        const cinetPayService = require('../../services/cinetpay.service');
-        const webhookData = req.body;
+        const webhookData = req.body || {};
+        const xToken = req.get('x-token') || req.headers['x-token'];
 
-        // Log de la notification CinetPay
-        console.log('Webhook CinetPay reçu:', webhookData);
+        if (process.env.CINETPAY_WEBHOOK_DISABLE_SIGNATURE_CHECK === 'true') {
+            logger.warn('Webhook CinetPay: vérification HMAC désactivée (CINETPAY_WEBHOOK_DISABLE_SIGNATURE_CHECK=true)');
+        } else {
+            if (!xToken) {
+                logger.warn('Webhook CinetPay: header x-token absent');
+                return res.status(401).json({
+                    success: false,
+                    message: 'Non autorisé'
+                });
+            }
+            if (!cinetPayService.verifyNotificationHmac(webhookData, xToken)) {
+                logger.error('Webhook CinetPay: x-token HMAC invalide', { cpm_trans_id: webhookData.cpm_trans_id });
+                return res.status(403).json({
+                    success: false,
+                    message: 'Signature invalide'
+                });
+            }
+        }
 
-        // Traiter la notification via le service CinetPay
+        logger.info('Webhook CinetPay reçu (HMAC valide)', { cpm_trans_id: webhookData.cpm_trans_id });
+
         const result = await cinetPayService.processWebhook(webhookData);
 
         if (result.success) {
@@ -406,7 +423,7 @@ exports.handleCinetPayWebhook = async (req, res) => {
                     payment.reservation.status = 'confirmed';
                     await payment.reservation.save();
 
-                    console.log(`Paiement CinetPay confirmé pour réservation ${payment.reservation._id}`);
+                    logger.info(`Paiement CinetPay confirmé pour réservation ${payment.reservation._id}`);
                     
                     // 🚀 NOUVEAU : Déclencher payout automatique
                     try {
@@ -429,7 +446,7 @@ exports.handleCinetPayWebhook = async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Erreur webhook CinetPay:', error);
+        logger.error('Erreur webhook CinetPay:', error);
         res.status(400).json({
             success: false,
             message: error.message
@@ -441,25 +458,22 @@ exports.handleCinetPayWebhook = async (req, res) => {
 exports.handleWaveWebhook = async (req, res) => {
     try {
         const signature = req.headers['x-wave-signature'] || req.headers['wave-signature'];
-        const rawBody = req.body; // Buffer brut depuis express.raw()
-        
-        // Convertir le corps brut en objet JSON APRÈS vérification de signature
-        let webhookData;
-        try {
-            webhookData = JSON.parse(rawBody.toString('utf8'));
-        } catch (parseError) {
-            console.error('Erreur parsing webhook Wave:', parseError);
-            return res.status(400).json({
-                success: false,
-                message: 'Corps de requête JSON invalide'
-            });
-        }
+        const rawBody = req.body;
 
-        // Log de la notification Wave
-        logger.info('Webhook Wave reçu:', webhookData);
-
-        // Vérifier la signature si configurée
-        if (process.env.WAVE_SIGNING_SECRET && signature) {
+        if (process.env.WAVE_SIGNING_SECRET) {
+            if (!signature) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Signature Wave requise'
+                });
+            }
+            if (!Buffer.isBuffer(rawBody)) {
+                logger.warn('Webhook Wave paiement: corps non Buffer — la route doit utiliser express.raw avant tout parse JSON global');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Format de requête incompatible avec la vérification de signature'
+                });
+            }
             const isValid = waveService.verifySignature(rawBody, signature);
             if (!isValid) {
                 logger.error('Signature Wave invalide');
@@ -469,6 +483,30 @@ exports.handleWaveWebhook = async (req, res) => {
                 });
             }
         }
+
+        let webhookData;
+        try {
+            if (Buffer.isBuffer(rawBody)) {
+                webhookData = JSON.parse(rawBody.toString('utf8'));
+            } else if (rawBody && typeof rawBody === 'object') {
+                webhookData = rawBody;
+            } else if (typeof rawBody === 'string') {
+                webhookData = JSON.parse(rawBody);
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Corps de requête invalide'
+                });
+            }
+        } catch (parseError) {
+            console.error('Erreur parsing webhook Wave:', parseError);
+            return res.status(400).json({
+                success: false,
+                message: 'Corps de requête JSON invalide'
+            });
+        }
+
+        logger.info('Webhook Wave reçu:', webhookData);
 
         // Traiter la notification via le service Wave
         const result = await waveService.processWebhook(webhookData);

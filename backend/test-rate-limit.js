@@ -13,7 +13,15 @@ try {
 
   // Test 2: Vérifier les exports
   console.log('2️⃣  Vérification des exports...');
-  const requiredExports = ['globalLimiter', 'authLimiter', 'paymentLimiter', 'userLimiter', 'uploadLimiter'];
+  const requiredExports = [
+    'globalLimiter',
+    'authLoginLimiter',
+    'authRegisterLimiter',
+    'authLimiter',
+    'paymentLimiter',
+    'userLimiter',
+    'uploadLimiter'
+  ];
   const missingExports = requiredExports.filter(exp => !rateLimiters[exp]);
 
   if (missingExports.length > 0) {

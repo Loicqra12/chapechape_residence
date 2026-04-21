@@ -131,12 +131,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             contextType: 'register',
             onRetry: _submitForm,
           );
-        } else if (state is RegisterSuccess) {
-          ErrorMessageService.showSuccess(
-            context,
-            'Inscription réussie ! Vous pouvez maintenant vous connecter.',
-          );
-          context.go('/login');
         }
       },
       builder: (context, state) {

@@ -67,13 +67,7 @@ const CLIENT = {
   LOGIN_ALERT: 'client_login_alert',               // 🔐 Nouvelle connexion
 };
 
-module.exports = {
-  COMMON,
-  PARTNER,
-  CLIENT,
-  
-  // Mappings pour la notification push OneSignal
-  getTitleByType: (type) => {
+const getTitleByType = (type) => {
     const titleMap = {
       // Titres pour les partenaires
       [PARTNER.NEW_BOOKING]: '🏠 Nouvelle réservation',
@@ -130,5 +124,94 @@ module.exports = {
     };
     
     return titleMap[type] || 'ChapeChape Notification';
+};
+
+const getPushTypeByNotificationType = (type) => {
+  if (!type || typeof type !== 'string') return 'system_update';
+
+  if (type === COMMON.NEW_MESSAGE || type.includes('message')) {
+    return 'new_message';
   }
+
+  if (
+    type.includes('booking') ||
+    type.includes('arrival') ||
+    type.includes('departure') ||
+    type.includes('checkin') ||
+    type.includes('checkout') ||
+    type.includes('approval')
+  ) {
+    return 'booking_update';
+  }
+
+  if (
+    type.includes('payment') ||
+    type.includes('deposit') ||
+    type.includes('payout') ||
+    type.includes('transfer')
+  ) {
+    return 'payment_update';
+  }
+
+  if (
+    type.includes('verification') ||
+    type.includes('security') ||
+    type.includes('login') ||
+    type.includes('phone_changed')
+  ) {
+    return 'security_alert';
+  }
+
+  if (
+    type.includes('offer') ||
+    type.includes('discount') ||
+    type.includes('popular') ||
+    type.includes('nearby') ||
+    type.includes('availability')
+  ) {
+    return 'promotion';
+  }
+
+  return 'system_update';
+};
+
+const getDeepLinkByNotificationType = (type, data = {}) => {
+  if (data.deepLink && typeof data.deepLink === 'string') {
+    return data.deepLink;
+  }
+
+  const isPartnerNotification = typeof type === 'string' && type.startsWith('partner_');
+  const bookingId = data.bookingId || data.reservationId;
+  const paymentId = data.paymentId || data.payoutId;
+
+  const pushType = getPushTypeByNotificationType(type);
+
+  if (pushType === 'new_message') {
+    return isPartnerNotification ? '/messages/support' : '/chat';
+  }
+
+  if (pushType === 'booking_update') {
+    if (bookingId) {
+      return isPartnerNotification ? `/reservations/${bookingId}` : `/booking-details/${bookingId}`;
+    }
+    return isPartnerNotification ? '/notifications' : '/bookings';
+  }
+
+  if (pushType === 'payment_update') {
+    if (isPartnerNotification) {
+      return paymentId ? `/payouts/${paymentId}` : '/payouts';
+    }
+    return paymentId ? `/payment/${paymentId}` : '/bookings';
+  }
+
+  return '/notifications';
+};
+
+module.exports = {
+  COMMON,
+  PARTNER,
+  CLIENT,
+  getTitleByType,
+  getPushTypeByNotificationType,
+  getDeepLinkByNotificationType
 };

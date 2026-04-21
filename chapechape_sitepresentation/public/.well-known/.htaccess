@@ -1,0 +1,4 @@
+# Fichier statique pur pour App Links — pas de PHP, pas de réécriture parente sur ce fichier
+<IfModule mod_headers.c>
+  Header set Content-Type "application/json; charset=utf-8"
+</IfModule>

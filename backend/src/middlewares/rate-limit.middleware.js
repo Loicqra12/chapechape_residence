@@ -1,13 +1,18 @@
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
 
-// Redis client (optionnel)
-let redisClient;
+// Module Redis (singleton) — utiliser getClient() pour l’instance ioredis native (méthode .call)
+let redisModule;
 try {
-  redisClient = require('../config/redis');
+  redisModule = require('../config/redis');
 } catch (error) {
   logger.warn('Redis client import failed, using memory store for rate limiting');
 }
+
+const getRedisNative = () => {
+  if (!redisModule) return null;
+  return typeof redisModule.getClient === 'function' ? redisModule.getClient() : redisModule;
+};
 
 // Chargement paresseux de rate-limit-redis (évite crash au démarrage si module absent)
 function getRedisStore() {
@@ -23,7 +28,7 @@ function getRedisStore() {
  * Ne charge rate-limit-redis qu'au moment de créer le store (évite crash au démarrage)
  */
 const createStore = (prefix) => {
-  if (process.env.NODE_ENV === 'development' || !redisClient) {
+  if (process.env.NODE_ENV === 'development' || process.env.RATE_LIMIT_USE_MEMORY === 'true' || !redisModule) {
     logger.info(`Rate limiter "${prefix}" using memory store (dev or no Redis)`);
     return undefined;
   }
@@ -32,11 +37,25 @@ const createStore = (prefix) => {
     logger.warn(`Rate limiter "${prefix}" using memory store (rate-limit-redis not installed)`);
     return undefined;
   }
+  const native = getRedisNative();
+  if (!native) {
+    logger.warn(`Rate limiter "${prefix}" using memory store (no native Redis client)`);
+    return undefined;
+  }
   try {
     return new RedisStoreClass({
-      client: redisClient,
+      client: native,
       prefix: `rl:${prefix}:`,
-      sendCommand: (...args) => redisClient.call(...args),
+      sendCommand: (...args) => {
+        if (typeof native.call === 'function') {
+          return native.call(...args);
+        }
+        if (typeof native.sendCommand === 'function') {
+          return native.sendCommand(...args);
+        }
+        logger.error(`Rate limiter "${prefix}": Redis client has no call/sendCommand`);
+        return Promise.reject(new Error('Redis client incompatible with rate-limit-redis'));
+      },
     });
   } catch (error) {
     logger.error(`Failed to create Redis store for "${prefix}":`, error);
@@ -70,18 +89,18 @@ const globalLimiter = rateLimit({
 });
 
 /**
- * Rate limiter strict pour authentification (5 req/15min par IP)
- * Appliqué aux routes /api/auth/login et /api/auth/register
+ * Connexion : strict (5 échecs / 15 min par IP).
+ * Les réponses 2xx/3xx ne comptent pas (skipSuccessfulRequests).
  */
-const authLimiter = rateLimit({
-  store: createStore('auth'),
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Très strict
-  skipSuccessfulRequests: true, // Ne compte que les échecs
+const authLoginLimiter = rateLimit({
+  store: createStore('auth-login'),
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
-    logger.warn(`Auth rate limit exceeded: ${req.ip} - ${req.method} ${req.path}`);
+    logger.warn(`Auth login rate limit exceeded: ${req.ip} - ${req.method} ${req.path}`);
     res.status(429).json({
       success: false,
       message: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
@@ -89,6 +108,30 @@ const authLimiter = rateLimit({
     });
   }
 });
+
+/**
+ * Inscription : plafond plus haut (erreurs métier ex. email déjà pris comptent comme échecs).
+ * Évite de bloquer l’IP après quelques essais légitimes tout en limitant l’abus.
+ */
+const authRegisterLimiter = rateLimit({
+  store: createStore('auth-register'),
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`Auth register rate limit exceeded: ${req.ip} - ${req.method} ${req.path}`);
+    res.status(429).json({
+      success: false,
+      message: 'Trop de tentatives d’inscription. Réessayez dans 15 minutes.',
+      retryAfter: 900
+    });
+  }
+});
+
+/** @deprecated Utiliser authLoginLimiter ; conservé pour compatibilité des imports */
+const authLimiter = authLoginLimiter;
 
 /**
  * Rate limiter pour paiements (3 req/1min par IP)
@@ -177,11 +220,86 @@ const otpLimiter = rateLimit({
   }
 });
 
+/**
+ * Mot de passe oublié — limite l’email bombing (par IP)
+ */
+const authForgotPasswordLimiter = rateLimit({
+  store: createStore('auth-forgot-password'),
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`Forgot-password rate limit exceeded: ${req.ip}`);
+    res.status(429).json({
+      success: false,
+      message: 'Trop de demandes de réinitialisation. Réessayez dans 15 minutes.',
+      retryAfter: 900
+    });
+  }
+});
+
+/**
+ * Vérification du code SMS — complète otpLimiter (envoi) en limitant les essais (IP + téléphone)
+ */
+const authVerifyCodeLimiter = rateLimit({
+  store: createStore('auth-verify-code'),
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const phone = req.body && req.body.phoneNumber ? String(req.body.phoneNumber) : '';
+    return phone ? `${req.ip}:${phone}` : req.ip;
+  },
+  handler: (req, res) => {
+    logger.warn(`Verify-code rate limit exceeded: ${req.ip}`);
+    res.status(429).json({
+      success: false,
+      message: 'Trop de tentatives de vérification. Réessayez dans 15 minutes.',
+      retryAfter: 900
+    });
+  }
+});
+
+const smsSendMaxPerHour = (() => {
+  const n = parseInt(process.env.SMS_SEND_MAX_PER_HOUR || '40', 10);
+  return Number.isFinite(n) && n > 0 ? n : 40;
+})();
+
+/**
+ * Envoi SMS libre (Partner/Admin) — POST /api/sms/send
+ * Limite par utilisateur authentifié pour limiter l’abus si compte compromis.
+ * Plafond configurable : SMS_SEND_MAX_PER_HOUR (défaut 40 / heure).
+ */
+const smsPartnerSendLimiter = rateLimit({
+  store: createStore('partner-sms-send'),
+  windowMs: 60 * 60 * 1000,
+  max: smsSendMaxPerHour,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user && req.user._id ? req.user._id.toString() : req.ip),
+  handler: (req, res) => {
+    const id = req.user && req.user._id ? req.user._id.toString() : req.ip;
+    logger.warn(`Partner SMS send rate limit exceeded: ${id}`);
+    res.status(429).json({
+      success: false,
+      message: 'Trop d’envois SMS. Réessayez dans une heure ou contactez le support.',
+      retryAfter: 3600
+    });
+  }
+});
+
 module.exports = {
   globalLimiter,
+  authLoginLimiter,
+  authRegisterLimiter,
   authLimiter,
   paymentLimiter,
   userLimiter,
   uploadLimiter,
-  otpLimiter
+  otpLimiter,
+  authForgotPasswordLimiter,
+  authVerifyCodeLimiter,
+  smsPartnerSendLimiter
 };

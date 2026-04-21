@@ -1,6 +1,60 @@
 const SibApiV3Sdk = require('sib-api-v3-sdk');
 const nodemailer = require('nodemailer');
 
+const DEFAULT_SENDER_NAME = 'ChapeChape Residences';
+const DEFAULT_SENDER_EMAIL = 'noreply@chapechaperesidence.com';
+
+/** Le login SMTP Brevo (xxx@smtp-brevo.com) n’est pas un expéditeur « From » valide pour l’API transactionnelle. */
+function isBrevoSmtpLoginEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const e = email.toLowerCase();
+  return e.endsWith('@smtp-brevo.com') || e.includes('@smtp-relay.brevo.com');
+}
+
+/**
+ * Adresse utilisée comme expéditeur dans sendTransacEmail : doit être un expéditeur vérifié dans Brevo.
+ * Ne pas utiliser EMAIL_USERNAME quand c’est un compte @smtp-brevo.com.
+ */
+function getBrevoTransactionalSenderEmail() {
+  const explicit = (process.env.BREVO_SENDER_EMAIL || '').trim();
+  if (explicit) return explicit;
+
+  const fromHeader = process.env.EMAIL_FROM || '';
+  const angle = fromHeader.match(/<([^>]+)>/);
+  if (angle) {
+    const inner = angle[1].trim();
+    if (inner && !isBrevoSmtpLoginEmail(inner)) return inner;
+  }
+  const loose = fromHeader.match(/[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}/);
+  if (loose && !isBrevoSmtpLoginEmail(loose[0])) return loose[0].trim();
+
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  if (smtpUser && !isBrevoSmtpLoginEmail(smtpUser)) return smtpUser;
+
+  const user = (process.env.EMAIL_USERNAME || '').trim();
+  if (user && !isBrevoSmtpLoginEmail(user)) return user;
+
+  return DEFAULT_SENDER_EMAIL;
+}
+
+function getBrevoTransactionalSenderName() {
+  const fromHeader = process.env.EMAIL_FROM || '';
+  const m = fromHeader.match(/^([^<]+?)\s*</);
+  if (m) {
+    const n = m[1].trim().replace(/^["']|["']$/g, '');
+    if (n) return n;
+  }
+  const named = (process.env.BREVO_SENDER_NAME || DEFAULT_SENDER_NAME).trim();
+  return named || DEFAULT_SENDER_NAME;
+}
+
+function getBrevoSender() {
+  return {
+    name: getBrevoTransactionalSenderName(),
+    email: getBrevoTransactionalSenderEmail(),
+  };
+}
+
 class EmailService {
     constructor() {
         // Configuration selon la documentation officielle de Brevo/Sendinblue
@@ -30,12 +84,7 @@ class EmailService {
     // Envoyer un email avec Brevo API
     async sendEmail(options) {
         try {
-            // Définir un expéditeur vérifié dans Brevo
-            const sender = {
-                name: "ChapeChape Residences",
-                // Utiliser l'adresse email vérifiée configurée dans les variables d'environnement
-                email: process.env.EMAIL_USERNAME || process.env.SMTP_USER || "noreply@chapechaperesidence.com"
-            };
+            const sender = getBrevoSender();
             
             // Support pour les champs 'to' et 'email'
             const recipientEmail = options.to || options.email;
@@ -98,21 +147,26 @@ class EmailService {
     // Envoyer un email en utilisant un template Brevo
     async sendTemplateEmail(options) {
         try {
-            const sender = {
-                name: "ChapeChape Residences",
-                email: process.env.EMAIL_USERNAME || process.env.SMTP_USER || "noreply@chapechaperesidence.com"
-            };
-            
+            const sender = getBrevoSender();
+
             const receivers = [{
                 email: options.email
             }];
-            
+
             // Création de l'objet de requête d'email
             const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
             sendSmtpEmail.sender = sender;
             sendSmtpEmail.to = receivers;
             sendSmtpEmail.templateId = options.templateId;
-            
+
+            const replyEmail = options.replyTo || process.env.EMAIL_REPLY_TO || process.env.EMAIL_CONTACT;
+            if (replyEmail) {
+                sendSmtpEmail.replyTo = {
+                    email: replyEmail,
+                    name: 'Support ChapeChape Residences'
+                };
+            }
+
             // Ajout des variables dynamiques si nécessaire
             if (options.params) {
                 sendSmtpEmail.params = options.params;

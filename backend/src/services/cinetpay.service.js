@@ -339,6 +339,61 @@ class CinetPayService {
     }
 
     /**
+     * Vérifie le header `x-token` (HMAC-SHA256) des notifications checkout CinetPay.
+     * @see https://docs.cinetpay.com/api/1.0-en/checkout/hmac
+     * @param {Object} body - req.body (application/x-www-form-urlencoded)
+     * @param {string} receivedXToken - valeur du header x-token
+     * @returns {boolean}
+     */
+    verifyNotificationHmac(body, receivedXToken) {
+        if (!this.secretKey || !receivedXToken || typeof receivedXToken !== 'string') {
+            return false;
+        }
+        const get = (keys) => {
+            for (const k of keys) {
+                if (body[k] !== undefined && body[k] !== null) {
+                    return String(body[k]);
+                }
+            }
+            return '';
+        };
+        const parts = [
+            ['cpm_site_id'],
+            ['cpm_trans_id'],
+            ['cpm_trans_date'],
+            ['cpm_amount'],
+            ['cpm_currency'],
+            ['signature'],
+            ['payment_method'],
+            ['cel_phone_num'],
+            ['cpm_phone_prefixe'],
+            ['cpm_language'],
+            ['cpm_version'],
+            ['cpm_payment_config'],
+            ['cpm_page_action'],
+            ['cpm_custom'],
+            ['cpm_designation'],
+            ['cpm_error_message']
+        ];
+        const data = parts.map((keys) => get(keys)).join('');
+
+        const expected = crypto
+            .createHmac('sha256', this.secretKey)
+            .update(data, 'utf8')
+            .digest('hex');
+
+        const recv = String(receivedXToken).trim();
+        try {
+            if (recv.length !== expected.length) {
+                return false;
+            }
+            return crypto.timingSafeEqual(Buffer.from(recv, 'utf8'), Buffer.from(expected, 'utf8'));
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Traiter une notification webhook CinetPay
      * @param {Object} webhookData - Données du webhook
      * @returns {Object} Résultat du traitement
@@ -347,9 +402,6 @@ class CinetPayService {
         try {
             logger.info('Traitement webhook CinetPay:', webhookData);
 
-            // Validation de la signature si nécessaire
-            // Note: CinetPay utilise généralement des paramètres POST simples
-            
             const transactionId = webhookData.cpm_trans_id;
             const status = webhookData.cpm_result;
             const amount = webhookData.cpm_amount;

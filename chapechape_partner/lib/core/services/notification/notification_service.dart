@@ -10,7 +10,12 @@ class NotificationService {
   
   // Services intégrés
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  final TwilioService _twilioService = TwilioService();
+  TwilioService? _twilioService;
+
+  /// À appeler depuis [main] après création du [TwilioService] (injection ApiService).
+  void bindTwilioService(TwilioService service) {
+    _twilioService = service;
+  }
   
   bool _isInitialized = false;
   
@@ -30,8 +35,8 @@ class NotificationService {
       // 1. Initialiser les notifications locales
       await _initializeLocalNotifications();
       
-      // 2. Initialiser Twilio
-      await _twilioService.initialize();
+      // 2. Initialiser SMS (backend) si branché
+      await _twilioService?.initialize();
       
       // 3. OneSignal est déjà initialisé dans main.dart
       debugPrint('✅ OneSignal déjà configuré dans main.dart');
@@ -93,8 +98,13 @@ class NotificationService {
       
       // 2. Envoyer SMS si demandé
       if (sendSms && phoneNumber != null) {
-        await _twilioService.sendSMS(phoneNumber, '$title: $body');
-        debugPrint('📞 SMS envoyé à $phoneNumber');
+        final sms = _twilioService;
+        if (sms == null) {
+          debugPrint('⚠️ SMS ignoré: TwilioService non configuré (bindTwilioService)');
+        } else {
+          await sms.sendSMS(phoneNumber, '$title: $body');
+          debugPrint('📞 SMS demandé pour $phoneNumber');
+        }
       }
       
       debugPrint('✅ Notification complète envoyée: $title');
@@ -395,6 +405,6 @@ class NotificationService {
   
   /// Nettoie les ressources
   void dispose() {
-    _twilioService.dispose();
+    _twilioService?.dispose();
   }
 }

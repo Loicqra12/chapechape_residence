@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 /// Interceptor qui implémente une stratégie de retry avec backoff exponentiel
-/// pour les erreurs réseau, en particulier les erreurs 429 (rate limit).
+/// pour les erreurs réseau et serveur transitoires (pas le 429).
 class RetryInterceptor extends Interceptor {
   final Dio dio;
   final int maxRetries;
@@ -17,13 +17,14 @@ class RetryInterceptor extends Interceptor {
   /// [maxRetries] : Nombre maximum de tentatives (3 par défaut)
   /// [initialDelay] : Délai initial entre les tentatives (500ms par défaut)
   /// [maxDelay] : Délai maximum entre les tentatives (30s par défaut)
-  /// [retryStatusCodes] : Codes de statut HTTP qui déclenchent un retry
+  /// [retryStatusCodes] : Codes de statut HTTP qui déclenchent un retry (429 exclu : le retry
+  /// immédiat aggrave le rate limiting côté serveur)
   RetryInterceptor({
     required this.dio,
     this.maxRetries = 3,
     this.initialDelay = const Duration(milliseconds: 500),
     this.maxDelay = const Duration(seconds: 30),
-    this.retryStatusCodes = const [408, 429, 500, 502, 503, 504],
+    this.retryStatusCodes = const [408, 500, 502, 503, 504],
   });
 
   @override
@@ -83,9 +84,12 @@ class RetryInterceptor extends Interceptor {
       return true;
     }
     
-    // Vérifier les codes de statut HTTP spécifiques
     if (err.response != null) {
-      return retryStatusCodes.contains(err.response!.statusCode);
+      final code = err.response!.statusCode;
+      if (code == 429) {
+        return false;
+      }
+      return retryStatusCodes.contains(code);
     }
     
     return false;

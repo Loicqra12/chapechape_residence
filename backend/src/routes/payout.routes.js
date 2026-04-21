@@ -33,10 +33,18 @@ const validate = (req, res, next) => {
 
 /**
  * Routes Payout - Gestion des reversements aux partners
- * 
- * Toutes les routes nécessitent une authentification
- * Certaines routes nécessitent des permissions admin/superadmin
+ * Webhooks fournisseurs (sans JWT) en tête, puis routes authentifiées.
  */
+
+// ===============================
+// WEBHOOKS FOURNISSEURS (sans JWT — callbacks CinetPay / Wave)
+// ===============================
+router.post(
+    '/cinetpay/webhook',
+    express.urlencoded({ extended: true }),
+    payoutController.handleCinetPayTransferWebhook
+);
+// Webhook Wave Payout : enregistré dans app.js avant express.json() (corps brut pour HMAC)
 
 // ===============================
 // MIDDLEWARE GLOBAL
@@ -78,7 +86,10 @@ const partnerPayoutsValidation = [
         .withMessage('ID partner invalide'),
     query('status')
         .optional()
-        .isIn(['PAYOUT_SCHEDULED', 'PAYOUT_PENDING', 'PAYOUT_SUCCESS', 'PAYOUT_FAILED', 'PAYOUT_CANCELLED'])
+        .isIn([
+            'PAYOUT_SCHEDULED', 'PAYOUT_PENDING', 'PAYOUT_SUCCESS', 'PAYOUT_FAILED', 'PAYOUT_CANCELLED',
+            'scheduled', 'pending', 'completed', 'failed', 'cancelled'
+        ])
         .withMessage('Statut invalide'),
     query('limit')
         .optional()
@@ -145,27 +156,27 @@ const statsValidation = [
 // ===============================
 
 /**
- * Créer un payout pour une réservation
- * POST /api/payouts/create/:reservationId
- * 
- * Permissions: Partner (propriétaire), Admin, SuperAdmin
- * Body: { scheduleDelayHours?: number }
- */
-router.post('/create/:reservationId', 
-    createPayoutValidation,
-    payoutController.createPayoutForReservation
-);
-
-/**
- * Créer des payouts en batch
+ * Créer des payouts en batch (doit être AVANT /create/:reservationId sinon "batch" est pris pour un MongoId)
  * POST /api/payouts/create/batch
- * 
+ *
  * Permissions: Admin, SuperAdmin uniquement
  * Body: { reservationIds: string[], scheduleDelayHours?: number }
  */
 router.post('/create/batch',
     batchCreateValidation,
     payoutController.createBatchPayouts
+);
+
+/**
+ * Créer un payout pour une réservation
+ * POST /api/payouts/create/:reservationId
+ *
+ * Permissions: Partner (propriétaire), Admin, SuperAdmin
+ * Body: { scheduleDelayHours?: number }
+ */
+router.post('/create/:reservationId',
+    createPayoutValidation,
+    payoutController.createPayoutForReservation
 );
 
 // ===============================
@@ -346,23 +357,6 @@ router.post('/wave/transfer/:waveId/reverse',
     payoutController.reverseWaveTransfer
 );
 
-/**
- * Webhook Wave Payout (pas d'authentification)
- * POST /api/payouts/wave/webhook
- * 
- * Appelé par Wave lors des notifications de transfert
- * Note: express.raw sera géré au niveau de app.js pour cette route
- */
-
-// Créer un router spécial pour webhook sans auth
-const webhookRouter = express.Router();
-webhookRouter.post('/wave/webhook',
-    payoutController.handleWavePayoutWebhook
-);
-
-// Exporter le webhook router séparément
-module.exports.webhookRouter = webhookRouter;
-
 // ===============================
 // ROUTES CINETPAY
 // ===============================
@@ -454,17 +448,6 @@ router.get('/cinetpay/transfer/stats',
         validate
     ],
     payoutController.getCinetPayTransferStats
-);
-
-/**
- * Webhook CinetPay Transfer (pas d'authentification)
- * POST /api/payouts/cinetpay/webhook
- * 
- * Appelé par CinetPay lors des notifications de transfert
- */
-router.post('/cinetpay/webhook',
-    express.urlencoded({ extended: true }), // Parser form-data si nécessaire
-    payoutController.handleCinetPayTransferWebhook
 );
 
 // ===============================

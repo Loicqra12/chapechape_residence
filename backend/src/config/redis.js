@@ -2,8 +2,14 @@ const Redis = require('ioredis');
 const RedisMock = require('ioredis-mock');
 const logger = require('../utils/logger');
 
-// Créer une instance unique du client Redis
+let clientInstance;
+
+// Créer (une seule fois) un client Redis partagé
 const createRedisClient = () => {
+    if (clientInstance) {
+        return clientInstance;
+    }
+
     // Utiliser redis-mock en test et développement
     const useRedisMock = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -33,31 +39,33 @@ const createRedisClient = () => {
         });
     }
 
-    return client;
+    clientInstance = client;
+    return clientInstance;
 };
 
-// Créer une instance unique du client Redis
 const client = createRedisClient();
 
-// Exporter la fonction createRedisClient comme export principal
-const redisExport = createRedisClient;
+// Export principal rétro-compatible:
+// - appelable comme fonction => retourne le singleton
+// - utilisable comme client Redis direct => redis.get(), redis.set(), etc.
+const redisExport = () => createRedisClient();
 
-// Ajouter le client comme propriété pour la rétro-compatibilité
-Object.keys(client).forEach(key => {
-    redisExport[key] = client[key];
-});
-
-// Ajouter les méthodes du client au module export
 Object.getOwnPropertyNames(Object.getPrototypeOf(client)).forEach(key => {
     if (key !== 'constructor') {
-        // Vérifier si la propriété est une fonction avant d'appliquer .bind()
         if (typeof client[key] === 'function') {
-            redisExport[key] = client[key].bind(client);
+            redisExport[key] = (...args) => createRedisClient()[key](...args);
         } else {
-            // Pour les getter/setter ou autres propriétés, copier la référence
-            redisExport[key] = client[key];
+            Object.defineProperty(redisExport, key, {
+                get: () => createRedisClient()[key],
+                enumerable: true,
+                configurable: true
+            });
         }
     }
 });
+
+// Exposer explicitement le singleton pour les nouveaux appels
+redisExport.client = client;
+redisExport.getClient = createRedisClient;
 
 module.exports = redisExport;

@@ -63,10 +63,19 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    /** Désactivation administrative du compte (JWT rejeté si false) */
+    isActive: {
+        type: Boolean,
+        default: true
+    },
     verificationToken: String,
     verificationTokenExpire: Date,
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    passwordChangedAt: {
+        type: Date,
+        select: false
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -98,6 +107,14 @@ const userSchema = new mongoose.Schema({
                 type: Boolean,
                 default: true
             },
+            messages: {
+                type: Boolean,
+                default: true
+            },
+            payments: {
+                type: Boolean,
+                default: true
+            },
             promotions: {
                 type: Boolean,
                 default: true
@@ -115,16 +132,31 @@ const userSchema = new mongoose.Schema({
 // Encrypt password using bcrypt
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
-        next();
+        return next();
+    }
+
+    // Permet d'invalider les JWT émis avant un changement de mot de passe
+    if (!this.isNew) {
+        this.passwordChangedAt = Date.now() - 1000;
     }
 
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    next();
 });
 
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Vérifie si le mot de passe a changé après l'émission du JWT
+userSchema.methods.hasPasswordChangedAfter = function (jwtIssuedAt) {
+    if (this.passwordChangedAt) {
+        const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        return jwtIssuedAt < changedTimestamp;
+    }
+    return false;
 };
 
 // Generate and hash password token

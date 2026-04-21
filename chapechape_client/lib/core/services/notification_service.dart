@@ -28,9 +28,17 @@ class NotificationService {
         },
       );
       
-      if (response.data['success'] == true && response.data['data'] != null) {
-        final List<dynamic> notificationsData = response.data['data'];
-        return notificationsData.map((json) => _mapToNotificationModel(json)).toList();
+      final data = response.data;
+      if (data is Map<String, dynamic> && data['success'] == true) {
+        // Backend actuel: { success, notifications, total, page, pages }
+        final rawNotifications = data['notifications'] ?? data['data'];
+        if (rawNotifications is List) {
+          return rawNotifications
+              .whereType<Map>()
+              .map((json) =>
+                  _mapToNotificationModel(Map<String, dynamic>.from(json)))
+              .toList();
+        }
       }
       
       return [];
@@ -89,7 +97,35 @@ class NotificationService {
   
   // Mapper les données JSON en modèle de notification
   NotificationModel _mapToNotificationModel(Map<String, dynamic> json) {
-    return NotificationModel.fromJson(json);
+    final id = (json['_id'] ?? json['id'] ?? '').toString();
+    final message = (json['message'] ?? '').toString();
+    final title = (json['title'] ??
+            _getTitleFromType(json['type']?.toString()) ??
+            'Notification')
+        .toString();
+    final read = json['read'] == true || json['isRead'] == true;
+    final timestampRaw = json['createdAt'] ?? json['timestamp'];
+    final timestamp = DateTime.tryParse(timestampRaw?.toString() ?? '') ??
+        DateTime.now();
+    final data = json['data'];
+    String? actionUrl;
+    if (data is Map) {
+      final dynamic reservationId = data['reservationId'] ?? data['bookingId'];
+      if (reservationId != null && reservationId.toString().isNotEmpty) {
+        actionUrl = '/bookings';
+      }
+    }
+
+    return NotificationModel(
+      id: id,
+      title: title,
+      message: message,
+      timestamp: timestamp,
+      isRead: read,
+      imageUrl: json['imageUrl']?.toString(),
+      actionUrl: actionUrl ?? json['actionUrl']?.toString(),
+      type: json['type']?.toString(),
+    );
   }
 
   // ================= FONCTIONNALITÉS SMS (TWILIO) =================
@@ -100,9 +136,10 @@ class NotificationService {
   Future<bool> requestBookingSmsConfirmation(String bookingId) async {
     try {
       final response = await _apiService.post(
-        '/bookings/$bookingId/request-sms',
+        '/sms/reservation',
         data: {
-          'type': 'confirmation'
+          'bookingId': bookingId,
+          'notificationType': 'confirmation'
         },
       );
       return response.data['success'] == true;
@@ -118,9 +155,10 @@ class NotificationService {
   Future<bool> requestBookingSmsReminder(String bookingId) async {
     try {
       final response = await _apiService.post(
-        '/bookings/$bookingId/request-sms',
+        '/sms/reservation',
         data: {
-          'type': 'reminder'
+          'bookingId': bookingId,
+          'notificationType': 'reminder'
         },
       );
       return response.data['success'] == true;
@@ -265,9 +303,8 @@ class NotificationService {
       final response = await _apiService.post(
         '/sms/send',
         data: {
-          'phoneNumber': formattedNumber,
-          'message': message,
-          'type': 'custom'
+          'to': formattedNumber,
+          'body': message,
         },
       );
       
@@ -290,7 +327,7 @@ class NotificationService {
   }) async {
     try {
       final response = await _apiService.post(
-        '/sms/payment-instructions',
+        '/sms/reservation/payment-instructions',
         data: {
           'bookingId': bookingId,
           'paymentMethod': paymentMethod,

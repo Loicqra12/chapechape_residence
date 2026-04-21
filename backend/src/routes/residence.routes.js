@@ -25,6 +25,7 @@ const {
   removeFromFavorites
 } = residenceController;
 const Residence = require('../models/residence.model');
+const logger = require('../utils/logger');
 
 // =============================================================================
 // RÈGLE FONDAMENTALE EXPRESS :
@@ -62,8 +63,8 @@ router.get('/partner/:partnerId', async (req, res) => {
     }
     return res.json({ success: true, count: residences.length, data: residences });
   } catch (error) {
-    console.error('Erreur GET /partner/:partnerId:', error.message);
-    return res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
+    logger.error('Erreur GET /partner/:partnerId', { message: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -75,32 +76,28 @@ router.get('/partner/:partnerId', async (req, res) => {
 
 // Résidences du partenaire connecté
 router.get('/my-residences', protect, authorize('partner'), async (req, res) => {
-  console.log('DEBUG /my-residences - route atteinte');
   try {
     const partnerId = req.user?.id ?? req.user?._id;
     if (!partnerId) {
-      console.error('DEBUG /my-residences - req.user manquant, keys:', req.user ? Object.keys(req.user) : 'null');
+      logger.warn('GET /my-residences: partenaire sans identifiant', { hasUser: !!req.user });
       return res.status(401).json({ success: false, message: 'Utilisateur non identifié' });
     }
     const filter = { partner: partnerId, deleted: { $ne: true } };
     try {
       const residences = await Residence.find(filter).lean();
-      console.log('DEBUG /my-residences - ok, count=', residences.length);
       return res.json({ success: true, data: residences });
     } catch (innerError) {
-      console.error('DEBUG /my-residences - Erreur MongoDB:', innerError.message, innerError.stack);
+      logger.error('GET /my-residences: erreur MongoDB', { message: innerError.message, stack: innerError.stack });
       return res.status(500).json({
         success: false,
-        message: 'Erreur lors de la récupération des résidences du partenaire',
-        error: innerError.message
+        message: 'Erreur lors de la récupération des résidences du partenaire'
       });
     }
   } catch (error) {
-    console.error('DEBUG /my-residences - Erreur détaillée:', error.message, error.stack);
+    logger.error('GET /my-residences', { message: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
-      message: 'Erreur lors de la récupération des résidences du partenaire',
-      error: error.message
+      message: 'Erreur lors de la récupération des résidences du partenaire'
     });
   }
 });

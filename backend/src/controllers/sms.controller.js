@@ -22,7 +22,12 @@ exports.sendSMS = asyncHandler(async (req, res) => {
         throw new apiError('Numéro de téléphone et message requis', 400);
     }
 
-    const message = await twilioService.sendSMS(to, body);
+    const text = typeof body === 'string' ? body : String(body);
+    if (text.length > 1600) {
+        throw new apiError('Message trop long (max 1600 caractères)', 400);
+    }
+
+    const message = await twilioService.sendSMS(to, text);
 
     res.status(200).json({
         success: true,
