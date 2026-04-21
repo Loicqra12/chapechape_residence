@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -38,6 +37,7 @@ import 'core/services/offline_payment_service.dart';
 import 'core/services/event_bus/residence_event_bus.dart' as event_bus;
 import 'core/services/notification/twilio_service.dart';
 import 'core/services/notification/sms_service.dart';
+import 'core/services/notification/notification_service.dart';
 import 'core/services/notification/notification_manager.dart';
 import 'core/services/currency_service.dart';
 import 'core/blocs/auth/auth_event.dart';
@@ -60,14 +60,6 @@ import 'core/utils/app_bloc_observer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialiser OneSignal
-  OneSignal.initialize("43531899-4645-4f52-a2bf-f4e4a4095513");
-  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-  OneSignal.Notifications.requestPermission(true);
-  
-  // Ajouter un tag pour identifier qu'il s'agit d'un partenaire
-  OneSignal.User.addTags({"userType": "partner"});
 
   // Configurer le système de logging
   _setupLogging();
@@ -177,10 +169,12 @@ Future<void> main() async {
     cacheService: cacheService,
   );
 
-  // Créer le repository de notification et le service
-  final twilioService = TwilioService();
+  // SMS Partner : uniquement via backend (POST /api/sms/send), jamais de secrets Twilio dans l'APK
+  final twilioService = TwilioService(apiService: apiService);
   await twilioService.initialize();
   final notificationRepository = NotificationRepository(twilioService, apiService); // Injection de apiService
+
+  NotificationService().bindTwilioService(twilioService);
 
   // Initialiser le bus d'événements pour les résidences
   final eventBus = event_bus.ResidenceEventBus();
@@ -192,6 +186,7 @@ Future<void> main() async {
   
   // Initialiser le NotificationManager unifié
   final notificationManager = NotificationManager();
+  notificationManager.bindSmsService(twilioService);
   await notificationManager.initialize();
   debugPrint('✅ NotificationManager unifié initialisé avec succès');
   

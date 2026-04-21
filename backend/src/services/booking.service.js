@@ -73,7 +73,11 @@ class BookingService {
 
       // Envoyer les notifications
       await notificationService.sendBookingNotification(booking);
-      await emailService.sendBookingConfirmation(userId, booking);
+      // Récupérer l'email réel de l'utilisateur (userId n'est pas un email)
+      const bookingUser = await User.findById(userId).select('email').lean();
+      if (bookingUser?.email) {
+        await emailService.sendBookingConfirmation(bookingUser.email, booking);
+      }
 
       return booking;
     } catch (error) {

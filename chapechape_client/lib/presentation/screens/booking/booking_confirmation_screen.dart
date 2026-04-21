@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -425,10 +426,20 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
-          title: const Text('Confirmation de réservation'),
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.textPrimary,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
           elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+          iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+          title: Text(
+            'Confirmation de réservation',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
@@ -543,12 +554,17 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 AppSpacing.verticalLg,
                 _buildBookingDetails(),
                 AppSpacing.verticalLg,
-                _buildSmsSection(),
-                AppSpacing.verticalLg,
                 _buildPaymentSection(),
+                AppSpacing.verticalLg,
+                _buildSmsSection(),
               ],
             ),
     );
+  }
+
+  String _shortBookingRef(String id) {
+    if (id.length <= 14) return id;
+    return '…${id.substring(id.length - 8)}';
   }
 
   Widget _buildSuccessHeader() {
@@ -560,31 +576,42 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
         ),
       );
     }
-    
+
+    final theme = Theme.of(context);
     return Card(
-      color: AppTheme.successColor.withOpacity(0.1),
+      elevation: 0,
+      color: AppTheme.lightGold.withOpacity(0.75),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        side: BorderSide(color: AppTheme.successColor.withOpacity(0.35)),
+      ),
       child: Padding(
-        padding: AppSpacing.cardPadding,
-        child: Column(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.smd),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: AppTheme.successColor,
-              size: 64,
-            ),
-            AppSpacing.verticalMd,
-            Text(
-              'Réservation créée avec succès !',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.successColor,
+            const Icon(Icons.check_circle, color: AppTheme.successColor, size: 32),
+            const SizedBox(width: AppSpacing.smd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Réservation confirmée',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Réf. ${_shortBookingRef(_booking!.id)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
-            AppSpacing.verticalSm,
-            Text(
-              'Référence: ${_booking!.id}',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -605,6 +632,12 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     // Utiliser une variable locale pour éviter les accès répétés avec non-null assertion
     final booking = _booking!;
     final dateFormat = DateFormat('dd/MM/yyyy');
+    
+    final iconColor = Theme.of(context).colorScheme.primary;
+    final dateRange =
+        '${dateFormat.format(booking.checkIn)} -> ${dateFormat.format(booking.checkOut)}';
+    final nightsAndGuests =
+        '${booking.nights} nuit${booking.nights > 1 ? 's' : ''} • ${booking.numberOfGuests} pers.';
     
     return Card(
       child: Padding(
@@ -629,22 +662,74 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
             ),
             const Divider(),
             AppSpacing.verticalSm,
-            _buildDetailRow('Résidence', booking.residenceName),
-            _buildDetailRow('Date d\'arrivée', dateFormat.format(booking.checkIn)),
-            _buildDetailRow('Date de départ', dateFormat.format(booking.checkOut)),
-            _buildDetailRow('Nombre de nuits', '${booking.nights}'),
-            _buildDetailRow('Nombre de personnes', '${booking.numberOfGuests}'),
-            _buildDetailRow('Statut', _getStatusText(booking.status)),
-            _buildDetailRow('Prix total', '${booking.totalPrice.toStringAsFixed(0)} FCFA'),
+            _buildCompactDetailItem(
+              icon: Icons.home_work_rounded,
+              value: booking.residenceName,
+              iconColor: iconColor,
+            ),
+            _buildCompactDetailItem(
+              icon: Icons.calendar_month_rounded,
+              value: dateRange,
+              iconColor: iconColor,
+            ),
+            _buildCompactDetailItem(
+              icon: Icons.nights_stay_rounded,
+              value: nightsAndGuests,
+              iconColor: iconColor,
+            ),
+            _buildCompactDetailItem(
+              icon: Icons.verified_rounded,
+              value: _getStatusText(booking.status),
+              iconColor: iconColor,
+            ),
+            _buildCompactDetailItem(
+              icon: Icons.payments_rounded,
+              value: '${booking.totalPrice.toStringAsFixed(0)} FCFA',
+              iconColor: iconColor,
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: AppSpacing.lg + AppSpacing.sm),
+              child: Text(
+                'Le montant final peut inclure des frais de service/paiement de l’opérateur.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
             AppSpacing.verticalSm,
             Text(
               'Détails de paiement',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const Divider(),
-            _buildDetailRow('Statut du paiement', _getPaymentStatusText(booking.isPaid)),
+            _buildCompactDetailItem(
+              icon: Icons.account_balance_wallet_rounded,
+              value: _getPaymentStatusText(booking.isPaid),
+              iconColor: iconColor,
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompactDetailItem({
+    required IconData icon,
+    required String value,
+    required Color iconColor,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -729,10 +814,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ),
             ),
             AppSpacing.verticalSm,
-            OutlinedButton(
+            TextButton(
               onPressed: () {
                 context.go('/bookings');
               },
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.textSecondary,
+              ),
               child: const Text('Payer plus tard'),
             ),
           ],
@@ -744,7 +832,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   String _getStatusText(String status) {
     switch (status) {
       case 'pending':
-        return 'En attente';
+        return 'En attente de paiement';
       case 'confirmed':
         return 'Confirmée';
       case 'cancelled':
@@ -752,7 +840,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
       case 'completed':
         return 'Terminée';
       default:
-        return 'Inconnu';
+        return 'En attente de paiement';
     }
   }
 

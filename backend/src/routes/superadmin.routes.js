@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');
-const { isSuperAdmin } = require('../lib/roleMiddleware');
+const { isSuperAdmin, isAdmin } = require('../lib/roleMiddleware');
 const superAdminController = require('../controllers/superadmin/superadmin.controller');
 
 // Routes pour la gestion des clients et partenaires
@@ -16,8 +16,9 @@ router.put('/admins/:id', protect, isSuperAdmin, superAdminController.updateAdmi
 router.delete('/admins/:id', protect, isSuperAdmin, superAdminController.deleteAdmin);
 
 // Routes pour les paramètres système
-router.get('/settings', protect, isSuperAdmin, superAdminController.getSystemSettings);
-router.put('/settings', protect, isSuperAdmin, superAdminController.updateSystemSettings);
+// Les paramètres système doivent être accessibles aux admins (et superadmins).
+router.get('/settings', protect, isAdmin, superAdminController.getSystemSettings);
+router.put('/settings', protect, isAdmin, superAdminController.updateSystemSettings);
 
 // Routes pour les journaux d'activité
 router.get('/activity-logs', protect, isSuperAdmin, superAdminController.getActivityLogs);

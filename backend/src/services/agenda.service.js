@@ -463,7 +463,7 @@ agenda.define('process payout', async (job) => {
     }
 
     // Vérifier que le payout est toujours exécutable
-    if (payout.status !== 'PAYOUT_SCHEDULED') {
+    if (!['PAYOUT_SCHEDULED', 'scheduled'].includes(payout.status)) {
       logger.info(`Payout ${payoutId} pas en statut SCHEDULED: ${payout.status}`);
       return;
     }

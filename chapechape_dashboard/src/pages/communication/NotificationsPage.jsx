@@ -515,7 +515,7 @@ const NotificationsPage = () => {
           onDeleteRead={handleDeleteRead}
           unreadCount={stats.unread}
           readCount={readCount}
-          onToggleSettings={() => toast.info('Paramètres des notifications')}
+          onToggleSettings={() => toast('Paramètres des notifications')}
         />
 
         {/* Onglets */}

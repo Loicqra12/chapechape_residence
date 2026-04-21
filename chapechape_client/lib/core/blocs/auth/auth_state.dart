@@ -29,12 +29,12 @@ class Unauthenticated extends AuthState {
   const Unauthenticated();
 }
 
-class RegisterSuccess extends AuthState {
-  const RegisterSuccess();
-}
-
 class ForgotPasswordSuccess extends AuthState {
   const ForgotPasswordSuccess();
+}
+
+class ConfirmPasswordResetSuccess extends AuthState {
+  const ConfirmPasswordResetSuccess();
 }
 
 class AuthError extends AuthState {

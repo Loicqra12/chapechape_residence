@@ -23,6 +23,7 @@ import {
   Percent
 } from 'lucide-react';
 import { dashboardApiService } from '../../services/dashboardApiService';
+import { analyticsService } from '../../services/analyticsService';
 import BookingStats from '../../components/analytics/BookingStats';
 import ResidenceStats from '../../components/analytics/ResidenceStats';
 import CommunicationStats from '../../components/analytics/CommunicationStats';
@@ -184,7 +185,7 @@ const SVGChart = ({ type = 'line', data, colors = ['#3F51B5', '#9FA8DA', '#303F9
           />
           {/* Data points */}
           {[80, 150, 220, 290, 360, 430, 500, 570, 640, 710].map((x, i) => (
-            <circle key={i} cx={x} cy={100 + Math.random() * 100} r="4" fill={colors[0]} />
+            <circle key={i} cx={x} cy={100 + i * 10} r="4" fill={colors[0]} />
           ))}
         </>
       )}
@@ -371,6 +372,10 @@ const DashboardPage = () => {
     residenceStats: {},
     communicationStats: {}
   });
+  const [detailedData, setDetailedData] = useState({
+    residence: null,
+    communication: null
+  });
   const [loading, setLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState('30d');
   const [activeTab, setActiveTab] = useState('overview');
@@ -386,7 +391,16 @@ const DashboardPage = () => {
       const dashboardResponse = await dashboardApiService.getDashboardOverview();
       
       if (dashboardResponse.success) {
+        const [residenceRes, communicationRes] = await Promise.all([
+          analyticsService.getResidenceStats(),
+          analyticsService.getCommunicationStats()
+        ]);
+
         setDashboardData(dashboardResponse.data);
+        setDetailedData({
+          residence: residenceRes.success ? residenceRes.data : null,
+          communication: communicationRes.success ? communicationRes.data : null
+        });
         toast.success('Données du dashboard mises à jour');
       } else {
         throw new Error(dashboardResponse.error || 'Erreur lors du chargement des données');
@@ -427,6 +441,7 @@ const DashboardPage = () => {
           messages: { unread: 0, total: 0 }
         }
       });
+      setDetailedData({ residence: null, communication: null });
     } finally {
       setLoading(false);
     }
@@ -455,7 +470,10 @@ const DashboardPage = () => {
         {
           icon: Calendar,
           title: 'Total Réservations',
-          value: (bookingStats?.confirmedBookings + bookingStats?.completedBookings + bookingStats?.pendingBookings) || '5',
+          value:
+            Number(bookingStats?.confirmedBookings || 0) +
+            Number(bookingStats?.completedBookings || 0) +
+            Number(bookingStats?.pendingBookings || 0),
           subtitle: 'Réservations confirmées',
           bgColor: 'bg-primary-50',
           textColor: 'text-primary-700',
@@ -464,7 +482,7 @@ const DashboardPage = () => {
         {
           icon: DollarSign,
           title: 'Revenus Totaux',
-          value: formatCurrency(revenueData?.totalRevenue || 780000),
+          value: formatCurrency(revenueData?.totalRevenue || 0),
           subtitle: 'Revenus cette période',
           bgColor: 'bg-primary-100',
           textColor: 'text-primary-800',
@@ -473,9 +491,9 @@ const DashboardPage = () => {
         {
           icon: Percent,
           title: 'Taux d\'Occupation',
-          value: '74%',
+          value: `${Math.round(residenceStats?.occupancyRate || 0)}%`,
           subtitle: 'Capacité utilisée',
-          gauge: 74,
+          gauge: Math.round(residenceStats?.occupancyRate || 0),
           bgColor: 'bg-primary-200',
           textColor: 'text-primary-900',
           trend: { positive: true, value: '+3%', label: 'vs mois dernier' }
@@ -483,9 +501,9 @@ const DashboardPage = () => {
         {
           icon: Star,
           title: 'Note Satisfaction',
-          value: '4.2',
+          value: Number(residenceStats?.averageRating || 0).toFixed(1),
           subtitle: 'Sur 5 étoiles',
-          stars: 4.2,
+          stars: Number(residenceStats?.averageRating || 0),
           bgColor: 'bg-primary-300',
           textColor: 'text-primary-900',
           trend: { positive: true, value: '+0.2', label: 'vs mois dernier' }
@@ -495,7 +513,7 @@ const DashboardPage = () => {
         {
           icon: Calendar,
           title: 'Total Réservations',
-          value: dashboardData.bookingStats?.totalBookings || '247',
+          value: dashboardData.bookingStats?.totalBookings || 0,
           subtitle: 'Total Réservations',
           bgColor: 'bg-primary-50',
           textColor: 'text-primary-700',
@@ -504,7 +522,7 @@ const DashboardPage = () => {
         {
           icon: Target,
           title: 'Taux de Conversion',
-          value: `${dashboardData.bookingStats?.conversionRate || 73}%`,
+          value: `${dashboardData.bookingStats?.conversionRate || 0}%`,
           subtitle: 'Taux de Conversion',
           bgColor: 'bg-primary-100',
           textColor: 'text-primary-700',
@@ -513,7 +531,7 @@ const DashboardPage = () => {
         {
           icon: Clock,
           title: 'Durée Moyenne',
-          value: dashboardData.bookingStats?.averageDuration || '4.2j',
+          value: dashboardData.bookingStats?.averageDuration || '0j',
           subtitle: 'Durée Moyenne',
           bgColor: 'bg-primary-200',
           textColor: 'text-primary-800',
@@ -522,7 +540,7 @@ const DashboardPage = () => {
         {
           icon: DollarSign,
           title: 'Revenus Réservations',
-          value: formatCurrency(dashboardData.revenueData?.totalRevenue || 1247000),
+          value: formatCurrency(dashboardData.revenueData?.totalRevenue || 0),
           subtitle: 'Revenus Réservations',
           bgColor: 'bg-primary-300',
           textColor: 'text-primary-900',
@@ -533,7 +551,7 @@ const DashboardPage = () => {
         {
           icon: Building,
           title: 'Total Résidences',
-          value: dashboardData.residenceStats?.totalResidences || '142',
+          value: dashboardData.residenceStats?.totalResidences || 0,
           subtitle: 'Total Résidences',
           bgColor: 'bg-primary-50',
           textColor: 'text-primary-700',
@@ -542,7 +560,7 @@ const DashboardPage = () => {
         {
           icon: Percent,
           title: 'Taux d\'Occupation',
-          value: `${dashboardData.residenceStats?.occupancyRate || 87}%`,
+          value: `${dashboardData.residenceStats?.occupancyRate || 0}%`,
           subtitle: 'Taux d\'Occupation',
           bgColor: 'bg-primary-100',
           textColor: 'text-primary-700',
@@ -551,7 +569,7 @@ const DashboardPage = () => {
         {
           icon: Star,
           title: 'Note Moyenne',
-          value: dashboardData.residenceStats?.averageRating || '4.6',
+          value: Number(dashboardData.residenceStats?.averageRating || 0).toFixed(1),
           subtitle: 'Note Moyenne',
           bgColor: 'bg-primary-200',
           textColor: 'text-primary-800',
@@ -560,7 +578,7 @@ const DashboardPage = () => {
         {
           icon: DollarSign,
           title: 'Prix Moyen/Nuit',
-          value: formatCurrency(dashboardData.residenceStats?.averagePrice || 87500),
+          value: formatCurrency(dashboardData.residenceStats?.averagePrice || 0),
           subtitle: 'Prix Moyen/Nuit',
           bgColor: 'bg-primary-300',
           textColor: 'text-primary-900',
@@ -571,7 +589,7 @@ const DashboardPage = () => {
         {
           icon: MessageSquare,
           title: 'Messages Total',
-          value: dashboardData.communicationStats?.totalMessages || '1847',
+          value: dashboardData.communicationStats?.totalMessages || 0,
           subtitle: 'Messages Total',
           bgColor: 'bg-primary-50',
           textColor: 'text-primary-700',
@@ -580,7 +598,7 @@ const DashboardPage = () => {
         {
           icon: Clock,
           title: 'Temps Réponse Moyen',
-          value: dashboardData.communicationStats?.averageResponseTime || '2.4h',
+          value: dashboardData.communicationStats?.averageResponseTime || '0h',
           subtitle: 'Temps Réponse Moyen',
           bgColor: 'bg-primary-100',
           textColor: 'text-primary-700',
@@ -589,7 +607,7 @@ const DashboardPage = () => {
         {
           icon: Star,
           title: 'Taux Satisfaction',
-          value: `${dashboardData.communicationStats?.satisfactionRate || 92}%`,
+          value: `${dashboardData.communicationStats?.satisfactionRate || 0}%`,
           subtitle: 'Taux Satisfaction',
           bgColor: 'bg-primary-200',
           textColor: 'text-primary-800',
@@ -598,7 +616,7 @@ const DashboardPage = () => {
         {
           icon: Users,
           title: 'Agents Actifs',
-          value: dashboardData.communicationStats?.activeSupport || '12',
+          value: dashboardData.communicationStats?.activeSupport || 0,
           subtitle: 'Agents Actifs',
           bgColor: 'bg-primary-300',
           textColor: 'text-primary-900',
@@ -610,62 +628,27 @@ const DashboardPage = () => {
     return configs[tab] || configs.overview;
   };
 
-  const getMetricsData = (type) => {
-    const data = {
-      bookingDistribution: [
-        { label: 'Confirmées', value: '156', color: 'bg-primary-500' },
-        { label: 'En attente', value: '43', color: 'bg-primary-300' },
-        { label: 'Terminées', value: '189', color: 'bg-primary-700' },
-        { label: 'Annulées', value: '27', color: 'bg-primary-800' }
-      ],
-      residenceTypes: [
-        { label: 'Appartements', value: '68', color: 'bg-primary-500' },
-        { label: 'Villas', value: '34', color: 'bg-primary-300' },
-        { label: 'Studios', value: '28', color: 'bg-primary-700' },
-        { label: 'Duplex', value: '12', color: 'bg-primary-800' }
-      ],
-      communicationChannels: [
-        { label: 'Chat en direct', value: '847', color: 'bg-primary-500' },
-        { label: 'Email', value: '634', color: 'bg-primary-300' },
-        { label: 'Téléphone', value: '234', color: 'bg-primary-700' },
-        { label: 'WhatsApp', value: '132', color: 'bg-primary-800' }
-      ],
-      amenities: [
-        { label: 'WiFi', value: '98', percentage: 98, color: 'bg-primary-500' },
-        { label: 'Climatisation', value: '89', percentage: 89, color: 'bg-primary-400' },
-        { label: 'Cuisine équipée', value: '76', percentage: 76, color: 'bg-primary-300' },
-        { label: 'Parking', value: '72', percentage: 72, color: 'bg-primary-200' },
-        { label: 'Piscine', value: '43', percentage: 43, color: 'bg-primary-100' },
-        { label: 'Sécurité 24h/24', value: '67', percentage: 67, color: 'bg-primary-50' }
-      ]
-    };
-    return data[type] || [];
+  const formatCompact = (n) => {
+    const num = Number(n || 0);
+    if (num >= 1000) return `${(num / 1000).toFixed(2)}K`;
+    return String(Math.round(num));
   };
 
-  const getPerformanceData = (type) => {
-    const data = {
-      booking: [
-        { label: 'Revenus moyens/résidence', value: formatCurrency(125000), change: '+15%', positive: true },
-        { label: 'Durée moyenne de séjour', value: '3.2 jours', change: '+0.3j', positive: true },
-        { label: 'Taux de réservation répétée', value: '34%', change: '+7%', positive: true },
-        { label: 'Temps de réponse moyen', value: '1.2h', change: '-18min', positive: true }
-      ],
-      communication: [
-        { label: 'Temps de première réponse', value: '1.4h', change: '-23min', positive: true },
-        { label: 'Taux de résolution premier contact', value: '87%', change: '+5%', positive: true },
-        { label: 'Messages par agent/jour', value: '42', change: '+8', positive: true },
-        { label: 'Score satisfaction client (CSAT)', value: '4.7/5', change: '+0.3', positive: true }
-      ]
-    };
-    return data[type] || [];
-  };
+  const getDonutData = () => {
+    const pending = Number(dashboardData.bookingStats?.pendingBookings || 0);
+    const confirmed = Number(dashboardData.bookingStats?.confirmedBookings || 0);
+    const completed = Number(dashboardData.bookingStats?.completedBookings || 0);
+    const cancelled = Number(dashboardData.bookingStats?.cancelledBookings || 0);
+    const total = pending + confirmed + completed + cancelled;
+    const pct = (v) => (total > 0 ? (v / total) * 100 : 0);
 
-  const getDonutData = () => [
-    { label: 'Confirmées', value: '3.74K', percentage: 30, color: '#3F51B5' },
-    { label: 'En attente', value: '2.68K', percentage: 25, color: '#7986CB' },
-    { label: 'Terminées', value: '3.02K', percentage: 25, color: '#303F9F' },
-    { label: 'Annulées', value: '2.72K', percentage: 20, color: '#C5CAE9' }
-  ];
+    return [
+      { label: 'Confirmées', value: formatCompact(confirmed), percentage: pct(confirmed), color: '#3F51B5' },
+      { label: 'En attente', value: formatCompact(pending), percentage: pct(pending), color: '#7986CB' },
+      { label: 'Terminées', value: formatCompact(completed), percentage: pct(completed), color: '#303F9F' },
+      { label: 'Annulées', value: formatCompact(cancelled), percentage: pct(cancelled), color: '#C5CAE9' }
+    ];
+  };
 
   const getChartLegends = (type) => {
     const legends = {
@@ -693,27 +676,39 @@ const DashboardPage = () => {
     return legends[type] || [];
   };
 
-  // Mock data pour les graphiques
-  const getWeeklyData = () => [
-    { day: 'Lundi', morning: 2.1, evening: 1.8, total: 3.9 },
-    { day: 'Mardi', morning: 1.9, evening: 2.1, total: 4.0 },
-    { day: 'Mercredi', morning: 2.2, evening: 1.9, total: 4.1 },
-    { day: 'Jeudi', morning: 2.0, evening: 2.3, total: 4.3 },
-    { day: 'Vendredi', morning: 2.4, evening: 2.6, total: 5.0 },
-    { day: 'Samedi', morning: 1.8, evening: 2.4, total: 4.2 },
-    { day: 'Dimanche', morning: 1.6, evening: 2.0, total: 3.6 }
-  ];
+  const getWeeklyData = () => {
+    const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const byDay = detailedData.communication?.messages?.byDay || [];
 
-  const getMonthlyData = () => [
-    { month: 'Janvier', revenus: 2.1, reservations: 2, taux: 65 },
-    { month: 'Février', revenus: 1.8, reservations: 1, taux: 45 },
-    { month: 'Mars', revenus: 2.8, reservations: 3, taux: 85 },
-    { month: 'Avril', revenus: 2.2, reservations: 2, taux: 70 },
-    { month: 'Mai', revenus: 3.1, reservations: 4, taux: 90 },
-    { month: 'Juin', revenus: 2.6, reservations: 3, taux: 78 },
-    { month: 'Juillet', revenus: 3.8, reservations: 5, taux: 95 },
-    { month: 'Août', revenus: 3.2, reservations: 4, taux: 88 }
-  ];
+    if (!byDay.length) {
+      return Array.from({ length: 7 }, (_, i) => ({ day: dayLabels[i], total: 0 }));
+    }
+
+    const mapped = byDay
+      .slice()
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map((d) => ({
+        day: new Date(d.date).toLocaleDateString('fr-FR', { weekday: 'short' }),
+        total: Number(d.total || 0)
+      }));
+
+    // Pad / cut pour avoir exactement 7 points
+    const padded = Array.from({ length: 7 }, (_, i) => mapped[i] || { day: dayLabels[i], total: 0 });
+    return padded;
+  };
+
+  const getMonthlyData = () => {
+    const monthLabels = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthlyRevenue = dashboardData.revenueData?.monthlyData || [];
+    const monthlyBookings = dashboardData.bookingStats?.monthlyBookings || [];
+
+    return monthLabels.map((label, i) => ({
+      month: label,
+      revenus: Number(monthlyRevenue?.[i] || 0),
+      reservations: Number(monthlyBookings?.[i] || 0),
+      taux: 0
+    }));
+  };
 
   if (loading) {
     return (
@@ -731,6 +726,7 @@ const DashboardPage = () => {
 
   const weeklyData = getWeeklyData();
   const monthlyData = getMonthlyData();
+  const maxWeeklyTotal = Math.max(...weeklyData.map((d) => Number(d.total || 0)), 1);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -846,7 +842,7 @@ const DashboardPage = () => {
             {/* Donut Chart */}
             <DonutChart 
               data={getDonutData()}
-              centerValue="2.74K"
+              centerValue={formatCompact(Number(dashboardData.bookingStats?.totalBookings || 0))}
               centerLabel="Total"
             />
 
@@ -859,14 +855,30 @@ const DashboardPage = () => {
                 'Résumé Activité'
               }
               items={
-                activeTab === 'bookings' ? getMetricsData('bookingDistribution') :
-                activeTab === 'residences' ? getMetricsData('residenceTypes') :
-                activeTab === 'communication' ? getMetricsData('communicationChannels') :
-                [
-                  { label: 'Réservations actives', value: String((dashboardData.bookingStats?.confirmedBookings || 0) + (dashboardData.bookingStats?.pendingBookings || 0)), color: 'bg-primary-500' },
-                  { label: 'Résidences disponibles', value: String(dashboardData.residenceStats?.available || 0), color: 'bg-primary-300' },
-                  { label: 'Messages non lus', value: String(dashboardData.communicationStats?.messages?.unread || 0), color: 'bg-primary-700' }
-                ]
+                activeTab === 'bookings'
+                  ? [
+                      { label: 'Confirmées', value: String(dashboardData.bookingStats?.confirmedBookings || 0), color: 'bg-primary-500' },
+                      { label: 'En attente', value: String(dashboardData.bookingStats?.pendingBookings || 0), color: 'bg-primary-300' },
+                      { label: 'Complétées', value: String(dashboardData.bookingStats?.completedBookings || 0), color: 'bg-primary-700' },
+                      { label: 'Annulées', value: String(dashboardData.bookingStats?.cancelledBookings || 0), color: 'bg-primary-800' }
+                    ]
+                  : activeTab === 'residences'
+                    ? [
+                        { label: 'Disponibles', value: String(dashboardData.residenceStats?.available || 0), color: 'bg-primary-300' },
+                        { label: 'Occupation', value: `${Math.round(dashboardData.residenceStats?.occupancyRate || 0)}%`, color: 'bg-primary-700' },
+                        { label: 'Prix moyen/nuit', value: formatCurrency(dashboardData.residenceStats?.averagePrice || 0), color: 'bg-primary-500' }
+                      ]
+                    : activeTab === 'communication'
+                      ? [
+                          { label: 'Messages', value: String(dashboardData.communicationStats?.totalMessages || 0), color: 'bg-primary-50' },
+                          { label: 'Non lus', value: String(dashboardData.communicationStats?.messages?.unread || 0), color: 'bg-primary-700' },
+                          { label: 'Satisfaction', value: `${Number(dashboardData.communicationStats?.satisfactionRate || 0)}%`, color: 'bg-primary-200' }
+                        ]
+                      : [
+                          { label: 'Réservations actives', value: String((dashboardData.bookingStats?.confirmedBookings || 0) + (dashboardData.bookingStats?.pendingBookings || 0)), color: 'bg-primary-500' },
+                          { label: 'Résidences disponibles', value: String(dashboardData.residenceStats?.available || 0), color: 'bg-primary-300' },
+                          { label: 'Messages non lus', value: String(dashboardData.communicationStats?.messages?.unread || 0), color: 'bg-primary-700' }
+                        ]
               }
             />
 
@@ -880,11 +892,11 @@ const DashboardPage = () => {
                     <div className="flex-1 mx-3 h-3 bg-primary-100 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-primary-500 to-primary-300 rounded-full transition-all duration-1000"
-                        style={{ width: `${(day.total / 5) * 100}%` }}
+                        style={{ width: `${(Number(day.total || 0) / maxWeeklyTotal) * 100}%` }}
                       ></div>
                     </div>
                     <span className="text-sm text-primary-700 font-medium w-12 text-right">
-                      {day.total.toFixed(1)}K
+                      {formatCompact(day.total)}
                     </span>
                   </div>
                 ))}
@@ -901,9 +913,88 @@ const DashboardPage = () => {
               <PerformanceMetrics 
                 title="Indicateurs de Performance"
                 metrics={
-                  activeTab === 'bookings' ? getPerformanceData('booking') :
-                  activeTab === 'communication' ? getPerformanceData('communication') :
-                  getPerformanceData('booking')
+                  activeTab === 'bookings'
+                    ? [
+                        {
+                          label: 'Taux de conversion',
+                          value: `${Number(dashboardData.bookingStats?.conversionRate || 0)}%`,
+                          change: '',
+                          positive: true
+                        },
+                        {
+                          label: "Taux d'annulation",
+                          value: `${Number(dashboardData.bookingStats?.cancellationRate || 0)}%`,
+                          change: '',
+                          positive: false
+                        },
+                        {
+                          label: 'Durée moyenne',
+                          value: dashboardData.bookingStats?.averageDuration || '0j',
+                          change: '',
+                          positive: true
+                        },
+                        {
+                          label: 'Total réservations',
+                          value: String(dashboardData.bookingStats?.totalBookings || 0),
+                          change: '',
+                          positive: true
+                        }
+                      ]
+                    : activeTab === 'communication'
+                      ? [
+                          {
+                            label: 'Messages',
+                            value: String(dashboardData.communicationStats?.totalMessages || 0),
+                            change: '',
+                            positive: true
+                          },
+                          {
+                            label: 'Non lus',
+                            value: String(dashboardData.communicationStats?.messages?.unread || 0),
+                            change: '',
+                            positive: false
+                          },
+                          {
+                            label: 'Temps de réponse',
+                            value: dashboardData.communicationStats?.averageResponseTime || '0h',
+                            change: '',
+                            positive: true
+                          },
+                          {
+                            label: 'Satisfaction',
+                            value: `${Number(dashboardData.communicationStats?.satisfactionRate || 0)}%`,
+                            change: '',
+                            positive: true
+                          }
+                        ]
+                      : activeTab === 'residences'
+                        ? [
+                            {
+                              label: 'Note moyenne',
+                              value: Number(dashboardData.residenceStats?.averageRating || 0).toFixed(1),
+                              change: '',
+                              positive: true
+                            },
+                            {
+                              label: 'Occupation',
+                              value: `${Math.round(dashboardData.residenceStats?.occupancyRate || 0)}%`,
+                              change: '',
+                              positive: true
+                            },
+                            {
+                              label: 'Prix moyen/nuit',
+                              value: formatCurrency(Number(dashboardData.residenceStats?.averagePrice || 0)),
+                              change: '',
+                              positive: true
+                            },
+                            {
+                              label: 'Total résidences',
+                              value: String(dashboardData.residenceStats?.totalResidences || 0),
+                              change: '',
+                              positive: true
+                            }
+                          ]
+                        : []
                 }
               />
             </div>
@@ -912,66 +1003,34 @@ const DashboardPage = () => {
             <div className="col-span-12 lg:col-span-6">
               {activeTab === 'residences' ? (
                 <MetricsList 
-                  title="Équipements les Plus Demandés"
-                  items={getMetricsData('amenities')}
+                  title="Top résidences (occupation)"
+                  items={(detailedData.residence?.most_booked || []).slice(0, 5).map((r, idx) => ({
+                    label: r.title,
+                    value: String(Math.round(r.occupancyRate || 0)),
+                    percentage: Math.round(r.occupancyRate || 0),
+                    color: idx % 3 === 0 ? 'bg-primary-500' : idx % 3 === 1 ? 'bg-primary-300' : 'bg-primary-700'
+                  }))}
                   showPercentage={true}
                 />
               ) : activeTab === 'communication' ? (
-                <div className="bg-white rounded-2xl p-6 border border-primary-200 shadow-sm">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4">Équipe Support - Performance</h4>
-                  <div className="space-y-3">
-                    {[
-                      { name: 'Sarah K.', messages: 67, rating: 4.9, status: 'online' },
-                      { name: 'Mohamed A.', messages: 54, rating: 4.8, status: 'online' },
-                      { name: 'Fatou D.', messages: 48, rating: 4.7, status: 'busy' },
-                      { name: 'Koffi J.', messages: 41, rating: 4.6, status: 'offline' }
-                    ].map((agent, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${
-                            agent.status === 'online' ? 'bg-green-400' : 
-                            agent.status === 'busy' ? 'bg-yellow-400' : 'bg-gray-400'
-                          }`}></div>
-                          <div>
-                            <span className="text-gray-700 font-medium text-sm">{agent.name}</span>
-                            <div className="flex items-center space-x-1 text-xs text-gray-500">
-                              <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                              <span>{agent.rating}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-primary-600 font-bold text-sm">
-                          {agent.messages} msg
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <MetricsList
+                  title="Répartition des tickets"
+                  items={(detailedData.communication?.tickets?.byType || []).map((t, idx) => ({
+                    label: t.type,
+                    value: String(t.total || 0),
+                    color: idx % 3 === 0 ? 'bg-primary-500' : idx % 3 === 1 ? 'bg-primary-300' : 'bg-primary-700'
+                  }))}
+                />
               ) : (
-                <div className="bg-white rounded-2xl p-6 border border-primary-200 shadow-sm">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4">Top Résidences</h4>
-                  <div className="space-y-3">
-                    {[
-                      { name: 'Villa Cocody Premium', rating: 4.9, bookings: 34 },
-                      { name: 'Appart Plateau Centre', rating: 4.8, bookings: 28 },
-                      { name: 'Studio Marcory Moderne', rating: 4.7, bookings: 22 },
-                      { name: 'Duplex Riviera Golf', rating: 4.8, bookings: 19 }
-                    ].map((residence, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-primary-50 rounded-lg">
-                        <div>
-                          <span className="text-gray-700 font-medium text-sm">{residence.name}</span>
-                          <div className="flex items-center space-x-1 text-xs text-gray-500">
-                            <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                            <span>{residence.rating}</span>
-                          </div>
-                        </div>
-                        <div className="text-primary-600 font-bold text-sm">
-                          {residence.bookings} résa
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <MetricsList
+                  title="Répartition des statuts"
+                  items={[
+                    { label: 'En attente', value: String(dashboardData.bookingStats?.pendingBookings || 0), color: 'bg-primary-300' },
+                    { label: 'Confirmées', value: String(dashboardData.bookingStats?.confirmedBookings || 0), color: 'bg-primary-500' },
+                    { label: 'Complétées', value: String(dashboardData.bookingStats?.completedBookings || 0), color: 'bg-primary-700' },
+                    { label: 'Annulées', value: String(dashboardData.bookingStats?.cancelledBookings || 0), color: 'bg-primary-800' }
+                  ]}
+                />
               )}
             </div>
           </div>
@@ -1003,20 +1062,17 @@ const DashboardPage = () => {
                 title="Évolution des Réservations par Période"
                 subtitle="Données comparatives sur 12 mois"
                 legends={getChartLegends('overview')}
-                rightValue="2.74K"
-                rightLabel="Total mensuel"
+                rightValue={formatCurrency(Number(dashboardData.revenueData?.totalRevenue || 0))}
+                rightLabel="Revenus cumulés (12 mois)"
               >
                 {dashboardData.revenueData ? (
                   <div className="h-full">
                     <AnalyticsChart
-                      data={[
-                        { name: 'Jan', revenus: dashboardData.revenueData.monthlyData?.[0] || 0, reservations: dashboardData.bookingStats?.monthlyBookings?.[0] || 0 },
-                        { name: 'Fév', revenus: dashboardData.revenueData.monthlyData?.[1] || 0, reservations: dashboardData.bookingStats?.monthlyBookings?.[1] || 0 },
-                        { name: 'Mar', revenus: dashboardData.revenueData.monthlyData?.[2] || 0, reservations: dashboardData.bookingStats?.monthlyBookings?.[2] || 0 },
-                        { name: 'Avr', revenus: dashboardData.revenueData.monthlyData?.[3] || 0, reservations: dashboardData.bookingStats?.monthlyBookings?.[3] || 0 },
-                        { name: 'Mai', revenus: dashboardData.revenueData.monthlyData?.[4] || 0, reservations: dashboardData.bookingStats?.monthlyBookings?.[4] || 0 },
-                        { name: 'Juin', revenus: dashboardData.revenueData.monthlyData?.[5] || 0, reservations: dashboardData.bookingStats?.monthlyBookings?.[5] || 0 },
-                      ]}
+                      data={monthlyData.map((row) => ({
+                        name: row.month,
+                        revenus: row.revenus,
+                        reservations: row.reservations
+                      }))}
                       xKey="name"
                       yKeys={[
                         { key: 'revenus', name: 'Revenus (XOF)', color: '#3F51B5' },
@@ -1071,22 +1127,16 @@ const DashboardPage = () => {
                   <thead>
                     <tr className="border-b border-primary-200">
                       <th className="text-left py-2 text-gray-600 font-medium">Mois</th>
-                      <th className="text-center py-2 text-gray-600 font-medium">2023</th>
-                      <th className="text-center py-2 text-gray-600 font-medium">2024</th>
-                      <th className="text-center py-2 text-gray-600 font-medium">2025</th>
-                      <th className="text-right py-2 text-gray-600 font-medium">Total</th>
+                      <th className="text-center py-2 text-gray-600 font-medium">Revenus (XOF)</th>
+                      <th className="text-right py-2 text-gray-600 font-medium">Réservations</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {monthlyData.slice(0, 6).map((row, index) => (
+                    {monthlyData.map((row) => (
                       <tr key={row.month} className="border-b border-primary-100">
                         <td className="py-2 text-gray-700 font-medium">{row.month}</td>
-                        <td className="text-center py-2 text-gray-900">{Math.floor(row.revenus)}</td>
-                        <td className="text-center py-2 text-gray-900">{Math.floor(row.revenus * 1.1)}</td>
-                        <td className="text-center py-2 text-gray-900">{Math.floor(row.revenus * 0.9)}</td>
-                        <td className="text-right py-2 text-primary-600 font-medium">
-                          {Math.floor(row.revenus * 3)}
-                        </td>
+                        <td className="text-center py-2 text-gray-900">{Math.floor(row.revenus || 0)}</td>
+                        <td className="text-right py-2 text-primary-600 font-medium">{Math.floor(row.reservations || 0)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1095,29 +1145,44 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Yearly Comparison */}
+          {/* Totaux 12 mois */}
           <div className="col-span-12 lg:col-span-4">
             <div className="bg-white rounded-2xl p-6 border border-primary-200 shadow-sm">
-              <h4 className="text-lg font-bold text-gray-900 mb-4">Évolution Annuelle</h4>
+              <h4 className="text-lg font-bold text-gray-900 mb-4">Totaux sur 12 mois</h4>
               <div className="space-y-4">
-                {[
-                  { year: '2023', total: 8.1 },
-                  { year: '2024', total: 9.0 },
-                  { year: '2025', total: 9.9 }
-                ].map((year, index) => (
-                  <div key={year.year} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 font-medium">{year.year}</span>
-                      <span className="text-sm text-primary-700 font-medium">{year.total}K</span>
-                    </div>
-                    <div className="w-full h-3 bg-primary-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary-500 to-primary-300 rounded-full transition-all duration-1000"
-                        style={{ width: `${(year.total / 10) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
+                {(() => {
+                  const totalRevenueYear = monthlyData.reduce((sum, r) => sum + (Number(r.revenus) || 0), 0);
+                  const totalBookingsYear = monthlyData.reduce((sum, r) => sum + (Number(r.reservations) || 0), 0);
+                  const maxVal = Math.max(totalRevenueYear, totalBookingsYear, 1);
+                  return (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 font-medium">Revenus</span>
+                          <span className="text-sm text-primary-700 font-medium">{formatCompact(totalRevenueYear)}</span>
+                        </div>
+                        <div className="w-full h-3 bg-primary-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary-500 to-primary-300 rounded-full transition-all duration-1000"
+                            style={{ width: `${Math.min((totalRevenueYear / maxVal) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 font-medium">Réservations</span>
+                          <span className="text-sm text-primary-700 font-medium">{formatCompact(totalBookingsYear)}</span>
+                        </div>
+                        <div className="w-full h-3 bg-primary-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary-500 to-primary-300 rounded-full transition-all duration-1000"
+                            style={{ width: `${Math.min((totalBookingsYear / maxVal) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -1128,19 +1193,19 @@ const DashboardPage = () => {
               <h4 className="text-lg font-bold text-gray-900 mb-4">Statistiques Rapides</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-primary-50 rounded-lg">
-                  <div className="text-2xl font-bold text-primary-600">247</div>
+                  <div className="text-2xl font-bold text-primary-600">{Number(dashboardData.bookingStats?.totalBookings || 0)}</div>
                   <div className="text-xs text-gray-600">Réservations</div>
                 </div>
                 <div className="text-center p-3 bg-primary-50 rounded-lg">
-                  <div className="text-2xl font-bold text-primary-600">142</div>
+                  <div className="text-2xl font-bold text-primary-600">{Number(dashboardData.residenceStats?.totalResidences || 0)}</div>
                   <div className="text-xs text-gray-600">Résidences</div>
                 </div>
                 <div className="text-center p-3 bg-primary-50 rounded-lg">
-                  <div className="text-2xl font-bold text-primary-600">1.8K</div>
+                  <div className="text-2xl font-bold text-primary-600">{formatCompact(Number(dashboardData.communicationStats?.totalMessages || 0))}</div>
                   <div className="text-xs text-gray-600">Messages</div>
                 </div>
                 <div className="text-center p-3 bg-primary-50 rounded-lg">
-                  <div className="text-2xl font-bold text-primary-600">4.6</div>
+                  <div className="text-2xl font-bold text-primary-600">{Number(dashboardData.residenceStats?.averageRating || 0).toFixed(1)}</div>
                   <div className="text-xs text-gray-600">Note moyenne</div>
                 </div>
               </div>

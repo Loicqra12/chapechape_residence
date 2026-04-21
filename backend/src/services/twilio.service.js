@@ -1,5 +1,20 @@
 const twilio = require('twilio');
 const logger = require('../utils/logger');
+const { normalizePhoneToE164, isValidE164 } = require('../utils/phone.util');
+
+const DEFAULT_PHONE_COUNTRY = process.env.DEFAULT_PHONE_COUNTRY || 'CI';
+
+function maskPhoneNumber(phoneNumber) {
+  if (!phoneNumber || typeof phoneNumber !== 'string') {
+    return '***';
+  }
+
+  if (phoneNumber.length <= 4) {
+    return '***';
+  }
+
+  return `${phoneNumber.slice(0, 4)}***${phoneNumber.slice(-2)}`;
+}
 
 class TwilioService {
   constructor() {
@@ -21,16 +36,15 @@ class TwilioService {
     // Vérifier si WhatsApp est configuré
     this.isWhatsAppConfigured = !!this.twilioWhatsAppNumber;
     
-    // Debug - Afficher les valeurs réellement chargées
-    logger.info('DEBUG - Variables Twilio chargées:');
-    logger.info('Account SID:', process.env.TWILIO_ACCOUNT_SID);
-    logger.info('Phone Number:', process.env.TWILIO_PHONE_NUMBER);
-    logger.info('WhatsApp Number:', process.env.TWILIO_WHATSAPP_NUMBER);
-    logger.info('Auth Token présent:', !!process.env.TWILIO_AUTH_TOKEN);
-    
-    logger.info('Service Twilio initialisé avec succès');
+    logger.info('Service Twilio initialisé', {
+      accountSidConfigured: !!process.env.TWILIO_ACCOUNT_SID,
+      phoneNumberConfigured: !!process.env.TWILIO_PHONE_NUMBER,
+      whatsAppConfigured: this.isWhatsAppConfigured,
+      defaultCountry: DEFAULT_PHONE_COUNTRY
+    });
+
     if (this.isWhatsAppConfigured) {
-      logger.info('WhatsApp Business configuré avec le numéro:', this.twilioWhatsAppNumber);
+      logger.info('WhatsApp Business activé');
     } else {
       logger.warn('WhatsApp Business non configuré - variable TWILIO_WHATSAPP_NUMBER manquante');
     }
@@ -43,21 +57,14 @@ class TwilioService {
     }
 
     try {
-      // Formatage international du numéro si nécessaire
-      let formattedNumber = to;
-      if (!to.startsWith('+')) {
-        // Nettoyer le numéro (supprimer espaces et autres caractères)
-        let cleanNumber = to.replace(/\s+/g, '').replace(/[^\d]/g, '');
-        
-        // Si le numéro commence par 0, le remplacer par le préfixe international
-        if (cleanNumber.startsWith('0')) {
-          cleanNumber = cleanNumber.substring(1); // Supprimer le 0
-        }
-        
-        // Ajouter le préfixe international pour la Côte d'Ivoire
-        formattedNumber = `+225${cleanNumber}`;
-        
-        logger.info(`Numéro formaté: "${to}" → "${formattedNumber}"`);
+      const formattedNumber = normalizePhoneToE164(to, DEFAULT_PHONE_COUNTRY);
+      if (!isValidE164(formattedNumber)) {
+        logger.warn('Numéro SMS invalide après normalisation', {
+          original: maskPhoneNumber(to),
+          normalized: maskPhoneNumber(formattedNumber),
+          defaultCountry: DEFAULT_PHONE_COUNTRY
+        });
+        throw new Error('Numéro destinataire invalide (format E.164 requis)');
       }
 
       const message = await this.client.messages.create({
@@ -66,7 +73,7 @@ class TwilioService {
         to: formattedNumber
       });
       
-      logger.info(`SMS envoyé avec succès à ${formattedNumber}. SID: ${message.sid}`);
+      logger.info(`SMS envoyé avec succès à ${maskPhoneNumber(formattedNumber)}. SID: ${message.sid}`);
       return message;
     } catch (error) {
       logger.error(`Erreur lors de l'envoi du SMS: ${error.message}`);
@@ -88,11 +95,14 @@ class TwilioService {
     }
 
     try {
-      // Formatage international du numéro si nécessaire
-      let formattedNumber = to;
-      if (!to.startsWith('+')) {
-        // Ajout du préfixe international pour les pays d'Afrique de l'Ouest si absent
-        formattedNumber = `+225${to}`; 
+      const formattedNumber = normalizePhoneToE164(to, DEFAULT_PHONE_COUNTRY);
+      if (!isValidE164(formattedNumber)) {
+        logger.warn('Numéro WhatsApp invalide après normalisation', {
+          original: maskPhoneNumber(to),
+          normalized: maskPhoneNumber(formattedNumber),
+          defaultCountry: DEFAULT_PHONE_COUNTRY
+        });
+        throw new Error('Numéro destinataire WhatsApp invalide (format E.164 requis)');
       }
 
       const message = await this.client.messages.create({
@@ -101,7 +111,7 @@ class TwilioService {
         to: `whatsapp:${formattedNumber}`
       });
       
-      logger.info(`WhatsApp envoyé avec succès à ${formattedNumber}. SID: ${message.sid}`);
+      logger.info(`WhatsApp envoyé avec succès à ${maskPhoneNumber(formattedNumber)}. SID: ${message.sid}`);
       return message;
     } catch (error) {
       logger.error(`Erreur lors de l'envoi du WhatsApp: ${error.message}`);

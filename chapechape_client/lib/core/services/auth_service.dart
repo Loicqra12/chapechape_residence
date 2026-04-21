@@ -205,6 +205,7 @@ class AuthService {
       await _apiService.put('/auth/password', data: {
         'currentPassword': currentPassword,
         'newPassword': newPassword,
+        'confirmPassword': newPassword,
       });
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -216,6 +217,19 @@ class AuthService {
     try {
       await _apiService.post('/auth/forgot-password', data: {
         'email': email,
+      });
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      await _apiService.put('/auth/reset-password/$token', data: {
+        'password': newPassword,
       });
     } on DioException catch (e) {
       throw _handleDioError(e);

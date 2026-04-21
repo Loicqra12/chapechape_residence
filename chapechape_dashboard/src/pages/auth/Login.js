@@ -27,8 +27,9 @@ const Login = () => {
         localStorage.removeItem('remember_email');
       }
 
-      // Redirection selon le rôle
-      if (user.role === 'SUPER_ADMIN') {
+      // Redirection selon le rôle (case-insensitive pour éviter les mismatch 'SUPER_ADMIN' vs 'superadmin')
+      const normalizedRole = String(user?.role || '').toLowerCase();
+      if (normalizedRole === 'super_admin' || normalizedRole === 'superadmin') {
         navigate('/dashboard');
       } else {
         navigate('/');

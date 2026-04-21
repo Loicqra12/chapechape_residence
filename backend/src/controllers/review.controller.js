@@ -369,8 +369,9 @@ const deleteReview = async (req, res) => {
             });
         }
 
-        // Vérifier que l'utilisateur est l'auteur de l'avis ou un admin
-        if (review.user.toString() !== req.user.id && req.user.role !== 'admin') {
+        const requesterId = (req.user._id && req.user._id.toString()) || req.user.id;
+        const privileged = ['admin', 'superadmin'].includes(req.user.role);
+        if (review.user.toString() !== requesterId && !privileged) {
             return res.status(403).json({
                 success: false,
                 message: "Vous n'êtes pas autorisé à supprimer cet avis"

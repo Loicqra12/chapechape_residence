@@ -6,8 +6,8 @@ class OneSignalService {
     constructor() {
         this.appId = process.env.ONESIGNAL_APP_ID;
         this.apiKey = process.env.ONESIGNAL_API_KEY;
-        // Pour l'API v2, on utilise la clé complète commençant par os_v2_...
-        this.restApiKey = process.env.ONESIGNAL_API_KEY;
+        // Priorité à la variable REST dédiée, fallback rétro-compatible
+        this.restApiKey = process.env.ONESIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY;
         this.enabled = false;
         this.baseUrl = 'https://api.onesignal.com';  // URL correcte dans la documentation la plus récente
 
@@ -42,15 +42,24 @@ class OneSignalService {
                 ...notificationData
             };
 
-            logger.info(`Envoi de notification OneSignal: ${JSON.stringify(notification)}`);
+            const hasPlayerTargets = Array.isArray(notification.include_subscription_ids);
+            const hasSegmentTargets = Array.isArray(notification.included_segments);
+            const targetCount = hasPlayerTargets ? notification.include_subscription_ids.length : 0;
+            const segments = hasSegmentTargets ? notification.included_segments : [];
+            const dataKeys = notification.data && typeof notification.data === 'object'
+                ? Object.keys(notification.data)
+                : [];
+
+            logger.info('Envoi notification OneSignal', {
+                targetMode: hasPlayerTargets ? 'subscription_ids' : (hasSegmentTargets ? 'segments' : 'unknown'),
+                targetCount,
+                segments,
+                hasData: dataKeys.length > 0,
+                dataKeys
+            });
 
             // Créer l'URL complète
             const url = `${this.baseUrl}/notifications`;
-            
-            // Déboguer les valeurs utilisées
-            logger.info(`URL: ${url}`);
-            logger.info(`Authorization: Key ${this.restApiKey.substring(0, 10)}...`);
-            logger.info(`App ID: ${this.appId}`);
             
             const response = await axios({
                 method: 'POST',
@@ -62,11 +71,18 @@ class OneSignalService {
                 data: notification
             });
 
-            logger.info(`Réponse OneSignal: ${JSON.stringify(response.data)}`);
+            logger.info('Réponse OneSignal reçue', {
+                notificationId: response.data?.id,
+                recipients: response.data?.recipients,
+                externalId: response.data?.external_id
+            });
             return response.data;
         } catch (error) {
-            logger.error('Erreur lors de l\'envoi de la notification OneSignal:', 
-                error.response ? error.response.data : error.message);
+            logger.error('Erreur lors de l\'envoi de la notification OneSignal:', {
+                message: error.message,
+                status: error.response?.status,
+                errorCode: error.response?.data?.errors?.[0] || error.response?.data?.error
+            });
             throw error;
         }
     }
@@ -94,7 +110,7 @@ class OneSignalService {
                 'en': title,
                 'fr': title
             },
-            include_player_ids: [playerId],
+            include_subscription_ids: [playerId],
             data
         });
     }
@@ -122,7 +138,7 @@ class OneSignalService {
                 'en': title,
                 'fr': title
             },
-            include_player_ids: playerIds,
+            include_subscription_ids: playerIds,
             data
         });
     }

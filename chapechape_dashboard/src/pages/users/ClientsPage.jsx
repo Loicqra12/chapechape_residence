@@ -42,6 +42,18 @@ import { fr } from 'date-fns/locale';
 import ImageUpload from '../../components/common/ImageUpload';
 import { adminService } from '../../services/adminService';
 
+const safeFormatDate = (value, pattern, locale) => {
+  try {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return '-';
+    // date-fns: format lève "Invalid time value" si date invalide
+    // On garde une vérification défensive pour ne jamais crasher l'UI
+    return format(date, pattern, { locale });
+  } catch {
+    return '-';
+  }
+};
+
 const ClientsPage = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +83,8 @@ const ClientsPage = () => {
         const transformedClients = response.data.map(client => ({
           id: client._id || client.id,
           name: `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.name || 'Utilisateur',
+          firstName: client.firstName || '',
+          lastName: client.lastName || '',
           email: client.email,
           phone: client.phoneNumber || client.phone,
           status: client.status || 'active',
@@ -273,19 +287,39 @@ const ClientsPage = () => {
   const handleSaveClient = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
-    
+
+    if (!editingClient?.id) {
+      setError('Création de client non implémentée');
+      return;
+    }
+
+    const fullName = String(formData.get('name') || '').trim();
+    const nameParts = fullName.split(' ').filter(Boolean);
+    const parsedFirstName = nameParts[0] || editingClient.firstName;
+    const parsedLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : editingClient.lastName;
+
     const clientData = {
-      name: formData.get('name'),
+      firstName: parsedFirstName,
+      lastName: parsedLastName,
       email: formData.get('email'),
-      phone: formData.get('phone'),
-      avatar: uploadedImage,
+      phoneNumber: formData.get('phone'),
     };
 
+    // Image: pour l'instant on sauvegarde l'URL locale (upload non implémenté côté serveur)
+    if (uploadedImage) {
+      clientData.profileImage = uploadedImage;
+    }
+
     try {
-      // TODO: Appel API pour sauvegarder le client
-      console.log('Saving client:', clientData);
-      handleCloseEditDialog();
+      const response = await adminService.updateClient(editingClient.id, clientData);
+      if (response.success) {
+        await loadClients();
+        handleCloseEditDialog();
+      } else {
+        setError(response.error || 'Erreur lors de la sauvegarde du client');
+      }
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde du client:', error);
       setError('Erreur lors de la sauvegarde du client');
     }
   };
@@ -384,7 +418,7 @@ const ClientsPage = () => {
                           )}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Inscrit le {format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: fr })}
+                          Inscrit le {safeFormatDate(client.createdAt, 'dd/MM/yyyy', fr)}
                         </Typography>
                       </Box>
                     </Box>
@@ -414,7 +448,7 @@ const ClientsPage = () => {
                     </Button>
                   </TableCell>
                   <TableCell>
-                    {format(new Date(client.lastLogin), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                    {safeFormatDate(client.lastLogin, 'dd/MM/yyyy HH:mm', fr)}
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="Modifier">
@@ -476,10 +510,10 @@ const ClientsPage = () => {
                     <TableCell>{booking.residenceName}</TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        Du {format(new Date(booking.checkIn), 'dd/MM/yyyy', { locale: fr })}
+                        Du {safeFormatDate(booking.checkIn, 'dd/MM/yyyy', fr)}
                       </Typography>
                       <Typography variant="body2">
-                        Au {format(new Date(booking.checkOut), 'dd/MM/yyyy', { locale: fr })}
+                        Au {safeFormatDate(booking.checkOut, 'dd/MM/yyyy', fr)}
                       </Typography>
                     </TableCell>
                     <TableCell>

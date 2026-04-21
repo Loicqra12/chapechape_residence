@@ -7,7 +7,10 @@ class SettingsService {
    */
   async getSettings(category = null) {
     try {
-      const response = await axios.get(`${API_URL}/superadmin/settings`);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/superadmin/settings`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
 
       if (response.data.success && response.data.data) {
         // Group settings by category
@@ -52,7 +55,14 @@ class SettingsService {
         settingsObj[setting.key] = setting.value;
       });
 
-      const response = await axios.put(`${API_URL}/superadmin/settings`, settingsObj);
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API_URL}/superadmin/settings`,
+        settingsObj,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        }
+      );
       return {
         success: true,
         data: response.data.data

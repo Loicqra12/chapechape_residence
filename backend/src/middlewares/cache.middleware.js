@@ -1,5 +1,16 @@
-const redisClient = require('../config/redis');
+const redisModule = require('../config/redis');
 const logger = require('../utils/logger');
+
+/** Instance ioredis (le module redis exporte une fonction + helpers ; .get n’est pas sur la fonction). */
+const getRedis = () => {
+    if (redisModule && typeof redisModule.getClient === 'function') {
+        return redisModule.getClient();
+    }
+    if (redisModule && redisModule.client) {
+        return redisModule.client;
+    }
+    return typeof redisModule === 'function' ? redisModule() : redisModule;
+};
 
 /**
  * Middleware de cache avancé utilisant Redis
@@ -30,12 +41,14 @@ const cacheMiddleware = (options = {}) => {
         }
 
         try {
-            // Générer une clé de cache
-            const cacheKey = keyGenerator 
+            // Clé : URL + segment auth pour éviter de servir une réponse « publique » à un utilisateur connecté
+            const authSegment = req.headers.authorization ? 'auth:' : 'anon:';
+            const cacheKey = keyGenerator
                 ? keyGenerator(req)
-                : `${prefix}${req.originalUrl}`;
+                : `${prefix}${authSegment}${req.originalUrl}`;
 
             // Tenter de récupérer depuis le cache
+            const redisClient = getRedis();
             const cachedData = await redisClient.get(cacheKey);
             
             if (cachedData) {
@@ -50,12 +63,13 @@ const cacheMiddleware = (options = {}) => {
             const originalJson = res.json;
             res.json = function(body) {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    try {
-                        redisClient.set(cacheKey, JSON.stringify(body), 'EX', duration);
-                        logger.debug(`Cache set: ${cacheKey}, TTL: ${duration}s`);
-                    } catch (error) {
-                        logger.error(`Erreur lors de la mise en cache: ${error.message}`);
-                    }
+                    const rc = getRedis();
+                    Promise.resolve(
+                        rc.set(cacheKey, JSON.stringify(body), 'EX', duration)
+                    ).catch((err) => {
+                        logger.error(`Erreur lors de la mise en cache Redis: ${err.message}`);
+                    });
+                    logger.debug(`Cache set: ${cacheKey}, TTL: ${duration}s`);
                 }
                 return originalJson.call(this, body);
             };

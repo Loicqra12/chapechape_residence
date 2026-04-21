@@ -34,6 +34,17 @@ class NotificationService {
             if (user.deviceTokens && user.deviceTokens.length &&
                 (!user.notificationSettings || user.notificationSettings.pushEnabled !== false)) {
                 try {
+                    const pushType = notificationTypes.getPushTypeByNotificationType(type);
+                    const deepLink = notificationTypes.getDeepLinkByNotificationType(type, data);
+                    const entityId =
+                        data.conversationId ||
+                        data.chatId ||
+                        data.bookingId ||
+                        data.reservationId ||
+                        data.paymentId ||
+                        data.payoutId ||
+                        null;
+
                     await oneSignalService.sendToMultipleUsers(
                         user.deviceTokens,
                         'ChapeChape Notification',
@@ -41,6 +52,9 @@ class NotificationService {
                         {
                             notificationId: notification._id.toString(),
                             type,
+                            pushType,
+                            deepLink,
+                            entityId,
                             ...data
                         }
                     );
@@ -311,8 +325,15 @@ class NotificationService {
         // Créer la notification
         const notification = await this.createNotification(partnerId, type, message, data);
 
-        // Envoyer un email
-        await emailService.sendPartnerNotification(partnerId, type, data);
+        // Envoyer un email — sendPartnerNotification attend un objet avec .email, pas un ID
+        try {
+            const partnerUser = await User.findById(partnerId);
+            if (partnerUser) {
+                await emailService.sendPartnerNotification(partnerUser, type, data);
+            }
+        } catch (emailErr) {
+            logger.error('Erreur email notification partner:', emailErr);
+        }
 
         return notification;
     }
@@ -331,6 +352,58 @@ class NotificationService {
         );
 
         return notifications;
+    }
+
+    /**
+     * Notifier la confirmation de paiement — appelé par payment-timer.service.js
+     * @param {Object} reservation - Réservation avec user, residence et partner peuplés
+     */
+    async sendPaymentConfirmationNotification(reservation) {
+        try {
+            if (!reservation || !reservation.user) {
+                logger.warn('Données insuffisantes pour notification confirmation paiement');
+                return null;
+            }
+
+            const residenceName = reservation.residence?.title || 'votre résidence';
+            const message = `Paiement confirme ! Votre reservation a "${residenceName}" du ${new Date(reservation.checkIn).toLocaleDateString('fr-FR')} est confirmee.`;
+
+            // Notification in-app client
+            const notification = await this.createNotification(
+                reservation.user._id,
+                notificationTypes.CLIENT.BOOKING_CONFIRMED,
+                message,
+                {
+                    reservationId: reservation._id.toString(),
+                    residenceName,
+                    checkIn: reservation.checkIn,
+                    checkOut: reservation.checkOut,
+                    amount: reservation.totalPrice
+                }
+            );
+
+            // Email de confirmation de paiement (template 8)
+            if (reservation.user.email) {
+                try {
+                    await emailService.sendPaymentConfirmationEmail(reservation.user, {
+                        residenceName,
+                        checkIn: new Date(reservation.checkIn).toLocaleDateString('fr-FR'),
+                        checkOut: new Date(reservation.checkOut).toLocaleDateString('fr-FR'),
+                        amount: reservation.totalPrice,
+                        paymentMethod: reservation.paymentMethod || 'Mobile Money'
+                    });
+                } catch (emailErr) {
+                    logger.error('Erreur email confirmation paiement:', emailErr);
+                }
+            }
+
+            logger.info(`Notification confirmation paiement envoyee pour reservation ${reservation._id}`);
+            return notification;
+
+        } catch (error) {
+            logger.error('Erreur notification confirmation paiement:', error);
+            throw error;
+        }
     }
 
     // Supprimer les anciennes notifications

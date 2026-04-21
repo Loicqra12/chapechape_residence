@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +9,7 @@ import 'package:chapechape_client/presentation/screens/booking_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/login_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/register_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/forgot_password_screen.dart';
+import 'package:chapechape_client/presentation/screens/auth/reset_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/chat_conversation_screen.dart';
 // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
 // import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
@@ -48,12 +51,61 @@ class AppRouter {
   static late final ApiService _apiService;
   static late final ChatService chatService;
 
+  static StreamSubscription<Uri>? _deepLinkSubscription;
+
   static Future<void> initialize({
     required ChatService chatServiceInstance,
     required ApiService apiServiceInstance,
   }) async {
     chatService = chatServiceInstance;
     _apiService = apiServiceInstance;
+  }
+
+  /// Lance le listener deep link. À appeler une fois après initialize().
+  static Future<void> initDeepLinks() async {
+    final appLinks = AppLinks();
+
+    // Lien initial : app lancée via deep link depuis un état fermé
+    try {
+      final initialUri = await appLinks.getInitialLink();
+      if (initialUri != null) {
+        _handleDeepLink(initialUri);
+      }
+    } catch (_) {}
+
+    // Liens entrants : app déjà ouverte
+    _deepLinkSubscription = appLinks.uriLinkStream.listen(
+      _handleDeepLink,
+      onError: (_) {},
+    );
+  }
+
+  static void _handleDeepLink(Uri uri) {
+    // HTTPS : https://presentation.chapechaperesidence.com/reset-password/{token}
+    // Custom scheme : chapechape://reset-password/{token}
+    final isHttpsReset = (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.pathSegments.length >= 2 &&
+        uri.pathSegments[0] == 'reset-password';
+
+    final isCustomReset = uri.scheme == 'chapechape' &&
+        uri.host == 'reset-password' &&
+        uri.pathSegments.isNotEmpty;
+
+    if (isHttpsReset) {
+      final token = uri.pathSegments[1];
+      if (token.isNotEmpty) {
+        router.go('/reset-password/$token');
+      }
+    } else if (isCustomReset) {
+      final token = uri.pathSegments[0];
+      if (token.isNotEmpty) {
+        router.go('/reset-password/$token');
+      }
+    }
+  }
+
+  static void dispose() {
+    _deepLinkSubscription?.cancel();
   }
 
   // Helper pour vérifier si l'utilisateur est authentifié
@@ -87,6 +139,11 @@ class AppRouter {
     initialLocation: '/splash',
     debugLogDiagnostics: true, // Activer les logs de diagnostic
     routes: [
+      // Racine : l’app n’expose pas de page sur `/` (accueil = `/home` dans le ShellRoute).
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/home',
+      ),
       GoRoute(
         path: '/splash',
         name: 'splash',
@@ -132,6 +189,13 @@ class AppRouter {
         path: '/forgot-password',
         name: 'forgot_password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password/:token',
+        name: 'reset_password',
+        builder: (context, state) => ResetPasswordScreen(
+          token: state.pathParameters['token']!,
+        ),
       ),
       ShellRoute(
         builder: (context, state, child) => MainScreen(child: child),

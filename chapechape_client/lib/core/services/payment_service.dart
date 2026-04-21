@@ -385,7 +385,8 @@ class PaymentService {
       // CORRIGÉ: Le backend retourne les paiements dans 'data', pas 'payments'
       final List<dynamic> paymentsData = response.data['data'] ?? [];
       return paymentsData
-          .map((paymentJson) => Payment.fromJson(paymentJson))
+          .map((paymentJson) =>
+              Payment.fromBackendJson(Map<String, dynamic>.from(paymentJson as Map)))
           .toList();
     } on DioException catch (e) {
       throw Exception(

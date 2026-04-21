@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
+
+const maskMongoUri = (uri = '') => uri.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@');
 
 const connectDB = async () => {
     try {
-        console.log('Trying to connect to MongoDB with URI:', process.env.MONGODB_URI);
+        logger.info(`Trying to connect to MongoDB: ${maskMongoUri(process.env.MONGODB_URI || '')}`);
         
         // Options modernes pour MongoDB driver v4+
         const options = {
@@ -16,10 +19,18 @@ const connectDB = async () => {
         };
         
         const conn = await mongoose.connect(process.env.MONGODB_URI, options);
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
+        logger.info(`MongoDB Connected: ${conn.connection.host}`);
+
+        mongoose.connection.on('disconnected', () => {
+            logger.error('MongoDB disconnected');
+        });
+
+        mongoose.connection.on('reconnected', () => {
+            logger.info('MongoDB reconnected');
+        });
     } catch (error) {
-        console.error('MongoDB connection error:', error);
-        process.exit(1);
+        logger.error('MongoDB connection error:', error);
+        throw error;
     }
 };
 

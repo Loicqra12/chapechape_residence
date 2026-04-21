@@ -97,22 +97,28 @@ class AuthInterceptor extends Interceptor {
       );
       
       if (response.statusCode == 200 && response.data != null) {
-        final Map<String, dynamic> data = response.data;
-        
-        if (data['token'] != null) {
-          await storage.write(key: 'token', value: data['token']);
-          
-          // Si un nouveau refresh token est fourni, le sauvegarder aussi
+        final raw = response.data;
+        final Map<String, dynamic> data = raw is Map<String, dynamic>
+            ? raw
+            : Map<String, dynamic>.from(raw as Map);
+        // Backend: accessToken (+ refreshToken) — aligné avec AuthService._refreshTokenIfNeeded
+        final access = data['token'] ?? data['accessToken'];
+
+        if (access != null && access is String && access.isNotEmpty) {
+          await storage.write(key: 'token', value: access);
+
           if (data['refreshToken'] != null) {
-            await storage.write(key: 'refresh_token', value: data['refreshToken']);
+            await storage.write(
+                key: 'refresh_token', value: data['refreshToken'] as String);
           }
-          
+
           debugPrint('Token rafraîchi avec succès');
           return true;
         }
       }
-      
-      debugPrint('Échec du rafraîchissement du token: ${response.statusCode}');
+
+      debugPrint(
+          'Échec du rafraîchissement du token: HTTP ${response.statusCode}, corps sans token/accessToken');
       return false;
     } catch (e) {
       debugPrint('Erreur lors du rafraîchissement du token: $e');

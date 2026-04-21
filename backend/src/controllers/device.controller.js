@@ -97,6 +97,12 @@ exports.updateNotificationPreferences = asyncHandler(async (req, res, next) => {
         if (categories.promotions !== undefined) {
             updateData['notificationSettings.categories.promotions'] = categories.promotions;
         }
+        if (categories.messages !== undefined) {
+            updateData['notificationSettings.categories.messages'] = categories.messages;
+        }
+        if (categories.payments !== undefined) {
+            updateData['notificationSettings.categories.payments'] = categories.payments;
+        }
         if (categories.system !== undefined) {
             updateData['notificationSettings.categories.system'] = categories.system;
         }
@@ -150,6 +156,8 @@ exports.getNotificationPreferences = asyncHandler(async (req, res, next) => {
                 emailEnabled: true,
                 categories: {
                     bookings: true,
+                    messages: true,
+                    payments: true,
                     promotions: true,
                     system: true
                 }

@@ -10,7 +10,12 @@ class NotificationManager {
   
   final NotificationService _localService = NotificationService();
   final OneSignalService _pushService = OneSignalService();
-  final TwilioService _smsService = TwilioService();
+  TwilioService? _smsService;
+
+  /// À appeler depuis [main] après création du [TwilioService].
+  void bindSmsService(TwilioService service) {
+    _smsService = service;
+  }
   
   bool _isInitialized = false;
   
@@ -108,8 +113,13 @@ class NotificationManager {
       if (notifyGuestBySms && guestPhone != null) {
         final smsMessage = 'ChapeChape: Votre réservation à $residenceName est confirmée. '
             'Référence: $bookingId. Détails sur l\'app.';
-        await _smsService.sendSMS(guestPhone, smsMessage);
-        debugPrint('📞 SMS confirmation envoyé au client');
+        final sms = _smsService;
+        if (sms == null) {
+          debugPrint('⚠️ SMS confirmation ignoré: TwilioService non configuré');
+        } else {
+          await sms.sendSMS(guestPhone, smsMessage);
+          debugPrint('📞 SMS confirmation demandé pour le client');
+        }
       }
       
       // 3. Push notification au partner (via backend en production)

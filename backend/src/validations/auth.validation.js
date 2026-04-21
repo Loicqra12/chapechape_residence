@@ -179,6 +179,19 @@ const resendVerificationCode = {
     })
 };
 
+const changePassword = {
+    body: Joi.object().keys({
+        currentPassword: Joi.string().required().messages({
+            'any.required': 'Le mot de passe actuel est obligatoire'
+        }),
+        newPassword: Joi.string().required().custom(password),
+        confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+            'any.only': 'La confirmation doit correspondre au nouveau mot de passe',
+            'any.required': 'La confirmation du mot de passe est obligatoire'
+        })
+    })
+};
+
 module.exports = {
     register,
     registerPartner,
@@ -192,5 +205,6 @@ module.exports = {
     facebookAuth,
     requestVerificationCode,
     verifyCode,
-    resendVerificationCode
+    resendVerificationCode,
+    changePassword
 };

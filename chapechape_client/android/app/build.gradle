@@ -82,7 +82,7 @@ android {
         manifestPlaceholders = [
             onesignal_app_id: '43531899-4645-4f52-a2bf-f4e4a4095513',
             onesignal_channel_id: "b80d5093-5e1f-480e-a42f-a0ccb009e3f2",
-            onesignal_firebase_default_notification_icon: "@mipmap/ic_launcher",
+            onesignal_firebase_default_notification_icon: "@drawable/ic_stat_notification",
             applicationName: "io.flutter.app.FlutterApplication"
         ]
     }

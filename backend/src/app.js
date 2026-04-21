@@ -10,6 +10,7 @@ const {
 const {
   csrfMiddleware,
   generateCsrfToken,
+  csrfProtection,
 } = require("./middlewares/csrf-custom.middleware");
 const cache = require("./middlewares/cache.middleware");
 const cors = require("cors");
@@ -17,7 +18,6 @@ const morgan = require("morgan");
 const path = require("path");
 const compression = require("compression");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpecs = require("./config/swagger");
@@ -68,6 +68,20 @@ const app = express();
 
 // Sentry middlewares sont maintenant gérés automatiquement par instrument.js
 
+// Webhooks Wave (HMAC sur corps brut) — AVANT express.json() pour garder le Buffer
+const paymentController = require("./controllers/payment/payment.controller");
+const payoutController = require("./controllers/payout.controller");
+app.post(
+  "/api/payments/wave/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.handleWaveWebhook
+);
+app.post(
+  "/api/payouts/wave/webhook",
+  express.raw({ type: "application/json" }),
+  payoutController.handleWavePayoutWebhook
+);
+
 // IMPORTANT: Configurer les middlewares de base AVANT toute définition de route
 app.use(express.json()); // Pour parser les requêtes avec JSON payloads
 app.use(express.urlencoded({ extended: true })); // Pour parser les requêtes avec URL-encoded payloads
@@ -106,7 +120,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_ROUTES !== 
         });
       }
 
-      console.log(`Envoi d'un email de test à : ${email}`);
+      logger.info(`Envoi d'un email de test à : ${email}`);
 
       // Utiliser le service d'email avec API Brevo
       const result = await emailService.sendEmail({
@@ -136,7 +150,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_ROUTES !== 
         result
       });
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de l\'email de test:', error);
+      logger.error("Erreur lors de l'envoi de l'email de test:", error);
       res.status(500).json({
         success: false,
         message: 'Erreur lors de l\'envoi de l\'email',
@@ -160,7 +174,7 @@ if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !==
         });
       }
 
-      console.log(`Envoi d'une notification de test: ${title}`);
+      logger.info(`Envoi d'une notification de test: ${title}`);
 
       let result;
       if (segment) {
@@ -177,7 +191,7 @@ if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !==
         result
       });
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de la notification:', error);
+      logger.error("Erreur lors de l'envoi de la notification:", error);
       res.status(500).json({
         success: false,
         message: 'Erreur lors de l\'envoi de la notification',
@@ -196,6 +210,41 @@ app.get("/health", (req, res) => {
   });
 });
 
+// ====================================================================
+// ANDROID APP LINKS — .well-known/assetlinks.json (optionnel sur l’hôte API)
+// La vérification Android utilise le MÊME domaine que l’URL du lien email
+// (souvent presentation.* = site statique chapechape_sitepresentation, pas ce serveur).
+// Le fichier canonique est : chapechape_sitepresentation/public/.well-known/assetlinks.json
+// Gardez APP_CLIENT_SHA256_FINGERPRINT / APP_PARTNER_SHA256_FINGERPRINT dans .env si vous
+// proxy ce chemin vers l’API ou pour cohérence locale.
+// ====================================================================
+app.get("/.well-known/assetlinks.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "com.chapechape.client",
+        sha256_cert_fingerprints: [
+          process.env.APP_CLIENT_SHA256_FINGERPRINT || "REMPLACER_PAR_VOTRE_SHA256_CLIENT"
+        ]
+      }
+    },
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "com.chapechape.chapechape_partner",
+        sha256_cert_fingerprints: [
+          process.env.APP_PARTNER_SHA256_FINGERPRINT || "REMPLACER_PAR_VOTRE_SHA256_PARTNER"
+        ]
+      }
+    }
+  ]);
+});
+
 // Import des routes de health checks avancés
 const healthRoutes = require("./routes/health.routes");
 const pingRoutes = require("./routes/ping.routes");
@@ -208,13 +257,6 @@ const {
   getPromotion,
   getResidencePromotions
 } = require("./controllers/promotion/promotion.controller");
-
-// Routes publiques de promotions (sans authentification)
-app.get("/api/promotions", cache(900), getPromotions);
-app.get("/api/promotions/active", cache(900), getActivePromotions);
-app.get("/api/promotions/exclusive", cache(900), getExclusivePromotions);
-app.get("/api/promotions/residence/:id", cache(900), getResidencePromotions);
-app.get("/api/promotions/:id", getPromotion);
 
 // Sécurité
 app.use(
@@ -248,12 +290,23 @@ app.use(
   })
 );
 
+// Routes publiques de promotions (sans authentification)
+// Déclarées après Helmet/CORS pour garantir les headers de sécurité sur les réponses.
+app.get("/api/promotions", cache(900), getPromotions);
+app.get("/api/promotions/active", cache(900), getActivePromotions);
+app.get("/api/promotions/exclusive", cache(900), getExclusivePromotions);
+app.get("/api/promotions/residence/:id", cache(900), getResidencePromotions);
+app.get("/api/promotions/:id", getPromotion);
+
 // ====================================================================
 // RATE LIMITING MULTI-NIVEAUX (Sécurité renforcée)
 // ====================================================================
 const {
   globalLimiter,
-  authLimiter,
+  authLoginLimiter,
+  authRegisterLimiter,
+  authForgotPasswordLimiter,
+  authVerifyCodeLimiter,
   paymentLimiter,
   userLimiter,
   uploadLimiter
@@ -266,7 +319,7 @@ app.use('/api/', globalLimiter);
 app.use(compression());
 
 // Middlewares
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // Servir les fichiers statiques publiquement pour les images (AVANT sécurité)
 app.use(
@@ -335,16 +388,21 @@ app.use("/api/residences", cache({
   duration: 3600,
   condition: (req) => req.method === 'GET' && !req.headers.authorization
 }), residenceRoutes);
-app.use("/api/reviews", cache(1800), reviewRoutes);
+app.use("/api/reviews", cache({
+  duration: 1800,
+  condition: (req) => req.method === "GET" && !req.headers.authorization,
+}), reviewRoutes);
 
 // ====================================================================
 // ROUTES PROTÉGÉES PAR RATE LIMITING SPÉCIFIQUE
 // ====================================================================
 
-// Routes d'authentification - Rate limit strict (5/15min)
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
-app.use("/api/auth/register-partner", authLimiter);
+// Routes d'authentification — login strict ; inscription plus tolérante (erreurs 400 comptées)
+app.use("/api/auth/login", authLoginLimiter);
+app.use("/api/auth/register", authRegisterLimiter);
+app.use("/api/auth/register-partner", authRegisterLimiter);
+app.use("/api/auth/forgot-password", authForgotPasswordLimiter);
+app.use("/api/auth/verify-code", authVerifyCodeLimiter);
 app.use("/api/auth", authRoutes);
 
 app.use("/api/users", userRoutes);
@@ -389,7 +447,9 @@ if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !==
   console.log('✅ SÉCURITÉ : Routes de test DÉSACTIVÉES en production');
 }
 */
-console.log('🔧 DIAGNOSTIC : Routes de test temporairement désactivées');
+if (process.env.NODE_ENV !== "production") {
+  logger.info("DIAGNOSTIC : Routes de test temporairement désactivées");
+}
 
 // Route de test
 app.get("/", (req, res) => {
@@ -398,13 +458,10 @@ app.get("/", (req, res) => {
 
 // Ajouter un endpoint pour vérifier le CSRF
 app.get("/api/csrf-token", (req, res) => {
-  // Importer le middleware CSRF qui utilise csurf
-  const { csrfProtection } = require("./middlewares/csrf-custom.middleware");
-
   // Appliquer csrfProtection pour générer un token
   csrfProtection(req, res, (err) => {
     if (err) {
-      console.error(`Erreur lors de la génération du token CSRF: ${err.message}`);
+      logger.error(`Erreur lors de la génération du token CSRF: ${err.message}`);
       return res.status(500).json({
         success: false,
         message: "Erreur lors de la génération du token CSRF",
@@ -421,11 +478,9 @@ app.get("/api/csrf-token", (req, res) => {
 // 🔒 Route de test Sentry (STRICTEMENT développement uniquement)
 if (process.env.NODE_ENV === 'development' && process.env.ENABLE_DEBUG_ROUTES !== 'false') {
   app.get("/debug-sentry", function mainHandler(req, res) {
-    console.log('⚠️ Route de debug Sentry appelée - Développement uniquement');
+    logger.warn("Route de debug Sentry appelée - Développement uniquement");
     throw new Error("Test Sentry - Erreur intentionnelle pour vérifier la capture!");
   });
-} else if (process.env.NODE_ENV === 'production') {
-  console.log('✅ SÉCURITÉ : Route debug Sentry DÉSACTIVÉE en production');
 }
 
 // Middleware de sécurité pour les fichiers

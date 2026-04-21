@@ -4,7 +4,7 @@ const Reservation = require('../models/reservation.model');
 const Partner = require('../models/partner.model');
 const cinetPayTransferService = require('./cinetpay-transfer.service');
 const notificationService = require('./notification.service');
-const agenda = require('./agenda.service');
+const { agenda } = require('./agenda.service');
 const logger = require('../utils/logger');
 
 /**
@@ -25,6 +25,10 @@ class PayoutService {
         this.retryDelays = [30, 60, 180, 360, 720]; // minutes
         
         logger.info(`PayoutService initialisé - Commission: ${this.defaultCommissionRate * 100}%`);
+    }
+
+    isScheduledStatus(status) {
+        return status === 'PAYOUT_SCHEDULED' || status === 'scheduled';
     }
 
     // ===============================
@@ -158,7 +162,7 @@ class PayoutService {
             logger.info(`Exécution payout ${payout.payout_id} (${payout.net_amount} XOF)`);
             
             // Vérifier que le payout est exécutable
-            if (payout.status !== 'PAYOUT_SCHEDULED') {
+            if (!this.isScheduledStatus(payout.status)) {
                 throw new Error(`Payout pas en statut SCHEDULED: ${payout.status}`);
             }
 

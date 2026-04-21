@@ -20,9 +20,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), paymentContro
 // Webhook CinetPay (pas de protection car appelé par CinetPay)
 router.post('/cinetpay/webhook', express.urlencoded({ extended: true }), paymentController.handleCinetPayWebhook);
 
-// Webhook Wave (pas de protection car appelé par Wave)
-// Utilisation de express.raw() pour accéder au corps brut pour vérification HMAC
-router.post('/wave/webhook', express.raw({ type: 'application/json' }), paymentController.handleWaveWebhook);
-
+// Webhook Wave : enregistré dans app.js avant express.json() (corps brut pour HMAC)
 
 module.exports = router;

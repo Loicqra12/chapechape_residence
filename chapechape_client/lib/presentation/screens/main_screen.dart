@@ -120,7 +120,7 @@ class _MainScreenState extends State<MainScreen> {
     if (location.startsWith('/profile/settings/storage')) return Text('Stockage et cache', style: titleStyle);
     if (location.startsWith('/profile/settings/about')) return Text('À propos', style: titleStyle);
     if (location.startsWith('/profile/settings')) return Text('Paramètres', style: titleStyle);
-    if (location.startsWith('/profile/wallet')) return Text('Portefeuille et récompenses', style: titleStyle);
+    if (location.startsWith('/profile/payments')) return Text('Mes paiements et justificatifs', style: titleStyle);
     if (location.startsWith('/profile/payment-methods')) return Text('Moyens de paiement', style: titleStyle);
     if (location.startsWith('/profile/help')) return Text('Aide et support', style: titleStyle);
     if (location.startsWith('/bookings')) return Text('Mes réservations', style: titleStyle);
@@ -174,6 +174,30 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _handleAppBarBackOrMenu(BuildContext context, String location) {
+    final shouldGoBack = _isSubRoute(location) || _canPop(context);
+    if (!shouldGoBack) {
+      _showLocationMenu(context);
+      return;
+    }
+
+    if (_canPop(context)) {
+      context.pop();
+      return;
+    }
+
+    // Fallback explicite quand la route a été ouverte via `go` (pas de pile à pop).
+    if (location.startsWith('/bookings')) {
+      context.go('/profile');
+      return;
+    }
+    if (location.startsWith('/profile/')) {
+      context.go('/profile');
+      return;
+    }
+    context.go('/home');
+  }
+
   @override
   Widget build(BuildContext context) {
     _logger.debug('Construction du MainScreen');
@@ -201,13 +225,7 @@ class _MainScreenState extends State<MainScreen> {
                         : Icons.menu,
                   ),
                   color: Theme.of(context).colorScheme.onSurface,
-                  onPressed: () {
-                    if (_isSubRoute(location) || _canPop(context)) {
-                      context.pop();
-                    } else {
-                      _showLocationMenu(context);
-                    }
-                  },
+                  onPressed: () => _handleAppBarBackOrMenu(context, location),
                   tooltip:
                       (_isSubRoute(location) || _canPop(context)) ? 'Retour' : 'Menu',
                   padding: EdgeInsets.zero,
@@ -235,7 +253,9 @@ class _MainScreenState extends State<MainScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
-                const NotificationButton(),
+                // Pas de 2e cloche sur l’écran Notifications (déjà l’onglet dédié).
+                if (!location.startsWith('/notifications'))
+                  const NotificationButton(),
               ],
               title: _buildAppBarTitle(context, location),
               centerTitle: false,
@@ -425,9 +445,11 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// Barre du haut en overlay sur l'écran d'accueil : même visuel que l'ancienne AppBar, animée au scroll.
+  /// Icônes en [onSurface] : le hero est clair (or/beige) ; le blanc hérité du thème « sombre » les rendait invisibles.
   Widget _buildHomeOverlayAppBar(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return IconTheme(
-      data: const IconThemeData(color: Colors.white),
+      data: IconThemeData(color: cs.onSurface),
       child: Material(
         color: Colors.transparent,
         child: Container(
@@ -442,13 +464,14 @@ class _MainScreenState extends State<MainScreen> {
             Container(
               margin: EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.2),
+                color: cs.surface.withOpacity(0.92),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                border: Border.all(color: cs.outline.withOpacity(0.22), width: 1),
+                boxShadow: AppTheme.softShadow,
               ),
               child: IconButton(
                 icon: const Icon(Icons.menu),
-                color: Colors.white,
+                color: cs.onSurface,
                 onPressed: () => _showLocationMenu(context),
                 tooltip: 'Menu',
                 padding: EdgeInsets.zero,
@@ -461,20 +484,20 @@ class _MainScreenState extends State<MainScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.location_on, size: 16, color: Colors.white),
+                          Icon(Icons.location_on, size: 16, color: AppTheme.primaryColor),
                           SizedBox(width: AppSpacing.xs),
                           Flexible(
                             child: Text(
                               'À ${_selectedCity!.name}',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.white,
+                                color: cs.onSurface,
                                 fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
                               semanticsLabel: 'Localisation: ${_selectedCity!.name}',
                             ),
                           ),
-                          Icon(Icons.arrow_drop_down, size: 16, color: Colors.white70),
+                          Icon(Icons.arrow_drop_down, size: 16, color: cs.onSurface.withOpacity(0.75)),
                         ],
                       ),
                     )

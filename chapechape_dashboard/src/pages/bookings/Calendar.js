@@ -28,8 +28,13 @@ const localizer = dateFnsLocalizer({
 // Statuts de réservation avec leurs couleurs
 const STATUS_COLORS = {
   pending: '#FFC107',
+  awaiting_approval: '#9C27B0',
+  payment_pending: '#FF9800',
   confirmed: '#4CAF50',
+  in_stay: '#00BCD4',
   cancelled: '#F44336',
+  expired: '#B71C1C',
+  refunded: '#607D8B',
   completed: '#2196F3'
 };
 
@@ -122,7 +127,7 @@ const BookingModal = ({ isOpen, onClose, booking, onStatusChange }) => {
         </div>
 
         <div className="mt-6 flex justify-end space-x-3">
-          {booking.status === 'pending' && (
+          {['pending', 'awaiting_approval', 'payment_pending'].includes(booking.status) && (
             <>
               <button
                 onClick={() => handleStatusChange('confirmed')}
@@ -138,7 +143,7 @@ const BookingModal = ({ isOpen, onClose, booking, onStatusChange }) => {
               </button>
             </>
           )}
-          {booking.status === 'confirmed' && (
+          {['confirmed', 'in_stay'].includes(booking.status) && (
             <button
               onClick={() => handleStatusChange('completed')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -173,9 +178,10 @@ const BookingCalendar = () => {
 
   const loadBookings = async () => {
     try {
-      const data = await bookingService.getBookings(filters);
+      const data = await bookingService.getBookings({ filters });
+      const reservations = data?.bookings || [];
       // Transformer les données pour le calendrier
-      const formattedBookings = data.map(booking => ({
+      const formattedBookings = reservations.map(booking => ({
         id: booking._id,
         title: `${booking.residence?.title} - ${booking.client?.name}`,
         start: new Date(booking.visitDate),
@@ -185,6 +191,7 @@ const BookingCalendar = () => {
       }));
       setBookings(formattedBookings);
     } catch (error) {
+      console.error('Erreur lors du chargement des réservations:', error);
       toast.error('Erreur lors du chargement des réservations');
     }
   };
@@ -212,7 +219,7 @@ const BookingCalendar = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `reservations.${format}`;
+      a.download = format === 'excel' ? 'reservations.xlsx' : `reservations.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

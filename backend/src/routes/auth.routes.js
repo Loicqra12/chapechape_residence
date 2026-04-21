@@ -14,7 +14,8 @@ const {
     forgotPassword,
     resetPassword,
     refreshToken,
-    updateProfile
+    updateProfile,
+    changePassword
 } = require('../controllers/auth/auth.controller');
 const { protect, authorize, validateRefreshToken } = require('../middlewares/auth.middleware');
 
@@ -23,6 +24,8 @@ const {
     verifyCode,
     resendVerificationCode
 } = require('../controllers/auth/verification.controller');
+
+const { otpLimiter } = require('../middlewares/rate-limit.middleware');
 
 /**
  * @swagger
@@ -198,6 +201,7 @@ router.post('/refresh-token', validateRefreshToken, refreshToken);
 // Routes protégées
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.put('/password', protect, validate(authValidation.changePassword), changePassword);
 
 // Upload profile picture
 const uploadMiddleware = require('../middlewares/upload.middleware');
@@ -284,8 +288,8 @@ router.post('/google', validate(authValidation.googleAuth), googleAuthController
 router.post('/facebook', validate(authValidation.facebookAuth), facebookAuthController.handleFacebookAuth);
 
 // Vérification de numéro de téléphone par SMS
-router.post('/request-verification-code', validate(authValidation.requestVerificationCode), requestVerificationCode);
+router.post('/request-verification-code', otpLimiter, validate(authValidation.requestVerificationCode), requestVerificationCode);
 router.post('/verify-code', validate(authValidation.verifyCode), verifyCode);
-router.post('/resend-verification-code', validate(authValidation.resendVerificationCode), resendVerificationCode);
+router.post('/resend-verification-code', otpLimiter, validate(authValidation.resendVerificationCode), resendVerificationCode);
 
 module.exports = router;

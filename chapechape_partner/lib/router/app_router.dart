@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import '../core/models/residence/residence.dart';
 import '../presentation/screens/auth/forgot_password_screen.dart';
 import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/auth/register_screen.dart';
+import '../presentation/screens/auth/reset_password_screen.dart';
 import '../presentation/screens/main/main_screen.dart';
 import '../presentation/screens/onboarding/onboarding_screen.dart';
 import '../presentation/screens/residences/edit_residence_screen.dart';
@@ -56,11 +58,69 @@ CustomTransitionPage<T> buildPageWithTransition<T>({
 }
 
 class AppRouter {
+  static AppRouter? _activeRouter;
   final AuthBloc authBloc;
+  StreamSubscription<Uri>? _deepLinkSubscription;
 
   AppRouter(this.authBloc) {
-    // Essayer de restaurer la session lors des hot reloads
+    _activeRouter = this;
     _tryRestoreSession();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    final appLinks = AppLinks();
+
+    try {
+      final initialUri = await appLinks.getInitialLink();
+      if (initialUri != null) {
+        _handleDeepLink(initialUri);
+      }
+    } catch (_) {}
+
+    _deepLinkSubscription = appLinks.uriLinkStream.listen(
+      _handleDeepLink,
+      onError: (_) {},
+    );
+  }
+
+  void _handleDeepLink(Uri uri) {
+    // HTTPS : https://presentation.chapechaperesidence.com/reset-password/{token}
+    // Custom scheme : chapechapepartner://reset-password/{token}
+    final isHttpsReset = (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.pathSegments.length >= 2 &&
+        uri.pathSegments[0] == 'reset-password';
+
+    final isCustomReset = uri.scheme == 'chapechapepartner' &&
+        uri.host == 'reset-password' &&
+        uri.pathSegments.isNotEmpty;
+
+    if (isHttpsReset) {
+      final token = uri.pathSegments[1];
+      if (token.isNotEmpty) {
+        router.go('/auth/reset-password/$token');
+      }
+    } else if (isCustomReset) {
+      final token = uri.pathSegments[0];
+      if (token.isNotEmpty) {
+        router.go('/auth/reset-password/$token');
+      }
+    }
+  }
+
+  void dispose() {
+    _deepLinkSubscription?.cancel();
+    if (identical(_activeRouter, this)) {
+      _activeRouter = null;
+    }
+  }
+
+  static void navigateFromPush(String route) {
+    final router = _activeRouter?.router;
+    if (router == null) return;
+
+    if (!route.startsWith('/')) return;
+    router.go(route);
   }
 
   Future<void> _tryRestoreSession() async {
@@ -122,6 +182,16 @@ class AppRouter {
           context: context,
           state: state,
           child: const ForgotPasswordScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/auth/reset-password/:token',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: ResetPasswordScreen(
+            token: state.pathParameters['token']!,
+          ),
         ),
       ),
       GoRoute(

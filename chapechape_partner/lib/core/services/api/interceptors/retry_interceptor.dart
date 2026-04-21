@@ -68,9 +68,9 @@ class RetryInterceptor extends Interceptor {
     if (err.response != null) {
       final statusCode = err.response!.statusCode ?? 0;
       
-      // 429 (Too Many Requests) - récupérable avec temporisation
-      if (statusCode == 429) return true;
-      
+      // 429 : ne pas retenter (multiplie les hits sur le rate limit serveur)
+      if (statusCode == 429) return false;
+
       // 500, 502, 503, 504 - erreurs serveur récupérables
       if (statusCode == 500 || statusCode == 502 || 
           statusCode == 503 || statusCode == 504) return true;

@@ -38,7 +38,7 @@ class FinanceService {
     ];
   }
 
-  async getPayments({ page = 1, limit = 10, filters = {} }) {
+  async getPayments({ page = 1, limit = 10, filters = {}, search = '' }) {
     try {
       // Récupérer les réservations avec leurs paiements via l'endpoint reservations
       const response = await axios.get(`${API_URL}/reservations/my-reservations`, {
@@ -62,9 +62,38 @@ class FinanceService {
         phoneNumber: reservation.user?.phoneNumber || reservation.client?.phoneNumber
       }));
 
+      // Filtrage côté client (les pages Finance passent des filters, mais le backend /reservations/my-reservations ne les applique pas)
+      const startDate = filters?.startDate ? new Date(filters.startDate) : null;
+      const endDate = filters?.endDate ? new Date(filters.endDate) : null;
+      const endDateInclusive = endDate ? new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
+
+      const statusFilter = filters?.status ? String(filters.status) : '';
+      const paymentMethodFilter = filters?.paymentMethod ? String(filters.paymentMethod) : '';
+      const searchQuery = String(search || '').trim().toLowerCase();
+
+      const filtered = payments.filter((p) => {
+        const created = p.createdAt ? new Date(p.createdAt) : null;
+
+        if (startDate && created && created < startDate) return false;
+        if (endDateInclusive && created && created > endDateInclusive) return false;
+
+        if (statusFilter && p.status !== statusFilter) return false;
+        if (paymentMethodFilter && p.paymentMethod !== paymentMethodFilter) return false;
+
+        if (searchQuery) {
+          const ref = p.paymentDetails?.reference || '';
+          const bookingId = p.paymentDetails?.bookingId || '';
+          const phone = p.phoneNumber || '';
+          const haystack = `${ref} ${bookingId} ${phone}`.toLowerCase();
+          if (!haystack.includes(searchQuery)) return false;
+        }
+
+        return true;
+      });
+
       return {
         success: true,
-        data: payments
+        data: filtered.slice(0, limit)
       };
     } catch (error) {
       console.error('Erreur lors de la récupération des paiements:', error);

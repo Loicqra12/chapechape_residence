@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_bloc.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_event.dart';
 import 'package:chapechape_client/core/blocs/payment/payment_state.dart';
 import 'package:chapechape_client/core/models/payment_model.dart';
-import 'package:chapechape_client/core/services/payment_service.dart';
 import 'package:chapechape_client/presentation/widgets/common/inputs/advanced_phone_input_widget.dart';
 import 'package:chapechape_client/core/models/phone_number.dart';
 
 import 'package:chapechape_client/config/theme.dart' hide AppTheme;
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
-import 'package:chapechape_client/core/theme/text_styles.dart';
+
+/// Ligne catalogue paiement (Wave actif ; autres affichés en « Bientôt disponible »).
+class _PaymentMethodRow {
+  final PaymentMethod method;
+  final String title;
+  final String iconAsset;
+  final bool available;
+
+  const _PaymentMethodRow({
+    required this.method,
+    required this.title,
+    required this.iconAsset,
+    required this.available,
+  });
+}
 
 class PaymentScreen extends StatefulWidget {
   // Accepter soit reservationId (pour créer un paiement) soit paymentId (pour consulter un paiement)
@@ -33,24 +48,53 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen>
     with AutomaticKeepAliveClientMixin {
-  PaymentMethod _selectedMethod = PaymentMethod.mobileMoney;
+  /// Seul Wave est activé pour l’instant (API fiable) ; le reste est informatif.
+  static const List<_PaymentMethodRow> _methodCatalog = [
+    _PaymentMethodRow(
+      method: PaymentMethod.wave,
+      title: 'Wave',
+      iconAsset: 'assets/images/payment/wave_money.png',
+      available: true,
+    ),
+    _PaymentMethodRow(
+      method: PaymentMethod.orangeMoney,
+      title: 'Orange Money',
+      iconAsset: 'assets/images/payment/orange_money.png',
+      available: false,
+    ),
+    _PaymentMethodRow(
+      method: PaymentMethod.mtnMoney,
+      title: 'MTN Money',
+      iconAsset: 'assets/images/payment/mtn_money.png',
+      available: false,
+    ),
+    _PaymentMethodRow(
+      method: PaymentMethod.moovMoney,
+      title: 'Moov Money',
+      iconAsset: 'assets/images/payment/moov_money.png',
+      available: false,
+    ),
+    _PaymentMethodRow(
+      method: PaymentMethod.creditCard,
+      title: 'Carte bancaire',
+      iconAsset: 'assets/images/payment/visa.png',
+      available: false,
+    ),
+  ];
+
+  PaymentMethod _selectedMethod = PaymentMethod.wave;
   bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   PaymentIntent? _paymentIntent;
   Payment? _payment;
-  
-  // Variables pour le widget de téléphone avancé
+
   PhoneNumber? _selectedPhoneNumber;
   bool _isPhoneValid = false;
 
   @override
   bool get wantKeepAlive => true;
 
-  // Données pour la commission (par défaut 10%)
   double _commissionRate = 0.10;
-
-  // Liste des méthodes de paiement acceptées
-  List<PaymentMethod> _acceptedMethods = [];
 
   @override
   void initState() {
@@ -69,44 +113,10 @@ class _PaymentScreenState extends State<PaymentScreen>
       context.read<PaymentBloc>().add(
             PreparePayment(
               reservationId: widget.reservationId!,
-              method: _selectedMethod,
+              method: PaymentMethod.wave,
             ),
           );
 
-      // Charger les méthodes de paiement acceptées
-      _loadAcceptedPaymentMethods();
-    }
-  }
-
-  // Nouvelle méthode pour charger les méthodes de paiement acceptées
-  void _loadAcceptedPaymentMethods() async {
-    final paymentService = await PaymentService.initialize();
-
-    try {
-      final methods = await paymentService.getAcceptedPaymentMethods(
-        residenceId: widget.reservationId ?? '',
-      );
-
-      if (mounted) {
-        setState(() {
-          _acceptedMethods = methods;
-          // Sélectionner par défaut la première méthode disponible
-          if (_acceptedMethods.isNotEmpty) {
-            _selectedMethod = _acceptedMethods.first;
-          }
-        });
-      }
-    } catch (e) {
-      // En cas d'erreur, définir quelques méthodes par défaut
-      setState(() {
-        _acceptedMethods = [
-          PaymentMethod.wave,
-          PaymentMethod.orangeMoney,
-          PaymentMethod.moovMoney,
-          PaymentMethod.mtnMoney,
-          PaymentMethod.cash,
-        ];
-      });
     }
   }
 
@@ -117,49 +127,32 @@ class _PaymentScreenState extends State<PaymentScreen>
     }
 
     if (_paymentIntent != null) {
-      // Flux pour tous les paiements mobile money (incluant Wave)
-      if (_selectedMethod == PaymentMethod.wave ||
-          _selectedMethod == PaymentMethod.mobileMoney ||
-          _selectedMethod == PaymentMethod.orangeMoney ||
-          _selectedMethod == PaymentMethod.moovMoney ||
-          _selectedMethod == PaymentMethod.mtnMoney) {
-        // Validation renforcée du numéro de téléphone
-        if (_selectedPhoneNumber?.phoneNumber != null && _selectedPhoneNumber!.phoneNumber!.isNotEmpty) {
-          // Le numéro est déjà formaté par le widget avancé
-          final formattedPhone = _selectedPhoneNumber!.phoneNumber!;
-          
-          // ✅ MARQUER COMME EN COURS
-          setState(() {
-            _isLoading = true;
-          });
-          
-          context.read<PaymentBloc>().add(
-            InitiateExternalPayment(
-              method: _getPaymentMethodString(),
-              reservationId: widget.reservationId ?? '',
-              phoneNumber: formattedPhone,
-              amount: _paymentIntent!.amount,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Veuillez entrer un numéro de téléphone valide'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-        }
-      } else {
-        // Flux pour les cartes bancaires (ancien flux avec PaymentIntent)
-        // D'abord créer l'intention de paiement avec les données complètes
+      // Écran Wave uniquement : pas de SnackBar d’erreur si l’état dérive, on resynchronise.
+      if (_selectedMethod != PaymentMethod.wave) {
+        setState(() => _selectedMethod = PaymentMethod.wave);
+      }
+
+      if (_selectedPhoneNumber?.phoneNumber != null &&
+          _selectedPhoneNumber!.phoneNumber!.isNotEmpty) {
+        final formattedPhone = _selectedPhoneNumber!.phoneNumber!;
+        setState(() {
+          _isLoading = true;
+        });
         context.read<PaymentBloc>().add(
-              CreatePaymentIntent(
+              InitiateExternalPayment(
+                method: 'wave',
                 reservationId: widget.reservationId ?? '',
+                phoneNumber: formattedPhone,
                 amount: _paymentIntent!.amount,
-                method: _selectedMethod,
-                phoneNumber: null, // Pas de téléphone pour les cartes
               ),
             );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Veuillez entrer un numéro de téléphone valide'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -214,24 +207,6 @@ class _PaymentScreenState extends State<PaymentScreen>
     return clean;
   }
 
-  // Obtenir le nom du fournisseur en fonction de la méthode
-  String _getProviderNameForMethod(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.orangeMoney:
-        return 'Orange Money';
-      case PaymentMethod.moovMoney:
-        return 'Moov Money';
-      case PaymentMethod.mtnMoney:
-        return 'MTN Money';
-      case PaymentMethod.wave:
-        return 'Wave';
-      case PaymentMethod.mobileMoney:
-        return 'Mobile Money';
-      default:
-        return 'Mobile Money';
-    }
-  }
-
   String _getPaymentMethodString() {
     switch (_selectedMethod) {
       case PaymentMethod.mobileMoney:
@@ -266,14 +241,24 @@ class _PaymentScreenState extends State<PaymentScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        title: const Text('Paiement'),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: onSurface,
         elevation: 0,
+        iconTheme: IconThemeData(color: onSurface),
+        title: Text(
+          'Moyen de paiement',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: onSurface,
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          color: onSurface,
           onPressed: () {
             // Vérifier si on peut faire pop, sinon aller à l'accueil
             if (Navigator.of(context).canPop()) {
@@ -347,6 +332,8 @@ class _PaymentScreenState extends State<PaymentScreen>
                 'paymentUrl': state.paymentUrl,
                 'expiresAt': state.expiresAt.toIso8601String(),
                 'phoneNumber': state.phoneNumber,
+                'reservationId': state.reservationId,
+                'paymentId': widget.paymentId,
               });
             } else {
               // Garde-fou: création de paiement échouée
@@ -423,11 +410,11 @@ class _PaymentScreenState extends State<PaymentScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildPaymentSummary(),
+            _buildAmountHeroCard(),
             AppSpacing.verticalLg,
-            _buildPaymentMethodSelector(),
+            _buildPaymentMethodSection(),
             AppSpacing.verticalLg,
-            _buildPaymentDetailsForm(),
+            _buildWavePhoneSection(),
             AppSpacing.verticalLg,
             _buildConfirmButton(),
           ],
@@ -436,346 +423,379 @@ class _PaymentScreenState extends State<PaymentScreen>
     );
   }
 
-  Widget _buildPaymentSummary() {
+  Widget _buildAmountHeroCard() {
     if (_paymentIntent == null && _payment == null) {
-      return const Card(
-        child: Padding(
-          padding: AppSpacing.cardPadding,
-          child: Center(
-            child: CircularProgressIndicator(),
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.12),
           ),
+          boxShadow: AppTheme.softShadow,
+        ),
+        child: const Padding(
+          padding: AppSpacing.cardPadding,
+          child: Center(child: CircularProgressIndicator()),
         ),
       );
     }
 
-    // Récupérer le montant du paiement ou de l'intention
     final amount = _payment?.amount ?? _paymentIntent?.amount ?? 0.0;
-
-    // Calculer la commission (10% par défaut)
     final commissionAmount = amount * _commissionRate;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final amountText =
+        '${NumberFormat('#,##0', 'fr_FR').format(amount.round())} FCFA';
 
-    return Card(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.primaryColor.withOpacity(0.22),
+          width: 1.2,
+        ),
+        boxShadow: AppTheme.softShadow,
+      ),
       child: Padding(
-        padding: AppSpacing.cardPadding,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        amountText,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: cs.onSurface,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Montant à payer',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurface.withOpacity(0.55),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.payments_outlined,
+                    color: AppTheme.primaryColor,
+                    size: 26,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: AppSpacing.md),
             Text(
-              'Récapitulatif du paiement',
-              style: Theme.of(context).textTheme.titleLarge,
+              'Frais de service ChapeChape (${(_commissionRate * 100).round()}%) : '
+              '${NumberFormat('#,##0', 'fr_FR').format(commissionAmount.round())} FCFA',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppTheme.errorColor.withOpacity(0.92),
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            const Divider(),
-            _buildDetailRow(
-              'Montant total',
-              '${amount.toStringAsFixed(0)} FCFA',
-              isTotal: true,
-            ),
-            AppSpacing.verticalSm,
-            const Divider(height: 1),
-            AppSpacing.verticalSm,
-            _buildDetailRow(
-              'Frais de service ChapeChape (10%)',
-              '${commissionAmount.toStringAsFixed(0)} FCFA',
-              isNegative: true,
-            ),
-            AppSpacing.verticalSm,
-            const Divider(
-              indent: 16,
-              endIndent: 16,
-              color: Colors.grey,
-            ),
-            AppSpacing.verticalSm,
-            // Montant partenaire masqué pour l'utilisateur final
-            if (_payment?.status != null)
-              Column(
+            if (_payment?.status != null) ...[
+              SizedBox(height: AppSpacing.sm),
+              Divider(height: 1, color: cs.outline.withOpacity(0.15)),
+              SizedBox(height: AppSpacing.sm),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  AppSpacing.verticalMd,
-                  _buildDetailRow(
+                  Text(
                     'Statut',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                  Text(
                     _payment!.status.displayName,
-                    statusColor: _payment!.status.color,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: _payment!.status.color,
+                    ),
                   ),
                 ],
               ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    bool isTotal = false,
-    bool isSubtotal = false,
-    bool isNegative = false,
-    Color? statusColor,
-  }) {
+  Widget _buildPaymentMethodSection() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Méthode de paiement',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
+            color: cs.onSurface,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Wave est disponible. Les autres options arrivent bientôt.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: cs.onSurface.withOpacity(0.55),
+            height: 1.35,
+          ),
+        ),
+        SizedBox(height: AppSpacing.md),
+        ..._methodCatalog.map(_buildMethodTile),
+      ],
+    );
+  }
+
+  Widget _buildMethodTile(_PaymentMethodRow row) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final selected = row.available && _selectedMethod == row.method;
+    final borderColor = selected
+        ? AppTheme.primaryColor
+        : cs.outline.withOpacity(0.18);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: isTotal || isSubtotal ? 16 : 14,
-                fontWeight:
-                    isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
-                color: isNegative ? Colors.red : null,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 1,
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: isTotal || isSubtotal ? 16 : 14,
-                fontWeight:
-                    isTotal || isSubtotal ? FontWeight.bold : FontWeight.normal,
-                color: statusColor ?? (isNegative ? Colors.red : null),
-              ),
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          boxShadow: AppTheme.softShadow,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: row.available
+              ? InkWell(
+                  borderRadius: BorderRadius.circular(15),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _selectedMethod = PaymentMethod.wave);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        _methodLeadingLogo(row.iconAsset),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            row.title,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.check_circle,
+                          color: AppTheme.primaryColor,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: cs.onSurface.withOpacity(0.35),
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Opacity(
+                        opacity: 0.65,
+                        child: _methodLeadingLogo(row.iconAsset),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          row.title,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface.withOpacity(0.72),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: cs.outline.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Text(
+                          'Bientôt disponible',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface.withOpacity(0.62),
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
       ),
     );
   }
 
-  Widget _buildPaymentMethodSelector() {
-    // Si aucune méthode n'est disponible, afficher un message
-    if (_acceptedMethods.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: AppSpacing.cardPadding,
-          child: Center(
-            child: Text(
-              'Chargement des méthodes de paiement...',
-              style: TextStyle(color: Colors.grey),
-            ),
+  Widget _methodLeadingLogo(String asset) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: Image.asset(
+        asset,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 44,
+          height: 44,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Icon(
+            Icons.account_balance_wallet_outlined,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return Card(
+  Widget _buildWavePhoneSection() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outline.withOpacity(0.14)),
+        boxShadow: AppTheme.softShadow,
+      ),
       child: Padding(
         padding: AppSpacing.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Méthode de paiement',
-              style: Theme.of(context).textTheme.titleLarge,
+              'Numéro Wave',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+              ),
             ),
-            const Divider(),
-            AppSpacing.verticalSm,
-            // Options de paiement Mobile Money
-            if (_acceptedMethods.contains(PaymentMethod.orangeMoney))
-              _buildPaymentMethodOption(
-                PaymentMethod.orangeMoney,
-                'Orange Money',
-                'assets/images/payment/orange_money.png',
+            const SizedBox(height: 4),
+            Text(
+              'Le numéro associé à votre compte Wave pour recevoir la demande de paiement.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurface.withOpacity(0.55),
+                height: 1.35,
               ),
-            if (_acceptedMethods.contains(PaymentMethod.moovMoney))
-              _buildPaymentMethodOption(
-                PaymentMethod.moovMoney,
-                'Moov Money',
-                'assets/images/payment/moov_money.png',
-              ),
-            if (_acceptedMethods.contains(PaymentMethod.mtnMoney))
-              _buildPaymentMethodOption(
-                PaymentMethod.mtnMoney,
-                'MTN Money',
-                'assets/images/payment/mtn_money.png',
-              ),
-            if (_acceptedMethods.contains(PaymentMethod.wave))
-              _buildPaymentMethodOption(
-                PaymentMethod.wave,
-                'Wave',
-                'assets/images/payment/wave_money.png',
-              ),
-
-            // Options de paiement par carte
-            if (_acceptedMethods.contains(PaymentMethod.visa) ||
-                _acceptedMethods.contains(PaymentMethod.mastercard) ||
-                _acceptedMethods.contains(PaymentMethod.creditCard))
-              _buildPaymentMethodOption(
-                PaymentMethod.creditCard,
-                'Carte bancaire',
-                'assets/images/payment/visa.png',
-              ),
-
-            // Virement bancaire
-            if (_acceptedMethods.contains(PaymentMethod.bankTransfer))
-              _buildPaymentMethodOption(
-                PaymentMethod.bankTransfer,
-                'Virement bancaire',
-                'assets/images/payment/mastercard.png',
-              ),
-
-            // Espèces
-            if (_acceptedMethods.contains(PaymentMethod.cash))
-              _buildPaymentMethodOption(
-                PaymentMethod.cash,
-                'Paiement en espèces',
-                'assets/images/payment/paypal.png',
-              ),
+            ),
+            AppSpacing.verticalMd,
+            AdvancedPhoneInputWidget(
+              label: 'Numéro de téléphone',
+              hint: 'Ex : 07 48 00 10 42',
+              isRequired: true,
+              onPhoneChanged: (PhoneNumber phoneNumber) {
+                setState(() => _selectedPhoneNumber = phoneNumber);
+              },
+              onValidationChanged: (bool isValid) {
+                setState(() => _isPhoneValid = isValid);
+              },
+              themeColor: AppTheme.primaryColor,
+            ),
+            SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: AppTheme.primaryColor.withOpacity(0.85),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Vous recevrez une notification Wave pour confirmer le paiement.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurface.withOpacity(0.6),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPaymentMethodOption(
-    PaymentMethod method,
-    String title,
-    String iconPath,
-  ) {
-    return RadioListTile<PaymentMethod>(
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Image.asset(
-            iconPath,
-            width: 40,
-            height: 40,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.payment, size: 40);
-            },
-          ),
-        ],
-      ),
-      value: method,
-      groupValue: _selectedMethod,
-      onChanged: (PaymentMethod? value) {
-        if (value != null) {
-          setState(() {
-            _selectedMethod = value;
-          });
-        }
-      },
-    );
-  }
-
-  Widget _buildPaymentDetailsForm() {
-    // Pour Wave, on demande le numéro de téléphone
-    if (_selectedMethod == PaymentMethod.wave ||
-        _selectedMethod == PaymentMethod.mobileMoney ||
-        _selectedMethod == PaymentMethod.orangeMoney ||
-        _selectedMethod == PaymentMethod.moovMoney ||
-        _selectedMethod == PaymentMethod.mtnMoney) {
-      final providerName = _getProviderNameForMethod(_selectedMethod);
-
-      return Card(
-        child: Padding(
-          padding: AppSpacing.cardPadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Informations de paiement $providerName',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const Divider(),
-              AppSpacing.verticalMd,
-              AdvancedPhoneInputWidget(
-                label: 'Numéro de téléphone',
-                hint: 'Ex: +225 07 12 34 56 78',
-                isRequired: true,
-                onPhoneChanged: (PhoneNumber phoneNumber) {
-                  setState(() {
-                    _selectedPhoneNumber = phoneNumber;
-                  });
-                },
-                onValidationChanged: (bool isValid) {
-                  setState(() {
-                    _isPhoneValid = isValid;
-                  });
-                },
-                themeColor: Theme.of(context).primaryColor,
-              ),
-              AppSpacing.verticalMd,
-              Text(
-                'Vous recevrez une notification sur votre téléphone $providerName pour confirmer le paiement.',
-                style: const TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (_selectedMethod == PaymentMethod.visa) {
-      // Pour les cartes bancaires, on utiliserait idéalement un widget spécifique pour saisir les informations de carte
-      return Card(
-        child: Padding(
-          padding: AppSpacing.cardPadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Informations de paiement',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const Divider(),
-              AppSpacing.verticalMd,
-              Text(
-                'Vous serez redirigé vers une page sécurisée pour saisir les informations de votre carte bancaire.',
-                style: const TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
-  }
-
   Widget _buildConfirmButton() {
-    // Désactiver le bouton si le téléphone n'est pas valide pour les paiements mobile money
-    bool isDisabled = false;
-    if (_selectedMethod == PaymentMethod.wave ||
-        _selectedMethod == PaymentMethod.mobileMoney ||
-        _selectedMethod == PaymentMethod.orangeMoney ||
-        _selectedMethod == PaymentMethod.moovMoney ||
-        _selectedMethod == PaymentMethod.mtnMoney) {
-      isDisabled = !_isPhoneValid;
-    }
-    
+    final isDisabled = !_isPhoneValid;
     final scheme = Theme.of(context).colorScheme;
     return ElevatedButton(
       onPressed: isDisabled ? null : _confirmPayment,
       style: ElevatedButton.styleFrom(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-        backgroundColor: isDisabled ? scheme.surfaceContainerHighest : AppTheme.primaryColor,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor:
+            isDisabled ? scheme.surfaceContainerHighest : AppTheme.primaryColor,
+        foregroundColor: Colors.black,
+        disabledBackgroundColor: scheme.surfaceContainerHighest,
+        disabledForegroundColor: scheme.onSurface.withOpacity(0.45),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        ),
       ),
       child: Text(
-        isDisabled ? 'Numéro de téléphone requis' : 'Confirmer le paiement',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: isDisabled ? scheme.onSurface.withOpacity(0.7) : AppTheme.textLight,
-        ),
+        isDisabled ? 'Saisissez un numéro Wave valide' : 'Payer avec Wave',
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDisabled ? null : Colors.black,
+            ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 /**
  * Modèle Payout - Reversement aux Partners via CinetPay
@@ -112,6 +113,13 @@ const payoutSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: [
+            // Statuts canoniques utilisés par les services payout
+            'PAYOUT_SCHEDULED',
+            'PAYOUT_PENDING',
+            'PAYOUT_SUCCESS',
+            'PAYOUT_FAILED',
+            'PAYOUT_CANCELLED',
+            // Statuts legacy conservés pour compatibilité historique
             'scheduled',        // Programmé
             'pending',          // En attente de traitement
             'processing',       // En cours de traitement
@@ -120,7 +128,7 @@ const payoutSchema = new mongoose.Schema({
             'cancelled',        // Annulé manuellement
             'expired'           // Expiré (non traité dans les délais)
         ],
-        default: 'scheduled',
+        default: 'PAYOUT_SCHEDULED',
         required: true,
         index: true
     },
@@ -347,7 +355,7 @@ payoutSchema.methods.addHistoryEntry = function(newStatus, reason = '', userId =
  */
 payoutSchema.statics.findReadyForExecution = function() {
     return this.find({
-        status: 'PAYOUT_SCHEDULED',
+        status: { $in: ['PAYOUT_SCHEDULED', 'scheduled'] },
         scheduled_for: { $lte: new Date() },
         attempts: { $lt: 5 }
     }).populate('partner source_transactions');
@@ -413,7 +421,7 @@ payoutSchema.pre('save', function(next) {
  * Après sauvegarde - Logging
  */
 payoutSchema.post('save', function(doc) {
-    console.log(`Payout ${doc.payout_id} sauvegardé avec statut ${doc.status}`);
+    logger.info(`Payout ${doc.payout_id} sauvegardé avec statut ${doc.status}`);
 });
 
 module.exports = mongoose.model('Payout', payoutSchema);

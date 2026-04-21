@@ -70,7 +70,7 @@ reviewSchema.pre('save', async function(next) {
         });
 
         if (!reservation) {
-            next(new Error('Réservation invalide pour cette résidence'));
+            return next(new Error('Réservation invalide pour cette résidence'));
         }
     }
     next();

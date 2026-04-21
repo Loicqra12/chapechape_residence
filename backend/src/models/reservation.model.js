@@ -293,7 +293,7 @@ const reservationSchema = new mongoose.Schema({
 
 reservationSchema.pre('save', function(next) {
     if (this.checkOut <= this.checkIn) {
-        next(new Error('La date de départ doit être après la date d\'arrivée'));
+        return next(new Error('La date de départ doit être après la date d\'arrivée'));
     }
     next();
 });

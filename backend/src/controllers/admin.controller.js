@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const Partner = require('../models/partner.model');
 const Residence = require('../models/residence.model');
+const { normalizeResidenceType } = require('../constants/residenceTypes.manifest');
 const Reservation = require('../models/reservation.model');
 const Payment = require('../models/payment.model');
 const ActivityLog = require('../models/activityLog.model'); // Added this line
@@ -97,7 +98,8 @@ exports.unblockResidenceDates = asyncHandler(async (req, res) => {
 
 // Gestion des utilisateurs
 exports.getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({ role: 'user' }).select('-password');
+    // Les "clients" côté admin panel correspondent au role 'client' (et non 'user')
+    const users = await User.find({ role: 'client' }).select('-password');
     res.status(200).json({
         success: true,
         data: users
@@ -236,7 +238,11 @@ exports.deleteAdmin = asyncHandler(async (req, res) => {
 
 // Gestion des partenaires
 exports.getAllPartners = asyncHandler(async (req, res) => {
-    const partners = await Partner.find();
+    // Les partenaires sont stockés dans la collection User via role ('partner' / 'partner_pending').
+    // Partner.find() peut retourner vide si les docs ne sont pas créés avec le discriminator.
+    const partners = await User.find({
+        role: { $in: ['partner', 'partner_pending', 'owner'] }
+    }).select('-password');
     res.status(200).json({
         success: true,
         data: partners
@@ -442,11 +448,85 @@ exports.deleteResidence = asyncHandler(async (req, res) => {
 });
 
 exports.getAllResidences = asyncHandler(async (req, res) => {
-    const residences = await Residence.find().populate('partner', 'name email');
-    
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+
+    const filter = { deleted: { $ne: true } };
+
+    if (req.query.type) {
+        const canonical = normalizeResidenceType(String(req.query.type));
+        if (canonical) filter.type = canonical;
+    }
+    if (req.query.status && String(req.query.status).trim()) {
+        filter.status = String(req.query.status).trim();
+    }
+
+    const minBedrooms = req.query.minBedrooms;
+    if (minBedrooms !== undefined && minBedrooms !== null && String(minBedrooms).trim() !== '') {
+        const n = Number(minBedrooms);
+        if (!Number.isNaN(n)) filter.bedrooms = { $gte: n };
+    }
+
+    const priceCond = {};
+    const minPrice = req.query.minPrice;
+    const maxPrice = req.query.maxPrice;
+    if (minPrice !== undefined && minPrice !== null && String(minPrice).trim() !== '') {
+        const n = Number(minPrice);
+        if (!Number.isNaN(n)) priceCond.$gte = n;
+    }
+    if (maxPrice !== undefined && maxPrice !== null && String(maxPrice).trim() !== '') {
+        const n = Number(maxPrice);
+        if (!Number.isNaN(n)) priceCond.$lte = n;
+    }
+    if (Object.keys(priceCond).length) filter.price = priceCond;
+
+    const and = [];
+
+    const cityQ = req.query.city;
+    if (cityQ && String(cityQ).trim()) {
+        const esc = String(cityQ).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx = new RegExp(esc, 'i');
+        and.push({ $or: [{ city: rx }, { 'locationData.city': rx }] });
+    }
+
+    const searchQ = req.query.search;
+    if (searchQ && String(searchQ).trim()) {
+        const esc = String(searchQ).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx = new RegExp(esc, 'i');
+        and.push({
+            $or: [
+                { title: rx },
+                { description: rx },
+                { address: rx },
+                { city: rx },
+                { 'locationData.city': rx },
+            ],
+        });
+    }
+
+    if (and.length) filter.$and = and;
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+        Residence.find(filter)
+            .populate('partner', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Residence.countDocuments(filter),
+    ]);
+
     res.status(200).json({
         success: true,
-        data: residences
+        data,
+        pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.max(1, Math.ceil(total / limit)),
+        },
     });
 });
 
@@ -480,7 +560,8 @@ exports.getResidence = asyncHandler(async (req, res) => {
 exports.validateResidence = asyncHandler(async (req, res) => {
     const residence = await Residence.findByIdAndUpdate(
         req.params.id,
-        { status: 'approved' },
+        // Le modèle de résidence n'accepte que 'available'/'unavailable'/'maintenance'
+        { status: 'available' },
         { new: true }
     );
 

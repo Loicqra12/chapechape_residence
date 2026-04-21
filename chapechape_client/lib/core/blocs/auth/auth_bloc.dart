@@ -16,6 +16,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterRequested>(_onRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<ConfirmPasswordResetRequested>(_onConfirmPasswordResetRequested);
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
   }
 
@@ -69,15 +70,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
-      await _authService.register(
+      final user = await _authService.register(
         email: event.email,
         password: event.password,
         firstName: event.firstName,
         lastName: event.lastName,
         phone: event.phone,
       );
-      
-      emit(const RegisterSuccess());
+
+      emit(Authenticated(user));
     } catch (e) {
       emit(AuthError(e.toString()));
     }
@@ -104,6 +105,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(const AuthLoading());
       await _authService.resetPassword(email: event.email);
       emit(const ForgotPasswordSuccess());
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onConfirmPasswordResetRequested(
+    ConfirmPasswordResetRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      await _authService.confirmPasswordReset(
+        token: event.token,
+        newPassword: event.newPassword,
+      );
+      emit(const ConfirmPasswordResetSuccess());
     } catch (e) {
       emit(AuthError(e.toString()));
     }

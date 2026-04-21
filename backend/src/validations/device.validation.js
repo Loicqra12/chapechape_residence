@@ -38,7 +38,8 @@ const notificationPreferencesSchema = {
       bookings: Joi.boolean().optional(),
       promotions: Joi.boolean().optional(),
       system: Joi.boolean().optional(),
-      messages: Joi.boolean().optional()
+      messages: Joi.boolean().optional(),
+      payments: Joi.boolean().optional()
     })
       .optional()
       .description('Préférences par catégorie de notification')

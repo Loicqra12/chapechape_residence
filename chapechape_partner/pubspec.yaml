@@ -1,7 +1,7 @@
 name: chapechape_partner
 description: "Application de gestion pour les partenaires ChapeChape Residence"
 publish_to: "none"
-version: 1.11.1+20
+version: 1.11.2+21
 
 environment:
   sdk: ^3.11.0
@@ -13,9 +13,10 @@ dependencies:
   dio: ^5.3.3
   flutter_secure_storage: ^9.0.0
   go_router: ^12.0.0
+  app_links: ^6.3.3
   equatable: ^2.0.5
   json_annotation: ^4.8.1
-  intl: 0.19.0
+  intl: ^0.20.2
   image_picker: ^1.0.4
   cached_network_image: ^3.3.0
   google_maps_flutter: ^2.5.0

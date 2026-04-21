@@ -1528,25 +1528,24 @@ exports.reverseWaveTransfer = async (req, res) => {
  */
 exports.handleWavePayoutWebhook = async (req, res) => {
     try {
+        const wavePayoutService = getWavePayoutService();
         const signature = req.headers['x-wave-signature'] || req.headers['wave-signature'];
-        const rawBody = req.body; // Buffer brut depuis express.raw()
-        
-        // Convertir le corps brut en objet JSON APRÈS vérification de signature
-        let webhookData;
-        try {
-            webhookData = JSON.parse(rawBody.toString('utf8'));
-        } catch (parseError) {
-            logger.error('Erreur parsing webhook Wave Payout:', parseError);
-            return res.status(400).json({
-                success: false,
-                message: 'Corps de requête JSON invalide'
-            });
-        }
+        const rawBody = req.body;
 
-        logger.info('Webhook Wave Payout reçu:', webhookData);
-
-        // Vérifier la signature si configurée
-        if (process.env.WAVE_PAYOUT_WEBHOOK_SECRET && signature) {
+        if (process.env.WAVE_PAYOUT_WEBHOOK_SECRET) {
+            if (!signature) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Signature Wave requise'
+                });
+            }
+            if (!Buffer.isBuffer(rawBody)) {
+                logger.warn('Webhook Wave Payout: corps non Buffer — utiliser express.raw sur cette route');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Format de requête incompatible avec la vérification de signature'
+                });
+            }
             const isValid = wavePayoutService.verifyWebhookSignature(rawBody, signature);
             if (!isValid) {
                 logger.error('Signature Wave Payout invalide');
@@ -1556,6 +1555,30 @@ exports.handleWavePayoutWebhook = async (req, res) => {
                 });
             }
         }
+
+        let webhookData;
+        try {
+            if (Buffer.isBuffer(rawBody)) {
+                webhookData = JSON.parse(rawBody.toString('utf8'));
+            } else if (rawBody && typeof rawBody === 'object') {
+                webhookData = rawBody;
+            } else if (typeof rawBody === 'string') {
+                webhookData = JSON.parse(rawBody);
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Corps de requête invalide'
+                });
+            }
+        } catch (parseError) {
+            logger.error('Erreur parsing webhook Wave Payout:', parseError);
+            return res.status(400).json({
+                success: false,
+                message: 'Corps de requête JSON invalide'
+            });
+        }
+
+        logger.info('Webhook Wave Payout reçu:', webhookData);
 
         // Traiter la notification via le service Wave
         const result = await wavePayoutService.processWebhook(webhookData);

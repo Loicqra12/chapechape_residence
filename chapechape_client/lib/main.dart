@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_bloc.dart';
 import 'package:chapechape_client/core/blocs/auth/auth_event.dart';
 import 'package:chapechape_client/core/blocs/locale/locale_cubit.dart';
@@ -61,14 +60,6 @@ void main() async {
   // Initialiser Firebase
   await FirebaseService.initialize();
   debugPrint('✅ Firebase initialisé au démarrage');
-  
-  // Initialiser OneSignal
-  OneSignal.initialize("43531899-4645-4f52-a2bf-f4e4a4095513");
-  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-  OneSignal.Notifications.requestPermission(true);
-  
-  // Ajouter un tag pour identifier qu'il s'agit d'un client
-  OneSignal.User.addTags({"userType": "client"});
   
   // Initialiser les configurations
   await AppConfig.initialize();

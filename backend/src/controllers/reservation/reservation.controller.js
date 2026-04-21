@@ -5,6 +5,7 @@ const PricingService = require('../../services/pricing.service'); // TEMPORAIREM
 const asyncHandler = require('../../middlewares/async');
 const Reservation = require('../../models/reservation.model');
 const Residence = require('../../models/residence.model');
+const logger = require('../../utils/logger');
 
 /**
  * Créer une nouvelle réservation
@@ -174,7 +175,7 @@ exports.getReservationById = asyncHandler(async (req, res) => {
             }
         }
         
-        console.log(`❌ Impossible d'extraire l'ID de:`, input);
+        logger.debug('getReservationById: impossible d\'extraire l\'ID', { inputType: typeof input });
         return null;
     };
 
@@ -190,55 +191,22 @@ exports.getReservationById = asyncHandler(async (req, res) => {
         reservationUserId = reservationClientId;
     }
 
-    // Logs pour le débogage
-    console.log('DEBUG - Analyse des IDs (v2):', {
-        currentUserId,
-        reservationUserId,
-        reservationClientId, 
-        reservationPartnerId,
-        userRole,
-        // Informations pour déboguer les types et formats
-        types: {
-            currentUser: typeof req.user._id,
-            reservationUser: typeof reservation.user,
-            reservationClient: typeof reservation.client,
-            reservationPartner: typeof reservation.partner
-        },
-        // Versions brutes pour vérification
-        raw: {
-            user: reservation.user,
-            client: reservation.client,
-            partner: reservation.partner
-        }
-    });
-
-    // Vérification simplifiée des permissions
-    const isAdmin = userRole === 'admin';
-    const isClient = userRole === 'client';
-    
-    // NOUVEAU: Déterminer si l'utilisateur a un rôle qui lui donne accès
+    const isPrivileged = ['admin', 'superadmin', 'owner'].includes(userRole);
     const isOwnerOfReservation = currentUserId === reservationUserId || currentUserId === reservationClientId;
     const isPartnerOfReservation = currentUserId === reservationPartnerId;
-    
-    // Afficher les résultats de vérification
-    console.log('Vérification d\'accès:', {
+
+    logger.debug('getReservationById: contrôle d\'accès', {
+        reservationId: req.params.id,
+        userRole,
+        isPrivileged,
         isOwnerOfReservation,
-        isPartnerOfReservation,
-        isAdmin,
-        isClient,
-        // Pour faciliter le débogage
-        idEquality: {
-            userMatchesReservationUser: currentUserId === reservationUserId,
-            userMatchesReservationClient: currentUserId === reservationClientId,
-            userMatchesReservationPartner: currentUserId === reservationPartnerId
-        }
+        isPartnerOfReservation
     });
 
-    // Autorisation simplifiée: 3 cas d'accès légitimes
-    const accessAllowed = isOwnerOfReservation || isPartnerOfReservation || isAdmin;
+    const accessAllowed = isOwnerOfReservation || isPartnerOfReservation || isPrivileged;
 
     if (!accessAllowed) {
-        console.log('Accès refusé: aucun critère d\'autorisation valide');
+        logger.warn('getReservationById: accès refusé', { reservationId: req.params.id, userId: currentUserId });
         throw new ApiError('Non autorisé', 403);
     }
 
@@ -707,7 +675,8 @@ exports.performCheckin = asyncHandler(async (req, res) => {
     }
 
     // Effectuer le check-in
-    reservation.status = 'confirmed'; // Statut confirmé après check-in
+    // Statut après check-in réel (phase 1 : séjour en cours)
+    reservation.status = 'in_stay';
     reservation.actualCheckIn = now;
     await reservation.save();
 
@@ -749,7 +718,7 @@ exports.performCheckout = asyncHandler(async (req, res) => {
     }
 
     // Vérifier que la réservation peut être check-out
-    if (reservation.status !== 'confirmed' || !reservation.actualCheckIn) {
+    if (!['confirmed', 'in_stay'].includes(reservation.status) || !reservation.actualCheckIn) {
         throw new ApiError('Cette réservation ne peut pas être check-out (doit être confirmée avec check-in effectué)', 400);
     }
 

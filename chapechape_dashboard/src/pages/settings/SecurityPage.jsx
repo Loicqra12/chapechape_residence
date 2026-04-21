@@ -48,6 +48,25 @@ const SecurityPage = () => {
   const [showOriginInput, setShowOriginInput] = useState(false);
   const [newOrigin, setNewOrigin] = useState('');
 
+  const isNonEmptyObject = (obj) => !!obj && typeof obj === 'object' && Object.keys(obj).length > 0;
+  const defaultSecuritySettings = {
+    passwordMinLength: 8,
+    passwordRequireUppercase: true,
+    passwordRequireNumbers: true,
+    passwordRequireSpecial: true,
+    passwordExpiryDays: 90,
+    maxLoginAttempts: 5,
+    lockoutDuration: 30,
+    sessionTimeout: 60,
+    twoFactorEnabled: true,
+    twoFactorMandatory: false,
+    jwtExpiryHours: 24,
+    ipWhitelist: ['192.168.1.1', '10.0.0.1'],
+    apiRateLimit: 100,
+    sslEnabled: true,
+    corsAllowedOrigins: ['https://chapechape.fr']
+  };
+
   useEffect(() => {
     loadSecuritySettings();
   }, []);
@@ -57,7 +76,7 @@ const SecurityPage = () => {
       setLoading(true);
       const response = await settingsService.getSettings('security');
 
-      if (response.success && response.data.security) {
+      if (response.success && isNonEmptyObject(response.data.security)) {
         const flatSettings = {};
         Object.entries(response.data.security).forEach(([key, setting]) => {
           flatSettings[key.replace('security_', '')] = setting.value;
@@ -65,27 +84,13 @@ const SecurityPage = () => {
         setSettings(flatSettings);
       } else {
         // Default values
-        setSettings({
-          passwordMinLength: 8,
-          passwordRequireUppercase: true,
-          passwordRequireNumbers: true,
-          passwordRequireSpecial: true,
-          passwordExpiryDays: 90,
-          maxLoginAttempts: 5,
-          lockoutDuration: 30,
-          sessionTimeout: 60,
-          twoFactorEnabled: true,
-          twoFactorMandatory: false,
-          jwtExpiryHours: 24,
-          ipWhitelist: ['192.168.1.1', '10.0.0.1'],
-          apiRateLimit: 100,
-          sslEnabled: true,
-          corsAllowedOrigins: ['https://chapechape.fr'],
-        });
+        setSettings(defaultSecuritySettings);
       }
     } catch (error) {
       console.error('Error loading security settings:', error);
       toast.error('Erreur lors du chargement des paramètres de sécurité');
+      // Fallback UI si l'API échoue (ex: 403/500)
+      setSettings(defaultSecuritySettings);
     } finally {
       setLoading(false);
     }
@@ -220,6 +225,7 @@ const SecurityPage = () => {
                     InputProps={{
                       endAdornment: <InputAdornment position="end">caractères</InputAdornment>,
                     }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -265,6 +271,7 @@ const SecurityPage = () => {
                     InputProps={{
                       endAdornment: <InputAdornment position="end">jours</InputAdornment>,
                     }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
               </Grid>
@@ -288,6 +295,7 @@ const SecurityPage = () => {
                     value={settings.maxLoginAttempts}
                     onChange={handleChange('maxLoginAttempts')}
                     type="number"
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -300,6 +308,7 @@ const SecurityPage = () => {
                     InputProps={{
                       endAdornment: <InputAdornment position="end">minutes</InputAdornment>,
                     }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -312,6 +321,7 @@ const SecurityPage = () => {
                     InputProps={{
                       endAdornment: <InputAdornment position="end">heures</InputAdornment>,
                     }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -360,6 +370,7 @@ const SecurityPage = () => {
                     InputProps={{
                       endAdornment: <InputAdornment position="end">minutes</InputAdornment>,
                     }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -372,6 +383,7 @@ const SecurityPage = () => {
                     InputProps={{
                       endAdornment: <InputAdornment position="end">req/min</InputAdornment>,
                     }}
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
               </Grid>
