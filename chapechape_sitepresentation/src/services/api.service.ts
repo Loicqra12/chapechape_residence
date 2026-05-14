@@ -1,5 +1,10 @@
-// Configuration de l'API (en production, définir VITE_API_BASE_URL)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost:4000/api');
+// Configuration de l'API
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000/api';
+
+// Éviter tout fallback silencieux en production
+if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL est requis en production pour éviter une URL API invalide.');
+}
 const API_TIMEOUT_MS = 15000;
 
 // Types pour les requêtes

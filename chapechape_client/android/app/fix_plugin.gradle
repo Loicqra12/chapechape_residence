@@ -6,8 +6,8 @@ project.configurations.all {
         // Forcer les versions des packages problématiques
         // Utiliser la même version que celle du projet partenaire
         force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
-        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib:2.1.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0'
         force 'androidx.lifecycle:lifecycle-common:2.6.2'
         force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
     }
@@ -64,15 +64,15 @@ allprojects {
                 // Méthode 1: Ajouter une extension flutter directement
                 if (!project.ext.has('flutter')) {
                     project.ext.flutter = [
-                        compileSdkVersion: 34,
+                        compileSdkVersion: 36,
                         minSdkVersion: 21,
-                        targetSdkVersion: 34
+                        targetSdkVersion: 35
                     ]
                 }
                 
                 // Méthode 2: Définir explicitement les propriétés SDK
                 if (!project.android.hasProperty('compileSdkVersion')) {
-                    project.android.compileSdkVersion = 34
+                    project.android.compileSdkVersion = 36
                 }
                 if (!project.android.defaultConfig.hasProperty('minSdkVersion')) {
                     project.android.defaultConfig.minSdkVersion = 21

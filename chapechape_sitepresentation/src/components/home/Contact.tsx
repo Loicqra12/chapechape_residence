@@ -605,20 +605,19 @@ const Contact = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-              className="relative bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-primary-100 dark:border-secondary-700 group overflow-hidden"
+              whileHover={{ y: -4 }}
+              className="relative bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-secondary-200 dark:border-secondary-700 group overflow-hidden"
             >
-              {/* Gradient overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-50/50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white to-secondary-50/60 dark:from-secondary-800 dark:to-secondary-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
               <div className="relative flex items-start">
                 <motion.div
                   className="flex-shrink-0"
-                  whileHover={{ rotate: 360, scale: 1.1 }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 300 }}
+                  whileHover={{ scale: 1.04 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-400 text-white shadow-lg group-hover:shadow-primary-300/50 transition-all duration-300">
-                    <EnvelopeIcon className="h-8 w-8" />
+                  <div className="flex items-center justify-center h-14 w-14 rounded-xl bg-secondary-900 text-primary-300 shadow-md transition-all duration-300">
+                    <EnvelopeIcon className="h-7 w-7" />
                   </div>
                 </motion.div>
                 <div className="ml-6">
@@ -634,8 +633,8 @@ const Contact = () => {
                   </p>
                   <motion.a
                     href="mailto:contact@chapechaperesidence.com"
-                    className="inline-flex items-center text-primary-400 hover:text-primary-500 font-semibold group/link"
-                    whileHover={{ x: 5 }}
+                    className="inline-flex items-center text-primary-500 hover:text-primary-400 font-semibold group/link break-all"
+                    whileHover={{ x: 3 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     contact@chapechaperesidence.com
@@ -660,20 +659,19 @@ const Contact = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-              className="relative bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-primary-100 dark:border-secondary-700 group overflow-hidden"
+              whileHover={{ y: -4 }}
+              className="relative bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-secondary-200 dark:border-secondary-700 group overflow-hidden"
             >
-              {/* Gradient overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white to-secondary-50/60 dark:from-secondary-800 dark:to-secondary-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
               <div className="relative flex items-start">
                 <motion.div
                   className="flex-shrink-0"
-                  whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 300 }}
+                  whileHover={{ scale: 1.04 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-500 text-white shadow-lg group-hover:shadow-blue-400/50 transition-all duration-300">
-                    <MapPinIcon className="h-8 w-8" />
+                  <div className="flex items-center justify-center h-14 w-14 rounded-xl bg-secondary-900 text-primary-300 shadow-md transition-all duration-300">
+                    <MapPinIcon className="h-7 w-7" />
                   </div>
                 </motion.div>
                 <div className="ml-6">
@@ -701,8 +699,8 @@ const Contact = () => {
                     href="https://maps.app.goo.gl/1iBVEeDp6Q58RSB69"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-blue-500 hover:text-blue-600 font-semibold group/link"
-                    whileHover={{ x: 5 }}
+                    className="inline-flex items-center text-primary-500 hover:text-primary-400 font-semibold group/link"
+                    whileHover={{ x: 3 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     Voir sur Google Maps
@@ -727,20 +725,19 @@ const Contact = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-              className="relative bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-primary-100 dark:border-secondary-700 group overflow-hidden"
+              whileHover={{ y: -4 }}
+              className="relative bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-secondary-200 dark:border-secondary-700 group overflow-hidden"
             >
-              {/* Gradient overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white to-secondary-50/60 dark:from-secondary-800 dark:to-secondary-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
               <div className="relative flex items-start">
                 <motion.div
                   className="flex-shrink-0"
-                  whileHover={{ scale: 1.1, rotate: 360 }}
-                  transition={{ duration: 0.8, type: "spring", stiffness: 200 }}
+                  whileHover={{ scale: 1.04 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-500 text-white shadow-lg group-hover:shadow-purple-400/50 transition-all duration-300">
-                    <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center justify-center h-14 w-14 rounded-xl bg-secondary-900 text-primary-300 shadow-md transition-all duration-300">
+                    <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
@@ -758,8 +755,8 @@ const Contact = () => {
                   </p>
                   <motion.a
                     href="mailto:support@chapechaperesidence.com"
-                    className="inline-flex items-center text-purple-500 hover:text-purple-600 font-semibold group/link"
-                    whileHover={{ x: 5 }}
+                    className="inline-flex items-center text-primary-500 hover:text-primary-400 font-semibold group/link"
+                    whileHover={{ x: 3 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     support@chapechaperesidence.com

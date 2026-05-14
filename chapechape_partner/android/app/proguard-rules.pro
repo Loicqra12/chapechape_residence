@@ -24,6 +24,14 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
+# Play Console / Samsung — NoSuchMethodError sur TextInputPlugin.createInputConnection (release + R8)
+# Garder explicitement l'embedding et le pont clavier / InputConnection.
+-keep class io.flutter.embedding.** { *; }
+-keep class io.flutter.plugin.editing.** { *; }
+-keep class io.flutter.plugin.platform.** { *; }
+-keepclassmembers class io.flutter.plugin.editing.TextInputPlugin { *; }
+-keepattributes Signature,*Annotation*,EnclosingMethod,InnerClasses
+
 # Keep Firebase classes
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }

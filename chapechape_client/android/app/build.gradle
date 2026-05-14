@@ -1,7 +1,7 @@
 // ✅ Le bloc buildscript doit être tout en haut
 buildscript {
     ext {
-        kotlin_version = '1.9.22'
+        kotlin_version = '2.1.0'
     }
     repositories {
         google()
@@ -45,7 +45,8 @@ apply from: "fix_plugin.gradle"
 
 android {
     namespace = "com.chapechape.client"
-    compileSdk = 35
+    // 36 : exigence app_links ; aligné avec le module partenaire
+    compileSdk = 36
     ndkVersion = project.hasProperty('ndkVersion') ? project.ndkVersion : "25.1.8937393"
     
     // Force all Android libraries to use SDK 23 as minimum
@@ -83,7 +84,8 @@ android {
             onesignal_app_id: '43531899-4645-4f52-a2bf-f4e4a4095513',
             onesignal_channel_id: "b80d5093-5e1f-480e-a42f-a0ccb009e3f2",
             onesignal_firebase_default_notification_icon: "@drawable/ic_stat_notification",
-            applicationName: "io.flutter.app.FlutterApplication"
+            // Flutter 3 + embedding v2 : éviter io.flutter.app.FlutterApplication (obsolète / crashs OEM)
+            applicationName: "androidx.multidex.MultiDexApplication"
         ]
     }
 
@@ -109,6 +111,7 @@ android {
     configurations.all {
         resolutionStrategy {
             force 'androidx.annotation:annotation:1.7.0'
+            // >= 1.13 : EditorInfoCompat.setStylusHandwritingEnabled (clavier Flutter)
             force 'androidx.core:core:1.13.1'
             force 'androidx.activity:activity:1.8.2'
             force 'com.google.android.gms:play-services-base:18.2.0'
@@ -116,8 +119,8 @@ android {
             force 'com.google.android.gms:play-services-basement:18.2.0'
             force 'androidx.lifecycle:lifecycle-common:2.6.2'
             force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
-            force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
-            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib:2.1.0'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0'
             // Forcer la version du plugin Flutter Android Lifecycle comme dans le projet partenaire
             force 'io.flutter:flutter_plugin_android_lifecycle:2.0.17'
             force 'com.google.android.gms:play-services-location:21.0.1'
@@ -128,6 +131,7 @@ android {
 }
 
 dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.annotation:annotation:1.7.0'
     implementation 'androidx.core:core:1.13.1'
     implementation 'androidx.activity:activity:1.8.2'

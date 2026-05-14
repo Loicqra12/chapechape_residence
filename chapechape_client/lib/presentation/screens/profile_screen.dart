@@ -18,7 +18,8 @@ import 'package:chapechape_client/core/models/phone_number.dart';
 import 'package:chapechape_client/presentation/widgets/skeletons/profile_skeleton.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/utils/partner_store_launch.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -45,38 +46,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   final ImagePicker _picker = ImagePicker();
 
-  /// Ouvre l'application partenaire si installée, sinon la fiche Play Store.
+  /// Ouvre la fiche Play Store de l'application Partenaire.
   Future<void> _openPartnerAppOrStore() async {
-    const String androidPackage = 'com.chapechape.chapechape_partner';
-
-    // Schéma Play Store natif
-    final Uri marketUri = Uri.parse('market://details?id=$androidPackage');
-    // Fallback Web Play Store
-    final Uri webUri = Uri.parse(
-      'https://play.google.com/store/apps/details?id=$androidPackage',
-    );
-
     try {
-      // Essayer d'abord l'app Play Store
-      if (await canLaunchUrl(marketUri)) {
-        await launchUrl(
-          marketUri,
-          mode: LaunchMode.externalApplication,
-        );
-        return;
-      }
-
-      // Sinon, ouvrir dans le navigateur
-      if (await canLaunchUrl(webUri)) {
-        await launchUrl(
-          webUri,
-          mode: LaunchMode.externalApplication,
-        );
-        return;
-      }
-
-      // Si rien ne fonctionne, informer l'utilisateur
-      if (mounted) {
+      final ok = await PartnerStoreLaunch.openPlayStoreListing();
+      if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(

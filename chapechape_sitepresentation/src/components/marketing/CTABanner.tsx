@@ -27,7 +27,7 @@ const CTABanner: React.FC<CTABannerProps> = ({
   },
   secondaryCTA = {
     text: "Devenir Partenaire",
-    href: "https://play.google.com/store/apps/details?id=com.chapechape.partner",
+    href: "https://play.google.com/store/apps/details?id=com.chapechape.chapechape_partner",
     external: true
   },
   className = ""

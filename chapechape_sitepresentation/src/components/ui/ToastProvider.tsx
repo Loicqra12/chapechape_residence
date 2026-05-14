@@ -28,7 +28,7 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
   const showToast = (message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substring(7)
+    const id = crypto.randomUUID()
     const newToast = { id, message, type }
 
     setToasts((prev) => [...prev, newToast])
@@ -78,6 +78,8 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
               initial={{ opacity: 0, y: -50, scale: 0.3 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+              role="alert"
+              aria-live="polite"
               className={`pointer-events-auto flex items-center gap-3 p-4 rounded-lg shadow-lg border ${getBgColor(toast.type)} backdrop-blur-sm min-w-[320px] max-w-md`}
             >
               {getIcon(toast.type)}
@@ -86,6 +88,7 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
               </p>
               <button
                 onClick={() => removeToast(toast.id)}
+                aria-label="Fermer la notification"
                 className="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200 transition-colors"
               >
                 <XMarkIcon className="w-5 h-5" />

@@ -583,6 +583,25 @@ class ResidenceService {
           return defaultValue;
         }
       }
+
+      /// Le backend renvoie souvent `rating` comme `{ overall, cleanliness, …, reviewCount }`.
+      double _extractOverallRating(dynamic ratingValue) {
+        if (ratingValue == null) return 0.0;
+        if (ratingValue is Map) {
+          final overall = ratingValue['overall'];
+          if (overall is num) return overall.toDouble();
+          return _safeParseDouble(overall, 0.0);
+        }
+        return _safeParseDouble(ratingValue);
+      }
+
+      int _extractReviewCount(Map<String, dynamic> d) {
+        final ratingValue = d['rating'];
+        if (ratingValue is Map && ratingValue['reviewCount'] != null) {
+          return _safeParseInt(ratingValue['reviewCount']);
+        }
+        return _safeParseInt(d['reviews'] ?? d['reviewCount']);
+      }
       
       // Extraire les règles de la résidence
       List<String> _extractRules(Map<String, dynamic> data) {
@@ -715,8 +734,8 @@ class ResidenceService {
         isPopular: data['isPopular'] == true,
         isVerified: data['isVerified'] == true,
         isNew: data['isNew'] == true,
-        rating: _safeParseDouble(data['rating']),
-        reviewCount: _safeParseInt(data['reviews']),
+        rating: _extractOverallRating(data['rating']),
+        reviewCount: _extractReviewCount(data),
         currency: data['currency']?.toString() ?? 'XOF',
         type: residenceType,
         maxOccupancy: _safeParseInt(

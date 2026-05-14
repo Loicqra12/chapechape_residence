@@ -5,103 +5,56 @@ import SEOHead from '../components/seo/SEOHead'
 
 const siteUrl = (import.meta as any).env?.VITE_SITE_URL || 'https://presentation.chapechaperesidence.com'
 
-// Données des partenaires
+// Tous les logos pour la section dispersée
+const allLogos = [
+  { id: 1, name: 'Partenaire 1', logo: '/assets/partners/partner1_logo.png', pos: { left: '30%', top: '4%'  } },
+  { id: 2, name: 'BNI',          logo: '/assets/partners/partner2_logo.png', pos: { left: '62%', top: '8%'  } },
+  { id: 3, name: 'Partenaire 3', logo: '/assets/partners/partner3_logo.png', pos: { left: '78%', top: '40%' } },
+  { id: 4, name: 'Partenaire 4', logo: '/assets/partners/partner4_logo.png', pos: { left: '45%', top: '48%' } },
+  { id: 5, name: 'Onloutou',     logo: '/assets/partners/partner5_logo.png', pos: { left: '22%', top: '55%' } },
+  { id: 6, name: 'Partenaire 6', logo: '/assets/partners/partner6_logo.png', pos: { left: '65%', top: '68%' } },
+  { id: 7, name: 'Wave',         logo: '/assets/partners/partner7_logo.png', pos: { left: '38%', top: '75%' } },
+]
+
+// 3 cards seulement
 const partners = [
   {
-    id: 1,
-    name: "Wave",
-    category: "fintech",
-    description: "Leader des services financiers mobiles en Afrique de l'Ouest, Wave offre à nos clients une solution de paiement simple et sécurisée.",
-    logo: "/assets/partners/wave.png",
-    website: "https://www.wave.com"
+    id: 7,
+    name: 'Wave',
+    category: 'Services de paiement',
+    description: "Leader des services financiers mobiles en Afrique de l'Ouest, Wave offre à nos clients une solution de paiement simple, rapide et sécurisée.",
+    logo: '/assets/partners/partner7_logo.png',
+    website: 'https://www.wave.com',
   },
   {
     id: 2,
-    name: "Orange Money",
-    category: "fintech",
-    description: "Partenaire de paiement mobile, Orange Money facilite les transactions financières pour nos propriétaires et locataires.",
-    logo: "/assets/partners/orange-money.png",
-    website: "https://www.orange.com/fr/orangemoney"
-  },
-  {
-    id: 3,
-    name: "MTN Mobile Money",
-    category: "fintech",
-    description: "Service de transfert d'argent et de paiement électronique qui permet à nos utilisateurs d'effectuer leurs paiements de loyer en toute simplicité.",
-    logo: "/assets/partners/mtn.png",
-    website: "https://www.mtn.com/what-we-do/mobile-financial-services/"
-  },
-  {
-    id: 4,
-    name: "Société Générale",
-    category: "banque",
-    description: "Notre partenaire bancaire qui offre des solutions financières adaptées pour nos propriétaires et investisseurs.",
-    logo: "/assets/partners/societe-generale.png",
-    website: "https://www.societegenerale.com"
+    name: 'BNI',
+    category: 'Banque',
+    description: "La Banque Nationale d'Investissement, partenaire bancaire de référence en Côte d'Ivoire, accompagne notre développement et sécurise les transactions de nos propriétaires.",
+    logo: '/assets/partners/partner2_logo.png',
+    website: 'https://www.bni.ci',
   },
   {
     id: 5,
-    name: "NSIA Banque",
-    category: "banque",
-    description: "Banque partenaire qui accompagne notre développement et propose des solutions de financement pour les projets immobiliers.",
-    logo: "/assets/partners/nsia.png",
-    website: "https://www.nsiabanque.com"
+    name: 'Onloutou',
+    category: 'Partenaire technologique',
+    description: "Plateforme ivoirienne de location d'équipements fondée par Adams Diaby. Onloutou partage notre vision d'un écosystème numérique accessible et innovant en Afrique de l'Ouest.",
+    logo: '/assets/partners/partner5_logo.png',
+    website: 'https://www.onloutou.com',
   },
-  {
-    id: 6,
-    name: "Homebase",
-    category: "immobilier",
-    description: "Agence immobilière partenaire qui nous aide à identifier les biens de qualité pour notre plateforme.",
-    logo: "/assets/partners/homebase.png",
-    website: "https://www.homebase.ci"
-  },
-  {
-    id: 7,
-    name: "Kaymu Déco",
-    category: "ameublement",
-    description: "Spécialiste de la décoration et de l'ameublement, Kaymu Déco équipe nos résidences meublées avec style et confort.",
-    logo: "/assets/partners/kaymu.png",
-    website: "https://www.kaymudeco.com"
-  },
-  {
-    id: 8,
-    name: "CFAO Technologies",
-    category: "technologie",
-    description: "Fournisseur de solutions technologiques pour l'équipement de nos résidences intelligentes.",
-    logo: "/assets/partners/cfao.png",
-    website: "https://www.cfao-technologies.com"
-  },
-  {
-    id: 9,
-    name: "Securicom",
-    category: "sécurité",
-    description: "Expert en sécurité qui assure la protection des résidences et des locataires avec des systèmes de surveillance modernes.",
-    logo: "/assets/partners/securicom.png",
-    website: "https://www.securicom.ci"
-  },
-  {
-    id: 10,
-    name: "Jumia Services",
-    category: "logistique",
-    description: "Partenaire logistique qui assure les livraisons et services à nos résidents dans les délais les plus courts.",
-    logo: "/assets/partners/jumia.png",
-    website: "https://www.jumia.ci"
-  }
 ]
 
-// Catégories de partenaires
-const categories = [
-  { id: "tous", name: "Tous les partenaires" },
-  { id: "fintech", name: "Services de paiement" },
-  { id: "banque", name: "Banques" },
-  { id: "immobilier", name: "Immobilier" },
-  { id: "ameublement", name: "Ameublement & Décoration" },
-  { id: "technologie", name: "Technologie" },
-  { id: "sécurité", name: "Sécurité" },
-  { id: "logistique", name: "Logistique & Services" }
+const floatVariants = [
+  { y: [-5, 5, -5], duration: 4 },
+  { y: [5, -5, 5], duration: 5 },
+  { y: [-4, 6, -4], duration: 6 },
+  { y: [6, -4, 6], duration: 4.5 },
+  { y: [-6, 4, -6], duration: 5.5 },
+  { y: [4, -6, 4], duration: 3.5 },
+  { y: [-3, 7, -3], duration: 4.2 },
 ]
 
-const Partners = () => {
+export default function PartnersPage() {
   return (
     <div className="bg-white">
       <SEOHead
@@ -109,157 +62,212 @@ const Partners = () => {
         description="Partenaires ChapeChape Residence : Wave, Orange Money, MTN, banques. Paiements et services en Côte d'Ivoire."
         url={`${siteUrl}/partners`}
       />
-      {/* Hero Section Harmonisé */}
+
+      {/* ── HERO ─────────────────────────────────── */}
       <section className="relative py-32 bg-secondary-900 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-10 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-b from-secondary-900/50 via-secondary-900/80 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-b from-secondary-900/60 via-secondary-900/85 to-white" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle,#D4AF37_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.04]" />
 
-        {/* Golden particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full bg-primary-400/20 blur-xl"
-              style={{
-                width: Math.random() * 150 + 50 + 'px',
-                height: Math.random() * 150 + 50 + 'px',
-                left: Math.random() * 100 + '%',
-                top: Math.random() * 100 + '%',
-              }}
-              animate={{
-                y: [0, -100, 0],
-                x: [0, Math.random() * 50 - 25, 0],
-                opacity: [0, 0.4, 0],
-              }}
-              transition={{
-                duration: Math.random() * 10 + 10,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            />
-          ))}
-        </div>
+        <motion.div
+          className="absolute right-0 top-0 w-[500px] h-[500px] rounded-full bg-primary-500/10 blur-[120px] pointer-events-none"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        />
 
-        <div className="container mx-auto px-4 max-w-6xl relative z-10 text-center">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-primary-300 text-xs font-bold tracking-widest uppercase mb-6">
+            <span className="inline-block py-1.5 px-4 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-primary-300 text-xs font-bold tracking-widest uppercase mb-6 font-body">
               Confiance & Collaboration
             </span>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
-              Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">Partenaires</span>
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
+              Nos{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">
+                Partenaires
+              </span>
             </h1>
-            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
-              Découvrez les entreprises leaders qui nous accompagnent dans notre mission d'excellence et d'innovation.
+            <p className="text-lg text-white/60 max-w-2xl mx-auto font-body leading-relaxed">
+              Découvrez les acteurs qui nous accompagnent dans notre mission d'excellence et d'innovation au service du marché ivoirien.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Main content */}
-      <div className="container mx-auto px-4 max-w-6xl py-16 sm:py-24">
-        {/* Introduction */}
-        <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl font-bold text-secondary-900 mb-6 font-display">
-            Un Écosystème de Confiance
-          </h2>
-          <p className="text-lg text-secondary-600">
-            ChapeChape Residence collabore avec des partenaires de confiance pour vous offrir une expérience complète et de qualité.
-            Nos partenaires sont sélectionnés pour leur expertise, leur fiabilité et leur engagement envers l'excellence.
-          </p>
-        </div>
+      {/* ── LOGOS DISPERSÉS style Veone ──────────── */}
+      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
-        {/* Grille de partenaires */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24">
-          {partners.map((partner, index) => (
-            <motion.div
-              key={partner.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 group border border-gray-100"
-            >
-              <div className="p-10 flex items-center justify-center h-56 bg-gradient-to-br from-secondary-50 to-secondary-100 dark:from-secondary-800 dark:to-secondary-700 relative overflow-hidden">
-                <div className="absolute inset-0 bg-white/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <img
-                  src={partner.logo}
-                  alt={partner.name}
-                  className="max-h-28 max-w-[80%] object-contain transition-transform duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/assets/images/placeholder-logo.png'; // Fallback
-                    target.style.opacity = '0.3';
-                  }}
-                />
-              </div>
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-secondary-900">{partner.name}</h3>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary-500 bg-primary-50 px-2 py-1 rounded-md">
-                    {categories.find(cat => cat.id === partner.category)?.name || partner.category}
-                  </span>
+          {/* Gauche — texte */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          >
+            <p className="text-xs font-bold tracking-widest uppercase text-primary-600 font-body mb-3">
+              Notre écosystème
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-secondary-900 font-display leading-tight mb-5">
+              Nos partenaires<br className="hidden sm:block" /> de référence
+            </h2>
+            <p className="text-secondary-500 font-body text-[15px] leading-relaxed max-w-sm">
+              Nous sommes fiers de collaborer avec des leaders du secteur —
+              paiement mobile, banque, technologie — qui partagent notre engagement
+              envers l'excellence et l'innovation pour le marché ivoirien.
+            </p>
+
+            <div className="mt-8">
+              <Link
+                to="/contact"
+                className="inline-flex items-center gap-2 text-sm font-bold text-primary-600 hover:text-primary-700 font-body group"
+              >
+                Devenir partenaire
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Droite — tous les logos dispersés */}
+          <div className="relative h-80 md:h-96">
+            {allLogos.map((p, i) => {
+              const fv = floatVariants[i]
+              return (
+                <motion.div
+                  key={p.id}
+                  className="absolute group"
+                  style={{ left: p.pos.left, top: p.pos.top }}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
+                  animate={{ y: fv.y }}
+                  // @ts-ignore
+                  whileHover={{ scale: 1.15 }}
+                >
+                  <div className="flex items-center justify-center opacity-75 hover:opacity-100 transition-opacity duration-300">
+                    <img
+                      src={p.logo}
+                      alt={p.name}
+                      className="h-10 w-auto object-contain max-w-[120px]"
+                    />
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── CARDS détail ─────────────────────────── */}
+      <section className="bg-secondary-50 py-20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-12"
+          >
+            <h2 className="text-2xl md:text-3xl font-bold text-secondary-900 font-display">
+              Un écosystème de confiance
+            </h2>
+            <div className="mt-4 h-px bg-gradient-to-r from-primary-500 to-transparent max-w-xs" />
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {partners.map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.07 }}
+                className="group bg-white rounded-2xl border border-secondary-100 hover:border-primary-200 hover:shadow-lg transition-all duration-300 overflow-hidden"
+              >
+                {/* Logo zone */}
+                <div className="h-40 bg-secondary-50 flex items-center justify-center p-8 border-b border-secondary-100 group-hover:bg-white transition-colors duration-300">
+                  <img
+                    src={p.logo}
+                    alt={p.name}
+                    className="max-h-16 max-w-[70%] object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
                 </div>
-                <p className="text-secondary-600 mb-6 leading-relaxed text-sm">{partner.description}</p>
-                <a
-                  href={partner.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-primary-600 hover:text-primary-700 font-bold group"
-                >
-                  Visiter le site
-                  <svg className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </a>
-              </div>
-            </motion.div>
-          ))}
-        </div>
 
-        {/* Devenez partenaire */}
-        <div className="bg-secondary-900 rounded-3xl p-10 sm:p-16 relative overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-[url('/assets/images/pattern-luxury.png')] bg-cover bg-center opacity-5 mix-blend-overlay" />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
-
-          <div className="max-w-4xl mx-auto relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="md:flex items-center justify-between gap-12"
-            >
-              <div className="md:w-2/3 mb-8 md:mb-0 text-left">
-                <h2 className="text-3xl font-bold text-white mb-6 font-display">
-                  Devenez Notre Partenaire
-                </h2>
-                <p className="text-primary-100 text-lg leading-relaxed">
-                  Vous souhaitez rejoindre notre écosystème de partenaires ? Nous sommes toujours à la recherche
-                  d'entreprises innovantes qui partagent notre vision et nos valeurs.
-                  Contactez-nous pour explorer les opportunités de collaboration.
-                </p>
-              </div>
-              <div className="md:w-1/3 flex justify-center md:justify-end">
-                <Link
-                  to="/contact"
-                  className="btn-primary w-full md:w-auto text-center px-8 py-4 text-base shadow-lg shadow-primary-500/20"
-                >
-                  Nous contacter
-                </Link>
-              </div>
-            </motion.div>
+                {/* Texte */}
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-bold text-secondary-900 font-display text-base leading-tight">{p.name}</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 bg-primary-50 border border-primary-100 px-2 py-0.5 rounded-full whitespace-nowrap ml-2 shrink-0">
+                      {p.category}
+                    </span>
+                  </div>
+                  <p className="text-sm text-secondary-500 font-body leading-relaxed mb-4">{p.description}</p>
+                  <a
+                    href={p.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-bold text-primary-600 hover:text-primary-700 font-body group/link"
+                  >
+                    Visiter le site
+                    <svg className="w-3.5 h-3.5 group-hover/link:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </a>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Contact Section */}
+      {/* ── CTA DEVENIR PARTENAIRE ────────────────── */}
+      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="relative bg-secondary-900 rounded-3xl p-10 sm:p-16 overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle,#D4AF37_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.03]" />
+          <motion.div
+            className="absolute top-0 right-0 w-80 h-80 rounded-full bg-primary-500/10 blur-3xl"
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+            <div className="md:w-2/3">
+              <h2 className="text-3xl font-bold text-white mb-4 font-display">
+                Devenez notre partenaire
+              </h2>
+              <p className="text-white/60 font-body leading-relaxed text-[15px]">
+                Vous souhaitez rejoindre notre écosystème ? Nous recherchons des entreprises innovantes
+                qui partagent notre vision et nos valeurs pour transformer l'immobilier en Afrique de l'Ouest.
+              </p>
+            </div>
+            <div className="md:w-1/3 flex justify-center md:justify-end">
+              <Link
+                to="/contact"
+                className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-primary-500 text-secondary-900 font-bold font-body text-sm hover:bg-primary-400 transition-colors duration-200 whitespace-nowrap"
+              >
+                Nous contacter
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
       <Contact />
     </div>
   )
 }
-
-export default Partners

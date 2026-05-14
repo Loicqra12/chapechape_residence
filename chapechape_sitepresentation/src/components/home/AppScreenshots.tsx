@@ -1,6 +1,45 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
+// SVG Icons
+const IconSearch = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-primary-600">
+    <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="9" y1="11" x2="13" y2="11" /><line x1="11" y1="9" x2="11" y2="13" />
+  </svg>
+);
+const IconPayment = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-primary-600">
+    <rect x="2" y="5" width="20" height="14" rx="3" /><line x1="2" y1="10" x2="22" y2="10" />
+    <line x1="6" y1="15" x2="10" y2="15" />
+  </svg>
+);
+const IconCalendar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-primary-600">
+    <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    <rect x="8" y="14" width="2" height="2" fill="currentColor" strokeWidth="0" /><rect x="14" y="14" width="2" height="2" fill="currentColor" strokeWidth="0" />
+  </svg>
+);
+const IconDashboard = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-secondary-700">
+    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+);
+const IconChat = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-secondary-700">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <line x1="9" y1="10" x2="15" y2="10" /><line x1="9" y1="14" x2="13" y2="14" />
+  </svg>
+);
+const IconStats = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-secondary-700">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+    <polyline points="16 7 22 7 22 13" />
+  </svg>
+);
+
 const clientAndroid = (import.meta as any).env?.VITE_CLIENT_ANDROID_URL || '#'
 const clientIos = (import.meta as any).env?.VITE_CLIENT_IOS_URL || '#'
 const partnerAndroid = (import.meta as any).env?.VITE_PARTNER_ANDROID_URL || '#'
@@ -14,9 +53,9 @@ const apps = [
     title: 'Trouvez votre résidence idéale',
     description: 'Une expérience de recherche fluide et intuitive. Réservez votre prochain séjour en quelques clics.',
     features: [
-      { icon: '🔍', title: 'Recherche Intelligente', text: 'Filtres avancés par prix, localisation et équipements' },
-      { icon: '💳', title: 'Paiement Sécurisé', text: 'Transactions cryptées et multiples moyens de paiement' },
-      { icon: '📅', title: 'Gestion Simplifiée', text: 'Suivez vos réservations et historiques en temps réel' }
+      { Icon: IconSearch, title: 'Recherche Intelligente', text: 'Filtres avancés par prix, localisation et équipements' },
+      { Icon: IconPayment, title: 'Paiement Sécurisé', text: 'Transactions cryptées et multiples moyens de paiement' },
+      { Icon: IconCalendar, title: 'Gestion Simplifiée', text: 'Suivez vos réservations et historiques en temps réel' }
     ],
     color: 'from-primary-500 to-secondary-500',
     accent: 'text-primary-600',
@@ -33,9 +72,9 @@ const apps = [
     title: 'Gérez vos biens en toute sérénité',
     description: 'Un tableau de bord complet pour maximiser vos revenus et gérer vos locations sans effort.',
     features: [
-      { icon: '📊', title: 'Dashboard Complet', text: 'Vue d\'ensemble de vos performances et revenus' },
-      { icon: '💬', title: 'Messagerie Directe', text: 'Communiquez facilement avec vos locataires' },
-      { icon: '📈', title: 'Statistiques Détaillées', text: 'Analysez vos taux d\'occupation et revenus' }
+      { Icon: IconDashboard, title: 'Dashboard Complet', text: 'Vue d\'ensemble de vos performances et revenus' },
+      { Icon: IconChat, title: 'Messagerie Directe', text: 'Communiquez facilement avec vos locataires' },
+      { Icon: IconStats, title: 'Statistiques Détaillées', text: 'Analysez vos taux d\'occupation et revenus' }
     ],
     color: 'from-secondary-800 to-secondary-900',
     accent: 'text-secondary-800',
@@ -109,7 +148,7 @@ const AppScreenshots: React.FC = () => {
             </h2>
 
             {/* Tabs Switcher */}
-            <div className="flex p-1 bg-secondary-100/50 rounded-full w-fit mb-10 backdrop-blur-sm border border-secondary-200/50">
+            <div className="flex flex-wrap gap-1 p-1 bg-secondary-100/50 rounded-full w-fit mb-10 backdrop-blur-sm border border-secondary-200/50">
               {apps.map((app, index) => (
                 <button
                   key={app.id}
@@ -148,8 +187,8 @@ const AppScreenshots: React.FC = () => {
                       transition={{ delay: idx * 0.1 + 0.3 }}
                       className="flex items-start gap-4 group"
                     >
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-white shadow-md border border-primary-100 group-hover:scale-110 transition-transform duration-300`}>
-                        {feature.icon}
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white shadow-md border border-primary-100 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                        <feature.Icon />
                       </div>
                       <div>
                         <h4 className="font-bold text-secondary-900 mb-1">{feature.title}</h4>
@@ -159,35 +198,24 @@ const AppScreenshots: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-3">
                   <motion.a
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
                     href={activeApp.id === 'client' ? clientAndroid : partnerAndroid}
                     target={(activeApp.id === 'client' ? clientAndroid : partnerAndroid) !== '#' ? '_blank' : undefined}
                     rel={(activeApp.id === 'client' ? clientAndroid : partnerAndroid) !== '#' ? 'noopener noreferrer' : undefined}
-                    className="flex items-center gap-3 px-6 py-3 bg-secondary-900 text-white rounded-xl shadow-xl hover:bg-secondary-800 transition-colors"
+                    className="inline-block rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
                   >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" /></svg>
-                    <div className="text-left">
-                      <div className="text-[10px] uppercase tracking-wider opacity-80">Télécharger sur</div>
-                      <div className="font-bold text-sm">Google Play</div>
-                    </div>
+                    <img src="/assets/googleplay.png" alt="Disponible sur Google Play" className="h-10 w-auto" />
                   </motion.a>
-
                   <motion.a
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
                     href={activeApp.id === 'client' ? clientIos : partnerIos}
                     target={(activeApp.id === 'client' ? clientIos : partnerIos) !== '#' ? '_blank' : undefined}
                     rel={(activeApp.id === 'client' ? clientIos : partnerIos) !== '#' ? 'noopener noreferrer' : undefined}
-                    className="flex items-center gap-3 px-6 py-3 bg-secondary-900 text-white rounded-xl shadow-xl hover:bg-secondary-800 transition-colors"
+                    className="inline-block rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
                   >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" /></svg>
-                    <div className="text-left">
-                      <div className="text-[10px] uppercase tracking-wider opacity-80">Télécharger sur</div>
-                      <div className="font-bold text-sm">App Store</div>
-                    </div>
+                    <img src="/assets/appstore.png" alt="Télécharger sur l'App Store" className="h-10 w-auto" />
                   </motion.a>
                 </div>
               </motion.div>
@@ -203,7 +231,7 @@ const AppScreenshots: React.FC = () => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-primary-200/20 to-secondary-200/20 rounded-full blur-3xl -z-10 animate-pulse" />
 
             {/* Phone Mockup */}
-            <div className="relative w-[300px] h-[600px] bg-secondary-900 rounded-[3rem] border-8 border-secondary-800 shadow-2xl overflow-hidden ring-1 ring-white/20">
+            <div className="relative w-[min(300px,85vw)] h-[600px] bg-secondary-900 rounded-[3rem] border-8 border-secondary-800 shadow-2xl overflow-hidden ring-1 ring-white/20">
               {/* Dynamic Island / Notch */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-2xl z-20" />
 
@@ -256,7 +284,11 @@ const AppScreenshots: React.FC = () => {
                     className="absolute -left-16 top-32 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/50 w-48 z-30 hidden md:block"
                   >
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">📈</div>
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" />
+                          </svg>
+                        </div>
                       <div>
                         <div className="text-xs text-secondary-500">Revenus</div>
                         <div className="text-sm font-bold text-secondary-900">+ 15.4%</div>

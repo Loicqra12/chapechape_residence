@@ -107,7 +107,7 @@ const AboutSection = () => {
       shortName: "A. Diaby",
       role: "CEO & CO-FONDATEUR",
       description: "Fondateur de Onloutou, une plateforme de location d'équipements, Adams est un visionnaire du numérique en Afrique de l'Ouest. Il apporte son expertise en gestion de projets digitaux et sa connaissance approfondie du marché ivoirien.",
-      image: "/assets/team/adams-diaby.jpg",
+      image: "/assets/team/adams_diaby.jpg",
       techTag: "Tech & Produit",
       location: "Basé à Abidjan",
     },
@@ -184,7 +184,6 @@ const AboutSection = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center mb-20"
         >
-          {/* Badge premium */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -681,157 +680,387 @@ const AboutSection = () => {
           </motion.div>
         </div>
 
-        {/* Section Nos Valeurs — format capture: icône au-dessus, sous-titre, cartes bordure primary */}
+        {/* Section Nos Valeurs — Bento Grid Dark Premium */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.7 }}
           className="mb-20"
         >
-          <div className="text-center mb-10">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="flex justify-center mb-3"
-            >
-              <span className="text-primary-500" aria-hidden>
-                <SparklesIcon className="w-8 h-8 mx-auto" strokeWidth={2} />
-              </span>
-            </motion.div>
-            <motion.h3
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-2xl md:text-3xl font-bold text-secondary-900 dark:text-white mb-2 font-display"
-            >
-              Nos Valeurs
-            </motion.h3>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-secondary-600 dark:text-secondary-400 text-sm md:text-base max-w-2xl mx-auto font-body"
-            >
-              Les principes qui guident chacune de nos décisions et actions au quotidien.
-            </motion.p>
-          </div>
+          <div className="relative rounded-3xl overflow-hidden bg-secondary-900 border border-white/10 p-6 md:p-10 shadow-2xl">
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6"
-          >
-            {values.map((value, index) => (
+            {/* Glow ambiant central */}
+            <motion.div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full bg-primary-500/8 blur-[120px] pointer-events-none"
+              animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.9, 0.5] }}
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            />
+
+            {/* Grille de points décorative */}
+            <div
+              className="absolute inset-0 opacity-[0.035] pointer-events-none"
+              style={{ backgroundImage: 'radial-gradient(circle, #D4AF37 1px, transparent 1px)', backgroundSize: '32px 32px' }}
+            />
+
+            {/* En-tête */}
+            <div className="relative z-10 text-center mb-8">
               <motion.div
-                key={value.title}
-                custom={index}
-                variants={itemVariants}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="relative bg-secondary-50 dark:bg-secondary-800/50 p-6 rounded-2xl shadow-soft-xl border border-secondary-200 dark:border-secondary-700 border-l-4 border-r-4 border-b-4 border-l-primary-500 border-r-primary-500 border-b-primary-500 dark:border-l-primary-400 dark:border-r-primary-400 dark:border-b-primary-400 transition-all duration-300"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary-500/40 bg-primary-500/10 text-primary-300 text-xs font-bold tracking-widest uppercase mb-4 font-body"
               >
-                <div className="relative z-10">
-                  <div className="rounded-full bg-secondary-100 dark:bg-secondary-700 w-14 h-14 flex items-center justify-center text-primary-600 dark:text-primary-400 mb-4 border-2 border-primary-400 dark:border-primary-500">
-                    {value.icon}
-                  </div>
-                  <h4 className="text-lg font-bold text-secondary-900 dark:text-white mb-2 font-display">{value.title}</h4>
-                  <p className="text-secondary-600 dark:text-secondary-400 text-sm leading-relaxed font-body">{value.description}</p>
-                </div>
+                <SparklesIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                Ce qui nous définit
               </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
+              <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 font-display tracking-tight">
+                Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-300 to-primary-500">Valeurs</span>
+              </h3>
+              <p className="text-secondary-400 text-sm md:text-base max-w-xl mx-auto font-body">
+                Les principes qui guident chacune de nos décisions et actions au quotidien.
+              </p>
+            </div>
 
-        {/* Section Qui sommes-nous — format capture: icône au-dessus, cartes avec bandeau primary + pills */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="mb-16"
-        >
-          <div className="text-center mb-10">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="flex justify-center mb-3"
-            >
-              <span className="text-primary-500" aria-hidden>
-                <UserGroupIcon className="w-8 h-8 mx-auto" strokeWidth={2} />
-              </span>
-            </motion.div>
-            <motion.h3
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="text-2xl md:text-3xl font-bold text-secondary-900 dark:text-white mb-2 font-display"
-            >
-              Qui sommes-nous ?
-            </motion.h3>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-secondary-600 dark:text-secondary-400 text-sm md:text-base max-w-2xl mx-auto font-body"
-            >
-              ChapeChapeRésidence est le fruit de la collaboration entre deux entrepreneurs passionnés par la transformation digitale du secteur immobilier en Afrique.
-            </motion.p>
-          </div>
+            {/* Bento Grid — row 1 : Accessibilité large + Confiance */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {team.map((member, index) => (
+              {/* Accessibilité — 2/3 avec orbite animée */}
               <motion.div
-                key={member.name}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: index * 0.2 }}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="bg-white dark:bg-secondary-800 rounded-2xl overflow-hidden shadow-xl border border-secondary-200 dark:border-secondary-700 flex flex-col md:flex-row"
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.05 }}
+                whileHover={{ scale: 1.01 }}
+                className="group lg:col-span-2 relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-primary-500/40 hover:bg-white/[0.05]"
               >
-                {/* Bandeau primary avec initiale / photo + shortName + LinkedIn */}
-                <div className="md:w-2/5 relative bg-gradient-to-br from-primary-400 to-primary-600 p-8 flex flex-col items-center justify-center min-h-[200px] md:min-h-[280px]">
-                  <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-3xl font-bold border-2 border-white/40 mb-4 font-display">
-                    {member.name.charAt(0)}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_top_left,rgba(212,175,55,0.07),transparent_55%)] pointer-events-none" />
+                <div className="absolute top-0 left-10 right-10 h-px bg-gradient-to-r from-transparent via-primary-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div className="flex items-center justify-between p-7 h-full min-h-[160px]">
+                  {/* Contenu gauche */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0 pr-6">
+                    <div className="shrink-0 w-12 h-12 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 group-hover:bg-primary-500/25 group-hover:border-primary-400/60 transition-all duration-300">
+                      {values[0].icon}
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-white mb-1.5 font-display">{values[0].title}</h4>
+                      <p className="text-secondary-400 text-sm leading-relaxed font-body">{values[0].description}</p>
+                    </div>
                   </div>
-                  <p className="text-white/90 text-sm font-medium italic font-body mb-3">{member.shortName}</p>
-                  <a
-                    href="https://www.linkedin.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-9 h-9 rounded bg-white/20 text-white hover:bg-white/30 transition-colors"
-                    aria-label="LinkedIn"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                  </a>
-                </div>
-                {/* Contenu: nom, rôle, description, pills */}
-                <div className="md:w-3/5 p-6 md:p-8 flex flex-col justify-center">
-                  <h4 className="text-xl md:text-2xl font-bold text-secondary-900 dark:text-white mb-1 font-display">{member.name}</h4>
-                  <p className="text-primary-600 dark:text-primary-400 font-bold text-xs tracking-widest uppercase mb-4 font-body">{member.role}</p>
-                  <p className="text-secondary-600 dark:text-secondary-400 text-sm leading-relaxed font-body mb-6">{member.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold font-body bg-blue-50 border border-blue-400 text-blue-800 dark:bg-blue-950/40 dark:border-blue-500 dark:text-blue-200">
-                      <RocketLaunchIcon className="w-4 h-4" strokeWidth={2} aria-hidden />
-                      {member.techTag}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-secondary-700 border border-primary-400 text-primary-600 dark:text-primary-400 text-xs font-semibold font-body">
-                      <MapPinIcon className="w-4 h-4" strokeWidth={2} aria-hidden />
-                      {member.location}
-                    </span>
+
+                  {/* Orbite animée droite */}
+                  <div className="shrink-0 relative w-28 h-28">
+                    {/* Cercle extérieur */}
+                    <div className="absolute inset-0 rounded-full border border-primary-500/20" />
+                    {/* Cercle intérieur */}
+                    <div className="absolute inset-[18px] rounded-full border border-primary-400/15" />
+                    {/* Centre */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary-500/50 shadow-[0_0_10px_#D4AF37]" />
+                    {/* Orbe 1 — orbite externe, sens horaire */}
+                    <motion.div
+                      className="absolute inset-0"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+                    >
+                      <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-primary-400 shadow-[0_0_10px_rgba(212,175,55,0.9)]" />
+                    </motion.div>
+                    {/* Orbe 2 — orbite interne, sens anti-horaire */}
+                    <motion.div
+                      className="absolute inset-[18px]"
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                    >
+                      <div className="absolute -top-[4px] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary-300/70 shadow-[0_0_6px_rgba(212,175,55,0.6)]" />
+                    </motion.div>
+                    {/* Trait de connexion orbital (arc SVG) */}
+                    <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 112 112">
+                      <circle cx="56" cy="56" r="50" fill="none" stroke="#D4AF37" strokeWidth="0.5" strokeDasharray="3 6" />
+                      <circle cx="56" cy="56" r="32" fill="none" stroke="#D4AF37" strokeWidth="0.5" strokeDasharray="2 8" />
+                    </svg>
                   </div>
                 </div>
               </motion.div>
-            ))}
+
+              {/* Confiance — 1/3 avec forme wave */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.12 }}
+                whileHover={{ scale: 1.02 }}
+                className="group relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-primary-500/40 hover:bg-white/[0.05]"
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.07),transparent_55%)] pointer-events-none" />
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-primary-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {/* Forme wave décorative en fond */}
+                <svg className="absolute bottom-0 right-0 opacity-[0.07] group-hover:opacity-[0.14] transition-opacity duration-500 pointer-events-none" width="120" height="100" viewBox="0 0 120 100">
+                  <motion.path
+                    d="M120 100 C80 60, 60 80, 40 40 C20 0, 0 20, -10 0"
+                    fill="none" stroke="#D4AF37" strokeWidth="40"
+                    animate={{ pathLength: [0.4, 1, 0.4] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                </svg>
+                <motion.div
+                  className="absolute bottom-2 right-2 w-20 h-20 rounded-full bg-primary-500/10 blur-2xl pointer-events-none"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                />
+
+                <div className="p-7 min-h-[160px] flex flex-col justify-between">
+                  <div>
+                    <div className="w-11 h-11 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 mb-4 group-hover:bg-primary-500/25 group-hover:border-primary-400/60 transition-all duration-300">
+                      {values[1].icon}
+                    </div>
+                    <h4 className="text-base font-bold text-white mb-1.5 font-display">{values[1].title}</h4>
+                    <p className="text-secondary-400 text-sm leading-relaxed font-body">{values[1].description}</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Bento Grid — row 2 : 3 cartes égales */}
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+              {/* Innovation — avec orbite mini */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.18 }}
+                whileHover={{ scale: 1.02 }}
+                className="group relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-primary-500/40 hover:bg-white/[0.05]"
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_bottom_left,rgba(212,175,55,0.07),transparent_55%)] pointer-events-none" />
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-primary-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {/* Mini orbite coin bas-droit */}
+                <div className="absolute bottom-3 right-3 w-14 h-14 opacity-30 group-hover:opacity-60 transition-opacity duration-300">
+                  <div className="absolute inset-0 rounded-full border border-primary-400/50" />
+                  <motion.div className="absolute inset-0" animate={{ rotate: 360 }} transition={{ duration: 5, repeat: Infinity, ease: "linear" }}>
+                    <div className="absolute -top-[3px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-400 shadow-[0_0_6px_#D4AF37]" />
+                  </motion.div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-primary-500" />
+                </div>
+
+                <div className="p-7 min-h-[160px] flex flex-col">
+                  <div className="w-11 h-11 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 mb-4 group-hover:bg-primary-500/25 group-hover:border-primary-400/60 transition-all duration-300">
+                    {values[2].icon}
+                  </div>
+                  <h4 className="text-base font-bold text-white mb-1.5 font-display">{values[2].title}</h4>
+                  <p className="text-secondary-400 text-sm leading-relaxed font-body">{values[2].description}</p>
+                </div>
+              </motion.div>
+
+              {/* Responsabilité — avec wave abstract */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.24 }}
+                whileHover={{ scale: 1.02 }}
+                className="group relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-primary-500/40 hover:bg-white/[0.05]"
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.07),transparent_55%)] pointer-events-none" />
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-primary-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {/* Vagues abstraites en fond (inspiré capture 3) */}
+                <svg className="absolute inset-0 w-full h-full opacity-[0.06] group-hover:opacity-[0.12] transition-opacity duration-500 pointer-events-none" viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice">
+                  {[0,1,2].map(i => (
+                    <motion.ellipse
+                      key={i}
+                      cx={100 + i * 20} cy={130 + i * 20} rx={80 + i * 30} ry={50 + i * 15}
+                      fill="none" stroke="#D4AF37" strokeWidth="12"
+                      animate={{ cy: [130 + i*20, 110 + i*20, 130 + i*20] }}
+                      transition={{ duration: 4 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.8 }}
+                    />
+                  ))}
+                </svg>
+
+                <div className="p-7 min-h-[160px] flex flex-col">
+                  <div className="w-11 h-11 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 mb-4 group-hover:bg-primary-500/25 group-hover:border-primary-400/60 transition-all duration-300">
+                    {values[3].icon}
+                  </div>
+                  <h4 className="text-base font-bold text-white mb-1.5 font-display">{values[3].title}</h4>
+                  <p className="text-secondary-400 text-sm leading-relaxed font-body">{values[3].description}</p>
+                </div>
+              </motion.div>
+
+              {/* Excellence — accentuée or + double orbite */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.30 }}
+                whileHover={{ scale: 1.02 }}
+                className="group relative rounded-2xl border border-primary-500/30 bg-secondary-800/60 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-primary-400/55 hover:bg-secondary-800/70"
+              >
+                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-primary-400/60 to-transparent" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(ellipse_at_bottom_right,rgba(212,175,55,0.08),transparent_60%)] pointer-events-none" />
+
+                {/* Double orbite coin haut-droite */}
+                <div className="absolute top-4 right-4 w-16 h-16 opacity-40 group-hover:opacity-70 transition-opacity duration-300">
+                  <div className="absolute inset-0 rounded-full border border-primary-400/60" />
+                  <div className="absolute inset-[10px] rounded-full border border-primary-300/40" />
+                  <motion.div className="absolute inset-0" animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }}>
+                    <div className="absolute -top-[4px] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary-400 shadow-[0_0_8px_rgba(212,175,55,0.9)]" />
+                  </motion.div>
+                  <motion.div className="absolute inset-[10px]" animate={{ rotate: -360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}>
+                    <div className="absolute -top-[3px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-300/80 shadow-[0_0_5px_rgba(212,175,55,0.6)]" />
+                  </motion.div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary-500 shadow-[0_0_8px_#D4AF37]" />
+                </div>
+
+                <div className="p-7 min-h-[160px] flex flex-col">
+                  <div className="w-11 h-11 rounded-xl bg-primary-500/20 border border-primary-400/50 flex items-center justify-center text-primary-300 mb-4 group-hover:bg-primary-500/30 group-hover:border-primary-400/70 transition-all duration-300">
+                    {values[4].icon}
+                  </div>
+                  <h4 className="text-base font-bold text-white mb-1.5 font-display">{values[4].title}</h4>
+                  <p className="text-secondary-400 text-sm leading-relaxed font-body">{values[4].description}</p>
+                </div>
+              </motion.div>
+
+            </div>
           </div>
         </motion.div>
+
+        {/* Section Qui sommes-nous — Layout zigzag alterné */}
+        <div className="mb-16">
+          {/* En-tête */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700 text-primary-500 mb-5">
+              <UserGroupIcon className="w-6 h-6" strokeWidth={2} />
+            </div>
+            <h3 className="text-2xl md:text-3xl font-bold text-secondary-900 dark:text-white mb-3 font-display">
+              Qui sommes-nous ?
+            </h3>
+            <p className="text-secondary-500 dark:text-secondary-400 text-sm md:text-base max-w-xl mx-auto font-body leading-relaxed">
+              ChapeChapeRésidence est le fruit de la collaboration entre deux entrepreneurs passionnés par la transformation digitale du secteur immobilier en Afrique.
+            </p>
+          </motion.div>
+
+          {/* Membres en zigzag */}
+          <div className="space-y-24">
+            {team.map((member, index) => {
+              const isEven = index % 2 === 0;
+              return (
+                <motion.div
+                  key={member.name}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.7, ease: "easeOut" }}
+                  className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-12 lg:gap-16`}
+                >
+                  {/* Visuel — carte avatar premium */}
+                  <div className="w-full lg:w-5/12 shrink-0">
+                    <motion.div
+                      initial={{ opacity: 0, x: isEven ? -30 : 30 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.7, delay: 0.15 }}
+                      className="relative overflow-hidden aspect-[3/4] rounded-2xl"
+                    >
+                      {/* Photo plein cadre */}
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                      />
+                      {/* Overlay dégradé bas pour lisibilité */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/75 via-secondary-900/10 to-transparent" />
+
+                      {/* Infos en bas */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
+                        <p className="text-white font-bold text-xl font-display mb-0.5">{member.name}</p>
+                        <p className="text-primary-300 text-xs font-semibold tracking-widest uppercase font-body mb-4">{member.role}</p>
+                        <a
+                          href="https://www.linkedin.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-semibold hover:bg-white/20 transition-all duration-200 font-body"
+                          aria-label="LinkedIn"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                          </svg>
+                          Voir le profil
+                        </a>
+                      </div>
+
+                      {/* Badge coin haut-droit */}
+                      <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-secondary-900/50 backdrop-blur-sm text-white/90 text-xs font-bold tracking-wider font-body border border-white/10">
+                        Co-fondateur
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Contenu texte */}
+                  <motion.div
+                    initial={{ opacity: 0, x: isEven ? 30 : -30 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.7, delay: 0.25 }}
+                    className="w-full lg:w-7/12"
+                  >
+                    {/* Badge rôle */}
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 text-primary-700 dark:text-primary-300 text-xs font-bold tracking-widest uppercase mb-5 font-body">
+                      <RocketLaunchIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                      {member.role}
+                    </div>
+
+                    {/* Nom */}
+                    <h4 className="text-3xl md:text-4xl font-bold text-secondary-900 dark:text-white mb-4 font-display leading-tight">
+                      {member.name}
+                    </h4>
+
+                    {/* Séparateur doré */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-0.5 bg-primary-500 rounded-full" />
+                      <div className="w-2 h-2 rounded-full bg-primary-500" />
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-secondary-600 dark:text-secondary-400 text-base leading-relaxed font-body mb-8">
+                      {member.description}
+                    </p>
+
+                    {/* Pills */}
+                    <div className="flex flex-wrap gap-3">
+                      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold font-body bg-secondary-900 dark:bg-white/10 text-white border border-secondary-700 dark:border-white/10">
+                        <RocketLaunchIcon className="w-4 h-4 text-primary-400" strokeWidth={2} aria-hidden />
+                        {member.techTag}
+                      </span>
+                      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold font-body bg-white dark:bg-secondary-800 border border-primary-300 dark:border-primary-600 text-primary-700 dark:text-primary-300">
+                        <MapPinIcon className="w-4 h-4" strokeWidth={2} aria-hidden />
+                        {member.location}
+                      </span>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Séparateur entre les deux membres */}
+          <div className="relative my-16 flex items-center justify-center">
+            <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-secondary-200 dark:via-secondary-700 to-transparent" />
+            <div className="relative bg-white dark:bg-secondary-900 px-4">
+              <div className="w-8 h-8 rounded-full border-2 border-primary-400 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-primary-500" />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Barre Statistiques & Mission — format capture */}
         <motion.div

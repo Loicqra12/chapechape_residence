@@ -13,6 +13,7 @@ import Pricing from '../components/home/Pricing'
 import AboutSection from '../components/home/AboutSection'
 import ResidenceTypes from '../components/home/ResidenceTypes'
 import AppScreenshots from '../components/home/AppScreenshots'
+import PartnerSection from '../components/home/PartnerSection'
 import Features from '../components/home/Features'
 import SEOHead from '../components/seo/SEOHead'
 import ParallaxSection from '../components/ui/ParallaxSection'
@@ -294,6 +295,9 @@ export default function Home() {
 
       {/* App Screenshots section */}
       <AppScreenshots />
+
+      {/* Section Partenaire Propriétaire */}
+      <PartnerSection />
 
       {/* Partners section */}
       <Partners />
