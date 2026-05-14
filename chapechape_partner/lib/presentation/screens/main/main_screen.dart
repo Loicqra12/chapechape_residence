@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/blocs/message/message_bloc.dart';
 import '../../../core/blocs/notification/notification_bloc.dart';
 import '../../../core/blocs/notification/notification_state.dart';
+import '../../../core/blocs/reservation/reservation_bloc.dart';
+import '../../widgets/common/partner_count_badge.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../messages/messages_screen.dart';
 import '../profile/profile_screen.dart';
@@ -14,7 +16,7 @@ import '../reservations/reservations_screen.dart';
 
 /// InheritedWidget pour permettre la navigation entre les onglets depuis les enfants
 class MainScreenNavigator extends InheritedWidget {
-  final void Function(int index) navigateToTab;
+  final void Function(BuildContext context, int index) navigateToTab;
 
   const MainScreenNavigator({
     super.key,
@@ -48,9 +50,12 @@ class _MainScreenState extends State<MainScreen> {
     const ProfileScreen(),
   ];
 
-  void _navigateToTab(int index) {
+  void _navigateToTab(BuildContext context, int index) {
     if (index >= 0 && index < _screens.length) {
       setState(() => _currentIndex = index);
+      if (index == 2) {
+        context.read<ReservationBloc>().add(LoadPartnerReservations());
+      }
     }
   }
 
@@ -102,12 +107,21 @@ class _MainScreenState extends State<MainScreen> {
                 activeIcon: Icons.apartment,
                 label: 'Résidences',
               ),
-              _buildNavItem(
-                context,
-                index: 2,
-                icon: Icons.calendar_today_outlined,
-                activeIcon: Icons.calendar_today,
-                label: 'Réservations',
+              BlocBuilder<ReservationBloc, ReservationState>(
+                builder: (context, state) {
+                  var badge = 0;
+                  if (state is ReservationLoaded) {
+                    badge = partnerReservationAttentionCount(state.reservations);
+                  }
+                  return _buildNavItem(
+                    context,
+                    index: 2,
+                    icon: Icons.calendar_today_outlined,
+                    activeIcon: Icons.calendar_today,
+                    label: 'Réservations',
+                    badgeCount: badge,
+                  );
+                },
               ),
               // Messages avec badge
               BlocBuilder<MessageBloc, MessageState>(
@@ -168,7 +182,7 @@ class _MainScreenState extends State<MainScreen> {
     
     return Expanded(
       child: InkWell(
-        onTap: () => _navigateToTab(index),
+        onTap: () => _navigateToTab(context, index),
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -198,37 +212,11 @@ class _MainScreenState extends State<MainScreen> {
                   // Badge
                   if (badgeCount > 0)
                     Positioned(
-                      right: -8,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        child: Text(
-                          badgeCount > 99 ? '99+' : '$badgeCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                      right: -10,
+                      top: -6,
+                      child: PartnerCountBadge(
+                        count: badgeCount,
+                        compact: true,
                       ),
                     ),
                 ],

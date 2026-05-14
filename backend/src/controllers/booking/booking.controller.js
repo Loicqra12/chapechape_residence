@@ -59,7 +59,7 @@ exports.getAllBookings = asyncHandler(async (req, res) => {
                 status: doc.isAvailable ? 'available' : 'unavailable'
             })
         })
-        .populate('client', 'firstName lastName email')
+        .populate('user', 'firstName lastName email')
         .populate('partner', 'name email')
         .sort(sortQuery)
         .skip(skip)

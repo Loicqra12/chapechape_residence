@@ -16,6 +16,11 @@ function maskPhoneNumber(phoneNumber) {
   return `${phoneNumber.slice(0, 4)}***${phoneNumber.slice(-2)}`;
 }
 
+/** Guest sur un Booking : le schéma utilise `user` ; l’ancien code peuplait `client`. */
+function guestFromBooking(booking) {
+  return booking?.user || booking?.client;
+}
+
 class TwilioService {
   constructor() {
     // Vérification des variables d'environnement
@@ -125,8 +130,8 @@ class TwilioService {
       throw new Error('Booking object is required');
     }
 
-    // Si le client n'a pas de numéro de téléphone, impossible d'envoyer un WhatsApp
-    if (!booking.client || !booking.client.phoneNumber) {
+    const guest = guestFromBooking(booking);
+    if (!guest?.phoneNumber) {
       logger.warn(`Impossible d'envoyer un WhatsApp pour la réservation ${booking._id}: Numéro de téléphone manquant`);
       return null;
     }
@@ -152,12 +157,13 @@ class TwilioService {
         message = `🏠 *ChapeChape Résidence*\n\n📋 *Mise à jour de réservation*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n\n📱 Consultez l'application pour plus de détails.`;
     }
 
-    return this.sendWhatsAppMessage(booking.client.phoneNumber, message);
+    return this.sendWhatsAppMessage(guest.phoneNumber, message);
   }
 
   // Méthode spécifique pour envoyer des instructions de paiement WhatsApp (version riche)
   async sendWhatsAppPaymentInstructions(booking, paymentMethod) {
-    if (!booking || !booking.client || !booking.client.phoneNumber) {
+    const guest = guestFromBooking(booking);
+    if (!booking || !guest?.phoneNumber) {
       logger.warn(`Impossible d'envoyer des instructions de paiement WhatsApp: Données manquantes`);
       return null;
     }
@@ -187,7 +193,7 @@ class TwilioService {
     }
     
     logger.info(`Envoi d'instructions de paiement WhatsApp ${paymentMethod} pour la réservation ${booking._id}`);
-    return this.sendWhatsAppMessage(booking.client.phoneNumber, messageBody);
+    return this.sendWhatsAppMessage(guest.phoneNumber, messageBody);
   }
 
   // ===== FIN WHATSAPP METHODS =====
@@ -250,8 +256,8 @@ class TwilioService {
       throw new Error('Booking object is required');
     }
 
-    // Si le client n'a pas de numéro de téléphone, impossible d'envoyer un SMS
-    if (!booking.client || !booking.client.phoneNumber) {
+    const guest = guestFromBooking(booking);
+    if (!guest?.phoneNumber) {
       logger.warn(`Impossible d'envoyer un SMS pour la réservation ${booking._id}: Numéro de téléphone manquant`);
       return null;
     }
@@ -278,7 +284,7 @@ class TwilioService {
         message = `ChapeChape: Mise à jour de votre réservation pour "${residenceName}" prévue le ${formattedDate}. Veuillez consulter l'application pour plus de détails.`;
     }
 
-    return this.sendSMS(booking.client.phoneNumber, message);
+    return this.sendSMS(guest.phoneNumber, message);
   }
 
   // Méthode spécifique pour envoyer des instructions de paiement Reservation
@@ -311,7 +317,8 @@ class TwilioService {
 
   // Méthode spécifique pour envoyer des instructions de paiement adaptées aux méthodes africaines
   async sendPaymentInstructions(booking, paymentMethod) {
-    if (!booking || !booking.client || !booking.client.phoneNumber) {
+    const guest = guestFromBooking(booking);
+    if (!booking || !guest?.phoneNumber) {
       logger.warn(`Impossible d'envoyer des instructions de paiement: Données manquantes`);
       return null;
     }
@@ -340,7 +347,7 @@ class TwilioService {
     }
     
     logger.info(`Envoi d'instructions de paiement ${paymentMethod} pour la réservation ${booking._id}`);
-    return this.sendSMS(booking.client.phoneNumber, messageBody);
+    return this.sendSMS(guest.phoneNumber, messageBody);
   }
 }
 

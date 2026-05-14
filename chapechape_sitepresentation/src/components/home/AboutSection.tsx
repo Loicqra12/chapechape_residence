@@ -869,15 +869,24 @@ const AboutSection = () => {
 
                 {/* Vagues abstraites en fond (inspiré capture 3) */}
                 <svg className="absolute inset-0 w-full h-full opacity-[0.06] group-hover:opacity-[0.12] transition-opacity duration-500 pointer-events-none" viewBox="0 0 200 160" preserveAspectRatio="xMidYMid slice">
-                  {[0,1,2].map(i => (
-                    <motion.ellipse
-                      key={i}
-                      cx={100 + i * 20} cy={130 + i * 20} rx={80 + i * 30} ry={50 + i * 15}
-                      fill="none" stroke="#D4AF37" strokeWidth="12"
-                      animate={{ cy: [130 + i*20, 110 + i*20, 130 + i*20] }}
-                      transition={{ duration: 4 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.8 }}
-                    />
-                  ))}
+                  {[0, 1, 2].map((i) => {
+                    // Framer Motion peut émettre cy="undefined" sans état initial explicite sur SVG animés.
+                    const cy0 = 130 + i * 20
+                    return (
+                      <motion.ellipse
+                        key={i}
+                        cx={100 + i * 20}
+                        rx={80 + i * 30}
+                        ry={50 + i * 15}
+                        fill="none"
+                        stroke="#D4AF37"
+                        strokeWidth="12"
+                        initial={{ cy: cy0 }}
+                        animate={{ cy: [cy0, 110 + i * 20, cy0] }}
+                        transition={{ duration: 4 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.8 }}
+                      />
+                    )
+                  })}
                 </svg>
 
                 <div className="p-7 min-h-[160px] flex flex-col">

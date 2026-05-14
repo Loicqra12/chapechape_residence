@@ -5,6 +5,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
+    // Dev : mêmes URLs relatives qu’en prod (fetch /api/... → proxy → backend, pas de CORS).
+    proxy: {
+      '/api': {
+        target: 'https://api.chapechaperesidence.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',

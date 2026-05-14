@@ -272,7 +272,7 @@ class DashboardService {
                 status: { $in: ['confirmed', 'pending'] },
                 checkIn: { $gte: startOfToday }
             }).populate('residence', 'name imageUrl')
-              .populate('client', 'name avatar')
+              .populate('user', 'firstName lastName profileImage profilePicture')
               .sort('checkIn');
 
             // Récupérer les visites du jour
@@ -280,9 +280,9 @@ class DashboardService {
                 id: booking._id,
                 time: booking.checkIn,
                 client: {
-                    id: booking.client._id,
-                    name: booking.client.name,
-                    avatar: booking.client.avatar
+                    id: booking.user?._id,
+                    name: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ').trim() || 'Client',
+                    avatar: booking.user?.profilePicture || booking.user?.profileImage,
                 },
                 residence: {
                     id: booking.residence._id,
@@ -300,7 +300,7 @@ class DashboardService {
                 residence: { $in: residenceIds },
                 createdAt: { $gte: last24Hours }
             }).populate('residence', 'name')
-              .populate('client', 'name')
+              .populate('user', 'firstName lastName profileImage profilePicture')
               .sort('-createdAt')
               .limit(10);
 
@@ -323,7 +323,7 @@ class DashboardService {
                 residence: { $in: residenceIds },
                 createdAt: { $gte: last24Hours }
             }).populate('residence', 'name')
-              .populate('client', 'name')
+              .populate('user', 'firstName lastName profileImage profilePicture')
               .sort('-createdAt')
               .limit(10);
 
@@ -333,7 +333,7 @@ class DashboardService {
                     type: 'booking',
                     data: {
                         id: booking._id,
-                        clientName: booking.client.name,
+                        clientName: [booking.user?.firstName, booking.user?.lastName].filter(Boolean).join(' ').trim() || 'Client',
                         residenceName: booking.residence.name,
                         status: booking.status
                     },
@@ -352,9 +352,9 @@ class DashboardService {
                     type: 'review',
                     data: {
                         id: review._id,
-                        clientName: review.client.name,
+                        clientName: [review.user?.firstName, review.user?.lastName].filter(Boolean).join(' ').trim() || 'Client',
                         residenceName: review.residence.name,
-                        rating: review.rating
+                        rating: review.rating?.overall ?? review.rating
                     },
                     timestamp: review.createdAt
                 }))

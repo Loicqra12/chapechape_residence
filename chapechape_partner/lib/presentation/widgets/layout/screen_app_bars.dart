@@ -12,6 +12,7 @@ import 'package:chapechape_partner/core/blocs/reservation/reservation_bloc.dart'
 import 'package:chapechape_partner/core/blocs/notification/notification_bloc.dart';
 import 'package:chapechape_partner/core/blocs/notification/notification_state.dart';
 import 'package:chapechape_partner/core/theme/colors.dart';
+import 'package:chapechape_partner/presentation/widgets/common/partner_count_badge.dart';
 import 'package:chapechape_partner/presentation/widgets/dashboard/dashboard_filter_sheet.dart';
 import 'package:chapechape_partner/presentation/widgets/messages/message_search_sheet.dart';
 import 'custom_sliver_app_bar.dart';
@@ -102,28 +103,11 @@ class ScreenAppBars {
                 ),
                 if (unreadCount > 0)
                   Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
-                      ),
-                      child: Text(
-                        unreadCount > 99 ? '99+' : '$unreadCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    right: 4,
+                    top: 4,
+                    child: PartnerCountBadge(
+                      count: unreadCount,
+                      compact: true,
                     ),
                   ),
               ],

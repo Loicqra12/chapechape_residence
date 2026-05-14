@@ -1,7 +1,7 @@
 const Reservation = require('../models/reservation.model');
 const Payment = require('../models/payment.model');
 const ApiError = require('../utils/apiError');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
 
 /**

@@ -58,11 +58,11 @@ exports.confirmBooking = asyncHandler(async (req, res) => {
         await booking.save();
 
         // Récupérer les informations du client pour les notifications
-        const client = await User.findById(booking.client);
+        const client = await User.findById(booking.user);
 
         // Envoyer les notifications
         await notificationService.sendNotification({
-            user: booking.client,
+            user: booking.user,
             title: 'Réservation confirmée',
             message: `Votre réservation a été confirmée par le partenaire`,
             type: 'booking_confirmed',
@@ -116,7 +116,7 @@ exports.cancelBooking = asyncHandler(async (req, res) => {
         }
 
         // Vérifier l'autorisation
-        const isClient = booking.client.toString() === req.user._id.toString();
+        const isClient = booking.user.toString() === req.user._id.toString();
         const isBookingPartner = isPartner && booking.partner.toString() === req.user._id.toString();
         
         if (!isAdmin && !isClient && !isBookingPartner) {
@@ -148,7 +148,7 @@ exports.cancelBooking = asyncHandler(async (req, res) => {
         await booking.save();
 
         // Récupérer les informations du client pour les notifications
-        const client = await User.findById(booking.client);
+        const client = await User.findById(booking.user);
 
         // Envoyer des notifications appropriées
         if (isClient) {
@@ -163,7 +163,7 @@ exports.cancelBooking = asyncHandler(async (req, res) => {
         } else {
             // Notifier le client
             await notificationService.sendNotification({
-                user: booking.client,
+                user: booking.user,
                 title: 'Réservation annulée',
                 message: isPartner ? 
                     `Votre réservation a été annulée par le partenaire` : 
@@ -250,7 +250,7 @@ exports.completeBooking = asyncHandler(async (req, res) => {
 
         // Envoyer des notifications
         await notificationService.sendNotification({
-            user: booking.client,
+            user: booking.user,
             title: 'Visite terminée',
             message: `Votre visite a été marquée comme terminée`,
             type: 'booking_completed',
@@ -258,7 +258,7 @@ exports.completeBooking = asyncHandler(async (req, res) => {
         });
 
         // Récupérer les informations du client
-        const client = await User.findById(booking.client);
+        const client = await User.findById(booking.user);
 
         // Envoyer un email demandant une évaluation
         await emailService.sendReviewRequest(

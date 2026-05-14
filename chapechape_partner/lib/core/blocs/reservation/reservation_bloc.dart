@@ -205,7 +205,7 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       if (currentState is ReservationDetailsLoaded) {
         add(LoadReservationDetails(event.reservationId));
       } else {
-        add(LoadMyReservations());
+        add(LoadPartnerReservations());
       }
     } catch (e) {
       // ✅ Gestion d'erreurs améliorée avec messages spécifiques
@@ -218,7 +218,8 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       
       // Messages d'erreur spécifiques selon le type
       if (errorMessage.contains('paiement requis')) {
-        errorMessage = 'Paiement requis avant de confirmer cette réservation';
+        errorMessage =
+            'Paiement requis avant de continuer cette réservation';
       } else if (errorMessage.contains('Transition d\'état invalide')) {
         errorMessage = 'Action impossible : l\'état de la réservation a changé';
       } else if (errorMessage.contains('pas autorisé')) {
@@ -244,7 +245,7 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       if (currentState is ReservationDetailsLoaded) {
         add(LoadReservationDetails(event.reservationId));
       } else {
-        add(LoadMyReservations());
+        add(LoadPartnerReservations());
       }
     } catch (e) {
       emit(ReservationError(e.toString()));

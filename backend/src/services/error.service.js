@@ -3,7 +3,7 @@
  * Permet de tracer les erreurs métier et techniques
  */
 
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
 
 class ErrorService {

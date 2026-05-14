@@ -272,19 +272,30 @@ app.use(
   })
 );
 
+// Origines autorisées (site vitrine LWS, apps, .env — doublons retirés)
+const corsAllowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:3003",
+  "http://localhost:5173", // Vite (site présentation local)
+  "https://admin.chapechaperesidence.com",
+  "https://presentation.chapechaperesidence.com", // Site vitrine prod (LWS, etc.)
+  process.env.CLIENT_URL,
+  process.env.PARTNER_URL,
+  process.env.DASHBOARD_URL,
+  process.env.PRODUCTION_FRONTEND_URL,
+  process.env.PRODUCTION_CORS_ORIGIN,
+  process.env.PRESENTATION_URL,
+]
+  .map((o) => (typeof o === "string" ? o.trim() : o))
+  .filter(Boolean);
+const corsOriginsUnique = [...new Set(corsAllowedOrigins)];
+
 // CORS
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000", // Frontend client
-      "http://localhost:3001", // Frontend partenaire
-      "http://localhost:3002", // Dashboard local
-      "http://localhost:3003", // Dashboard local alternatif
-      "https://admin.chapechaperesidence.com", // Dashboard admin
-      process.env.CLIENT_URL,
-      process.env.PARTNER_URL,
-      process.env.DASHBOARD_URL, // Dashboard URL depuis env
-    ],
+    origin: corsOriginsUnique,
     credentials: true, // Pour permettre les cookies avec CORS
     exposedHeaders: ["X-CSRF-Token", "Authorization"], // Exposer les en-têtes nécessaires
   })
