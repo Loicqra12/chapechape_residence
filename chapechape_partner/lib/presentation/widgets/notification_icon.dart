@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/repositories/notification_repository.dart';
+import 'common/partner_count_badge.dart';
 import '../screens/notifications/notification_settings_screen.dart';
 
 class NotificationIcon extends StatefulWidget {
@@ -48,27 +49,11 @@ class _NotificationIconState extends State<NotificationIcon> {
         ),
         if (_unreadCount > 0)
           Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              child: Text(
-                _unreadCount > 9 ? '9+' : _unreadCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
+            top: 4,
+            right: 4,
+            child: PartnerCountBadge(
+              count: _unreadCount,
+              compact: true,
             ),
           ),
       ],

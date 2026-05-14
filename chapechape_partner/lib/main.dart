@@ -281,7 +281,7 @@ Future<void> main() async {
             create: (context) => MessageBloc(context.read<MessageService>()),
           ),
           BlocProvider<ReservationBloc>(
-            create: (context) => ReservationBloc(context.read<ReservationService>())..add(LoadMyReservations()),
+            create: (context) => ReservationBloc(context.read<ReservationService>())..add(LoadPartnerReservations()),
           ),
           BlocProvider<SyncBloc>.value(
             value: syncBloc,

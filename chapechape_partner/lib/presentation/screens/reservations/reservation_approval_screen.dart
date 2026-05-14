@@ -40,7 +40,7 @@ class _ReservationApprovalScreenState extends State<ReservationApprovalScreen>
       _isLoading = true;
     });
     
-    context.read<ReservationBloc>().add(LoadMyReservations());
+    context.read<ReservationBloc>().add(LoadPartnerReservations());
   }
 
   void _filterReservations(List<Reservation> allReservations) {

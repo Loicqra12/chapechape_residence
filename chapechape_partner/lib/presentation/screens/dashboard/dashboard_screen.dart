@@ -625,7 +625,7 @@ class DashboardScreen extends StatelessWidget {
                 title: 'Configurer vos disponibilités',
                 subtitle: 'Ouvrez votre calendrier',
                 color: Theme.of(context).colorScheme.primary,
-                onTap: () => MainScreenNavigator.of(context)?.navigateToTab(1),
+                onTap: () => MainScreenNavigator.of(context)?.navigateToTab(context, 1),
                 showDivider: true,
               ),
               Container(
@@ -658,7 +658,7 @@ class DashboardScreen extends StatelessWidget {
             title: 'Attirer plus de clients',
             subtitle: 'Concluez 1 transaction par semaine...',
             color: const Color(0xFF9C27B0), // Violet
-            onTap: () => MainScreenNavigator.of(context)?.navigateToTab(1),
+            onTap: () => MainScreenNavigator.of(context)?.navigateToTab(context, 1),
             showDivider: false,
           ),
         ),
@@ -1542,7 +1542,7 @@ class DashboardScreen extends StatelessWidget {
           child: TextButton.icon(
             onPressed: () {
               // Notifier le parent (MainScreen) de changer d'onglet vers Réservations (index 2)
-              MainScreenNavigator.of(context)?.navigateToTab(2);
+              MainScreenNavigator.of(context)?.navigateToTab(context, 2);
             },
             icon: const Icon(Icons.visibility_outlined),
             label: const Text('Voir toutes les réservations'),

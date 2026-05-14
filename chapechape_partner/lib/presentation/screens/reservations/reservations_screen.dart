@@ -4,8 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
 import '../../../core/models/reservation/reservation.dart';
-import '../../../core/services/api/reservation_service.dart';
-import '../../../core/services/api/api_service.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 import '../../widgets/calendar/reservation_calendar_widget.dart';
 import '../../widgets/skeletons/skeletons.dart';
@@ -15,12 +13,7 @@ class ReservationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ReservationBloc(
-        context.read<ReservationService>(),
-      )..add(LoadMyReservations()),
-      child: const _ReservationsView(),
-    );
+    return const _ReservationsView();
   }
 }
 
@@ -278,423 +271,6 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
       },
     );
   }
-}
-
-class _ReservationCard extends StatelessWidget {
-  final Reservation reservation;
-  final Function(ReservationStatus) onStatusUpdate;
-  final VoidCallback onCancel;
-
-  const _ReservationCard({
-    required this.reservation,
-    required this.onStatusUpdate,
-    required this.onCancel,
-  });
-
-  /// Retourne l'icône appropriée pour chaque statut
-  IconData _getStatusIcon(ReservationStatus status) {
-    switch (status) {
-      case ReservationStatus.pending:
-        return Icons.schedule;
-      case ReservationStatus.confirmed:
-        return Icons.check_circle;
-      case ReservationStatus.cancelled:
-        return Icons.cancel;
-      case ReservationStatus.completed:
-        return Icons.done_all;
-      case ReservationStatus.awaitingApproval:
-        return Icons.pending_actions;
-      case ReservationStatus.paymentPending:
-        return Icons.payment;
-      case ReservationStatus.rejected:
-        return Icons.block;
-      case ReservationStatus.paymentExpired:
-        return Icons.timer_off;
-      case ReservationStatus.paymentProcessing:
-        return Icons.sync;
-      case ReservationStatus.inStay:
-        return Icons.hotel;
-      case ReservationStatus.expired:
-        return Icons.event_busy;
-      case ReservationStatus.refunded:
-        return Icons.money_off;
-    }
-  }
-
-  /// Convertit la couleur hex en Color
-  Color _getStatusColor(ReservationStatus status) {
-    return Color(
-      int.parse(
-        status.color.replaceAll('#', '0xFF'),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusColor = Color(
-      int.parse(
-        reservation.status.color.replaceAll('#', '0xFF'),
-      ),
-    );
-
-    return Card(
-      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          context.go('/reservations/${reservation.id}');
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: Image.network(
-                reservation.residenceImage,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          reservation.residenceName,
-                          style: theme.textTheme.titleLarge,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          reservation.status.displayName,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: statusColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      child: Text(
-                        reservation.clientName[0].toUpperCase(),
-                      ),
-                    ),
-                    title: Text(reservation.clientName),
-                    subtitle: Text(reservation.clientPhone),
-                  ),
-                  
-                  const Divider(),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _DetailItem(
-                          icon: Icons.calendar_today,
-                          label: 'Dates',
-                          value: reservation.formattedDates,
-                        ),
-                      ),
-                      Expanded(
-                        child: _DetailItem(
-                          icon: Icons.people,
-                          label: 'Voyageurs',
-                          value: '${reservation.guestsCount} personne${reservation.guestsCount > 1 ? 's' : ''}',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _DetailItem(
-                          icon: Icons.attach_money,
-                          label: 'Montant',
-                          value: reservation.formattedTotalAmount,
-                        ),
-                      ),
-                      Expanded(
-                        child: _DetailItem(
-                          icon: Icons.access_time,
-                          label: 'Créée le',
-                          value: reservation.formattedCreatedAt,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  if (reservation.notes != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.note,
-                            size: 20,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              reservation.notes!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  
-                  const SizedBox(height: 16),
-                  
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (reservation.status != ReservationStatus.cancelled)
-                        TextButton.icon(
-                          onPressed: onCancel,
-                          icon: const Icon(Icons.cancel, size: 18),
-                          label: const Text('Annuler'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.colorScheme.error,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                      PopupMenuButton<ReservationStatus>(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 8,
-                        itemBuilder: (context) {
-                          final currentStatusColor = _getStatusColor(reservation.status);
-                          final currentStatusIcon = _getStatusIcon(reservation.status);
-                          
-                          return [
-                            // Statut actuel (non cliquable, grisé)
-                            PopupMenuItem<ReservationStatus>(
-                              enabled: false,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: currentStatusColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Icon(
-                                      currentStatusIcon,
-                                      size: 18,
-                                      color: currentStatusColor.withOpacity(0.6),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Statut actuel',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w400,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          reservation.status.displayName,
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey[700],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Séparateur
-                            const PopupMenuDivider(),
-                            // Autres statuts disponibles
-                            ...ReservationStatus.values
-                                .where((s) => s != reservation.status)
-                                .map((status) {
-                              final statusColor = _getStatusColor(status);
-                              final statusIcon = _getStatusIcon(status);
-                              
-                              return PopupMenuItem<ReservationStatus>(
-                                value: status,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                child: Semantics(
-                                  label: 'Changer le statut à ${status.displayName}',
-                                  button: true,
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Icon(
-                                          statusIcon,
-                                          size: 18,
-                                          color: statusColor,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          status.displayName,
-                                          style: const TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ];
-                        },
-                        onSelected: (status) {
-                          HapticFeedback.mediumImpact();
-                          onStatusUpdate(status);
-                        },
-                        child: Semantics(
-                          label: 'Changer le statut de la réservation',
-                          button: true,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.edit, size: 18),
-                                const SizedBox(width: 4),
-                                const Text('Statut'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DetailItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _DetailItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _TabsHeaderDelegate(this.tabBar);
-  final TabBar tabBar;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Colors.white,
-      child: tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(_TabsHeaderDelegate oldDelegate) => false;
-}
 
   Widget _buildEmptyReservationsState(BuildContext context) {
     return Center(
@@ -736,3 +312,543 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
     );
   }
+}
+
+IconData _reservationStatusIcon(ReservationStatus status) {
+  switch (status) {
+    case ReservationStatus.pending:
+      return Icons.schedule_rounded;
+    case ReservationStatus.confirmed:
+      return Icons.check_circle_rounded;
+    case ReservationStatus.cancelled:
+      return Icons.cancel_rounded;
+    case ReservationStatus.completed:
+      return Icons.done_all_rounded;
+    case ReservationStatus.awaitingApproval:
+      return Icons.pending_actions_rounded;
+    case ReservationStatus.paymentPending:
+      return Icons.payments_rounded;
+    case ReservationStatus.rejected:
+      return Icons.block_rounded;
+    case ReservationStatus.paymentExpired:
+      return Icons.timer_off_rounded;
+    case ReservationStatus.paymentProcessing:
+      return Icons.sync_rounded;
+    case ReservationStatus.inStay:
+      return Icons.hotel_rounded;
+    case ReservationStatus.expired:
+      return Icons.event_busy_rounded;
+    case ReservationStatus.refunded:
+      return Icons.currency_exchange_rounded;
+  }
+}
+
+Color _reservationStatusColor(ReservationStatus status) {
+  return Color(int.parse(status.color.replaceAll('#', '0xFF')));
+}
+
+Future<void> _openReservationActionsSheet(
+  BuildContext context, {
+  required Reservation reservation,
+  required void Function(ReservationStatus) onStatusUpdate,
+  required VoidCallback onCancel,
+}) {
+  final theme = Theme.of(context);
+  final others = ReservationStatus.values
+      .where((s) => s != reservation.status)
+      .toList()
+    ..sort((a, b) => a.displayName.compareTo(b.displayName));
+
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      final bottomInset = MediaQuery.paddingOf(sheetContext).bottom;
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Changer le statut',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      reservation.residenceName,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _reservationStatusIcon(reservation.status),
+                              color: theme.colorScheme.primary,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Statut actuel',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    reservation.status.displayName,
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  children: [
+                    ...others.map((status) {
+                      return ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _reservationStatusIcon(status),
+                            color: theme.colorScheme.onSurfaceVariant,
+                            size: 22,
+                          ),
+                        ),
+                        title: Text(
+                          status.displayName,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: theme.colorScheme.outline,
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.of(sheetContext).pop();
+                          onStatusUpdate(status);
+                        },
+                      );
+                    }),
+                    if (reservation.status != ReservationStatus.cancelled) ...[
+                      const Divider(height: 24),
+                      ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.errorContainer.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.cancel_outlined,
+                            color: theme.colorScheme.error,
+                            size: 22,
+                          ),
+                        ),
+                        title: Text(
+                          'Annuler la réservation',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.of(sheetContext).pop();
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text('Annuler la réservation'),
+                              content: const Text(
+                                'Cette action est en général irréversible. Confirmer l\'annulation ?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext, false),
+                                  child: const Text('Non'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.error,
+                                    foregroundColor: theme.colorScheme.onError,
+                                  ),
+                                  onPressed: () => Navigator.pop(dialogContext, true),
+                                  child: const Text('Annuler'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            onCancel();
+                          }
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _ReservationCard extends StatelessWidget {
+  final Reservation reservation;
+  final void Function(ReservationStatus) onStatusUpdate;
+  final VoidCallback onCancel;
+
+  const _ReservationCard({
+    required this.reservation,
+    required this.onStatusUpdate,
+    required this.onCancel,
+  });
+
+  void _goDetails(BuildContext context) {
+    context.go('/reservations/${reservation.id}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final statusColor = _reservationStatusColor(reservation.status);
+
+    return Card(
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.45),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => _goDetails(context),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 88,
+                      height: 88,
+                      child: Image.network(
+                        reservation.residenceImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => ColoredBox(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: Icon(
+                            Icons.home_work_outlined,
+                            size: 36,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _goDetails(context),
+                              behavior: HitTestBehavior.opaque,
+                              child: Text(
+                                reservation.residenceName,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.more_vert_rounded,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            tooltip: 'Actions',
+                            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _openReservationActionsSheet(
+                                context,
+                                reservation: reservation,
+                                onStatusUpdate: onStatusUpdate,
+                                onCancel: onCancel,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () => _goDetails(context),
+                        behavior: HitTestBehavior.opaque,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _CompactInfoRow(
+                              icon: Icons.person_outline_rounded,
+                              text: reservation.clientName,
+                            ),
+                            const SizedBox(height: 4),
+                            _CompactInfoRow(
+                              icon: Icons.calendar_today_rounded,
+                              text: reservation.formattedDates,
+                            ),
+                            const SizedBox(height: 4),
+                            _CompactInfoRow(
+                              icon: Icons.people_outline_rounded,
+                              text:
+                                  '${reservation.guestsCount} personne${reservation.guestsCount > 1 ? 's' : ''}',
+                            ),
+                            if (reservation.notes != null &&
+                                reservation.notes!.trim().isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              _CompactInfoRow(
+                                icon: Icons.notes_rounded,
+                                text: reservation.notes!.trim(),
+                                maxLines: 1,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => _goDetails(context),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      reservation.clientPhone,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        reservation.formattedTotalAmount,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      Text(
+                        'Total séjour',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => _goDetails(context),
+              behavior: HitTestBehavior.opaque,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _StatusPill(
+                  label: reservation.status.displayName,
+                  color: statusColor,
+                  icon: _reservationStatusIcon(reservation.status),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final int maxLines;
+
+  const _CompactInfoRow({
+    required this.icon,
+    required this.text,
+    this.maxLines = 2,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+              height: 1.25,
+            ),
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _StatusPill({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _TabsHeaderDelegate(this.tabBar);
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_TabsHeaderDelegate oldDelegate) => false;
+}
