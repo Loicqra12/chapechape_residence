@@ -22,7 +22,7 @@ agenda.define('sendBookingReminder', async (job) => {
     const { bookingId } = job.attrs.data;
 
     const booking = await Booking.findById(bookingId)
-      .populate('client', 'phoneNumber firstName lastName')
+      .populate('user', 'phoneNumber firstName lastName')
       .populate('residence', 'title address');
 
     if (!booking) {
@@ -42,7 +42,7 @@ agenda.define('sendBookingReminder', async (job) => {
     // Enregistrer les métriques
     await SMSMetrics.create({
       type: 'booking_reminder',
-      recipient: booking.client._id,
+      recipient: booking.user._id,
       booking: bookingId,
       messageId: message?.sid || null,
       status: message?.status || 'failed',
@@ -60,7 +60,7 @@ agenda.define('sendStatusChangeNotification', async (job) => {
     const { bookingId, oldStatus, newStatus } = job.attrs.data;
 
     const booking = await Booking.findById(bookingId)
-      .populate('client', 'phoneNumber firstName lastName')
+      .populate('user', 'phoneNumber firstName lastName')
       .populate('residence', 'title address');
 
     if (!booking) {
@@ -91,7 +91,7 @@ agenda.define('sendStatusChangeNotification', async (job) => {
     // Enregistrer les métriques
     await SMSMetrics.create({
       type: `booking_${notificationType}`,
-      recipient: booking.client._id,
+      recipient: booking.user._id,
       booking: bookingId,
       messageId: message?.sid || null,
       status: message?.status || 'failed',
@@ -109,7 +109,7 @@ agenda.define('sendPaymentReminderAfricaSpecific', async (job) => {
     const { bookingId, paymentMethod } = job.attrs.data;
 
     const booking = await Booking.findById(bookingId)
-      .populate('client', 'phoneNumber firstName lastName')
+      .populate('user', 'phoneNumber firstName lastName')
       .populate('residence', 'title address');
 
     if (!booking) {
@@ -141,12 +141,12 @@ agenda.define('sendPaymentReminderAfricaSpecific', async (job) => {
     const messageBody = `ChapeChape: Rappel de paiement pour votre réservation à "${booking.residence.title}" le ${new Date(booking.visitDate).toLocaleDateString('fr-FR')}. ${paymentInstructions}`;
 
     // Envoyer le SMS personnalisé
-    const message = await twilioService.sendSMS(booking.client.phoneNumber, messageBody);
+    const message = await twilioService.sendSMS(booking.user.phoneNumber, messageBody);
 
     // Enregistrer les métriques
     await SMSMetrics.create({
       type: 'payment_reminder',
-      recipient: booking.client._id,
+      recipient: booking.user._id,
       booking: bookingId,
       messageId: message?.sid || null,
       status: message?.status || 'failed',

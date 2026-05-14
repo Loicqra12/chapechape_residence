@@ -1,5 +1,5 @@
 const ApiError = require('../utils/apiError');
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const { ERROR_MESSAGES } = require('../utils/constants');
 const errorCodes = require('../utils/errorCodes');
 const { sanitizeError, extractSafeErrorInfo } = require('../utils/sanitize-error');
