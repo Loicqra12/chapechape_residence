@@ -1,7 +1,7 @@
 name: chapechape_partner
 description: "Application de gestion pour les partenaires ChapeChape Residence"
 publish_to: "none"
-version: 1.11.3+22
+version: 1.11.4+23
 
 environment:
   sdk: ^3.11.0
