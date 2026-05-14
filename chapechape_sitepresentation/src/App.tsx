@@ -20,6 +20,8 @@ import AccountDeletion from './pages/AccountDeletion'
 import CookiePolicy from './pages/CookiePolicy'
 import Resources from './pages/Resources'
 import Careers from './pages/Careers'
+import Partner from './pages/Partner'
+import NotFound from './pages/NotFound'
 
 function App() {
   const location = useLocation()
@@ -44,11 +46,13 @@ function App() {
             <Route path="partners" element={<Partners />} />
             <Route path="resources" element={<Resources />} />
             <Route path="careers" element={<Careers />} />
+            <Route path="partenaires" element={<Partner />} />
             <Route path="contact" element={<Contact />} />
             <Route path="politique-de-confidentialite" element={<PrivacyPolicy />} />
             <Route path="conditions" element={<TermsOfService />} />
             <Route path="suppression-compte" element={<AccountDeletion />} />
             <Route path="cookies" element={<CookiePolicy />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </AnimatePresence>

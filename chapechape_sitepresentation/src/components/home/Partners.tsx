@@ -52,7 +52,7 @@ const Partners = () => {
                 key={`${partner.name}-${index}`}
                 className="flex-shrink-0 group relative"
               >
-                <div className="w-32 h-16 md:w-40 md:h-20 flex items-center justify-center transition-all duration-300 filter grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110">
+                <div className="w-32 h-16 md:w-40 md:h-20 flex items-center justify-center transition-all duration-300 opacity-80 group-hover:opacity-100 group-hover:scale-110">
                   <img
                     src={partner.logo}
                     alt={`Logo ${partner.name}`}

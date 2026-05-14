@@ -17,11 +17,9 @@ export default function SEOHead({
   url,
   type = 'website'
 }: SEOHeadProps) {
-  const baseUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SITE_URL
-    ? (import.meta as any).env.VITE_SITE_URL
-    : 'https://presentation.chapechaperesidence.com'
+  const baseUrl = import.meta.env.VITE_SITE_URL?.trim() || 'https://presentation.chapechaperesidence.com'
   const defaultImage = `${baseUrl}/assets/logo.png`
-  const fullUrl = url || baseUrl
+  const fullUrl = url || `${baseUrl}/`
   const fullTitle = `${title} - ChapeChape Residence`
   
   return (

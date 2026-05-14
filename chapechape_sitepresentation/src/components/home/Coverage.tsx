@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
 
@@ -30,6 +30,7 @@ const locations: LocationData[] = [
 
 const Coverage = () => {
   const containerRef = useRef(null)
+  const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null)
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
@@ -37,6 +38,29 @@ const Coverage = () => {
 
   const y = useTransform(scrollYProgress, [0, 1], [50, -50])
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.3, 1, 1, 0.3])
+
+  const activeLocations = useMemo(() => locations.filter((l) => l.active), [])
+  const totalProperties = useMemo(() => activeLocations.reduce((sum, location) => sum + location.properties, 0), [activeLocations])
+  const totalCountries = useMemo(() => new Set(activeLocations.map((l) => l.country)).size, [activeLocations])
+
+  const highlightedLocation =
+    (hoveredLocationId ? locations.find((l) => l.id === hoveredLocationId) : null) ?? activeLocations[0]
+
+  const cityImageByLocation: Record<string, string> = {
+    abidjan: '/assets/residences/meuble.png',
+    yamoussoukro: '/assets/residences/longue_duree.png',
+    dakar: '/assets/residences/hotel.png',
+    cotonou: '/assets/residences/economique.png',
+    lome: '/assets/residences/insolite.png',
+    accra: '/assets/residences/colocation.png',
+    ouagadougou: '/assets/residences/economique.png',
+    bamako: '/assets/residences/longue_duree.png',
+    conakry: '/assets/residences/meuble.png',
+    niamey: '/assets/residences/insolite.png',
+    lagos: '/assets/residences/hotel.png',
+    libreville: '/assets/residences/colocation.png',
+    douala: '/assets/residences/meuble.png',
+  }
 
   // Animation variants
   const containerVariants = {
@@ -208,6 +232,8 @@ const Coverage = () => {
                       left: `${location.coordinates[0]}%`,
                       top: `${location.coordinates[1]}%`,
                     }}
+                    onHoverStart={() => setHoveredLocationId(location.id)}
+                    onHoverEnd={() => setHoveredLocationId(null)}
                   >
                     {/* Point pulsant pour les emplacements actifs */}
                     {location.active && (
@@ -220,7 +246,7 @@ const Coverage = () => {
                     )}
 
                     {/* Point central */}
-                    <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full ${location.active ? 'bg-primary-400 shadow-[0_0_15px_rgba(212,175,55,0.6)]' : 'bg-secondary-600'} border-2 border-secondary-900 z-10 relative transition-colors duration-300 group-hover:bg-white`} />
+                    <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full ${location.active ? 'bg-primary-400 shadow-[0_0_15px_rgba(212,175,55,0.6)]' : 'bg-secondary-600'} border-2 border-secondary-900 z-10 relative transition-colors duration-300 group-hover:bg-white ${hoveredLocationId === location.id ? 'ring-4 ring-primary-300/30' : ''}`} />
 
                     {/* Tooltip au survol */}
                     <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-4 transition-all duration-300 pointer-events-none z-30 min-w-[150px]">
@@ -279,6 +305,28 @@ const Coverage = () => {
                     </defs>
                   </g>
                 </svg>
+
+                {/* City card contextuelle */}
+                <motion.div
+                  key={highlightedLocation.id}
+                  initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.28, ease: 'easeOut' }}
+                  className="absolute top-6 right-6 z-30 hidden md:flex items-center gap-3 bg-white/95 backdrop-blur-md rounded-xl border border-primary-100 shadow-xl p-2.5 max-w-[260px]"
+                >
+                  <img
+                    src={cityImageByLocation[highlightedLocation.id] ?? '/assets/residences/meuble.png'}
+                    alt={`Aperçu ${highlightedLocation.name}`}
+                    className="w-16 h-12 rounded-lg object-cover"
+                  />
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-secondary-500 font-semibold">Ville en focus</p>
+                    <p className="text-sm font-bold text-secondary-900">{highlightedLocation.name}</p>
+                    <p className="text-xs text-secondary-600">
+                      {highlightedLocation.active ? `${highlightedLocation.properties} biens actifs` : 'Ouverture prochaine'}
+                    </p>
+                  </div>
+                </motion.div>
               </div>
 
               {/* Légende intégrée */}
@@ -317,7 +365,7 @@ const Coverage = () => {
                 <div>
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-secondary-600 font-medium">Villes couvertes</span>
-                    <span className="text-3xl font-bold text-secondary-900">{locations.filter(l => l.active).length}</span>
+                    <span className="text-3xl font-bold text-secondary-900">{activeLocations.length}</span>
                   </div>
                   <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
                     <motion.div
@@ -333,7 +381,7 @@ const Coverage = () => {
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-secondary-600 font-medium">Propriétés</span>
                     <span className="text-3xl font-bold text-secondary-900">
-                      {locations.reduce((sum, location) => sum + location.properties, 0)}+
+                      {hoveredLocationId && highlightedLocation.active ? highlightedLocation.properties : totalProperties}+
                     </span>
                   </div>
                   <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
@@ -350,7 +398,7 @@ const Coverage = () => {
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-secondary-600 font-medium">Pays</span>
                     <span className="text-3xl font-bold text-secondary-900">
-                      {new Set(locations.filter(l => l.active).map(l => l.country)).size}
+                      {hoveredLocationId && highlightedLocation.active ? 1 : totalCountries}
                     </span>
                   </div>
                   <div className="h-2 bg-secondary-100 rounded-full overflow-hidden">
@@ -378,7 +426,10 @@ const Coverage = () => {
                 <div className="flex flex-wrap gap-2">
                   {locations.filter(l => l.comingSoon).map((city, index) => (
                     <span key={city.id} className="px-3 py-1 rounded-full bg-white/10 text-sm border border-white/10 text-white/90">
-                      {city.name}
+                      <span className="inline-flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-300 animate-pulse"></span>
+                        {city.name}
+                      </span>
                     </span>
                   ))}
                 </div>

@@ -148,7 +148,7 @@ export default function Apps() {
             <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-primary-300 text-xs font-bold tracking-widest uppercase mb-6">
               Innovation & Mobilité
             </span>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-display tracking-tight">
               Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200">Applications</span>
             </h1>
             <p className="text-xl text-secondary-200 mb-10 max-w-2xl mx-auto font-light leading-relaxed">
@@ -218,34 +218,14 @@ export default function Apps() {
           </div>
 
           <div className="mt-16 flex justify-center">
-            <div className="flex flex-wrap gap-4 justify-center">
-              <a
-                href={clientAndroid}
-                target={clientAndroid !== '#' ? '_blank' : undefined}
-                rel={clientAndroid !== '#' ? 'noopener noreferrer' : undefined}
-                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-900 text-white hover:bg-secondary-800 transition-all transform hover:-translate-y-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" />
-                </svg>
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] uppercase font-normal opacity-80">Disponible sur</span>
-                  <span className="text-base">Google Play</span>
-                </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <a href={clientAndroid} target={clientAndroid !== '#' ? '_blank' : undefined} rel={clientAndroid !== '#' ? 'noopener noreferrer' : undefined}
+                className="inline-block rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
+                <img src="/assets/googleplay.png" alt="Disponible sur Google Play" className="h-10 w-auto" />
               </a>
-              <a
-                href={clientIos}
-                target={clientIos !== '#' ? '_blank' : undefined}
-                rel={clientIos !== '#' ? 'noopener noreferrer' : undefined}
-                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-900 text-white hover:bg-secondary-800 transition-all transform hover:-translate-y-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" />
-                </svg>
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] uppercase font-normal opacity-80">Télécharger sur</span>
-                  <span className="text-base">App Store</span>
-                </div>
+              <a href={clientIos} target={clientIos !== '#' ? '_blank' : undefined} rel={clientIos !== '#' ? 'noopener noreferrer' : undefined}
+                className="inline-block rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
+                <img src="/assets/appstore.png" alt="Télécharger sur l'App Store" className="h-10 w-auto" />
               </a>
             </div>
           </div>
@@ -309,34 +289,14 @@ export default function Apps() {
           </div>
 
           <div className="mt-16 flex justify-center">
-            <div className="flex flex-wrap gap-4 justify-center">
-              <a
-                href={partnerAndroid}
-                target={partnerAndroid !== '#' ? '_blank' : undefined}
-                rel={partnerAndroid !== '#' ? 'noopener noreferrer' : undefined}
-                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-800 text-white hover:bg-secondary-900 transition-all transform hover:-translate-y-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.5,1.5A1.5,1.5,0,0,0,16,0H8A1.5,1.5,0,0,0,6.5,1.5v21A1.5,1.5,0,0,0,8,24h8a1.5,1.5,0,0,0,1.5-1.5ZM12,23a1.5,1.5,0,1,1,1.5-1.5A1.5,1.5,0,0,1,12,23Zm4.5-4H7.5V5h9Z" />
-                </svg>
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] uppercase font-normal opacity-80">Disponible sur</span>
-                  <span className="text-base">Google Play</span>
-                </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <a href={partnerAndroid} target={partnerAndroid !== '#' ? '_blank' : undefined} rel={partnerAndroid !== '#' ? 'noopener noreferrer' : undefined}
+                className="inline-block rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
+                <img src="/assets/googleplay.png" alt="Disponible sur Google Play" className="h-10 w-auto" />
               </a>
-              <a
-                href={partnerIos}
-                target={partnerIos !== '#' ? '_blank' : undefined}
-                rel={partnerIos !== '#' ? 'noopener noreferrer' : undefined}
-                className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-lg bg-secondary-800 text-white hover:bg-secondary-900 transition-all transform hover:-translate-y-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M22,17.28a4.19,4.19,0,0,1-2-3.51A4.06,4.06,0,0,1,22,10.24v-.8a4.15,4.15,0,0,0-2,.35A4.53,4.53,0,0,0,17.5,6,4.39,4.39,0,0,0,14,7.47a7.34,7.34,0,0,0-2,.28,7.26,7.26,0,0,0-2-.28A4.38,4.38,0,0,0,6.5,6,4.51,4.51,0,0,0,4,9.78a4.31,4.31,0,0,0-2-.34v.8a4,4,0,0,1,2,3.53,4.13,4.13,0,0,1-2,3.51v.8a4.29,4.29,0,0,0,2-.34,4.52,4.52,0,0,0,2.5,3.77A4.38,4.38,0,0,0,10,18.53a7.14,7.14,0,0,0,2-.28,7.15,7.15,0,0,0,2,.28,4.39,4.39,0,0,0,3.5-1.47,4.53,4.53,0,0,0,2.5-3.77,4.22,4.22,0,0,0,2,.34Z" />
-                </svg>
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] uppercase font-normal opacity-80">Télécharger sur</span>
-                  <span className="text-base">App Store</span>
-                </div>
+              <a href={partnerIos} target={partnerIos !== '#' ? '_blank' : undefined} rel={partnerIos !== '#' ? 'noopener noreferrer' : undefined}
+                className="inline-block rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all hover:-translate-y-1">
+                <img src="/assets/appstore.png" alt="Télécharger sur l'App Store" className="h-10 w-auto" />
               </a>
             </div>
           </div>
@@ -359,10 +319,10 @@ export default function Apps() {
             <p className="mt-6 text-lg leading-8 text-secondary-600 max-w-2xl mx-auto">
               Rejoignez les milliers d'utilisateurs qui simplifient déjà leur expérience de logement avec ChapeChape Residence.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to="/"
-                className="rounded-full bg-primary-500 px-8 py-4 text-sm font-bold text-white shadow-lg hover:bg-primary-600 hover:shadow-primary-500/30 transition-all duration-300 transform hover:-translate-y-1"
+                className="w-full sm:w-auto rounded-full bg-primary-500 px-8 py-4 text-sm font-bold text-white shadow-lg hover:bg-primary-600 hover:shadow-primary-500/30 transition-all duration-300 transform hover:-translate-y-1 text-center"
               >
                 Découvrir nos résidences
               </Link>

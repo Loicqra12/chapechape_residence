@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useMotionTemplate, useSpring } from 'framer-motion'
 
 type FAQItem = {
   question: string
@@ -39,6 +39,7 @@ const FAQ = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const containerRef = useRef(null)
+  const faqGridRef = useRef<HTMLDivElement | null>(null)
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
@@ -55,6 +56,20 @@ const FAQ = () => {
   
   const y = useTransform(scrollYProgress, [0, 1], [100, -100])
   const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0.3, 1, 1, 0.3])
+
+  // Spotlight dynamique (effet premium visible au survol de la grille FAQ)
+  const pointerX = useMotionValue(0)
+  const pointerY = useMotionValue(0)
+  const spotlightX = useSpring(pointerX, { stiffness: 180, damping: 26, mass: 0.5 })
+  const spotlightY = useSpring(pointerY, { stiffness: 180, damping: 26, mass: 0.5 })
+  const spotlight = useMotionTemplate`radial-gradient(360px circle at ${spotlightX}px ${spotlightY}px, rgba(212,175,55,0.22), rgba(212,175,55,0.08) 35%, transparent 70%)`
+
+  const onFaqGridMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const bounds = faqGridRef.current?.getBoundingClientRect()
+    if (!bounds) return
+    pointerX.set(event.clientX - bounds.left)
+    pointerY.set(event.clientY - bounds.top)
+  }
   
   // Animation variants pour les éléments de FAQ
   const containerVariants = {
@@ -296,12 +311,19 @@ const FAQ = () => {
           </AnimatePresence>
 
           <motion.div
+            ref={faqGridRef}
+            onMouseMove={onFaqGridMove}
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="grid gap-6"
+            className="relative grid gap-6 rounded-3xl p-4 md:p-6 overflow-hidden"
           >
+            <motion.div
+              aria-hidden
+              className="hidden md:block pointer-events-none absolute inset-0 z-0"
+              style={{ background: spotlight }}
+            />
             <AnimatePresence mode="popLayout">
               {filteredFaqs.map((faq, index) => {
                 const originalIndex = faqs.findIndex(f => f.question === faq.question)
@@ -310,7 +332,7 @@ const FAQ = () => {
                     key={faq.question}
                     layout
                     variants={itemVariants}
-                    className="overflow-hidden"
+                    className="overflow-hidden relative z-10"
                   >
                     <motion.div
                       className={`rounded-xl p-6 shadow-lg border border-primary-200/30 transition-all duration-500 hover:shadow-xl ${activeIndex === index ? 'bg-gradient-to-r from-primary-50 via-white to-secondary-50 shadow-xl border-primary-300/50 scale-[1.02]' : 'bg-white dark:bg-secondary-800 hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-white dark:hover:from-secondary-700 dark:hover:to-secondary-800'}`}

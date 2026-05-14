@@ -25,6 +25,7 @@ import '../screens/promotion_detail_screen.dart';
 import '../widgets/que_cherchez_vous_widget.dart';
 import '../widgets/around_me_widget.dart';
 import '../widgets/home_compact_sections.dart';
+import '../widgets/home_partner_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -212,6 +213,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               const SizedBox(height: 12),
               
               const QueCherchezVousWidget(),
+              
+              const SizedBox(height: 12),
+              
+              const HomePartnerBanner(),
               
               const SizedBox(height: 12),
               

@@ -34,6 +34,10 @@ class AppAssets {
   static const String loginBackground = 'assets/images/backgrounds/login_bg.jpg';
   static const String registerBackground = 'assets/images/backgrounds/register_bg.jpg';
   static const String homescreenPlan = 'assets/images/backgrounds/homescreen_plan.png';
+  /// Bannière campagne app Partenaire (aperçu accueil).
+  static const String partnerPromoBanner = 'assets/images/bannieres/banner_partner.png';
+  /// Visuel plein écran après tap sur la bannière partenaire.
+  static const String partnerPromoFullscreen = 'assets/images/bannieres/image_partner.png';
   static const String paymentSuccess = 'assets/images/payment/payment_success.png';
   static const String paymentError = 'assets/images/payment/payment_error.png';
   static const String searchBackground = 'assets/images/backgrounds/search_bg.jpg';

@@ -57,6 +57,15 @@ const plans = [
   }
 ]
 
+const valueNotes = [
+  { src: '/assets/residences/meuble.png', alt: 'Residence meublee' },
+  { src: '/assets/residences/hotel.png', alt: 'Residence type hotel' },
+  { src: '/assets/residences/longue_duree.png', alt: 'Residence longue duree' },
+  { src: '/assets/residences/colocation.png', alt: 'Residence colocation' },
+  { src: '/assets/residences/insolite.png', alt: 'Residence insolite' },
+  { src: '/assets/residences/economique.png', alt: 'Residence economique' },
+]
+
 const useCountAnimation = (target: number, isInView: boolean) => {
   const count = useMotionValue(0)
   const rounded = useTransform(count, (latest) => Math.round(latest))
@@ -90,6 +99,49 @@ const Pricing = () => {
         <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-secondary-50/50 rounded-full blur-3xl" />
       </div>
 
+      {/* Value notes flottantes (metaphore premium) */}
+      <div className="absolute inset-0 pointer-events-none z-[1] hidden lg:block">
+        {valueNotes.map((note, index) => {
+          const basePositions = [
+            { top: '14%', left: '8%' },
+            { top: '22%', left: '74%' },
+            { top: '46%', left: '5%' },
+            { top: '58%', left: '78%' },
+            { top: '72%', left: '18%' },
+            { top: '76%', left: '66%' },
+          ]
+
+          const targetX = hoveredCard === null ? 0 : hoveredCard === 0 ? -30 : hoveredCard === 1 ? 0 : 30
+          const targetY = hoveredCard === null ? 0 : hoveredCard === 1 ? -8 : 8
+
+          return (
+            <motion.div
+              key={note.src}
+              className="absolute"
+              style={basePositions[index]}
+              initial={{ opacity: 0, y: 20, rotate: index % 2 === 0 ? -8 : 8 }}
+              animate={{
+                opacity: 0.5,
+                y: [0, -10, 0],
+                x: targetX + (index % 2 === 0 ? -6 : 6),
+                rotate: index % 2 === 0 ? -8 : 8,
+                scale: hoveredCard !== null ? 1.04 : 1,
+              }}
+              transition={{
+                opacity: { duration: 0.6, delay: index * 0.08 },
+                y: { duration: 5 + index * 0.4, repeat: Infinity, ease: 'easeInOut' },
+                x: { duration: 0.45, ease: 'easeOut' },
+                scale: { duration: 0.35, ease: 'easeOut' },
+              }}
+            >
+              <div className="w-36 h-24 rounded-2xl overflow-hidden border border-primary-200/40 shadow-xl bg-white/80 backdrop-blur-sm">
+                <img src={note.src} alt={note.alt} className="w-full h-full object-cover" />
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
+
       <div className="container-custom relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -111,6 +163,8 @@ const Pricing = () => {
             <span className={`text-sm font-medium transition-colors ${billingPeriod === 'monthly' ? 'text-secondary-900' : 'text-secondary-500'}`}>Mensuel</span>
             <button
               onClick={() => setBillingPeriod(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+              aria-label="Basculer entre tarification mensuelle et annuelle"
+              title="Basculer la période de facturation"
               className="relative w-16 h-8 bg-secondary-200 rounded-full p-1 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary-400"
             >
               <motion.div
@@ -140,7 +194,7 @@ const Pricing = () => {
                 onHoverStart={() => setHoveredCard(index)}
                 onHoverEnd={() => setHoveredCard(null)}
                 className={`relative rounded-3xl p-8 transition-all duration-300 border ${isPopular
-                    ? 'bg-secondary-900 text-white border-secondary-800 shadow-2xl scale-105 z-10'
+                    ? 'bg-secondary-900 text-white border-secondary-800 shadow-2xl md:scale-105 z-10'
                     : 'bg-white text-secondary-900 border-secondary-100 hover:border-secondary-300 hover:shadow-xl'
                   }`}
               >
