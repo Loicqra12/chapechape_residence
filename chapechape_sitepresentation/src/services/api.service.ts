@@ -1,4 +1,4 @@
-// Configuration de l'API
+// Configuration de l'API (ex. /api en prod derrière nginx → même origine, pas de CORS).
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000/api';
 
 // Éviter tout fallback silencieux en production

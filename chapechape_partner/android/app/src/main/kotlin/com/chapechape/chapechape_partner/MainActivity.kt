@@ -1,14 +1,14 @@
 package com.chapechape.chapechape_partner
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Android 15+ / Play Console : fenêtre en bord à bord (API recommandées par Google).
-        // Les insets sont gérés côté Flutter (SystemUiMode.edgeToEdge, SafeArea, AppBar/SliverAppBar).
-        enableEdgeToEdge()
+        // Bord à bord : FlutterActivity n’hérite pas de ComponentActivity → pas d’enableEdgeToEdge().
+        // WindowCompat fonctionne sur Activity et reste aligné avec SystemUiMode.edgeToEdge côté Flutter.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
     }
 }

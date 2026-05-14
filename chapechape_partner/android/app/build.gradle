@@ -42,7 +42,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.chapechape.chapechape_partner"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "28.0.12433566"
     
     // Force all Android libraries to use SDK 23 as minimum
@@ -110,7 +110,7 @@ android {
     configurations.all {
         resolutionStrategy {
             force 'androidx.annotation:annotation:1.7.0'
-            // >= 1.13 : EditorInfoCompat.setStylusHandwritingEnabled (crash clavier si < 1.13). Reste sur 1.13.x pour compileSdk 34–36.
+            // >= 1.13 : EditorInfoCompat (clavier). compileSdk 36 + core 1.13.x OK.
             force 'androidx.core:core:1.13.1'
             force 'com.google.android.gms:play-services-base:18.2.0'
             force 'com.google.android.gms:play-services-tasks:18.0.2'
@@ -133,7 +133,6 @@ dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     implementation 'androidx.annotation:annotation:1.7.0'
     implementation 'androidx.core:core:1.13.1'
-    implementation 'androidx.activity:activity-ktx:1.9.3'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.multidex:multidex:2.0.1'  // Ajout de la dépendance multidex
 }
