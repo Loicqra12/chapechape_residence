@@ -86,7 +86,22 @@ class ApiService {
       });
       clearTimeout(timeoutId);
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') ?? '';
+      const rawBody = await response.text();
+
+      if (contentType.includes('text/html') || rawBody.trimStart().startsWith('<')) {
+        throw new Error(
+          'Le serveur du site a renvoyé une page web au lieu de l’API. ' +
+            'Vérifiez VITE_API_BASE_URL au build (https://api.chapechaperesidence.com/api sur LWS).'
+        );
+      }
+
+      let data: ApiResponse<T>;
+      try {
+        data = JSON.parse(rawBody) as ApiResponse<T>;
+      } catch {
+        throw new Error('Réponse serveur invalide (JSON attendu).');
+      }
 
       if (!response.ok) {
         throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
