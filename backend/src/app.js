@@ -356,24 +356,26 @@ app.use(securityMiddleware);
 // Middleware de logging
 app.use(logger.http);
 
-// Documentation API
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpecs, {
-    explorer: true,
-    customCss: ".swagger-ui .topbar { display: none }",
-    customSiteTitle: "ChapeChape API Documentation",
-    customfavIcon: "/favicon.ico",
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: "none",
-      filter: true,
-      tagsSorter: "alpha",
-      operationsSorter: "alpha",
-    },
-  })
-);
+// Documentation API (désactivée en production pour réduire la surface d'attaque)
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpecs, {
+      explorer: true,
+      customCss: ".swagger-ui .topbar { display: none }",
+      customSiteTitle: "ChapeChape API Documentation",
+      customfavIcon: "/favicon.ico",
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: "none",
+        filter: true,
+        tagsSorter: "alpha",
+        operationsSorter: "alpha",
+      },
+    })
+  );
+}
 
 // Génération de tokens CSRF pour les routes qui en ont besoin
 // Désactivé temporairement pour résoudre les problèmes d'authentification du dashboard

@@ -146,16 +146,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> with SingleTickerProvid
           ),
           TextButton(
             onPressed: () {
-              if (formKey.currentState?.validate() ?? false) {
-                // Traiter le retrait
-                final amount = double.parse(amountController.text);
-                context.read<PaymentBloc>().add(
-                  RequestWithdrawal(amount: amount),
-                );
-                Navigator.pop(context);
-              }
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Les reversements sont automatiques après chaque réservation payée. '
+                    'Consultez l\'onglet Reversements pour le détail.',
+                  ),
+                  duration: Duration(seconds: 5),
+                ),
+              );
             },
-            child: const Text('RETIRER'),
+            child: const Text('COMPRIS'),
           ),
         ],
       ),

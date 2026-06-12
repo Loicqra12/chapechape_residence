@@ -627,6 +627,55 @@ exports.verifyResidence = asyncHandler(async (req, res) => {
 });
 
 // Récupérer les logs d'activité
+/**
+ * Liste des paiements (admin) — source de vérité collection Payment
+ * GET /api/admin/payments
+ */
+exports.getPayments = asyncHandler(async (req, res) => {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const skip = (page - 1) * limit;
+    const filter = {};
+
+    if (req.query.status) {
+        const statusMap = {
+            completed: 'paid',
+            paid: 'paid',
+            pending: 'pending',
+            failed: 'failed',
+            refunded: 'refunded',
+        };
+        filter.status = statusMap[req.query.status] || req.query.status;
+    }
+
+    if (req.query.paymentMethod) {
+        filter.paymentMethod = req.query.paymentMethod;
+    }
+
+    const [payments, total] = await Promise.all([
+        Payment.find(filter)
+            .populate({
+                path: 'reservation',
+                populate: [{ path: 'user', select: 'firstName lastName email phone' }, { path: 'residence', select: 'title name' }],
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        Payment.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+        success: true,
+        data: payments,
+        pagination: {
+            page,
+            limit,
+            total,
+            hasNext: skip + payments.length < total,
+        },
+    });
+});
+
 exports.getActivityLogs = asyncHandler(async (req, res) => {
     const activityLogs = await ActivityLog.find()
         .populate('user', 'firstName lastName email')

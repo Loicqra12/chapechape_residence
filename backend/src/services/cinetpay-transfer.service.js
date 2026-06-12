@@ -2,6 +2,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const Payout = require('../models/payout.model');
+const { getCinetPayTransferWebhookUrl } = require('../utils/cinetpay-transfer-webhook.util');
 
 /**
  * Service CinetPay Transfer - Gestion des payouts aux partners
@@ -304,7 +305,7 @@ class CinetPayTransferService {
                 phone: payout.recipient_info.phone_number,
                 amount: payout.net_amount,
                 client_transaction_id: payout.cinetpay_info.client_transaction_id,
-                notify_url: payout.notify_url || `${process.env.APP_URL}/api/payouts/cinetpay/webhook`,
+                notify_url: payout.notify_url || getCinetPayTransferWebhookUrl(),
                 ...(paymentMethod && { payment_method: paymentMethod })
             }];
 

@@ -14,6 +14,9 @@ const cinetPayService = require('./cinetpay.service');
 // Import du service Wave
 const waveService = require('./wave.service');
 
+/** Fournisseurs sans intégration PSP réelle (simulation dev uniquement). */
+const SIMULATED_PAYMENT_PROVIDERS = new Set(['orange', 'mtn', 'moov', 'djamo']);
+
 class PaymentService {
     constructor() {
         this.providers = {
@@ -28,7 +31,16 @@ class PaymentService {
     }
 
     async initiatePayment(paymentData) {
-        const provider = this.providers[paymentData.paymentProvider];
+        const providerKey = paymentData.paymentProvider;
+        if (
+            process.env.NODE_ENV === 'production' &&
+            SIMULATED_PAYMENT_PROVIDERS.has(providerKey)
+        ) {
+            throw new Error(
+                `Fournisseur « ${providerKey} » désactivé en production. Utilisez cinetpay ou wave.`
+            );
+        }
+        const provider = this.providers[providerKey];
         if (!provider) {
             throw new Error('Méthode de paiement non supportée');
         }
@@ -154,8 +166,13 @@ class PaymentService {
         }
     }
 
-    // Simulateur de requête de paiement (à remplacer par de vraies intégrations API)
+    // Simulateur de requête de paiement (dev/test uniquement)
     async simulatePaymentRequest(provider, paymentData) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error(
+                `Paiement simulé interdit en production (provider=${provider})`
+            );
+        }
         return new Promise((resolve) => {
             setTimeout(() => {
                 resolve({
@@ -170,17 +187,61 @@ class PaymentService {
         });
     }
 
-    // Vérifier le statut d'un paiement
+    /**
+     * Vérifier le statut auprès du PSP (jamais de simulation en production).
+     */
     async checkPaymentStatus(transactionId, provider) {
-        // Pour la démo, on simule un succès immédiat après confirmation OTP
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    status: 'paid', // ✅ HARMONISÉ - était 'completed'
-                    message: 'Paiement confirmé avec succès'
-                });
-            }, 1000);
-        });
+        if (!transactionId) {
+            throw new Error('ID de transaction requis');
+        }
+
+        const normalized = (provider || '').toLowerCase();
+
+        if (normalized === 'wave') {
+            const result = await waveService.checkPaymentStatus(transactionId);
+            if (!result.success) {
+                throw new Error(result.error || 'Impossible de vérifier le paiement Wave');
+            }
+            return {
+                status: result.status,
+                message: result.status === 'paid' ? 'Paiement confirmé' : 'Paiement en attente',
+            };
+        }
+
+        if (normalized === 'cinetpay' || normalized === 'orange' || normalized === 'mtn' || normalized === 'moov' || normalized === 'djamo') {
+            const result = await cinetPayService.checkPaymentStatus(transactionId);
+            if (!result.success) {
+                throw new Error(result.error || 'Impossible de vérifier le paiement CinetPay');
+            }
+            return {
+                status: result.status,
+                message: result.status === 'paid' ? 'Paiement confirmé' : 'Paiement en attente',
+            };
+        }
+
+        if (normalized === 'stripe') {
+            if (!stripe) {
+                throw new Error('Stripe non configuré');
+            }
+            const intent = await stripe.paymentIntents.retrieve(transactionId);
+            const statusMap = {
+                succeeded: 'paid',
+                processing: 'pending',
+                requires_payment_method: 'failed',
+                canceled: 'cancelled',
+            };
+            return {
+                status: statusMap[intent.status] || 'pending',
+                message: `Statut Stripe: ${intent.status}`,
+            };
+        }
+
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn(`[DEV] checkPaymentStatus fallback pour provider=${provider}`);
+            return { status: 'pending', message: 'Vérification PSP non disponible pour ce fournisseur' };
+        }
+
+        throw new Error(`Vérification de paiement non supportée pour: ${provider}`);
     }
 }
 

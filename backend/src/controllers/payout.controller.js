@@ -4,6 +4,10 @@ const Partner = require('../models/partner.model');
 const payoutService = require('../services/payout.service');
 const cinetPayTransferService = require('../services/cinetpay-transfer.service');
 const { getInstance: getWavePayoutService } = require('../services/wave-payout.service');
+const {
+    getWavePayoutWebhookSecret,
+    verifyWaveWebhookHmac,
+} = require('../utils/wave-webhook-signature.util');
 const logger = require('../utils/logger');
 
 /**
@@ -485,10 +489,46 @@ exports.getCinetPayBalance = async (req, res) => {
 exports.handleCinetPayTransferWebhook = async (req, res) => {
     try {
         const webhookData = req.body;
-        
-        logger.info('Webhook CinetPay Transfer reçu:', JSON.stringify(webhookData));
 
-        // Validation basique du webhook
+        const {
+            verifyCinetPayTransferWebhookToken,
+        } = require('../utils/cinetpay-transfer-webhook.util');
+        const tokenCheck = verifyCinetPayTransferWebhookToken(req);
+        if (!tokenCheck.ok) {
+            if (tokenCheck.status === 503) {
+                logger.error(tokenCheck.message);
+            } else {
+                logger.warn('Webhook CinetPay Transfer: token invalide');
+            }
+            return res.status(tokenCheck.status).json({
+                success: false,
+                message: tokenCheck.message,
+            });
+        }
+        if (tokenCheck.devMode) {
+            logger.warn('Webhook CinetPay Transfer sans secret (dev uniquement)');
+        }
+
+        const eventId =
+            webhookData.client_transaction_id ||
+            webhookData.transaction_id ||
+            String(webhookData.treatment_status);
+
+        const WebhookEvent = require('../models/webhook-event.model');
+        try {
+            await WebhookEvent.create({
+                provider: 'cinetpay_transfer',
+                eventId: String(eventId),
+            });
+        } catch (dupErr) {
+            if (dupErr.code === 11000) {
+                return res.json({ success: true, message: 'Événement déjà traité' });
+            }
+            throw dupErr;
+        }
+
+        logger.info('Webhook CinetPay Transfer reçu:', { eventId });
+
         if (!webhookData.transaction_id && !webhookData.client_transaction_id) {
             return res.status(400).json({
                 success: false,
@@ -1529,29 +1569,56 @@ exports.reverseWaveTransfer = async (req, res) => {
 exports.handleWavePayoutWebhook = async (req, res) => {
     try {
         const wavePayoutService = getWavePayoutService();
-        const signature = req.headers['x-wave-signature'] || req.headers['wave-signature'];
+        const signature =
+            req.headers['wave-signature'] ||
+            req.headers['x-wave-signature'];
         const rawBody = req.body;
+        const payoutWebhookSecret = getWavePayoutWebhookSecret();
 
-        if (process.env.WAVE_PAYOUT_WEBHOOK_SECRET) {
+        if (!payoutWebhookSecret) {
+            if (process.env.NODE_ENV === 'production') {
+                logger.error(
+                    'Webhook Wave Payout: WAVE_PAYOUT_WEBHOOK_SECRET ou WAVE_SIGNING_SECRET manquant'
+                );
+                return res.status(503).json({
+                    success: false,
+                    message: 'Webhook Wave Payout non configuré',
+                });
+            }
+            logger.warn(
+                'Webhook Wave Payout accepté sans signature (environnement non production)'
+            );
+        } else {
             if (!signature) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Signature Wave requise'
+                    message: 'Signature Wave requise',
                 });
             }
             if (!Buffer.isBuffer(rawBody)) {
-                logger.warn('Webhook Wave Payout: corps non Buffer — utiliser express.raw sur cette route');
+                logger.warn(
+                    'Webhook Wave Payout: corps non Buffer — utiliser express.raw sur cette route'
+                );
                 return res.status(400).json({
                     success: false,
-                    message: 'Format de requête incompatible avec la vérification de signature'
+                    message:
+                        'Format de requête incompatible avec la vérification de signature',
                 });
             }
-            const isValid = wavePayoutService.verifyWebhookSignature(rawBody, signature);
+            const isValid = verifyWaveWebhookHmac(
+                rawBody,
+                signature,
+                payoutWebhookSecret
+            );
             if (!isValid) {
-                logger.error('Signature Wave Payout invalide');
+                logger.error('Signature Wave Payout invalide', {
+                    hasPayoutSecret: !!process.env.WAVE_PAYOUT_WEBHOOK_SECRET,
+                    hasSigningSecret: !!process.env.WAVE_SIGNING_SECRET,
+                    signatureLength: String(signature).length,
+                });
                 return res.status(400).json({
                     success: false,
-                    message: 'Signature invalide'
+                    message: 'Signature invalide',
                 });
             }
         }

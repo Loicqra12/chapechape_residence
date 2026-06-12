@@ -41,7 +41,9 @@ class WaveTransferService {
         name: name,
       );
 
-      final response = await _apiService.post('/api/payouts/wave/transfer', data: {
+      // PROB #9 CORRIGÉ : ApiService du partner ajoute déjà le préfixe /api dans sa baseUrl
+      // Ne pas ajouter /api ici sinon on obtient /api/api/payouts/...
+      final response = await _apiService.post('/payouts/wave/transfer', data: {
         'amount': amount,
         'mobile': _formatPhoneNumber(mobile),
         'name': name,
@@ -61,7 +63,7 @@ class WaveTransferService {
   /// Vérifier le statut d'un transfert Wave
   Future<WaveTransferModel> getTransferStatus(String waveId) async {
     try {
-      final response = await _apiService.get('/api/payouts/wave/transfer/$waveId/status');
+      final response = await _apiService.get('/payouts/wave/transfer/$waveId/status');
       
       final data = response.data;
       
@@ -104,7 +106,7 @@ class WaveTransferService {
       }
       
       final response = await _apiService.get(
-        '/api/payouts/wave/search',
+        '/payouts/wave/search',
         queryParameters: queryParams,
       );
       
@@ -137,7 +139,7 @@ class WaveTransferService {
         );
       }
 
-      final response = await _apiService.post('/api/payouts/wave/batch', data: {
+      final response = await _apiService.post('/payouts/wave/batch', data: {
         'transfers': transfers.map((t) => {
           'amount': t.amount,
           'mobile': _formatPhoneNumber(t.mobile),
@@ -158,7 +160,7 @@ class WaveTransferService {
   /// Vérifier le statut d'un batch Wave
   Future<WaveBatchModel> getBatchStatus(String batchId) async {
     try {
-      final response = await _apiService.get('/api/payouts/wave/batch/$batchId/status');
+      final response = await _apiService.get('/payouts/wave/batch/$batchId/status');
       
       return WaveBatchModel.fromJson(response.data['data']);
       
@@ -170,7 +172,7 @@ class WaveTransferService {
   /// Annuler un transfert Wave (reverse)
   Future<bool> reverseTransfer(String waveId) async {
     try {
-      final response = await _apiService.post('/api/payouts/wave/transfer/$waveId/reverse');
+      final response = await _apiService.post('/payouts/wave/transfer/$waveId/reverse');
       
       return response.data['success'] ?? false;
       
@@ -247,10 +249,10 @@ class WaveTransferService {
         queryParams['to_date'] = toDate.toIso8601String();
       }
       
-      // Note: Le backend n'a pas d'endpoint /api/payouts/wave/stats spécifique
-      // On utilise la recherche pour calculer les stats côté client
+      // PROB #10 CORRIGÉ : ne pas charger 1000 enregistrements pour calculer des stats
+      // Limite à 100 — les stats précises doivent être calculées côté serveur
       final transfers = await getTransferHistory(
-        limit: 1000, // Récupérer un maximum pour les stats
+        limit: 100,
         fromDate: fromDate,
         toDate: toDate,
       );

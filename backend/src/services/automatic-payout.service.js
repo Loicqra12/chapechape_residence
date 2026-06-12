@@ -44,10 +44,10 @@ class AutomaticPayoutService {
             const grossAmount = payment.amount;
             const commissionRate = parseFloat(process.env.DEFAULT_COMMISSION_RATE) || 0.10;
             const commissionAmount = Math.round(grossAmount * commissionRate);
-            let netAmount = grossAmount - commissionAmount;
             
-            // Pour CinetPay : arrondir au multiple de 5 inférieur (contrainte API)
-            const payoutChannel = this.determinePayoutChannel(await Partner.findById(reservation.partner || (await Residence.findById(reservation.residence)).partner));
+            // Déterminer le canal AVANT d'arrondir (partner déjà chargé via residence.partner)
+            const payoutChannel = this.determinePayoutChannel(partner);
+            let netAmount = grossAmount - commissionAmount;
             if (payoutChannel !== 'wave') {
                 netAmount = Math.floor(netAmount / 5) * 5;
                 logger.info(`Montant arrondi pour CinetPay: ${grossAmount - commissionAmount} → ${netAmount} XOF`);
@@ -130,29 +130,33 @@ class AutomaticPayoutService {
             // Préparer les informations pour Wave
             const fullPhoneNumber = `${payout.recipient_info.phone_prefix}${payout.recipient_info.phone_number}`;
             
-            // Exécuter le transfert Wave
+            const wavePayoutService = getWavePayoutService();
             const waveResult = await wavePayoutService.createPayout({
                 amount: payout.net_amount,
                 mobile: fullPhoneNumber,
                 name: payout.recipient_info.full_name,
-                reference: payout.payout_id
+                client_reference: payout.payout_id,
             });
-            
-            // Mettre à jour avec les informations Wave
-            payout.cinetpay_info = {
-                transaction_id: waveResult.transactionId,
-                client_transaction_id: waveResult.clientTransactionId,
-                status: waveResult.status,
-                provider_response: waveResult
-            };
-            
-            if (waveResult.success) {
+
+            if (waveResult.success && waveResult.data) {
+                payout.cinetpay_info = {
+                    transaction_id: waveResult.data.wave_id,
+                    client_transaction_id: waveResult.data.client_reference,
+                    status: waveResult.data.status,
+                    provider_response: waveResult.data,
+                };
                 payout.status = 'completed';
                 logger.info(`Payout automatique ${payout.payout_id} exécuté avec succès`);
             } else {
                 payout.status = 'failed';
-                payout.failure_reason = waveResult.message || 'Échec du transfert Wave';
-                logger.error(`Échec du payout automatique ${payout.payout_id}: ${payout.failure_reason}`);
+                const errDetail =
+                    typeof waveResult.error === 'string'
+                        ? waveResult.error
+                        : waveResult.error?.message;
+                payout.failure_reason = errDetail || 'Échec du transfert Wave';
+                logger.error(
+                    `Échec du payout automatique ${payout.payout_id}: ${payout.failure_reason}`
+                );
             }
             
             await payout.save();

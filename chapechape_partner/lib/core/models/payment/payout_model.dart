@@ -36,14 +36,28 @@ extension PayoutStatusExtension on PayoutStatus {
   }
 
   static PayoutStatus fromString(String status) {
+    final s = status.toUpperCase();
+    if (s.contains('SUCCESS') || s == 'COMPLETED' || s == 'PAID') {
+      return PayoutStatus.success;
+    }
+    if (s.contains('FAIL') || s.contains('CANCEL')) {
+      return PayoutStatus.failed;
+    }
+    if (s.contains('PENDING') || s.contains('PROCESS')) {
+      return PayoutStatus.pending;
+    }
     switch (status.toLowerCase()) {
       case 'scheduled':
+      case 'payout_scheduled':
         return PayoutStatus.scheduled;
       case 'pending':
+      case 'payout_pending':
         return PayoutStatus.pending;
       case 'success':
+      case 'completed':
         return PayoutStatus.success;
       case 'failed':
+      case 'cancelled':
         return PayoutStatus.failed;
       default:
         return PayoutStatus.scheduled;
@@ -293,18 +307,32 @@ class PayoutStats extends Equatable {
 
   factory PayoutStats.fromJson(Map<String, dynamic> json) {
     return PayoutStats(
-      totalEarned: (json['totalEarned'] ?? 0.0).toDouble(),
-      totalPending: (json['totalPending'] ?? 0.0).toDouble(),
-      totalCommission: (json['totalCommission'] ?? 0.0).toDouble(),
-      totalPayouts: json['totalPayouts'] ?? 0,
-      successfulPayouts: json['successfulPayouts'] ?? 0,
-      pendingPayouts: json['pendingPayouts'] ?? 0,
-      failedPayouts: json['failedPayouts'] ?? 0,
-      lastPayoutDate: json['lastPayoutDate'] != null 
-          ? DateTime.parse(json['lastPayoutDate']) 
+      totalEarned: (json['totalEarned'] ??
+              json['successful_amount'] ??
+              json['total_amount'] ??
+              0.0)
+          .toDouble(),
+      totalPending: (json['totalPending'] ?? json['pending_amount'] ?? 0.0).toDouble(),
+      totalCommission: (json['totalCommission'] ?? json['total_commission'] ?? 0.0)
+          .toDouble(),
+      totalPayouts: json['totalPayouts'] ?? json['total_payouts'] ?? 0,
+      successfulPayouts: json['successfulPayouts'] ?? json['successful'] ?? 0,
+      pendingPayouts: json['pendingPayouts'] ?? json['pending'] ?? 0,
+      failedPayouts: json['failedPayouts'] ?? json['failed'] ?? 0,
+      lastPayoutDate: json['lastPayoutDate'] != null
+          ? DateTime.parse(json['lastPayoutDate'] as String)
           : null,
     );
   }
+
+  /// Solde en attente de reversement (affichage app).
+  double get availableBalance => totalPending;
+
+  /// Revenus encaissés / reversés avec succès.
+  double get monthlyRevenue => totalEarned;
+
+  /// Total déjà reversé au partenaire.
+  double get totalPaidOut => totalEarned;
 
   @override
   List<Object?> get props => [

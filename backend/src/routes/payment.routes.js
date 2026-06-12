@@ -10,6 +10,9 @@ router.post('/create-payment-intent', protect, validate(paymentValidation.create
 router.post('/:paymentId/confirm', protect, validate(paymentValidation.confirmPayment), paymentController.confirmPayment);
 router.get('/my-payments', protect, validate(paymentValidation.getUserPayments), paymentController.getUserPayments);
 
+// Vérification rapide du statut par transactionId (lookup direct — PROB #7 fix)
+router.get('/status/:transactionId', protect, paymentController.getPaymentStatus);
+
 // Vérifier le statut d'un paiement CinetPay en temps réel
 router.get('/cinetpay/verify/:transactionId', protect, paymentController.verifyCinetPayPayment);
 router.post('/:paymentId/refund', protect, validate(paymentValidation.requestRefund), paymentController.requestRefund);

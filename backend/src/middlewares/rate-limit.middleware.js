@@ -143,6 +143,11 @@ const paymentLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const path = req.path || '';
+    const webhookPaths = ['/webhook', '/cinetpay/webhook', '/wave/webhook'];
+    return req.method === 'POST' && webhookPaths.some((p) => path === p || path.endsWith(p));
+  },
   handler: (req, res) => {
     logger.warn(`Payment rate limit exceeded: ${req.ip} - ${req.method} ${req.path}`);
     res.status(429).json({

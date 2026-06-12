@@ -302,7 +302,7 @@ class AppRouter {
         pageBuilder: (context, state) => buildPageWithTransition(
           context: context,
           state: state,
-          child: const TransactionsScreen(),
+          child: TransactionsScreen.withService(context),
         ),
       ),
     ],

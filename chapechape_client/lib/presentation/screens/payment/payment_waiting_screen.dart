@@ -266,7 +266,7 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen>
           listener: (context, state) {
             if (state is PaymentStatusChecked) {
               if (state.payment.status == PaymentStatus.succeeded) {
-                context.go('/payment/success/${widget.transactionId}');
+                context.go('/payment-success/${widget.transactionId}');
               } else if (state.payment.status == PaymentStatus.failed) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

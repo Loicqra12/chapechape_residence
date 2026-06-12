@@ -10,6 +10,7 @@ const paymentService = require('./payment.service');
 const notificationService = require('./notification.service');
 const emailService = require('./email.service');
 const moment = require('moment');
+const User = require('../models/user.model');
 
 class BookingService {
   /**

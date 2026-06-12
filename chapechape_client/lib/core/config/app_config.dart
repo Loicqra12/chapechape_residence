@@ -13,10 +13,11 @@ class AppConfig {
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    // 🚀 UTILISER L'ENVIRONNEMENT DE DÉVELOPPEMENT pour le backend local
-    await AppConfigManager.initialize(environment: Environment.dev);
+    // Sélectionner automatiquement l'environnement selon le mode de compilation
+    const environment = kReleaseMode ? Environment.prod : Environment.dev;
+    await AppConfigManager.initialize(environment: environment);
     
-    debugPrint('🔧 [AppConfig] Initialisation en DÉVELOPPEMENT pour backend local');
+    debugPrint('🔧 [AppConfig] Initialisation en ${environment == Environment.prod ? 'PRODUCTION' : 'DÉVELOPPEMENT'}');
     _initialized = true;
   }
 

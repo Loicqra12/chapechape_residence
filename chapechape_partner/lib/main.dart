@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, kIsWeb, TargetPlatform, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -87,9 +87,10 @@ Future<void> main() async {
   // Services
   final storage = const FlutterSecureStorage();
   
-  // 🚀 FORCER L'ENVIRONNEMENT PRODUCTION (au lieu de development)
-  await AppConfigManager.initialize(environment: Environment.production);
-  debugPrint('🔧 [Partner] Initialisation forcée en PRODUCTION');
+  // Sélectionner automatiquement l'environnement selon le mode de compilation
+  const environment = kReleaseMode ? Environment.production : Environment.development;
+  await AppConfigManager.initialize(environment: environment);
+  debugPrint('🔧 [Partner] Initialisation en ${environment == Environment.production ? 'PRODUCTION' : 'DEVELOPPEMENT'}');
   debugPrint('🌐 [Partner] URL API finale: ${AppConfigManager.apiUrl}');
   
   // Ajouter des logs pour le token d'authentification

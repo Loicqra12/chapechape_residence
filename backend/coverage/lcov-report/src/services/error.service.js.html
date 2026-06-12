@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">76.31% </span>
+                <span class="strong">63.15% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>29/38</span>
+                <span class='fraction'>24/38</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">54.83% </span>
+                <span class="strong">41.93% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>17/31</span>
+                <span class='fraction'>13/31</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">75% </span>
+                <span class="strong">62.5% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/8</span>
+                <span class='fraction'>5/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.77% </span>
+                <span class="strong">63.88% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>28/36</span>
+                <span class='fraction'>23/36</span>
             </div>
         
             
@@ -304,11 +304,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -441,16 +441,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -478,7 +478,7 @@
  * Permet de tracer les erreurs métier et techniques
  */
 &nbsp;
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
 &nbsp;
 class ErrorService {
@@ -509,11 +509,11 @@ class ErrorService {
         }
 &nbsp;
         // Si l'erreur est critique, on peut envoyer une alerte
-        <span class="missing-if-branch" title="if path not taken" >I</span>if (this._isCriticalError(error)) {
+<span class="cstat-no" title="statement not covered" >        if (this._isCriticalError(error)) {</span>
 <span class="cstat-no" title="statement not covered" >            this._sendAlert(error, context);</span>
         }
 &nbsp;
-        return errorDetails;
+<span class="cstat-no" title="statement not covered" >        return errorDetails;</span>
     }
 &nbsp;
     /**
@@ -644,18 +644,18 @@ class ErrorService {
      * @returns {boolean} - True si l'erreur est critique
      * @private
      */
-    _isCriticalError(error) {
+<span class="fstat-no" title="function not covered" >    _i</span>sCriticalError(error) {
         // Les erreurs serveur sont considérées comme critiques
-        <span class="missing-if-branch" title="if path not taken" >I</span>if (error.statusCode &gt;= 500) <span class="cstat-no" title="statement not covered" >return true;</span>
+<span class="cstat-no" title="statement not covered" >        if (error.statusCode &gt;= 500) <span class="cstat-no" title="statement not covered" >return true;</span></span>
 &nbsp;
         // Certains codes d'erreur métier peuvent aussi être critiques
-        const criticalErrorCodes = [
+        const criticalErrorCodes = <span class="cstat-no" title="statement not covered" >[</span>
             errorCodes.PAYMENT.FAILED,
             errorCodes.BOOKING.INVALID_STATUS_CHANGE,
             errorCodes.AUTH.ACCOUNT_DISABLED
         ];
 &nbsp;
-        return error.errorCode &amp;&amp; criticalErrorCodes.includes(error.errorCode);
+<span class="cstat-no" title="statement not covered" >        return error.errorCode &amp;&amp; criticalErrorCodes.includes(error.errorCode);</span>
     }
 &nbsp;
     /**
@@ -685,7 +685,7 @@ module.exports = new ErrorService();
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-06-14T19:08:01.093Z
+                at 2026-06-12T16:14:20.282Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
