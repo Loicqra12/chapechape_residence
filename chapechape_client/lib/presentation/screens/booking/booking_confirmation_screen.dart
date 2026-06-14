@@ -488,13 +488,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                 });
 
                 if (state is PaymentPrepared) {
-                  context.go('/payment/${state.bookingId}');
-                } else if (state is PaymentIntentCreated) {
+                  context.go('/payment/${state.reservationId}');
+                } else if (state is PaymentExternalLaunched) {
                   context.go('/payment-waiting', extra: {
                     'method': state.method,
                     'transactionId': state.transactionId,
                     'paymentUrl': state.paymentUrl,
-                    'expiresAt': state.expiresAt?.toIso8601String(),
+                    'expiresAt': state.expiresAt.toIso8601String(),
                     'phoneNumber': state.phoneNumber,
                   });
                 } else if (state is PaymentError) {

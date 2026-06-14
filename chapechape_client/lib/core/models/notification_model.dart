@@ -15,6 +15,7 @@ class NotificationModel with _$NotificationModel {
     String? imageUrl,
     String? actionUrl,
     String? type,
+    @JsonKey(name: 'data') Map<String, dynamic>? metadata,
   }) = _NotificationModel;
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) =>

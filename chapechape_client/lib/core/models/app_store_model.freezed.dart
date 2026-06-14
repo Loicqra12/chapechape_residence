@@ -26,12 +26,8 @@ mixin _$AppStoreModel {
   String? get qrCodeUrl => throw _privateConstructorUsedError;
   String? get description => throw _privateConstructorUsedError;
 
-  /// Serializes this AppStoreModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of AppStoreModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $AppStoreModelCopyWith<AppStoreModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -60,8 +56,6 @@ class _$AppStoreModelCopyWithImpl<$Res, $Val extends AppStoreModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of AppStoreModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -120,8 +114,6 @@ class __$$AppStoreModelImplCopyWithImpl<$Res>
       _$AppStoreModelImpl _value, $Res Function(_$AppStoreModelImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of AppStoreModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -214,14 +206,12 @@ class _$AppStoreModelImpl
                 other.description == description));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType, name, logoUrl, downloadUrl, qrCodeUrl, description);
 
-  /// Create a copy of AppStoreModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$AppStoreModelImplCopyWith<_$AppStoreModelImpl> get copyWith =>
@@ -256,11 +246,8 @@ abstract class _AppStoreModel implements AppStoreModel {
   String? get qrCodeUrl;
   @override
   String? get description;
-
-  /// Create a copy of AppStoreModel
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$AppStoreModelImplCopyWith<_$AppStoreModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

@@ -29,12 +29,8 @@ mixin _$ChatMessage {
   String? get fileUrl => throw _privateConstructorUsedError;
   bool get isRead => throw _privateConstructorUsedError;
 
-  /// Serializes this ChatMessage to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ChatMessage
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ChatMessageCopyWith<ChatMessage> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -66,8 +62,6 @@ class _$ChatMessageCopyWithImpl<$Res, $Val extends ChatMessage>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ChatMessage
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -144,8 +138,6 @@ class __$$ChatMessageImplCopyWithImpl<$Res>
       _$ChatMessageImpl _value, $Res Function(_$ChatMessageImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ChatMessage
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -253,14 +245,12 @@ class _$ChatMessageImpl implements _ChatMessage {
             (identical(other.isRead, isRead) || other.isRead == isRead));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, content, senderId,
       conversationId, createdAt, type, fileUrl, isRead);
 
-  /// Create a copy of ChatMessage
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ChatMessageImplCopyWith<_$ChatMessageImpl> get copyWith =>
@@ -304,11 +294,8 @@ abstract class _ChatMessage implements ChatMessage {
   String? get fileUrl;
   @override
   bool get isRead;
-
-  /// Create a copy of ChatMessage
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ChatMessageImplCopyWith<_$ChatMessageImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -326,12 +313,8 @@ mixin _$ChatParticipant {
   bool get isOnline => throw _privateConstructorUsedError;
   DateTime? get lastSeen => throw _privateConstructorUsedError;
 
-  /// Serializes this ChatParticipant to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ChatParticipant
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ChatParticipantCopyWith<ChatParticipant> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -361,8 +344,6 @@ class _$ChatParticipantCopyWithImpl<$Res, $Val extends ChatParticipant>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ChatParticipant
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -427,8 +408,6 @@ class __$$ChatParticipantImplCopyWithImpl<$Res>
       _$ChatParticipantImpl _value, $Res Function(_$ChatParticipantImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ChatParticipant
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -518,14 +497,12 @@ class _$ChatParticipantImpl implements _ChatParticipant {
                 other.lastSeen == lastSeen));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, id, name, avatarUrl, role, isOnline, lastSeen);
 
-  /// Create a copy of ChatParticipant
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ChatParticipantImplCopyWith<_$ChatParticipantImpl> get copyWith =>
@@ -564,11 +541,8 @@ abstract class _ChatParticipant implements ChatParticipant {
   bool get isOnline;
   @override
   DateTime? get lastSeen;
-
-  /// Create a copy of ChatParticipant
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ChatParticipantImplCopyWith<_$ChatParticipantImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -589,12 +563,8 @@ mixin _$ChatConversation {
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
-  /// Serializes this ChatConversation to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ChatConversation
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ChatConversationCopyWith<ChatConversation> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -627,8 +597,6 @@ class _$ChatConversationCopyWithImpl<$Res, $Val extends ChatConversation>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ChatConversation
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -711,8 +679,6 @@ class __$$ChatConversationImplCopyWithImpl<$Res>
       $Res Function(_$ChatConversationImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ChatConversation
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -847,7 +813,7 @@ class _$ChatConversationImpl implements _ChatConversation {
                 other.updatedAt == updatedAt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -861,9 +827,7 @@ class _$ChatConversationImpl implements _ChatConversation {
       createdAt,
       updatedAt);
 
-  /// Create a copy of ChatConversation
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ChatConversationImplCopyWith<_$ChatConversationImpl> get copyWith =>
@@ -911,11 +875,8 @@ abstract class _ChatConversation implements ChatConversation {
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
-
-  /// Create a copy of ChatConversation
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ChatConversationImplCopyWith<_$ChatConversationImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

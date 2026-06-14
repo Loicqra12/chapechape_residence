@@ -32,12 +32,8 @@ mixin _$LocationSuggestionModel {
   bool get isPopular => throw _privateConstructorUsedError;
   int get searchCount => throw _privateConstructorUsedError;
 
-  /// Serializes this LocationSuggestionModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of LocationSuggestionModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $LocationSuggestionModelCopyWith<LocationSuggestionModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -72,8 +68,6 @@ class _$LocationSuggestionModelCopyWithImpl<$Res,
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of LocationSuggestionModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -165,8 +159,6 @@ class __$$LocationSuggestionModelImplCopyWithImpl<$Res>
       $Res Function(_$LocationSuggestionModelImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of LocationSuggestionModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -314,14 +306,12 @@ class _$LocationSuggestionModelImpl
                 other.searchCount == searchCount));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, name, fullAddress, city,
       district, country, latitude, longitude, isPopular, searchCount);
 
-  /// Create a copy of LocationSuggestionModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$LocationSuggestionModelImplCopyWith<_$LocationSuggestionModelImpl>
@@ -372,11 +362,8 @@ abstract class _LocationSuggestionModel implements LocationSuggestionModel {
   bool get isPopular;
   @override
   int get searchCount;
-
-  /// Create a copy of LocationSuggestionModel
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$LocationSuggestionModelImplCopyWith<_$LocationSuggestionModelImpl>
       get copyWith => throw _privateConstructorUsedError;
 }

@@ -22,16 +22,25 @@ _$LocationSuggestionModelImpl _$$LocationSuggestionModelImplFromJson(
     );
 
 Map<String, dynamic> _$$LocationSuggestionModelImplToJson(
-        _$LocationSuggestionModelImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'fullAddress': instance.fullAddress,
-      if (instance.city case final value?) 'city': value,
-      if (instance.district case final value?) 'district': value,
-      if (instance.country case final value?) 'country': value,
-      if (instance.latitude case final value?) 'latitude': value,
-      if (instance.longitude case final value?) 'longitude': value,
-      'isPopular': instance.isPopular,
-      'searchCount': instance.searchCount,
-    };
+    _$LocationSuggestionModelImpl instance) {
+  final val = <String, dynamic>{
+    'id': instance.id,
+    'name': instance.name,
+    'fullAddress': instance.fullAddress,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('city', instance.city);
+  writeNotNull('district', instance.district);
+  writeNotNull('country', instance.country);
+  writeNotNull('latitude', instance.latitude);
+  writeNotNull('longitude', instance.longitude);
+  val['isPopular'] = instance.isPopular;
+  val['searchCount'] = instance.searchCount;
+  return val;
+}

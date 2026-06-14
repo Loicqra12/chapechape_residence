@@ -17,17 +17,28 @@ _$NotificationModelImpl _$$NotificationModelImplFromJson(
       imageUrl: json['imageUrl'] as String?,
       actionUrl: json['actionUrl'] as String?,
       type: json['type'] as String?,
+      metadata: json['data'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$$NotificationModelImplToJson(
-        _$NotificationModelImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'title': instance.title,
-      'message': instance.message,
-      'timestamp': instance.timestamp.toIso8601String(),
-      'isRead': instance.isRead,
-      if (instance.imageUrl case final value?) 'imageUrl': value,
-      if (instance.actionUrl case final value?) 'actionUrl': value,
-      if (instance.type case final value?) 'type': value,
-    };
+    _$NotificationModelImpl instance) {
+  final val = <String, dynamic>{
+    'id': instance.id,
+    'title': instance.title,
+    'message': instance.message,
+    'timestamp': instance.timestamp.toIso8601String(),
+    'isRead': instance.isRead,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('imageUrl', instance.imageUrl);
+  writeNotNull('actionUrl', instance.actionUrl);
+  writeNotNull('type', instance.type);
+  writeNotNull('data', instance.metadata);
+  return val;
+}

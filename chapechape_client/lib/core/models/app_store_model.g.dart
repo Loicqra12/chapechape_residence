@@ -15,11 +15,20 @@ _$AppStoreModelImpl _$$AppStoreModelImplFromJson(Map<String, dynamic> json) =>
       description: json['description'] as String?,
     );
 
-Map<String, dynamic> _$$AppStoreModelImplToJson(_$AppStoreModelImpl instance) =>
-    <String, dynamic>{
-      'name': instance.name,
-      'logoUrl': instance.logoUrl,
-      'downloadUrl': instance.downloadUrl,
-      if (instance.qrCodeUrl case final value?) 'qrCodeUrl': value,
-      if (instance.description case final value?) 'description': value,
-    };
+Map<String, dynamic> _$$AppStoreModelImplToJson(_$AppStoreModelImpl instance) {
+  final val = <String, dynamic>{
+    'name': instance.name,
+    'logoUrl': instance.logoUrl,
+    'downloadUrl': instance.downloadUrl,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('qrCodeUrl', instance.qrCodeUrl);
+  writeNotNull('description', instance.description);
+  return val;
+}

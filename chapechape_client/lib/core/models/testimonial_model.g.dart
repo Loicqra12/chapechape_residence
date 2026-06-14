@@ -20,13 +20,21 @@ _$TestimonialModelImpl _$$TestimonialModelImplFromJson(
     );
 
 Map<String, dynamic> _$$TestimonialModelImplToJson(
-        _$TestimonialModelImpl instance) =>
-    <String, dynamic>{
-      if (instance.id case final value?) 'id': value,
-      if (instance.userName case final value?) 'userName': value,
-      if (instance.userAvatar case final value?) 'userAvatar': value,
-      if (instance.residenceName case final value?) 'residenceName': value,
-      if (instance.rating case final value?) 'rating': value,
-      if (instance.content case final value?) 'content': value,
-      if (instance.date?.toIso8601String() case final value?) 'date': value,
-    };
+    _$TestimonialModelImpl instance) {
+  final val = <String, dynamic>{};
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('id', instance.id);
+  writeNotNull('userName', instance.userName);
+  writeNotNull('userAvatar', instance.userAvatar);
+  writeNotNull('residenceName', instance.residenceName);
+  writeNotNull('rating', instance.rating);
+  writeNotNull('content', instance.content);
+  writeNotNull('date', instance.date?.toIso8601String());
+  return val;
+}

@@ -18,17 +18,26 @@ _$ChatMessageImpl _$$ChatMessageImplFromJson(Map<String, dynamic> json) =>
       isRead: json['isRead'] as bool? ?? false,
     );
 
-Map<String, dynamic> _$$ChatMessageImplToJson(_$ChatMessageImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'content': instance.content,
-      'senderId': instance.senderId,
-      'conversationId': instance.conversationId,
-      'createdAt': instance.createdAt.toIso8601String(),
-      'type': instance.type,
-      if (instance.fileUrl case final value?) 'fileUrl': value,
-      'isRead': instance.isRead,
-    };
+Map<String, dynamic> _$$ChatMessageImplToJson(_$ChatMessageImpl instance) {
+  final val = <String, dynamic>{
+    'id': instance.id,
+    'content': instance.content,
+    'senderId': instance.senderId,
+    'conversationId': instance.conversationId,
+    'createdAt': instance.createdAt.toIso8601String(),
+    'type': instance.type,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('fileUrl', instance.fileUrl);
+  val['isRead'] = instance.isRead;
+  return val;
+}
 
 _$ChatParticipantImpl _$$ChatParticipantImplFromJson(
         Map<String, dynamic> json) =>
@@ -44,16 +53,24 @@ _$ChatParticipantImpl _$$ChatParticipantImplFromJson(
     );
 
 Map<String, dynamic> _$$ChatParticipantImplToJson(
-        _$ChatParticipantImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      if (instance.avatarUrl case final value?) 'avatarUrl': value,
-      'role': instance.role,
-      'isOnline': instance.isOnline,
-      if (instance.lastSeen?.toIso8601String() case final value?)
-        'lastSeen': value,
-    };
+    _$ChatParticipantImpl instance) {
+  final val = <String, dynamic>{
+    'id': instance.id,
+    'name': instance.name,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('avatarUrl', instance.avatarUrl);
+  val['role'] = instance.role;
+  val['isOnline'] = instance.isOnline;
+  writeNotNull('lastSeen', instance.lastSeen?.toIso8601String());
+  return val;
+}
 
 _$ChatConversationImpl _$$ChatConversationImplFromJson(
         Map<String, dynamic> json) =>
@@ -75,15 +92,24 @@ _$ChatConversationImpl _$$ChatConversationImplFromJson(
     );
 
 Map<String, dynamic> _$$ChatConversationImplToJson(
-        _$ChatConversationImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'participants': instance.participants.map((e) => e.toJson()).toList(),
-      'messages': instance.messages.map((e) => e.toJson()).toList(),
-      if (instance.residenceId case final value?) 'residenceId': value,
-      if (instance.residenceName case final value?) 'residenceName': value,
-      if (instance.reservationId case final value?) 'reservationId': value,
-      'isUnread': instance.isUnread,
-      'createdAt': instance.createdAt.toIso8601String(),
-      'updatedAt': instance.updatedAt.toIso8601String(),
-    };
+    _$ChatConversationImpl instance) {
+  final val = <String, dynamic>{
+    'id': instance.id,
+    'participants': instance.participants.map((e) => e.toJson()).toList(),
+    'messages': instance.messages.map((e) => e.toJson()).toList(),
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('residenceId', instance.residenceId);
+  writeNotNull('residenceName', instance.residenceName);
+  writeNotNull('reservationId', instance.reservationId);
+  val['isUnread'] = instance.isUnread;
+  val['createdAt'] = instance.createdAt.toIso8601String();
+  val['updatedAt'] = instance.updatedAt.toIso8601String();
+  return val;
+}

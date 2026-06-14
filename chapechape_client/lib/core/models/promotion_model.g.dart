@@ -27,24 +27,32 @@ _$PromotionImpl _$$PromotionImplFromJson(Map<String, dynamic> json) =>
       termsAndConditions: json['termsAndConditions'] as String?,
     );
 
-Map<String, dynamic> _$$PromotionImplToJson(_$PromotionImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'title': instance.title,
-      'description': instance.description,
-      'discountPercentage': instance.discountPercentage,
-      if (instance.discountCode case final value?) 'discountCode': value,
-      'startDate': instance.startDate.toIso8601String(),
-      'endDate': instance.endDate.toIso8601String(),
-      'imageUrl': instance.imageUrl,
-      'residenceId': instance.residenceId,
-      if (instance.residence?.toJson() case final value?) 'residence': value,
-      if (instance.badge case final value?) 'badge': value,
-      'isExclusive': instance.isExclusive,
-      'type': _$PromotionTypeEnumMap[instance.type]!,
-      if (instance.termsAndConditions case final value?)
-        'termsAndConditions': value,
-    };
+Map<String, dynamic> _$$PromotionImplToJson(_$PromotionImpl instance) {
+  final val = <String, dynamic>{
+    'id': instance.id,
+    'title': instance.title,
+    'description': instance.description,
+    'discountPercentage': instance.discountPercentage,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('discountCode', instance.discountCode);
+  val['startDate'] = instance.startDate.toIso8601String();
+  val['endDate'] = instance.endDate.toIso8601String();
+  val['imageUrl'] = instance.imageUrl;
+  val['residenceId'] = instance.residenceId;
+  writeNotNull('residence', instance.residence?.toJson());
+  writeNotNull('badge', instance.badge);
+  val['isExclusive'] = instance.isExclusive;
+  val['type'] = _$PromotionTypeEnumMap[instance.type]!;
+  writeNotNull('termsAndConditions', instance.termsAndConditions);
+  return val;
+}
 
 const _$PromotionTypeEnumMap = {
   PromotionType.discount: 'discount',

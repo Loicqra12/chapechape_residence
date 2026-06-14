@@ -28,12 +28,8 @@ mixin _$TestimonialModel {
   String? get content => throw _privateConstructorUsedError;
   DateTime? get date => throw _privateConstructorUsedError;
 
-  /// Serializes this TestimonialModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of TestimonialModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $TestimonialModelCopyWith<TestimonialModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -64,8 +60,6 @@ class _$TestimonialModelCopyWithImpl<$Res, $Val extends TestimonialModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of TestimonialModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -136,8 +130,6 @@ class __$$TestimonialModelImplCopyWithImpl<$Res>
       $Res Function(_$TestimonialModelImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of TestimonialModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -250,14 +242,12 @@ class _$TestimonialModelImpl
             (identical(other.date, date) || other.date == date));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, userName, userAvatar,
       residenceName, rating, content, date);
 
-  /// Create a copy of TestimonialModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$TestimonialModelImplCopyWith<_$TestimonialModelImpl> get copyWith =>
@@ -299,11 +289,8 @@ abstract class _TestimonialModel implements TestimonialModel {
   String? get content;
   @override
   DateTime? get date;
-
-  /// Create a copy of TestimonialModel
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$TestimonialModelImplCopyWith<_$TestimonialModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

@@ -28,13 +28,11 @@ mixin _$NotificationModel {
   String? get imageUrl => throw _privateConstructorUsedError;
   String? get actionUrl => throw _privateConstructorUsedError;
   String? get type => throw _privateConstructorUsedError;
+  @JsonKey(name: 'data')
+  Map<String, dynamic>? get metadata => throw _privateConstructorUsedError;
 
-  /// Serializes this NotificationModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of NotificationModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $NotificationModelCopyWith<NotificationModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -53,7 +51,8 @@ abstract class $NotificationModelCopyWith<$Res> {
       bool isRead,
       String? imageUrl,
       String? actionUrl,
-      String? type});
+      String? type,
+      @JsonKey(name: 'data') Map<String, dynamic>? metadata});
 }
 
 /// @nodoc
@@ -66,8 +65,6 @@ class _$NotificationModelCopyWithImpl<$Res, $Val extends NotificationModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of NotificationModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -79,6 +76,7 @@ class _$NotificationModelCopyWithImpl<$Res, $Val extends NotificationModel>
     Object? imageUrl = freezed,
     Object? actionUrl = freezed,
     Object? type = freezed,
+    Object? metadata = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -113,6 +111,10 @@ class _$NotificationModelCopyWithImpl<$Res, $Val extends NotificationModel>
           ? _value.type
           : type // ignore: cast_nullable_to_non_nullable
               as String?,
+      metadata: freezed == metadata
+          ? _value.metadata
+          : metadata // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>?,
     ) as $Val);
   }
 }
@@ -133,7 +135,8 @@ abstract class _$$NotificationModelImplCopyWith<$Res>
       bool isRead,
       String? imageUrl,
       String? actionUrl,
-      String? type});
+      String? type,
+      @JsonKey(name: 'data') Map<String, dynamic>? metadata});
 }
 
 /// @nodoc
@@ -144,8 +147,6 @@ class __$$NotificationModelImplCopyWithImpl<$Res>
       $Res Function(_$NotificationModelImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of NotificationModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -157,6 +158,7 @@ class __$$NotificationModelImplCopyWithImpl<$Res>
     Object? imageUrl = freezed,
     Object? actionUrl = freezed,
     Object? type = freezed,
+    Object? metadata = freezed,
   }) {
     return _then(_$NotificationModelImpl(
       id: null == id
@@ -191,6 +193,10 @@ class __$$NotificationModelImplCopyWithImpl<$Res>
           ? _value.type
           : type // ignore: cast_nullable_to_non_nullable
               as String?,
+      metadata: freezed == metadata
+          ? _value._metadata
+          : metadata // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>?,
     ));
   }
 }
@@ -208,7 +214,9 @@ class _$NotificationModelImpl
       this.isRead = false,
       this.imageUrl,
       this.actionUrl,
-      this.type});
+      this.type,
+      @JsonKey(name: 'data') final Map<String, dynamic>? metadata})
+      : _metadata = metadata;
 
   factory _$NotificationModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$NotificationModelImplFromJson(json);
@@ -230,10 +238,20 @@ class _$NotificationModelImpl
   final String? actionUrl;
   @override
   final String? type;
+  final Map<String, dynamic>? _metadata;
+  @override
+  @JsonKey(name: 'data')
+  Map<String, dynamic>? get metadata {
+    final value = _metadata;
+    if (value == null) return null;
+    if (_metadata is EqualUnmodifiableMapView) return _metadata;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(value);
+  }
 
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'NotificationModel(id: $id, title: $title, message: $message, timestamp: $timestamp, isRead: $isRead, imageUrl: $imageUrl, actionUrl: $actionUrl, type: $type)';
+    return 'NotificationModel(id: $id, title: $title, message: $message, timestamp: $timestamp, isRead: $isRead, imageUrl: $imageUrl, actionUrl: $actionUrl, type: $type, metadata: $metadata)';
   }
 
   @override
@@ -248,7 +266,8 @@ class _$NotificationModelImpl
       ..add(DiagnosticsProperty('isRead', isRead))
       ..add(DiagnosticsProperty('imageUrl', imageUrl))
       ..add(DiagnosticsProperty('actionUrl', actionUrl))
-      ..add(DiagnosticsProperty('type', type));
+      ..add(DiagnosticsProperty('type', type))
+      ..add(DiagnosticsProperty('metadata', metadata));
   }
 
   @override
@@ -266,17 +285,25 @@ class _$NotificationModelImpl
                 other.imageUrl == imageUrl) &&
             (identical(other.actionUrl, actionUrl) ||
                 other.actionUrl == actionUrl) &&
-            (identical(other.type, type) || other.type == type));
+            (identical(other.type, type) || other.type == type) &&
+            const DeepCollectionEquality().equals(other._metadata, _metadata));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, id, title, message, timestamp,
-      isRead, imageUrl, actionUrl, type);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      title,
+      message,
+      timestamp,
+      isRead,
+      imageUrl,
+      actionUrl,
+      type,
+      const DeepCollectionEquality().hash(_metadata));
 
-  /// Create a copy of NotificationModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$NotificationModelImplCopyWith<_$NotificationModelImpl> get copyWith =>
@@ -293,14 +320,16 @@ class _$NotificationModelImpl
 
 abstract class _NotificationModel implements NotificationModel {
   const factory _NotificationModel(
-      {required final String id,
-      required final String title,
-      required final String message,
-      required final DateTime timestamp,
-      final bool isRead,
-      final String? imageUrl,
-      final String? actionUrl,
-      final String? type}) = _$NotificationModelImpl;
+          {required final String id,
+          required final String title,
+          required final String message,
+          required final DateTime timestamp,
+          final bool isRead,
+          final String? imageUrl,
+          final String? actionUrl,
+          final String? type,
+          @JsonKey(name: 'data') final Map<String, dynamic>? metadata}) =
+      _$NotificationModelImpl;
 
   factory _NotificationModel.fromJson(Map<String, dynamic> json) =
       _$NotificationModelImpl.fromJson;
@@ -321,11 +350,11 @@ abstract class _NotificationModel implements NotificationModel {
   String? get actionUrl;
   @override
   String? get type;
-
-  /// Create a copy of NotificationModel
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(name: 'data')
+  Map<String, dynamic>? get metadata;
+  @override
+  @JsonKey(ignore: true)
   _$$NotificationModelImplCopyWith<_$NotificationModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

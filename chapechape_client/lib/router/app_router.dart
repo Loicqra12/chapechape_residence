@@ -11,7 +11,7 @@ import 'package:chapechape_client/presentation/screens/auth/register_screen.dart
 import 'package:chapechape_client/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/reset_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/chat_conversation_screen.dart';
-import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
+// import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment_methods_screen.dart';
 import '../core/models/chat_model.dart';
 import '../core/services/chat_service.dart';
@@ -373,18 +373,18 @@ class AppRouter {
                   ),
                 ],
               ),
-              GoRoute(
-                path: 'wallet',
-                name: 'wallet',
-                builder: (context, state) {
-                  if (_isAuthenticated(context)) {
-                    return const WalletScreen();
-                  } else {
-                    _redirectToLogin(context);
-                    return const SizedBox();
-                  }
-                },
-              ),
+              // GoRoute(
+              //   path: 'wallet',
+              //   name: 'wallet',
+              //   builder: (context, state) {
+              //     if (_isAuthenticated(context)) {
+              //       return const WalletScreen();
+              //     } else {
+              //       _redirectToLogin(context);
+              //       return const SizedBox();
+              //     }
+              //   },
+              // ),
               GoRoute(
                 path: 'payment-methods',
                 name: 'payment_methods',
