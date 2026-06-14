@@ -70,7 +70,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
 
   void _handleUrlChange(String url) {
     // Détecter les URLs de succès/échec CinetPay
-    if (url.contains('/payment/success') || url.contains('success')) {
+    if (url.contains('/payment-success') || url.contains('/payment/success') || url.contains('success')) {
       _navigateToSuccess();
     } else if (url.contains('/payment/cancel') ||
         url.contains('/payment/failed') ||

@@ -61,9 +61,11 @@ const apps = [
     accent: 'text-primary-600',
     bgGradient: 'from-primary-50/50 via-white to-secondary-50/30',
     screenshots: [
-      '/assets/apps/client/client-01.jpg',
-      '/assets/apps/client/client-02.jpg',
-      '/assets/apps/client/client-03.jpg'
+      '/assets/apps/client/client-01.jpeg',
+      '/assets/apps/client/client-02.jpeg',
+      '/assets/apps/client/client-03.jpeg',
+      '/assets/apps/client/client-04.jpeg',
+      '/assets/apps/client/client-05.jpeg',
     ]
   },
   {
@@ -80,9 +82,11 @@ const apps = [
     accent: 'text-secondary-800',
     bgGradient: 'from-secondary-50 via-white to-primary-50/30',
     screenshots: [
-      '/assets/apps/partner/partner-01.jpg',
-      '/assets/apps/partner/partner-02.jpg',
-      '/assets/apps/partner/partner-03.jpg'
+      '/assets/apps/partner/partner-01.jpeg',
+      '/assets/apps/partner/partner-02.jpeg',
+      '/assets/apps/partner/partner-03.jpeg',
+      '/assets/apps/partner/partner-04.jpeg',
+      '/assets/apps/partner/partner-05.jpeg',
     ]
   }
 ];
@@ -241,7 +245,7 @@ const AppScreenshots: React.FC = () => {
                   <motion.img
                     key={`${activeApp.id}-${currentScreenshot}`}
                     src={activeApp.screenshots[currentScreenshot]}
-                    alt="App Screenshot"
+                    alt={`Capture ${activeApp.name} — écran ${currentScreenshot + 1}`}
                     initial={{ opacity: 0, scale: 1.1 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}

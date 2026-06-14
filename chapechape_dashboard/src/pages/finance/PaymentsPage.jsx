@@ -182,8 +182,13 @@ const PaymentsPage = () => {
                   </TableCell>
                   <TableCell>
                     <IconButton
-                      onClick={() => setConfirmDialog({ open: true, paymentId: payment._id })}
-                      disabled={payment.status !== 'pending' && payment.status !== 'processing'}
+                      onClick={() => {
+                        toast.info(
+                          'La validation est automatique via Wave/CinetPay. Utilisez « Vérifier » côté client ou attendez le webhook.',
+                        );
+                      }}
+                      disabled
+                      title="Confirmation manuelle désactivée (sécurité PSP)"
                     >
                       <RefreshIcon />
                     </IconButton>

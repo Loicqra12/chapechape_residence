@@ -11,9 +11,8 @@ import 'package:chapechape_client/presentation/screens/auth/register_screen.dart
 import 'package:chapechape_client/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/auth/reset_password_screen.dart';
 import 'package:chapechape_client/presentation/screens/chat_conversation_screen.dart';
-// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-// import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
-// import 'package:chapechape_client/presentation/screens/payment_methods_screen.dart';
+import 'package:chapechape_client/presentation/screens/wallet_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment_methods_screen.dart';
 import '../core/models/chat_model.dart';
 import '../core/services/chat_service.dart';
 import '../core/services/api_service.dart';
@@ -31,20 +30,18 @@ import 'package:chapechape_client/presentation/screens/booking/booking_status_sc
     as booking;
 import 'package:chapechape_client/presentation/screens/booking/booking_modify_screen.dart'
     as booking;
-// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-// import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart'
-//     as payment;
-// import 'package:chapechape_client/presentation/screens/payment/payment_redirect_screen.dart';
-// import 'package:chapechape_client/presentation/screens/payment/payment_success_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart'
+    as payment;
+import 'package:chapechape_client/presentation/screens/payment/payment_redirect_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_success_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/temperature_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/display_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/about_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings/storage_screen.dart';
 import 'package:chapechape_client/presentation/screens/settings_screen.dart';
 import 'package:chapechape_client/presentation/screens/full_map_screen.dart';
-// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-// import 'package:chapechape_client/presentation/screens/payment/payment_waiting_screen.dart';
-// import 'package:chapechape_client/presentation/screens/payment/payment_failed_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_waiting_screen.dart';
+import 'package:chapechape_client/presentation/screens/payment/payment_failed_screen.dart';
 import 'package:chapechape_client/presentation/screens/search_criteria_screen.dart';
 
 class AppRouter {
@@ -376,33 +373,30 @@ class AppRouter {
                   ),
                 ],
               ),
-              // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-              // GoRoute(
-              //   path: 'wallet',
-              //   name: 'wallet',
-              //   builder: (context, state) {
-              //     // Vérifier l'authentification pour le portefeuille
-              //     if (_isAuthenticated(context)) {
-              //       return const WalletScreen();
-              //     } else {
-              //       _redirectToLogin(context);
-              //       return const SizedBox();
-              //     }
-              //   },
-              // ),
-              // GoRoute(
-              //   path: 'payment-methods',
-              //   name: 'payment_methods',
-              //   builder: (context, state) {
-              //     // Vérifier l'authentification pour les moyens de paiement
-              //     if (_isAuthenticated(context)) {
-              //       return const PaymentMethodsScreen();
-              //     } else {
-              //       _redirectToLogin(context);
-              //       return const SizedBox();
-              //     }
-              //   },
-              // ),
+              GoRoute(
+                path: 'wallet',
+                name: 'wallet',
+                builder: (context, state) {
+                  if (_isAuthenticated(context)) {
+                    return const WalletScreen();
+                  } else {
+                    _redirectToLogin(context);
+                    return const SizedBox();
+                  }
+                },
+              ),
+              GoRoute(
+                path: 'payment-methods',
+                name: 'payment_methods',
+                builder: (context, state) {
+                  if (_isAuthenticated(context)) {
+                    return const PaymentMethodsScreen();
+                  } else {
+                    _redirectToLogin(context);
+                    return const SizedBox();
+                  }
+                },
+              ),
               GoRoute(
                 path: 'help',
                 name: 'help',
@@ -499,14 +493,20 @@ class AppRouter {
           }
         },
       ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment/:reservationId',
-      //   name: 'payment_booking',
-      //   builder: (context, state) => payment.PaymentScreen(
-      //     reservationId: state.pathParameters['reservationId']!,
-      //   ),
-      // ),
+      GoRoute(
+        path: '/payment/:reservationId',
+        name: 'payment_booking',
+        builder: (context, state) {
+          if (_isAuthenticated(context)) {
+            return payment.PaymentScreen(
+              reservationId: state.pathParameters['reservationId']!,
+            );
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
       GoRoute(
         path: '/password-change',
         name: 'password_change',
@@ -541,135 +541,104 @@ class AppRouter {
           bookingId: state.pathParameters['bookingId']!,
         ),
       ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment/:paymentId',
-      //   name: 'payment',
-      //   builder: (context, state) {
-      //     final paymentId = state.pathParameters['paymentId'] ?? '';
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       return payment.PaymentScreen(paymentId: paymentId);
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment-redirect/:paymentId',
-      //   name: 'payment_redirect',
-      //   builder: (context, state) {
-      //     final paymentId = state.pathParameters['paymentId'] ?? '';
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       return PaymentRedirectScreen(paymentId: paymentId);
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment-success/:paymentId',
-      //   name: 'payment_success',
-      //   builder: (context, state) {
-      //     final paymentId = state.pathParameters['paymentId'] ?? '';
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       return PaymentSuccessScreen(paymentId: paymentId);
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment-pending/:paymentId',
-      //   name: 'payment_pending',
-      //   builder: (context, state) {
-      //     final paymentId = state.pathParameters['paymentId'] ?? '';
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       // Vous pouvez créer un écran spécifique pour les paiements en attente
-      //       // ou réutiliser l'écran de redirection
-      //       return PaymentRedirectScreen(paymentId: paymentId);
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment-failed/:paymentId',
-      //   name: 'payment_failed',
-      //   builder: (context, state) {
-      //     final paymentId = state.pathParameters['paymentId'] ?? '';
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       final extra = state.extra as Map<String, dynamic>? ?? {};
-      //       return PaymentFailedScreen(
-      //         paymentId: paymentId,
-      //         transactionId: extra['transactionId'],
-      //         method: extra['method'],
-      //         phoneNumber: extra['phoneNumber'],
-      //         amount: extra['amount'],
-      //         reservationId: extra['reservationId'],
-      //         failureReason: extra['failureReason'],
-      //         isExpired: extra['isExpired'] ?? false,
-      //       );
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payment-waiting',
-      //   name: 'payment_waiting',
-      //   builder: (context, state) {
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       final extra = state.extra as Map<String, dynamic>? ?? {};
-      //       return PaymentWaitingScreen(
-      //         method: extra['method'] ?? '',
-      //         transactionId: extra['transactionId'] ?? '',
-      //         paymentUrl: extra['paymentUrl'],
-      //         expiresAt: extra['expiresAt'] is String
-      //             ? DateTime.tryParse(extra['expiresAt']) ??
-      //                 DateTime.now().add(const Duration(minutes: 15))
-      //             : extra['expiresAt'] ??
-      //                 DateTime.now().add(const Duration(minutes: 15)),
-      //         phoneNumber: extra['phoneNumber'],
-      //       );
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/booking-payment/:bookingId',
-      //   name: 'booking_payment',
-      //   builder: (context, state) {
-      //     final bookingId = state.pathParameters['bookingId'] ?? '';
-      //     // Vérifier l'authentification
-      //     if (_isAuthenticated(context)) {
-      //       // Cette route pourrait rediriger vers l'écran de confirmation où l'utilisateur
-      //       // peut choisir de payer
-      //       return booking.BookingConfirmationScreen(bookingId: bookingId);
-      //     } else {
-      //       _redirectToLogin(context);
-      //       return const SizedBox();
-      //     }
-      //   },
-      // ),
+      GoRoute(
+        path: '/payment-redirect/:paymentId',
+        name: 'payment_redirect',
+        builder: (context, state) {
+          final paymentId = state.pathParameters['paymentId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return PaymentRedirectScreen(paymentId: paymentId);
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/payment-success/:paymentId',
+        name: 'payment_success',
+        builder: (context, state) {
+          final paymentId = state.pathParameters['paymentId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return PaymentSuccessScreen(paymentId: paymentId);
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/payment-pending/:paymentId',
+        name: 'payment_pending',
+        builder: (context, state) {
+          final paymentId = state.pathParameters['paymentId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return PaymentRedirectScreen(paymentId: paymentId);
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/payment-failed/:paymentId',
+        name: 'payment_failed',
+        builder: (context, state) {
+          final paymentId = state.pathParameters['paymentId'] ?? '';
+          if (_isAuthenticated(context)) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return PaymentFailedScreen(
+              paymentId: paymentId,
+              transactionId: extra['transactionId'],
+              method: extra['method'],
+              phoneNumber: extra['phoneNumber'],
+              amount: extra['amount'],
+              reservationId: extra['reservationId'],
+              failureReason: extra['failureReason'],
+              isExpired: extra['isExpired'] ?? false,
+            );
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/payment-waiting',
+        name: 'payment_waiting',
+        builder: (context, state) {
+          if (_isAuthenticated(context)) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return PaymentWaitingScreen(
+              method: extra['method'] ?? '',
+              transactionId: extra['transactionId'] ?? '',
+              paymentUrl: extra['paymentUrl'],
+              expiresAt: extra['expiresAt'] is String
+                  ? DateTime.tryParse(extra['expiresAt']) ??
+                      DateTime.now().add(const Duration(minutes: 15))
+                  : extra['expiresAt'] ??
+                      DateTime.now().add(const Duration(minutes: 15)),
+              phoneNumber: extra['phoneNumber'],
+            );
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
+      GoRoute(
+        path: '/booking-payment/:bookingId',
+        name: 'booking_payment',
+        builder: (context, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          if (_isAuthenticated(context)) {
+            return booking.BookingConfirmationScreen(bookingId: bookingId);
+          } else {
+            _redirectToLogin(context);
+            return const SizedBox();
+          }
+        },
+      ),
       GoRoute(
         path: '/booking-modify/:bookingId',
         name: 'booking_modify',
@@ -726,17 +695,7 @@ class AppRouter {
           if (_isAuthenticated(context)) {
             return booking.BookingStatusScreen.approved(
               bookingId: bookingId,
-              // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-              // onGoToPayment: () => context.go('/payment/$bookingId'),
-              onGoToPayment: () {
-                // Afficher un message indiquant que le paiement n'est pas disponible
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Le paiement en ligne sera bientôt disponible'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
+              onGoToPayment: () => context.go('/payment/$bookingId'),
               onViewDetails: () => context.go('/booking-details/$bookingId'),
             );
           } else {

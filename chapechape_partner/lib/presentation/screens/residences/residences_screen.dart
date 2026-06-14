@@ -777,8 +777,7 @@ class _ResidencesViewState extends State<_ResidencesView> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildStatItem(context, '0', 'Réservations'),
-                        // 🚫 MASQUÉ POUR GOOGLE PLAY SUBMISSION
-                        // _buildStatItem(context, '0 FCFA', 'Revenus'),
+                        _buildStatItem(context, '0 FCFA', 'Revenus'),
                         _buildStatItem(context, '${residence.reviewCount} avis', '${residence.rating == residence.rating.truncate() ? residence.rating.toInt() : residence.rating} ★'),
                       ],
                     ),

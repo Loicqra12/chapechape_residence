@@ -15,9 +15,15 @@ const getRedisNative = () => {
 };
 
 // Chargement paresseux de rate-limit-redis (évite crash au démarrage si module absent)
+// rate-limit-redis v3+ exporte { RedisStore }, v2 exporte directement la classe
 function getRedisStore() {
   try {
-    return require('rate-limit-redis');
+    const mod = require('rate-limit-redis');
+    // v3+: module exports { RedisStore }
+    if (mod && mod.RedisStore) return mod.RedisStore;
+    // v2: module exports la classe directement
+    if (typeof mod === 'function') return mod;
+    return null;
   } catch (e) {
     return null;
   }
@@ -143,6 +149,11 @@ const paymentLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const path = req.path || '';
+    const webhookPaths = ['/webhook', '/cinetpay/webhook', '/wave/webhook'];
+    return req.method === 'POST' && webhookPaths.some((p) => path === p || path.endsWith(p));
+  },
   handler: (req, res) => {
     logger.warn(`Payment rate limit exceeded: ${req.ip} - ${req.method} ${req.path}`);
     res.status(429).json({

@@ -309,8 +309,14 @@ const secureUploads = {
 const verifyFileSecurity = (req, res, next) => {
     const filePath = req.params.path;
     
-    // Vérifier que le chemin est sécurisé (pas de directory traversal)
-    if (filePath.includes('../') || filePath.includes('..\\')) {
+    if (!filePath) return next();
+
+    // Résoudre le dossier parent absolu (chemin vers backend/uploads)
+    const baseUploadDir = path.resolve(__dirname, '../../uploads');
+    const resolvedPath = path.resolve(baseUploadDir, filePath);
+    
+    // S'assurer que le chemin résolu commence par le chemin de base uploads/
+    if (!resolvedPath.startsWith(baseUploadDir)) {
         logger.warn(`Tentative de directory traversal détectée: ${filePath}`);
         return res.status(403).json({
             success: false,

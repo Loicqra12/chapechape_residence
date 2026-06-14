@@ -287,7 +287,7 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
               
               // Si le paiement est réussi, naviguer vers l'écran de succès
               if (state.payment.status == PaymentStatus.succeeded) {
-                context.go('/payment/success/${widget.paymentId}');
+                context.go('/payment-success/${widget.paymentId}');
               }
               
               // Mettre à jour l'URL de redirection si disponible

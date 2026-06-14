@@ -113,15 +113,13 @@ class DashboardScreen extends StatelessWidget {
             _buildActionSection(context),
             const SizedBox(height: 24),
             
-            // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
             // Section Revenus
-            // _buildRevenueSection(context, state.dashboardData.revenue, state.period),
-            // const SizedBox(height: 24),
+            _buildRevenueSection(context, state.dashboardData.revenue, state.period),
+            const SizedBox(height: 24),
             
-            // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
             // Section Financière Payouts
-            // _buildPayoutFinancialSection(context),
-            // const SizedBox(height: 24),
+            _buildPayoutFinancialSection(context),
+            const SizedBox(height: 24),
             
             // Section Tendances
             _buildTrendsSection(context, state.trendData, state.period),
@@ -135,10 +133,9 @@ class DashboardScreen extends StatelessWidget {
             _buildMyCitiesSection(context, state),
             const SizedBox(height: 24),
             
-            // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
             // Section Pricing Dynamique
-            // _buildPricingSection(context),
-            // const SizedBox(height: 24),
+            _buildPricingSection(context),
+            const SizedBox(height: 24),
             
             // Ajouter la section Performances par résidence
             if (state.residenceStats.isNotEmpty)
@@ -2183,13 +2180,12 @@ class DashboardScreen extends StatelessWidget {
                           '${residence.totalBookings}',
                           Icons.calendar_today,
                         ),
-                        // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-                        // _buildResidenceStatItem(
-                        //   context,
-                        //   'Revenus',
-                        //   '${NumberFormat.compact().format(residence.revenue)} FCFA',
-                        //   Icons.payments,
-                        // ),
+                        _buildResidenceStatItem(
+                          context,
+                          'Revenus',
+                          '${NumberFormat.compact().format(residence.revenue)} FCFA',
+                          Icons.payments,
+                        ),
                         _buildResidenceStatItem(
                           context,
                           'Occupation',
@@ -2615,39 +2611,38 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-              // GestureDetector(
-              //   onTap: () {
-              //     // Navigation vers l'écran détaillé des payouts
-              //     Navigator.pushNamed(context, '/payouts');
-              //   },
-              //   child: Container(
-              //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              //     decoration: BoxDecoration(
-              //       color: Theme.of(context).primaryColor.withOpacity(0.1),
-              //       borderRadius: BorderRadius.circular(16),
-              //     ),
-              //     child: Row(
-              //       mainAxisSize: MainAxisSize.min,
-              //       children: [
-              //         Text(
-              //           'Voir tout',
-              //           style: TextStyle(
-              //             color: Theme.of(context).primaryColor,
-              //             fontSize: 12,
-              //             fontWeight: FontWeight.w500,
-              //           ),
-              //         ),
-              //         const SizedBox(width: 4),
-              //         Icon(
-              //           Icons.arrow_forward_ios,
-              //           size: 12,
-              //           color: Theme.of(context).primaryColor,
-              //         ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
+              GestureDetector(
+                onTap: () {
+                  // Navigation vers l'écran détaillé des payouts
+                  Navigator.pushNamed(context, '/payouts');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Voir tout',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),

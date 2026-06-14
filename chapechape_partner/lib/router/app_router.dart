@@ -20,12 +20,10 @@ import '../presentation/screens/reservations/reservation_details_screen.dart';
 import '../presentation/screens/splash/splash_screen.dart';
 import '../presentation/screens/settings/settings_screen.dart';
 import '../presentation/screens/notifications/notification_settings_screen.dart';
-import '../presentation/screens/notifications/notification_list_screen.dart';
 import '../presentation/screens/notifications/notifications_screen.dart';
-// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-// import '../presentation/screens/payments/payouts/payouts.dart';
-// import '../presentation/screens/payments/payouts/payout_details_screen.dart';
-// import '../presentation/screens/payments/transactions/transactions.dart';
+import '../presentation/screens/payments/payouts/payouts.dart';
+import '../presentation/screens/payments/payouts/payout_details_screen.dart';
+import '../presentation/screens/payments/transactions/transactions.dart';
 import '../presentation/screens/profile/edit_profile_screen.dart';
 import '../presentation/screens/help/help_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -280,22 +278,33 @@ class AppRouter {
           child: const NotificationsScreen(),
         ),
       ),
-      // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-      // GoRoute(
-      //   path: '/payouts',
-      //   builder: (context, state) => PayoutHistoryScreen.withService(context),
-      // ),
-      // GoRoute(
-      //   path: '/payouts/:id',
-      //   builder: (context, state) {
-      //     final payoutId = state.pathParameters['id'] ?? '';
-      //     return PayoutDetailsScreen(payoutId: payoutId);
-      //   },
-      // ),
-      // GoRoute(
-      //   path: '/transactions',
-      //   builder: (context, state) => const TransactionsScreen(),
-      // ),
+      GoRoute(
+        path: '/payouts',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: PayoutHistoryScreen.withService(context),
+        ),
+      ),
+      GoRoute(
+        path: '/payouts/:id',
+        pageBuilder: (context, state) {
+          final payoutId = state.pathParameters['id'] ?? '';
+          return buildPageWithTransition(
+            context: context,
+            state: state,
+            child: PayoutDetailsScreen(payoutId: payoutId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/transactions',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: TransactionsScreen.withService(context),
+        ),
+      ),
     ],
     redirect: (context, state) async {
       final isAuthenticated = authBloc.state is AuthAuthenticated;

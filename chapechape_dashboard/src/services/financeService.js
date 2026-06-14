@@ -1,29 +1,20 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 
+const authHeaders = () => ({
+  Authorization: `Bearer ${localStorage.getItem('token')}`,
+});
+
 class FinanceService {
   getPaymentStatuses() {
     return {
-      pending: {
-        label: 'En attente',
-        color: 'warning'
-      },
-      processing: {
-        label: 'En cours',
-        color: 'info'
-      },
-      completed: {
-        label: 'Complété',
-        color: 'success'
-      },
-      failed: {
-        label: 'Échoué',
-        color: 'error'
-      },
-      refunded: {
-        label: 'Remboursé',
-        color: 'default'
-      }
+      pending: { label: 'En attente', color: 'warning' },
+      paid: { label: 'Payé', color: 'success' },
+      completed: { label: 'Payé', color: 'success' },
+      failed: { label: 'Échoué', color: 'error' },
+      cancelled: { label: 'Annulé', color: 'default' },
+      refunded: { label: 'Remboursé', color: 'default' },
+      expired: { label: 'Expiré', color: 'default' },
     };
   }
 
@@ -34,171 +25,131 @@ class FinanceService {
       { id: 'mtn_money', name: 'MTN Money' },
       { id: 'moov_money', name: 'Moov Money' },
       { id: 'wave', name: 'Wave' },
-      { id: 'djamo', name: 'Djamo' }
+      { id: 'mobile_money', name: 'Mobile Money' },
     ];
   }
 
-  async getPayments({ page = 1, limit = 10, filters = {}, search = '' }) {
+  /**
+   * Liste des paiements depuis la collection Payment (admin).
+   */
+  async getPayments({ page = 1, limit = 20, filters = {}, search = '' }) {
     try {
-      // Récupérer les réservations avec leurs paiements via l'endpoint reservations
-      const response = await axios.get(`${API_URL}/reservations/my-reservations`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
+      const response = await axios.get(`${API_URL}/admin/payments`, {
+        headers: authHeaders(),
+        params: {
+          page,
+          limit,
+          status: filters?.status || undefined,
+          paymentMethod: filters?.paymentMethod || undefined,
+        },
       });
 
-      // Transformer les réservations en paiements (adapter au format reservations)
-      const reservations = response.data.data || response.data || [];
-      const payments = reservations.map(reservation => ({
-        _id: reservation._id,
-        amount: reservation.totalPrice || reservation.amount || 50000, // Valeur par défaut temporaire
-        status: reservation.paymentStatus === 'paid' ? 'completed' : 'pending',
-        paymentMethod: reservation.paymentMethod || 'orange_money',
-        createdAt: reservation.createdAt,
-        paymentDetails: {
-          reference: reservation._id,
-          bookingId: reservation._id
-        },
-        phoneNumber: reservation.user?.phoneNumber || reservation.client?.phoneNumber
-      }));
+      let payments = response.data?.data || [];
 
-      // Filtrage côté client (les pages Finance passent des filters, mais le backend /reservations/my-reservations ne les applique pas)
+      const searchQuery = String(search || '').trim().toLowerCase();
+      if (searchQuery) {
+        payments = payments.filter((p) => {
+          const ref = p.paymentDetails?.reference || p.transactionId || '';
+          const phone = p.phoneNumber || p.reservation?.user?.phone || '';
+          const haystack = `${ref} ${phone} ${p._id}`.toLowerCase();
+          return haystack.includes(searchQuery);
+        });
+      }
+
       const startDate = filters?.startDate ? new Date(filters.startDate) : null;
       const endDate = filters?.endDate ? new Date(filters.endDate) : null;
-      const endDateInclusive = endDate ? new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1) : null;
-
-      const statusFilter = filters?.status ? String(filters.status) : '';
-      const paymentMethodFilter = filters?.paymentMethod ? String(filters.paymentMethod) : '';
-      const searchQuery = String(search || '').trim().toLowerCase();
-
-      const filtered = payments.filter((p) => {
-        const created = p.createdAt ? new Date(p.createdAt) : null;
-
-        if (startDate && created && created < startDate) return false;
-        if (endDateInclusive && created && created > endDateInclusive) return false;
-
-        if (statusFilter && p.status !== statusFilter) return false;
-        if (paymentMethodFilter && p.paymentMethod !== paymentMethodFilter) return false;
-
-        if (searchQuery) {
-          const ref = p.paymentDetails?.reference || '';
-          const bookingId = p.paymentDetails?.bookingId || '';
-          const phone = p.phoneNumber || '';
-          const haystack = `${ref} ${bookingId} ${phone}`.toLowerCase();
-          if (!haystack.includes(searchQuery)) return false;
-        }
-
-        return true;
-      });
+      if (startDate || endDate) {
+        payments = payments.filter((p) => {
+          const created = p.createdAt ? new Date(p.createdAt) : null;
+          if (!created) return true;
+          if (startDate && created < startDate) return false;
+          if (endDate) {
+            const endInclusive = new Date(endDate.getTime() + 86400000 - 1);
+            if (created > endInclusive) return false;
+          }
+          return true;
+        });
+      }
 
       return {
         success: true,
-        data: filtered.slice(0, limit)
+        data: payments.map((p) => this._normalizePayment(p)),
       };
     } catch (error) {
       console.error('Erreur lors de la récupération des paiements:', error);
       return {
         success: false,
         data: [],
-        error: error.response?.data?.message || 'Erreur lors de la récupération des paiements'
+        error: error.response?.data?.message || 'Erreur lors de la récupération des paiements',
       };
     }
   }
 
-  async createPayment(data) {
-    try {
-      // Utilise l'endpoint reservations pour confirmer le paiement
-      const response = await axios.patch(`${API_URL}/reservations/${data.bookingId}`, {
-        paymentMethod: data.paymentMethod,
-        phoneNumber: data.phoneNumber,
-        paymentStatus: 'paid',
-        status: 'confirmed'
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      return {
-        success: true,
-        data: {
-          _id: response.data.data?._id || response.data._id,
-          status: 'completed',
-          ...data
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Erreur lors de la création du paiement'
-      };
-    }
+  _normalizePayment(p) {
+    const uiStatus = p.status === 'paid' ? 'completed' : p.status;
+    return {
+      ...p,
+      status: uiStatus,
+      paymentDetails: {
+        reference: p.transactionId || p._id,
+        ...(p.paymentDetails || {}),
+      },
+      phoneNumber:
+        p.phoneNumber ||
+        p.reservation?.user?.phone ||
+        p.reservation?.user?.phoneNumber,
+    };
   }
 
-  async confirmPayment(bookingId) {
-    try {
-      // Utilise l'endpoint reservations pour confirmer le paiement
-      const response = await axios.patch(`${API_URL}/reservations/${bookingId}`, {
-        paymentStatus: 'paid',
-        status: 'confirmed'
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      return {
-        success: true,
-        data: response.data.data || response.data
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Erreur lors de la confirmation du paiement'
-      };
-    }
+  /**
+   * Confirmation manuelle interdite — le statut vient du PSP via webhook.
+   */
+  async confirmPayment(paymentId, _otp) {
+    return {
+      success: false,
+      error:
+        'La confirmation manuelle est désactivée. Le paiement est validé uniquement via Wave/CinetPay (webhook).',
+    };
+  }
+
+  async createPayment() {
+    return {
+      success: false,
+      error:
+        'La création manuelle de paiement est désactivée pour des raisons de sécurité.',
+    };
   }
 
   async getFinancialStats() {
     try {
-      // Récupérer toutes les réservations pour calculer les statistiques
-      const response = await this.getPayments({ limit: 1000 });
+      const response = await this.getPayments({ page: 1, limit: 500, filters: {}, search: '' });
       if (!response.success) {
         throw new Error(response.error);
       }
 
-      const bookings = response.data;
+      const payments = response.data;
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      // Calculer les statistiques
-      const stats = {
-        totalVolume: 0,
-        todayTransactions: 0,
-        successRate: 0,
-        refundAmount: 0
-      };
-
-      const completedBookings = bookings.filter(b => b.status === 'completed');
-      const todayBookings = bookings.filter(b => new Date(b.createdAt) >= todayStart);
-      const refundedBookings = bookings.filter(b => b.status === 'refunded');
-
-      stats.totalVolume = completedBookings.reduce((sum, b) => sum + b.amount, 0);
-      stats.todayTransactions = todayBookings.length;
-      stats.successRate = bookings.length > 0 
-        ? Math.round((completedBookings.length / bookings.length) * 100)
-        : 0;
-      stats.refundAmount = refundedBookings.reduce((sum, b) => sum + b.amount, 0);
+      const paid = payments.filter((p) => p.status === 'completed' || p.status === 'paid');
+      const today = payments.filter((p) => new Date(p.createdAt) >= todayStart);
+      const refunded = payments.filter((p) => p.status === 'refunded');
 
       return {
         success: true,
-        data: stats
+        data: {
+          totalVolume: paid.reduce((sum, p) => sum + (p.amount || 0), 0),
+          todayTransactions: today.length,
+          successRate:
+            payments.length > 0 ? Math.round((paid.length / payments.length) * 100) : 0,
+          refundAmount: refunded.reduce((sum, p) => sum + (p.amount || 0), 0),
+        },
       };
     } catch (error) {
-      console.error('Erreur lors de la récupération des statistiques:', error);
       return {
         success: false,
         data: null,
-        error: error.message || 'Erreur lors de la récupération des statistiques'
+        error: error.message || 'Erreur lors de la récupération des statistiques',
       };
     }
   }

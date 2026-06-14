@@ -198,16 +198,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       title: 'Messagerie verrouillée',
       subtitle: 'Finalisez votre réservation pour débloquer la messagerie directe avec le propriétaire',
       imageHeight: 200,
-      // 🚫 Paiement masqué pour Google Play – message à la place de la navigation
       action: widget.conversation.reservationId != null
           ? ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Le paiement en ligne sera bientôt disponible'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
+                context.go('/payment/${widget.conversation.reservationId}');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,

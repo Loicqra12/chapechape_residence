@@ -1,11 +1,37 @@
 const Payment = require('../../models/payment.model');
 const Reservation = require('../../models/reservation.model');
-const User = require('../../models/user.model');
-const { Conversation, Message } = require('../../models/message.model');
 const PaymentService = require('../../services/payment.service');
 const waveService = require('../../services/wave.service');
 const logger = require('../../utils/logger');
 const cinetPayService = require('../../services/cinetpay.service');
+const {
+    registerWebhookEvent,
+    applyPaymentPaid,
+} = require('../../services/payment-confirmation.service');
+const { getWavePaymentWebhookSecret } = require('../../utils/wave-webhook-signature.util');
+
+/**
+ * Clé d'idempotence stable par événement Wave (type + session), pas seulement par session.
+ */
+function extractWaveWebhookEventId(webhookData) {
+    const transactionId = webhookData?.data?.id || webhookData?.id;
+    if (webhookData?.event && transactionId) {
+        return `wave:${webhookData.event}:${transactionId}`;
+    }
+    if (transactionId) {
+        return `wave:${transactionId}`;
+    }
+    return `wave:${JSON.stringify(webhookData || {}).slice(0, 120)}`;
+}
+
+let stripe;
+try {
+    if (process.env.STRIPE_SECRET_KEY) {
+        stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    }
+} catch (_) {
+    stripe = null;
+}
 
 // Créer une intention de paiement
 exports.createPaymentIntent = async (req, res) => {
@@ -73,8 +99,8 @@ exports.createPaymentIntent = async (req, res) => {
         // ✅ VÉRIFICATION ANTI-DOUBLON : Chercher un paiement actif existant
         const existingPayment = await Payment.findOne({
             reservation: reservationId,
-            status: { $in: ['pending', 'processing'] },
-            paymentMethod: normalizedPaymentMethod
+            status: 'pending',
+            paymentMethod: normalizedPaymentMethod,
         }).sort({ createdAt: -1 });
 
         if (existingPayment) {
@@ -174,82 +200,37 @@ exports.confirmPayment = async (req, res) => {
             });
         }
 
-        // Vérifier le statut du paiement auprès du fournisseur
         const statusResponse = await PaymentService.checkPaymentStatus(
             payment.transactionId,
             payment.paymentProvider
         );
 
-        // Mettre à jour le statut du paiement
-        payment.status = statusResponse.status;
         if (otp) {
+            payment.paymentDetails = payment.paymentDetails || {};
             payment.paymentDetails.otp = otp;
+            await payment.save();
         }
-        await payment.save();
 
-        // Si le paiement est complété, mettre à jour la réservation
-        if (statusResponse.status === 'paid') { // ✅ HARMONISÉ - était 'completed'
-            const reservation = await Reservation.findById(payment.reservation);
-            if (reservation) {
-                // Vérifier s'il n'y a pas d'autres paiements complétés
-                const otherCompletedPayments = await Payment.find({
-                    reservation: payment.reservation,
-                    status: 'paid', // ✅ HARMONISÉ - était 'completed'
-                    _id: { $ne: paymentId }
-                });
-
-                if (otherCompletedPayments.length === 0) {
-                    // Utiliser updateOne pour éviter les problèmes de validation sur les anciens documents
-                    await Reservation.updateOne(
-                        { _id: payment.reservation },
-                        { 
-                            $set: {
-                                paymentStatus: 'paid',
-                                status: 'confirmed',
-                                messagingEnabled: true
-                            }
-                        }
-                    );
-                    
-                    // Créer une conversation entre le client et le partenaire si elle n'existe pas déjà
-                    const existingConversation = await Conversation.findOne({
-                        reservationId: reservation._id
-                    });
-                    
-                    if (!existingConversation) {
-                        // Obtenir les informations de l'utilisateur et du partenaire
-                        const populatedReservation = await Reservation.findById(reservation._id)
-                            .populate('user partner residence');
-                        
-                        // Vérifier que les participants existent avant de créer la conversation
-                        if (populatedReservation && populatedReservation.user && populatedReservation.partner) {
-                            const conversation = await Conversation.create({
-                                participants: [populatedReservation.user._id, populatedReservation.partner._id],
-                                reservationId: populatedReservation._id,
-                                residenceId: populatedReservation.residence._id,
-                                createdAt: Date.now(),
-                                updatedAt: Date.now()
-                            });
-                        
-                            // Envoyer un message automatique de bienvenue
-                            const message = await Message.create({
-                                conversation: conversation._id,
-                                sender: populatedReservation.partner._id,
-                                content: `Merci pour votre réservation de "${populatedReservation.residence.name}" ! N'hésitez pas à me contacter pour toute question concernant votre séjour.`
-                            });
-                            
-                            // Mettre à jour le dernier message de la conversation
-                            conversation.lastMessage = message._id;
-                            await conversation.save();
-                        }
-                    }
-                }
-            }
+        let resultPayment = payment;
+        if (statusResponse.status === 'paid') {
+            const confirmation = await applyPaymentPaid(payment, { triggerPayout: true });
+            resultPayment = confirmation.payment || payment;
+        } else if (statusResponse.status === 'failed' || statusResponse.status === 'cancelled') {
+            payment.status = statusResponse.status;
+            await payment.save();
+            resultPayment = payment;
+        } else {
+            payment.status = 'pending';
+            payment.providerStatus = 'processing';
+            await payment.save();
+            resultPayment = payment;
         }
 
         res.status(200).json({
             success: true,
-            data: payment
+            data: resultPayment,
+            providerStatus: statusResponse.status,
+            message: statusResponse.message,
         });
     } catch (error) {
         res.status(400).json({
@@ -263,23 +244,40 @@ exports.confirmPayment = async (req, res) => {
 // Obtenir l'historique des paiements d'un utilisateur
 exports.getUserPayments = async (req, res) => {
     try {
-        const payments = await Payment.find({})
-            .populate({
-                path: 'reservation',
-                match: { user: req.user._id }
-            })
-            .sort({ createdAt: -1 });
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+        const skip = (page - 1) * limit;
 
-        const validPayments = payments.filter(payment => payment.reservation);
+        const reservationIds = await Reservation.find({ user: req.user._id })
+            .select('_id')
+            .lean();
+
+        const ids = reservationIds.map((r) => r._id);
+
+        const [payments, total] = await Promise.all([
+            Payment.find({ reservation: { $in: ids } })
+                .populate('reservation')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Payment.countDocuments({ reservation: { $in: ids } }),
+        ]);
 
         res.status(200).json({
             success: true,
-            data: validPayments
+            data: payments,
+            payments,
+            pagination: {
+                page,
+                limit,
+                total,
+                hasNext: skip + payments.length < total,
+            },
         });
     } catch (error) {
         res.status(400).json({
             success: false,
-            message: error.message
+            message: error.message,
         });
     }
 };
@@ -313,39 +311,69 @@ exports.requestRefund = async (req, res) => {
         const { paymentId } = req.params;
         const { reason } = req.body;
 
+        if (!['admin', 'superadmin'].includes(req.user.role)) {
+            const payment = await Payment.findById(paymentId).populate('reservation');
+            if (
+                !payment?.reservation ||
+                payment.reservation.user?.toString() !== req.user._id.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Non autorisé à demander un remboursement',
+                });
+            }
+            return res.status(501).json({
+                success: false,
+                message:
+                    'Le remboursement automatique n’est pas encore disponible. Contactez le support.',
+            });
+        }
+
         const payment = await Payment.findById(paymentId);
         if (!payment) {
             return res.status(404).json({
                 success: false,
-                message: "Paiement non trouvé"
+                message: 'Paiement non trouvé',
             });
         }
 
-        // Vérifier si le paiement peut être remboursé
         if (payment.status === 'refunded') {
             return res.status(400).json({
                 success: false,
-                message: "Ce paiement a déjà été remboursé"
+                message: 'Ce paiement a déjà été remboursé',
             });
         }
 
-        // Simuler le remboursement
+        if (payment.status !== 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Seuls les paiements confirmés peuvent être remboursés',
+            });
+        }
+
+        // TODO: appeler le PSP (Wave/CinetPay/Stripe) — marquage manuel admin en attendant
+        logger.warn('Remboursement admin sans appel PSP', {
+            paymentId,
+            adminId: req.user._id,
+            reason,
+        });
+
         payment.status = 'refunded';
         payment.refundAmount = payment.amount;
-        payment.refundReason = reason;
+        payment.refundReason = reason || 'Remboursement administrateur';
         await payment.save();
 
-        // Mettre à jour le statut de la réservation
         await updateReservationStatus(payment.reservation);
 
         res.status(200).json({
             success: true,
-            data: payment
+            data: payment,
+            warning: 'Remboursement enregistré en base — vérifiez le remboursement côté PSP.',
         });
     } catch (error) {
         res.status(400).json({
             success: false,
-            message: error.message
+            message: error.message,
         });
     }
 };
@@ -353,25 +381,50 @@ exports.requestRefund = async (req, res) => {
 // Webhook pour les événements de paiement Stripe
 exports.handleStripeWebhook = async (req, res) => {
     try {
-        const event = req.body;
+        if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+            logger.error('Webhook Stripe: STRIPE_SECRET_KEY ou STRIPE_WEBHOOK_SECRET manquant');
+            return res.status(503).json({ success: false, message: 'Stripe webhook non configuré' });
+        }
 
-        // Traiter différents types d'événements
-        switch (event.type) {
-            case 'payment_intent.succeeded':
-                // Traitement du succès du paiement
-                break;
-            case 'payment_intent.payment_failed':
-                // Traitement de l'échec du paiement
-                break;
-            default:
-                console.log(`Événement non géré : ${event.type}`);
+        const signature = req.headers['stripe-signature'];
+        if (!signature) {
+            return res.status(401).json({ success: false, message: 'Signature Stripe requise' });
+        }
+
+        const event = stripe.webhooks.constructEvent(
+            req.body,
+            signature,
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+
+        const isNew = await registerWebhookEvent('stripe', event.id);
+        if (!isNew) {
+            return res.json({ received: true, duplicate: true });
+        }
+
+        if (event.type === 'payment_intent.succeeded') {
+            const intent = event.data.object;
+            const payment = await Payment.findOne({ transactionId: intent.id });
+            if (payment) {
+                await applyPaymentPaid(payment, {
+                    providerResponse: intent,
+                    triggerPayout: true,
+                });
+            }
+        } else if (event.type === 'payment_intent.payment_failed') {
+            const intent = event.data.object;
+            await Payment.updateOne(
+                { transactionId: intent.id },
+                { $set: { status: 'failed', providerStatus: 'processing' } }
+            );
         }
 
         res.json({ received: true });
     } catch (error) {
+        logger.error('Erreur webhook Stripe:', error);
         res.status(400).json({
             success: false,
-            message: error.message
+            message: error.message,
         });
     }
 };
@@ -383,7 +436,13 @@ exports.handleCinetPayWebhook = async (req, res) => {
         const xToken = req.get('x-token') || req.headers['x-token'];
 
         if (process.env.CINETPAY_WEBHOOK_DISABLE_SIGNATURE_CHECK === 'true') {
-            logger.warn('Webhook CinetPay: vérification HMAC désactivée (CINETPAY_WEBHOOK_DISABLE_SIGNATURE_CHECK=true)');
+            if (process.env.NODE_ENV === 'production') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Vérification HMAC obligatoire en production',
+                });
+            }
+            logger.warn('Webhook CinetPay: HMAC désactivé (dev uniquement)');
         } else {
             if (!xToken) {
                 logger.warn('Webhook CinetPay: header x-token absent');
@@ -401,45 +460,40 @@ exports.handleCinetPayWebhook = async (req, res) => {
             }
         }
 
+        const eventId =
+            webhookData.cpm_trans_id ||
+            webhookData.transaction_id ||
+            `${webhookData.cpm_custom}_${webhookData.cpm_amount}`;
+
+        const isNew = await registerWebhookEvent('cinetpay', String(eventId));
+        if (!isNew) {
+            return res.json({ success: true, message: 'Événement déjà traité' });
+        }
+
         logger.info('Webhook CinetPay reçu (HMAC valide)', { cpm_trans_id: webhookData.cpm_trans_id });
 
         const result = await cinetPayService.processWebhook(webhookData);
 
         if (result.success) {
-            // Rechercher le paiement correspondant
-            const payment = await Payment.findOne({ 
-                transactionId: result.transactionId 
-            }).populate('reservation');
+            const payment = await Payment.findOne({
+                transactionId: result.transactionId,
+            });
 
-            if (payment) {
-                // Mettre à jour le statut du paiement
+            if (payment && result.status === 'paid') {
+                await applyPaymentPaid(payment, {
+                    providerResponse: result.webhookData,
+                    triggerPayout: true,
+                });
+            } else if (payment && result.status) {
                 payment.status = result.status;
-                payment.providerResponse = result.webhookData;
+                payment.paymentDetails = payment.paymentDetails || {};
+                payment.paymentDetails.providerResponse = result.webhookData;
                 await payment.save();
-
-                // Mettre à jour le statut de la réservation si paiement confirmé
-                if (result.status === 'paid' && payment.reservation) { // ✅ HARMONISÉ - était 'completed'
-                    payment.reservation.paymentStatus = 'paid';
-                    payment.reservation.status = 'confirmed';
-                    await payment.reservation.save();
-
-                    logger.info(`Paiement CinetPay confirmé pour réservation ${payment.reservation._id}`);
-                    
-                    // 🚀 NOUVEAU : Déclencher payout automatique
-                    try {
-                        const AutomaticPayoutService = require('../../services/automatic-payout.service');
-                        await AutomaticPayoutService.triggerAutomaticPayout(payment, payment.reservation);
-                        logger.info(`Payout automatique déclenché pour payment ${payment._id}`);
-                    } catch (payoutError) {
-                        logger.error('Erreur lors du déclenchement du payout automatique:', payoutError);
-                        // Ne pas faire échouer le webhook pour une erreur de payout
-                    }
-                }
             }
 
-            res.json({ 
-                success: true, 
-                message: 'Webhook traité avec succès' 
+            res.json({
+                success: true,
+                message: 'Webhook traité avec succès',
             });
         } else {
             throw new Error(result.error || 'Erreur traitement webhook');
@@ -460,18 +514,29 @@ exports.handleWaveWebhook = async (req, res) => {
         const signature = req.headers['x-wave-signature'] || req.headers['wave-signature'];
         const rawBody = req.body;
 
-        if (process.env.WAVE_SIGNING_SECRET) {
+        const waveSigningSecret = getWavePaymentWebhookSecret();
+
+        if (!waveSigningSecret) {
+            if (process.env.NODE_ENV === 'production') {
+                logger.error('Webhook Wave: WAVE_SIGNING_SECRET ou WAVE_WEBHOOK_SECRET manquant en production');
+                return res.status(503).json({
+                    success: false,
+                    message: 'Webhook Wave non configuré',
+                });
+            }
+            logger.warn('Webhook Wave accepté sans signature (environnement non production)');
+        } else {
             if (!signature) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Signature Wave requise'
+                    message: 'Signature Wave requise',
                 });
             }
             if (!Buffer.isBuffer(rawBody)) {
-                logger.warn('Webhook Wave paiement: corps non Buffer — la route doit utiliser express.raw avant tout parse JSON global');
+                logger.warn('Webhook Wave paiement: corps non Buffer');
                 return res.status(400).json({
                     success: false,
-                    message: 'Format de requête incompatible avec la vérification de signature'
+                    message: 'Format de requête incompatible avec la vérification de signature',
                 });
             }
             const isValid = waveService.verifySignature(rawBody, signature);
@@ -479,7 +544,7 @@ exports.handleWaveWebhook = async (req, res) => {
                 logger.error('Signature Wave invalide');
                 return res.status(400).json({
                     success: false,
-                    message: 'Signature invalide'
+                    message: 'Signature invalide',
                 });
             }
         }
@@ -506,47 +571,42 @@ exports.handleWaveWebhook = async (req, res) => {
             });
         }
 
-        logger.info('Webhook Wave reçu:', webhookData);
+        const waveEventId = extractWaveWebhookEventId(webhookData);
+        const isNew = await registerWebhookEvent('wave', String(waveEventId));
 
-        // Traiter la notification via le service Wave
         const result = await waveService.processWebhook(webhookData);
 
         if (result.success) {
-            // Rechercher le paiement correspondant
-            const payment = await Payment.findOne({ 
-                transactionId: result.transactionId 
-            }).populate('reservation');
+            // ⚠️  TOUJOURS répondre 200 à Wave même en cas d'erreur interne.
+            // Si on renvoie 400+, Wave retente indéfiniment → risque de double-paiement.
+            try {
+                const payment = await Payment.findOne({
+                    transactionId: result.transactionId,
+                });
 
-            if (payment) {
-                // Mettre à jour le statut du paiement
-                payment.status = result.status;
-                payment.providerResponse = result.webhookData;
-                await payment.save();
-
-                // Mettre à jour la réservation si paiement réussi
-                if (result.status === 'paid' && payment.reservation) {
-                    payment.reservation.paymentStatus = 'paid';
-                    payment.reservation.status = 'confirmed';
-                    await payment.reservation.save();
-
-                    console.log(`Paiement Wave confirmé pour la réservation ${payment.reservation._id}`);
-                    
-                    // 🚀 NOUVEAU : Déclencher payout automatique
-                    try {
-                        const AutomaticPayoutService = require('../../services/automatic-payout.service');
-                        await AutomaticPayoutService.triggerAutomaticPayout(payment, payment.reservation);
-                        logger.info(`Payout automatique déclenché pour payment ${payment._id}`);
-                    } catch (payoutError) {
-                        logger.error('Erreur lors du déclenchement du payout automatique:', payoutError);
-                        // Ne pas faire échouer le webhook pour une erreur de payout
-                    }
+                if (payment && result.status === 'paid') {
+                    await applyPaymentPaid(payment, {
+                        providerResponse: result.webhookData,
+                        triggerPayout: true,
+                    });
+                } else if (payment && result.status) {
+                    payment.status = result.status;
+                    payment.paymentDetails = payment.paymentDetails || {};
+                    payment.paymentDetails.providerResponse = result.webhookData;
+                    await payment.save();
+                } else {
+                    logger.warn('Aucun paiement pour transaction Wave:', result.transactionId);
                 }
-            } else {
-                console.warn('Aucun paiement trouvé pour la transaction Wave:', result.transactionId);
+            } catch (updateError) {
+                // Loguer mais NE PAS propager — Wave doit recevoir un 200
+                logger.error('Erreur mise à jour paiement Wave (webhook accepté quand même):', {
+                    error: updateError.message,
+                    transactionId: result.transactionId,
+                });
             }
         }
 
-        res.json({ received: true });
+        res.json({ received: true, duplicate: !isNew });
 
     } catch (error) {
         console.error('Erreur webhook Wave:', error);
@@ -576,17 +636,18 @@ exports.verifyCinetPayPayment = async (req, res) => {
             if (payment) {
                 // Mettre à jour le statut local si différent
                 if (payment.status !== cinetPayStatus.status) {
-                    console.log(`📝 Mise à jour statut: ${payment.status} → ${cinetPayStatus.status}`);
-                    payment.status = cinetPayStatus.status;
-                    payment.providerResponse = cinetPayStatus.data;
-                    await payment.save();
-                    
-                    // Mettre à jour la réservation si paiement confirmé
-                    if (cinetPayStatus.status === 'paid' && payment.reservation) {
-                        payment.reservation.paymentStatus = 'paid';
-                        payment.reservation.status = 'confirmed';
-                        await payment.reservation.save();
+                    if (cinetPayStatus.status === 'paid') {
+                        await applyPaymentPaid(payment, {
+                            providerResponse: cinetPayStatus.data,
+                            triggerPayout: true,
+                        });
+                    } else {
+                        payment.status = cinetPayStatus.status;
+                        payment.paymentDetails = payment.paymentDetails || {};
+                        payment.paymentDetails.providerResponse = cinetPayStatus.data;
+                        await payment.save();
                     }
+                    payment = await Payment.findById(payment._id).populate('reservation');
                 }
                 
                 // Ajouter des informations contextuelles selon le statut
@@ -667,5 +728,52 @@ exports.verifyCinetPayPayment = async (req, res) => {
             message: 'Erreur serveur lors de la vérification',
             error: error.message
         });
+    }
+};
+
+// Vérifier le statut d'un paiement par transactionId (lookup direct — rapide)
+exports.getPaymentStatus = async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+
+        if (!transactionId) {
+            return res.status(400).json({ success: false, message: 'transactionId requis' });
+        }
+
+        // Lookup direct par index transactionId — pas besoin de charger tous les paiements
+        const payment = await Payment.findOne({ transactionId })
+            .select('_id transactionId status providerStatus amount currency paymentMethod paymentProvider createdAt updatedAt')
+            .lean();
+
+        if (!payment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Paiement non trouvé',
+                transactionId,
+            });
+        }
+
+        // Vérification que la réservation appartient bien à l'utilisateur connecté
+        const Reservation = require('../../models/reservation.model');
+        const reservation = await Reservation.findById(
+            payment.reservation || (await Payment.findOne({ transactionId }).select('reservation').lean())?.reservation
+        ).select('user').lean();
+
+        // Charger la réservation depuis le payment si non peuplée
+        const fullPayment = await Payment.findOne({ transactionId }).select('reservation').lean();
+        if (fullPayment?.reservation) {
+            const res2 = await Reservation.findById(fullPayment.reservation).select('user').lean();
+            if (res2 && res2.user.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ success: false, message: 'Non autorisé' });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            payment,
+        });
+    } catch (error) {
+        logger.error('Erreur getPaymentStatus:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };

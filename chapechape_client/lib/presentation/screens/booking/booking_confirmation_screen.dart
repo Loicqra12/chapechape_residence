@@ -487,21 +487,16 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   _isLoading = state is PaymentLoading;
                 });
 
-                // 🚫 Paiement masqué pour Google Play – pas de navigation vers /payment
                 if (state is PaymentPrepared) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Le paiement en ligne sera bientôt disponible'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  context.go('/payment/${state.bookingId}');
                 } else if (state is PaymentIntentCreated) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Le paiement en ligne sera bientôt disponible'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
+                  context.go('/payment-waiting', extra: {
+                    'method': state.method,
+                    'transactionId': state.transactionId,
+                    'paymentUrl': state.paymentUrl,
+                    'expiresAt': state.expiresAt?.toIso8601String(),
+                    'phoneNumber': state.phoneNumber,
+                  });
                 } else if (state is PaymentError) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(state.message)),

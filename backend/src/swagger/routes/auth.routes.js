@@ -1,6 +1,6 @@
 /**
  * Documentation Swagger pour les endpoints d'authentification
- * 
+ *
  * @swagger
  * tags:
  *   name: Authentification
@@ -9,8 +9,7 @@
 
 /**
  * @swagger
-
-
+ * /api/auth/request-verification-code:
  *   post:
  *     summary: Demander un code de vérification par SMS ou WhatsApp
  *     tags: [Authentification]
@@ -59,6 +58,8 @@
  *                       description: "Présent uniquement en mode développement"
  *       400:
  *         description: Données invalides
+ *       429:
+ *         description: Trop de demandes de code (rate limit OTP)
  */
 
 /**
@@ -523,6 +524,228 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiError'
+ */
+
+/**
+ * @swagger
+ * /api/auth/register-partner:
+ *   post:
+ *     summary: Inscription d'un nouveau partenaire
+ *     tags: [Authentification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - firstName
+ *               - lastName
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Partenaire créé avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 token:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Données invalides
+ *       409:
+ *         description: Email déjà utilisé
+ *
+ * /api/auth/google:
+ *   post:
+ *     summary: Authentification avec Google (OAuth2)
+ *     tags: [Authentification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Token ID fourni par Google Sign-In
+ *     responses:
+ *       200:
+ *         description: Authentification réussie — compte créé ou connecté
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Token manquant ou invalide
+ *       401:
+ *         description: Authentification Google échouée
+ *
+ * /api/auth/facebook:
+ *   post:
+ *     summary: Authentification avec Facebook (OAuth2)
+ *     tags: [Authentification]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accessToken
+ *             properties:
+ *               accessToken:
+ *                 type: string
+ *                 description: Token d'accès fourni par Facebook Login
+ *     responses:
+ *       200:
+ *         description: Authentification réussie — compte créé ou connecté
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Token manquant ou invalide
+ *       401:
+ *         description: Authentification Facebook échouée
+ *
+ * /api/auth/profile:
+ *   put:
+ *     summary: Mettre à jour le profil de l'utilisateur connecté
+ *     tags: [Authentification]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profil mis à jour
+ *       401:
+ *         description: Non autorisé
+ *
+ * /api/auth/password:
+ *   put:
+ *     summary: Changer le mot de passe de l'utilisateur connecté
+ *     tags: [Authentification]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Mot de passe changé avec succès
+ *       400:
+ *         description: Mot de passe actuel incorrect
+ *       401:
+ *         description: Non autorisé
+ *
+ * /api/auth/profile/picture:
+ *   post:
+ *     summary: Uploader une photo de profil
+ *     tags: [Authentification]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - profilePicture
+ *             properties:
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image de profil (jpg, png — max 5MB)
+ *     responses:
+ *       200:
+ *         description: Photo de profil mise à jour
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     profilePicture:
+ *                       type: string
+ *                       description: URL Cloudinary de la nouvelle photo
+ *       400:
+ *         description: Fichier manquant ou invalide
+ *       401:
+ *         description: Non autorisé
  */
 
 // Ce fichier sert uniquement à documenter les endpoints pour Swagger

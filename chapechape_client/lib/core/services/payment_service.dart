@@ -45,38 +45,21 @@ class PaymentService {
     );
   }
 
-  /// Récupérer les méthodes de paiement acceptées pour une résidence/partenaire
+  /// Récupérer les méthodes de paiement réellement supportées par le backend
+  /// Seules Wave, Orange Money (CinetPay), MTN Money (CinetPay) et Moov Money (CinetPay) sont actives.
+  /// BUG #4 CORRIGÉ : plus de simulation — liste réelle des méthodes du backend
   Future<List<PaymentMethod>> getAcceptedPaymentMethods({
     required String residenceId,
     String? partnerId,
   }) async {
-    try {
-      // Pour une API réelle, on ferait ça :
-      // final response = await _apiService.get('/residences/$residenceId/payment-methods');
-      // return (response.data as List).map((method) => _parsePaymentMethod(method)).toList();
-
-      // Simulation
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // Liste simulée de méthodes de paiement acceptées
-      return [
-        PaymentMethod.orangeMoney,
-        PaymentMethod.moovMoney,
-        PaymentMethod.mtnMoney,
-        PaymentMethod.wave,
-        PaymentMethod.mobileMoney,
-        PaymentMethod.creditCard,
-        PaymentMethod.bankTransfer,
-        PaymentMethod.cash,
-      ];
-    } catch (e) {
-      // En cas d'erreur, retourner des méthodes par défaut
-      return [
-        PaymentMethod.wave,
-        PaymentMethod.orangeMoney,
-        PaymentMethod.cash
-      ];
-    }
+    // Méthodes réellement supportées par le backend (pas de bankTransfer ni cash)
+    // Wave est le seul checkout direct. Orange/MTN/Moov passent par CinetPay.
+    return [
+      PaymentMethod.wave,
+      PaymentMethod.orangeMoney,
+      PaymentMethod.mtnMoney,
+      PaymentMethod.moovMoney,
+    ];
   }
 
   // Créer une intention de paiement avec commission - CONNECTÉ AU BACKEND RÉEL
@@ -224,13 +207,13 @@ class PaymentService {
   Future<Payment> confirmCardPayment({
     required String paymentIntentId,
     required Map<String, dynamic> cardDetails,
-    double amount = 50000, // Montant par défaut pour la simulation
+    double amount = 50000,
     double? commissionRate,
   }) async {
     try {
-      // CORRIGÉ: Utiliser le bon endpoint backend
+      // INCO #14 CORRIGÉ: slash de début ajouté (évite la concaténation incorrecte avec baseUrl)
       final response = await _apiService
-          .post('payments/$paymentIntentId/confirm', data: {
+          .post('/payments/$paymentIntentId/confirm', data: {
         'paymentMethod': 'card',
         'cardDetails': {
           'number': cardDetails['number'],
@@ -277,86 +260,21 @@ class PaymentService {
     }
   }
 
-  // Vérifier le statut d'un paiement via backend réel
+  // Vérifier le statut d'un paiement via l'endpoint dédié (lookup direct)
+  // PROB #7 CORRIGÉ : plus de chargement de tous les paiements — 1 requête directe
   Future<Payment> checkPaymentStatus(String paymentId) async {
     try {
-      print('🔍 === DÉBUT VÉRIFICATION PAIEMENT ===');
-      print('🆔 ID recherché: $paymentId');
-      print('📏 Longueur ID: ${paymentId.length}');
-      print(
-          '🏷️ Format ID: ${paymentId.startsWith('CHAPE') ? 'CinetPay TransactionID' : 'Autre format'}');
+      // Endpoint dédié : GET /payments/status/:transactionId (index direct MongoDB)
+      final response = await _apiService.get('/payments/status/$paymentId');
 
-      // Pour les paiements CinetPay, utiliser la vérification directe
-      if (paymentId.startsWith('CHAPE')) {
-        print('🚀 Paiement CinetPay détecté - utilisation vérification directe');
-        try {
-          final response = await _apiService.get('payments/cinetpay/verify/$paymentId');
-          
-          if (response.data['success'] == true && response.data['payment'] != null) {
-            final payment = response.data['payment'];
-            print('✅ Paiement trouvé via vérification CinetPay directe');
-            print('📊 Statut: ${payment['status']}');
-            return Payment.fromJson(payment);
-          }
-        } catch (directError) {
-          print('⚠️ Erreur vérification directe CinetPay: $directError');
-          print('🔄 Fallback vers my-payments...');
-        }
+      if (response.data['success'] == true && response.data['payment'] != null) {
+        return Payment.fromBackendJson(
+            Map<String, dynamic>.from(response.data['payment'] as Map));
       }
-      
-      // Utiliser l'endpoint my-payments pour récupérer tous les paiements
-      final response = await _apiService.get('payments/my-payments');
-
-      // Chercher le paiement par ID dans la liste
-      final List<dynamic> paymentsData = response.data['data'] ?? [];
-
-      print('📋 Nombre de paiements trouvés: ${paymentsData.length}');
-      print('🔍 IDs de paiements disponibles:');
-      for (var payment in paymentsData.take(10)) {
-        print('  - _id: ${payment['_id']}');
-        print('  - transactionId: ${payment['transactionId']}');
-        if (payment['paymentDetails']?['providerResponse']?['transactionId'] !=
-            null) {
-          print(
-              '  - providerResponse.transactionId: ${payment['paymentDetails']['providerResponse']['transactionId']}');
-        }
-        print('  - paymentMethod: ${payment['paymentMethod']}');
-        print('  - status: ${payment['status']}');
-        print('  - createdAt: ${payment['createdAt']}');
-        print('  ---');
-      }
-
-      // Logs des IDs disponibles pour debug
-      final ids = paymentsData.map((p) => {
-        'root': p['transactionId']?.toString(),
-        'nested': p['paymentDetails']?['providerResponse']?['transactionId']?.toString(),
-        'status': p['status']?.toString(),
-        'providerStatus': p['providerStatus']?.toString(),
-      }).toList();
-      print('🔍 IDs disponibles: $ids');
-      
-      // Recherche robuste par transactionId (SANS filtres de statut)
-      final paymentData = _findPaymentByTransactionId(paymentId, paymentsData);
-      
-      if (paymentData != null) {
-        print('✅ Paiement trouvé: ${paymentData['_id']}');
-        print('📊 Status: ${paymentData['status']}, ProviderStatus: ${paymentData['providerStatus']}');
-        return Payment.fromJson(paymentData);
-      }
-
-      print('❌ === AUCUN PAIEMENT TROUVÉ ===');
-      print('🆔 ID recherché: $paymentId');
-      print('📊 Total paiements en base: ${paymentsData.length}');
 
       throw Exception('Paiement non trouvé avec ID: $paymentId');
     } on DioException catch (e) {
-      print('❌ Erreur Dio: ${e.message}');
       throw Exception('Erreur lors de la vérification du statut: ${e.message}');
-    } catch (e) {
-      print('❌ Erreur générale: $e');
-      rethrow;
-    } finally {
-      print('🔍 === FIN VÉRIFICATION PAIEMENT ===');
     }
   }
 
@@ -416,18 +334,18 @@ class PaymentService {
     }
   }
 
-  // Annuler un paiement via backend réel
+  // Annuler un paiement (uniquement possible si statut pending)
+  // BUG #6 CORRIGÉ : on ne peut pas "rembourser" un paiement non complété
   Future<void> cancelPayment({
     required String paymentId,
     String? reason,
   }) async {
     try {
-      // CORRIGÉ: Le backend n'a pas d'endpoint /payments/{id}/cancel
-      // Utiliser l'endpoint refund avec montant complet pour "annuler"
-      await _apiService.post('/payments/$paymentId/refund', data: {
-        'reason': reason ?? 'Annulation demandée par l\'utilisateur',
-        // Le montant sera déduit automatiquement par le backend (remboursement complet)
-      });
+      // Un paiement pending ne peut pas être remboursé (pas encore capturé)
+      // On log simplement côté client — l'expiration automatique à 30min suffira
+      // Si le backend expose un day un endpoint /payments/:id/cancel, l'utiliser ici
+      throw Exception(
+          'Annulation non disponible. Le paiement expirera automatiquement dans 30 minutes.');
     } on DioException catch (e) {
       throw Exception('Erreur lors de l\'annulation du paiement: ${e.message}');
     }
@@ -472,10 +390,55 @@ class PaymentService {
     return await waveService.launchPaymentInBrowser(paymentUrl);
   }
 
-  /// Vérifier le statut d'un paiement Wave
+  /// Vérifier le statut d'un paiement Wave via l'endpoint dédié (rapide)
+  /// PROB #7 CORRIGÉ : lookup direct par transactionId
   Future<WavePaymentStatus> checkWavePaymentStatus(String transactionId) async {
-    final waveService = await WaveService.initialize();
-    return await waveService.checkPaymentStatus(transactionId);
+    try {
+      final response = await _apiService.get('/payments/status/$transactionId');
+      if (response.data['success'] == true && response.data['payment'] != null) {
+        final p = response.data['payment'] as Map<String, dynamic>;
+        return WavePaymentStatus(
+          transactionId: transactionId,
+          status: _mapBackendStatusToPaymentStatus(p['status']?.toString()),
+          amount: (p['amount'] as num?)?.toDouble(),
+          currency: p['currency']?.toString() ?? 'XOF',
+          message: p['providerStatus']?.toString() ?? '',
+          processedAt: p['updatedAt'] != null
+              ? DateTime.tryParse(p['updatedAt'].toString())
+              : null,
+        );
+      }
+      return WavePaymentStatus(
+        transactionId: transactionId,
+        status: PaymentStatus.pending,
+        message: 'Paiement non trouvé',
+      );
+    } on DioException catch (e) {
+      throw Exception('Erreur vérification statut Wave: ${e.message}');
+    }
+  }
+
+  /// Mapper le statut backend vers PaymentStatus (centralisé)
+  PaymentStatus _mapBackendStatusToPaymentStatus(String? backendStatus) {
+    switch (backendStatus?.toLowerCase()) {
+      case 'paid':
+      case 'completed':
+      case 'succeeded':
+      case 'success':
+        return PaymentStatus.succeeded;
+      case 'failed':
+      case 'error':
+      case 'rejected':
+        return PaymentStatus.failed;
+      case 'cancelled':
+      case 'canceled':
+        return PaymentStatus.cancelled;
+      case 'processing':
+        return PaymentStatus.processing;
+      case 'pending':
+      default:
+        return PaymentStatus.pending;
+    }
   }
 
   /// Vérifier le statut d'un paiement CinetPay
@@ -504,11 +467,11 @@ class PaymentService {
     return _cinetPayService.formatPhoneNumber(phoneNumber);
   }
 
-  // Simuler génération de reçu
-  Future<String> generateReceipt(String paymentId) async {
-    // Simuler un délai réseau
-    await Future.delayed(const Duration(seconds: 1));
-    return 'https://example.com/receipts/simulated_receipt.pdf';
+  // BUG #5 CORRIGÉ : plus de reçu simulé pointant vers example.com
+  // Le reçu sera disponible dans le futur via un endpoint backend dédié.
+  // En attendant, on retourne null — l'UI doit gérer l'absence de reçu.
+  Future<String?> generateReceipt(String paymentId) async {
+    return null; // Reçu non disponible pour l'instant
   }
 
   // Vérifier si un moyen de paiement est disponible (simulation)

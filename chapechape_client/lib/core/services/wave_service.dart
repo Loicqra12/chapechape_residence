@@ -10,7 +10,7 @@ class WaveService {
   final ApiService _apiService;
   
   // Configuration URLs
-  static const String _successUrl = '/payment/success';
+  static const String _successUrl = '/payment-success';
   static const String _cancelUrl = '/payment/cancel';
   
   WaveService._({required ApiService apiService}) : _apiService = apiService;
@@ -104,53 +104,32 @@ class WaveService {
     }
   }
 
-  /// Vérifier le statut d'un paiement Wave
+  /// Vérifier le statut d'un paiement Wave via l'endpoint dédié (rapide)
+  /// PROB #7 CORRIGÉ : lookup direct, ne charge plus tous les paiements
   Future<WavePaymentStatus> checkPaymentStatus(String transactionId) async {
     try {
-      print('🔍 === WAVE STATUS CHECK ===');
-      print('🆔 TransactionId recherché: $transactionId');
-      
-      // Utiliser l'endpoint my-payments pour récupérer le statut
-      final response = await _apiService.get('payments/my-payments');
-      
-      final List<dynamic> payments = response.data['payments'] ?? [];
-      print('📋 Nombre de paiements trouvés: ${payments.length}');
-      
-      // Logs des IDs disponibles pour debug
-      final ids = payments.map((p) => {
-        'root': p['transactionId']?.toString(),
-        'nested': p['paymentDetails']?['providerResponse']?['transactionId']?.toString(),
-        'status': p['status']?.toString(),
-        'providerStatus': p['providerStatus']?.toString(),
-      }).toList();
-      print('🔍 IDs disponibles: $ids');
-      
-      // Recherche robuste par transactionId (SANS filtres de statut)
-      final payment = _findPaymentByTransactionId(transactionId, payments);
-      
-      if (payment == null) {
-        print('❌ Paiement Wave non trouvé avec ID: $transactionId');
+      // Endpoint dédié : lookup direct par index MongoDB
+      final response = await _apiService.get('/payments/status/$transactionId');
+
+      if (response.data['success'] == true && response.data['payment'] != null) {
+        final p = response.data['payment'] as Map<String, dynamic>;
         return WavePaymentStatus(
           transactionId: transactionId,
-          status: PaymentStatus.pending,
-          message: 'Paiement non trouvé',
+          status: _mapPaymentStatus(p['status']?.toString()),
+          amount: (p['amount'] as num?)?.toDouble(),
+          currency: p['currency']?.toString() ?? 'XOF',
+          message: p['providerStatus']?.toString() ?? '',
+          processedAt: p['updatedAt'] != null
+              ? DateTime.tryParse(p['updatedAt'].toString())
+              : null,
         );
       }
-      
-      print('✅ Paiement Wave trouvé: ${payment['_id']}');
-      print('📊 Status: ${payment['status']}, ProviderStatus: ${payment['providerStatus']}');
-      
+
       return WavePaymentStatus(
         transactionId: transactionId,
-        status: _mapPaymentStatus(payment['status']),
-        amount: payment['amount']?.toDouble(),
-        currency: payment['currency'] ?? 'XOF',
-        message: payment['statusMessage'] ?? '',
-        processedAt: payment['processedAt'] != null 
-            ? DateTime.parse(payment['processedAt']) 
-            : null,
+        status: PaymentStatus.pending,
+        message: 'Paiement non trouvé',
       );
-      
     } on DioException catch (e) {
       throw WaveException('Erreur lors de la vérification du statut Wave: ${e.message}');
     }
@@ -171,12 +150,14 @@ class WaveService {
   }
 
   /// Mapper le statut backend vers enum PaymentStatus
+  /// PROB #8 CORRIGÉ : centralisé, inclut tous les alias backend
   PaymentStatus _mapPaymentStatus(String? backendStatus) {
     switch (backendStatus?.toLowerCase()) {
       case 'paid':
       case 'completed':
+      case 'succeeded':
       case 'success':
-        return PaymentStatus.succeeded;
+        return PaymentStatus.succeeded; // Cohérent avec payment_model.dart
       case 'failed':
       case 'error':
       case 'rejected':
@@ -184,8 +165,9 @@ class WaveService {
       case 'cancelled':
       case 'canceled':
         return PaymentStatus.cancelled;
-      case 'pending':
       case 'processing':
+        return PaymentStatus.processing;
+      case 'pending':
       default:
         return PaymentStatus.pending;
     }

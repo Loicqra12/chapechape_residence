@@ -333,16 +333,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                       },
                       child: const Text('Détails'),
                     ),
-                    // 🚫 Paiement masqué pour Google Play
                     if (!booking.isPaid)
                       ElevatedButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Le paiement en ligne sera bientôt disponible'),
-                              duration: Duration(seconds: 3),
-                            ),
-                          );
+                          context.go('/payment/${booking.id}');
                         },
                         child: const Text('Payer'),
                       ),

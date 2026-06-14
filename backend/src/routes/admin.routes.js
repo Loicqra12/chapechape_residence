@@ -7,6 +7,7 @@ const roleController = require('../controllers/role.controller');
 
 // Dashboard et statistiques
 router.get('/dashboard', protect, isAdmin, adminController.getDashboardStats);
+router.get('/payments', protect, isAdmin, adminController.getPayments);
 router.get('/stats/advanced', protect, isAdmin, adminController.getAdvancedStats);
 router.get('/activity-logs', protect, isAdmin, adminController.getActivityLogs);
 

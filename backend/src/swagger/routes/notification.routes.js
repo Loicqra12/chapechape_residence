@@ -9,6 +9,35 @@
 
 /**
  * @swagger
+ * /api/notifications/unread/count:
+ *   get:
+ *     summary: Obtenir le nombre de notifications non lues
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Nombre de notifications non lues
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       example: 5
+ *       401:
+ *         description: Non autorisé
+ */
+
+/**
+ * @swagger
  * /api/notifications:
  *   get:
  *     summary: Récupérer toutes les notifications de l'utilisateur

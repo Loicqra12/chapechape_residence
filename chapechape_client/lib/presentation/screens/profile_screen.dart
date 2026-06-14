@@ -615,23 +615,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                   
-                  // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-                  // _buildOptionTile(
-                  //   icon: Icons.account_balance_wallet,
-                  //   title: 'Portefeuille et récompenses',
-                  //   onTap: () {
-                  //     context.push('/profile/wallet');
-                  //   },
-                  // ),
+                  _buildOptionTile(
+                    icon: Icons.account_balance_wallet,
+                    title: 'Portefeuille et récompenses',
+                    onTap: () {
+                      context.push('/profile/wallet');
+                    },
+                  ),
                   
-                  // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-                  // _buildOptionTile(
-                  //   icon: Icons.payment,
-                  //   title: 'Moyens de paiement',
-                  //   onTap: () {
-                  //     context.push('/profile/payment-methods');
-                  //   },
-                  // ),
+                  _buildOptionTile(
+                    icon: Icons.payment,
+                    title: 'Moyens de paiement',
+                    onTap: () {
+                      context.push('/profile/payment-methods');
+                    },
+                  ),
                   
                   _buildOptionTile(
                     icon: Icons.history,

@@ -346,7 +346,7 @@ const createReservation = async (reservationBody) => {
     try {
       // Rechercher l'utilisateur et le partenaire séparément pour gérer les cas null
       const user = clientId ? await User.findById(clientId) : null;
-      const partner = residence.owner ? await User.findById(residence.owner) : null;
+      const partner = residence.partner ? await User.findById(residence.partner) : null;
 
       console.log(`DEBUG: Utilisateur trouvé: ${user ? 'Oui' : 'Non'}, Partenaire trouvé: ${partner ? 'Oui' : 'Non'}`);
 
@@ -441,8 +441,8 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
 
     // Vérifier les permissions
     if (
-      reservation.client.toString() !== userId &&
-      reservation.residence.owner.toString() !== userId
+      reservation.user.toString() !== userId &&
+      reservation.residence.partner.toString() !== userId
     ) {
       throw new ApiError('Non autorisé', 403);
     }
@@ -484,8 +484,8 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
 
     // Envoyer les emails de notification (hors transaction)
     const [user, partner] = await Promise.all([
-      User.findById(reservation.client),
-      User.findById(reservation.residence.owner)
+      User.findById(reservation.user),
+      User.findById(reservation.residence.partner)
     ]);
 
     await Promise.all([
@@ -546,7 +546,7 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
     }
 
     // Vérifier les permissions
-    if (reservation.client.toString() !== userId) {
+    if (reservation.user.toString() !== userId) {
       throw new ApiError('Non autorisé', 403);
     }
 
@@ -621,8 +621,8 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
 
     // Envoyer les notifications par email (hors transaction)
     const [user, partner] = await Promise.all([
-      User.findById(reservation.client),
-      User.findById(reservation.residence.owner)
+      User.findById(reservation.user),
+      User.findById(reservation.residence.partner)
     ]);
 
     await Promise.all([

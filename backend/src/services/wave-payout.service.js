@@ -1,7 +1,10 @@
 const axios = require('axios');
-const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
+const {
+    getWavePayoutWebhookSecret,
+    verifyWaveWebhookHmac,
+} = require('../utils/wave-webhook-signature.util');
 
 /**
  * Service Wave Payout - Gestion des transferts sortants via Wave API
@@ -17,10 +20,11 @@ const { v4: uuidv4 } = require('uuid');
 
 class WavePayoutService {
     constructor() {
-        // Utiliser les noms de variables du .env existant sur DigitalOcean
-        this.apiKey = process.env.CLÉ_API_WAVE_PAYOUT || process.env.WAVE_PAYOUT_API_KEY;
+        // Clé API Wave Payout (WAVE_PAYOUT_API_KEY dans le .env DigitalOcean)
+        // ⚠️  NE PAS utiliser de caractères accentués dans les noms de variables Linux
+        this.apiKey = process.env.WAVE_PAYOUT_API_KEY;
         this.baseUrl = process.env.WAVE_BASE_URL || process.env.WAVE_PAYOUT_BASE_URL || 'https://api.wave.com';
-        this.webhookSecret = process.env.WAVE_WEBHOOK_SECRET || process.env.WAVE_PAYOUT_WEBHOOK_SECRET;
+        this.webhookSecret = getWavePayoutWebhookSecret();
         
         if (!this.apiKey) {
             console.warn('⚠️  Clé API Wave manquante - Service Wave Payout désactivé');
@@ -326,24 +330,7 @@ class WavePayoutService {
      * Vérifier la signature HMAC du webhook
      */
     verifyWebhookSignature(rawBody, signature) {
-        if (!this.webhookSecret || !signature) {
-            return false;
-        }
-
-        try {
-            const expectedSignature = crypto
-                .createHmac('sha256', this.webhookSecret)
-                .update(rawBody)
-                .digest('hex');
-
-            return crypto.timingSafeEqual(
-                Buffer.from(signature),
-                Buffer.from(expectedSignature)
-            );
-        } catch (error) {
-            logger.error('Erreur vérification signature webhook Wave:', error);
-            return false;
-        }
+        return verifyWaveWebhookHmac(rawBody, signature, this.webhookSecret);
     }
 
     /**

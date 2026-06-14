@@ -3,6 +3,7 @@ const User = require('../models/user.model');
 const apiError = require('../utils/apiError');
 const jwt = require('../utils/jwt');
 const emailService = require('./email.service');
+const logger = require('../utils/logger');
 
 // ID client Google — doit correspondre au serverClientId passé à GoogleSignIn() côté Flutter.
 // Les deux utilisent le projet Firebase chapchapresi (39884732136).
@@ -23,18 +24,18 @@ const verifyGoogleToken = async (idToken) => {
   try {
     // 🔍 DEBUG: Inspecter le token reçu
     console.log("🟢 ID Token reçu :", idToken?.substring(0, 50) + "...");
-    
+
     const headerBase64 = idToken.split('.')[0];
     const header = JSON.parse(Buffer.from(headerBase64, 'base64').toString());
     console.log("📋 Header JWT :", header);
     console.log("🔑 Key ID (kid) :", header.kid);
-    
+
     // 🔍 DEBUG: Décoder le payload pour voir l'audience
     const payloadBase64 = idToken.split('.')[1];
     const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
     console.log("🎯 Audience dans le token :", payload.aud);
     console.log("🎯 Client ID attendu :", GOOGLE_CLIENT_ID);
-    
+
     // Configuration avec gestion des certificats
     const ticket = await client.verifyIdToken({
       idToken: idToken,
@@ -42,14 +43,14 @@ const verifyGoogleToken = async (idToken) => {
       // Forcer le rechargement des certificats si nécessaire
       maxExpiry: 86400, // 24 heures
     });
-    
+
     const verifiedPayload = ticket.getPayload();
-    
+
     // Validation supplémentaire
     if (!verifiedPayload || !verifiedPayload.email || !verifiedPayload.sub) {
       throw new Error('Payload du token invalide');
     }
-    
+
     return {
       email: verifiedPayload.email,
       firstName: verifiedPayload.given_name || '',
@@ -59,7 +60,7 @@ const verifyGoogleToken = async (idToken) => {
     };
   } catch (error) {
     console.error('Erreur de vérification du token Google:', error);
-    
+
     // Gestion spécifique de l'erreur PEM
     if (error.message && error.message.includes('No pem found')) {
       console.log('Tentative de rechargement des certificats Google...');
@@ -68,13 +69,13 @@ const verifyGoogleToken = async (idToken) => {
         clientId: GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET
       });
-      
+
       try {
         const retryTicket = await freshClient.verifyIdToken({
           idToken: idToken,
           audience: GOOGLE_CLIENT_ID,
         });
-        
+
         const retryPayload = retryTicket.getPayload();
         return {
           email: retryPayload.email,
@@ -88,7 +89,7 @@ const verifyGoogleToken = async (idToken) => {
         throw new apiError('Erreur de certificats Google - Veuillez réessayer', 401);
       }
     }
-    
+
     throw new apiError('Token Google invalide ou expiré', 401);
   }
 };
@@ -102,7 +103,7 @@ const authenticateWithGoogle = async (idToken) => {
   try {
     // Vérifier le token Google
     const googleUserInfo = await verifyGoogleToken(idToken);
-    
+
     // Chercher l'utilisateur par email ou googleId
     let user = await User.findOne({
       $or: [
@@ -110,7 +111,7 @@ const authenticateWithGoogle = async (idToken) => {
         { googleId: googleUserInfo.googleId }
       ]
     });
-    
+
     if (!user) {
       // Créer un nouvel utilisateur s'il n'existe pas
       user = await User.create({
@@ -128,23 +129,23 @@ const authenticateWithGoogle = async (idToken) => {
     } else if (!user.googleId) {
       // Si l'utilisateur existe mais n'a pas de googleId, le mettre à jour
       user.googleId = googleUserInfo.googleId;
-      
+
       // Mettre à jour la photo de profil si elle n'existe pas
       if (!user.profilePicture && googleUserInfo.picture) {
         user.profilePicture = googleUserInfo.picture;
       }
-      
+
       await user.save();
     }
-    
+
     // Mettre à jour la dernière connexion
     user.lastLogin = Date.now();
     await user.save();
-    
+
     // Générer les tokens JWT
     const accessToken = jwt.generateAccessToken(user._id, user.role);
     const refreshToken = jwt.generateRefreshToken(user._id);
-    
+
     return {
       user: {
         id: user._id.toString(),

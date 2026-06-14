@@ -1,6 +1,6 @@
 /**
  * Documentation Swagger pour les endpoints de réservation
- * 
+ *
  * @swagger
  * tags:
  *   name: Réservations
@@ -23,36 +23,32 @@
  *             type: object
  *             required:
  *               - residence
- *               - partner
  *               - checkIn
  *               - checkOut
  *               - numberOfGuests
- *               - cancellationPolicy
  *             properties:
  *               residence:
  *                 type: string
  *                 description: ID de la résidence à réserver
- *               partner:
- *                 type: string
- *                 description: ID du partenaire (propriétaire de la résidence)
  *               checkIn:
  *                 type: string
  *                 format: date
- *                 description: Date d'arrivée
  *               checkOut:
  *                 type: string
  *                 format: date
- *                 description: Date de départ
  *               numberOfGuests:
  *                 type: integer
  *                 minimum: 1
- *                 description: Nombre de personnes
- *               cancellationPolicy:
+ *               bookingType:
  *                 type: string
- *                 description: ID de la politique d'annulation choisie
- *               notes:
+ *                 enum: [hour, day, week, month]
+ *                 default: day
+ *               paymentMethod:
  *                 type: string
- *                 description: Notes additionnelles pour la réservation
+ *                 enum: [mtn_money, orange_money, wave, moov_money, card]
+ *                 default: mtn_money
+ *               specialRequests:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Réservation créée avec succès
@@ -67,30 +63,18 @@
  *                 data:
  *                   $ref: '#/components/schemas/Reservation'
  *       400:
- *         description: Données invalides
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
+ *         description: Données invalides ou résidence non disponible
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
+ *       404:
+ *         description: Résidence non trouvée
  */
 
 /**
  * @swagger
- * /api/reservations/user:
+ * /api/reservations/my-reservations:
  *   get:
- *     summary: Obtenir les réservations de l'utilisateur connecté
+ *     summary: Réservations de l'utilisateur connecté
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
@@ -99,23 +83,20 @@
  *         name: status
  *         schema:
  *           type: string
- *           enum: [pending, confirmed, cancelled, completed, refunded]
- *         description: Filtrer par statut (optionnel)
+ *           enum: [pending, awaiting_approval, payment_pending, confirmed, in_stay, cancelled, completed, expired, refunded]
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Nombre maximum de résultats
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Numéro de page
  *     responses:
  *       200:
- *         description: Liste des réservations récupérée
+ *         description: Liste des réservations
  *         content:
  *           application/json:
  *             schema:
@@ -123,41 +104,16 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/ReservationWithVirtuals'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     pages:
- *                       type: integer
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- */
-
-/**
- * @swagger
- * /api/reservations/all:
+ *
+ * /api/reservations/partner-reservations:
  *   get:
- *     summary: Obtenir toutes les réservations (admin seulement)
+ *     summary: Réservations du partenaire connecté
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
@@ -166,83 +122,63 @@
  *         name: status
  *         schema:
  *           type: string
- *         description: Filtrer par statut
+ *           enum: [pending, awaiting_approval, payment_pending, confirmed, in_stay, cancelled, completed, expired, refunded]
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 20
- *         description: Nombre maximum de résultats
+ *           default: 10
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Numéro de page
  *     responses:
  *       200:
- *         description: Liste des réservations récupérée
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Reservation'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     pages:
- *                       type: integer
+ *         description: Liste des réservations du partenaire
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  *       403:
- *         description: Accès interdit (non admin)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
+ *         description: Réservé aux partenaires
+ *
+ * /api/reservations/residence/{residenceId}:
+ *   get:
+ *     summary: Réservations d'une résidence
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: residenceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Liste des réservations de la résidence
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Résidence non trouvée
  */
 
 /**
  * @swagger
  * /api/reservations/{id}:
  *   get:
- *     summary: Obtenir les détails d'une réservation
+ *     summary: Détails d'une réservation
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID de la réservation
  *     responses:
  *       200:
- *         description: Détails de la réservation récupérés
+ *         description: Détails de la réservation
  *         content:
  *           application/json:
  *             schema:
@@ -250,93 +186,91 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   $ref: '#/components/schemas/ReservationWithVirtuals'
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  *       403:
  *         description: Accès interdit
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  *       404:
  *         description: Réservation non trouvée
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- */
-
-/**
- * @swagger
- * /api/reservations/{id}/confirm:
- *   post:
- *     summary: Confirmer une réservation
+ *   patch:
+ *     summary: Modifier une réservation (dates, nombre de personnes)
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID de la réservation à confirmer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               checkIn:
+ *                 type: string
+ *                 format: date
+ *               checkOut:
+ *                 type: string
+ *                 format: date
+ *               numberOfGuests:
+ *                 type: integer
+ *                 minimum: 1
  *     responses:
  *       200:
- *         description: Réservation confirmée
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Reservation'
+ *         description: Réservation modifiée
+ *       400:
+ *         description: Modification non autorisée ou dates indisponibles
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       403:
- *         description: Accès interdit
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  *       404:
  *         description: Réservation non trouvée
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  */
 
 /**
  * @swagger
+ * /api/reservations/{id}/status:
+ *   patch:
+ *     summary: Mettre à jour le statut d'une réservation
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [confirmed, cancelled, completed]
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Statut mis à jour
+ *       400:
+ *         description: Transition de statut invalide — règle métier (confirmed requiert paymentStatus=paid)
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Réservation non trouvée
+ *
  * /api/reservations/{id}/cancel:
- *   post:
+ *   patch:
  *     summary: Annuler une réservation
  *     tags: [Réservations]
  *     security:
@@ -344,10 +278,9 @@
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID de la réservation à annuler
  *     requestBody:
  *       content:
  *         application/json:
@@ -356,7 +289,6 @@
  *             properties:
  *               reason:
  *                 type: string
- *                 description: Raison de l'annulation
  *     responses:
  *       200:
  *         description: Réservation annulée
@@ -367,56 +299,207 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   $ref: '#/components/schemas/Reservation'
  *                 refundAmount:
  *                   type: number
- *                   description: Montant du remboursement (le cas échéant)
+ *       400:
+ *         description: Annulation non autorisée
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       403:
- *         description: Accès interdit
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  *       404:
  *         description: Réservation non trouvée
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  */
 
 /**
  * @swagger
- * /api/reservations/{id}/complete:
- *   post:
- *     summary: Marquer une réservation comme terminée
+ * /api/reservations/{id}/approve:
+ *   patch:
+ *     summary: Approuver une réservation (partenaire — mode approval_required)
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID de la réservation à terminer
  *     responses:
  *       200:
- *         description: Réservation marquée comme terminée
+ *         description: Réservation approuvée — statut passe à payment_pending
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Réservé aux partenaires
+ *       404:
+ *         description: Réservation non trouvée
+ *
+ * /api/reservations/{id}/reject:
+ *   patch:
+ *     summary: Rejeter une réservation (partenaire — mode approval_required)
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Réservation rejetée — statut passe à cancelled
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Réservé aux partenaires
+ *       404:
+ *         description: Réservation non trouvée
+ *
+ * /api/reservations/{id}/checkin:
+ *   patch:
+ *     summary: Check-in via QR code (partenaire uniquement)
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qrCode
+ *             properties:
+ *               qrCode:
+ *                 type: string
+ *                 description: Code QR scanné lors du check-in
+ *     responses:
+ *       200:
+ *         description: Check-in effectué — statut passe à in_stay
+ *       400:
+ *         description: QR code invalide ou réservation non confirmée
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Réservé aux partenaires
+ *       404:
+ *         description: Réservation non trouvée
+ *
+ * /api/reservations/{id}/checkout:
+ *   patch:
+ *     summary: Check-out via QR code (partenaire uniquement)
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qrCode
+ *             properties:
+ *               qrCode:
+ *                 type: string
+ *                 description: Code QR scanné lors du check-out
+ *     responses:
+ *       200:
+ *         description: Check-out effectué — statut passe à completed
+ *       400:
+ *         description: QR code invalide ou séjour non en cours
+ *       401:
+ *         description: Non autorisé
+ *       403:
+ *         description: Réservé aux partenaires
+ *       404:
+ *         description: Réservation non trouvée
+ */
+
+/**
+ * @swagger
+ * /api/reservations/{id}/check-availability:
+ *   get:
+ *     summary: Vérifier la disponibilité pour une modification
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: checkIn
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: checkOut
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Résultat de la vérification
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Réservation non trouvée
+ *
+ * /api/reservations/{id}/modification-fees:
+ *   post:
+ *     summary: Calculer les frais de modification
+ *     tags: [Réservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               checkIn:
+ *                 type: string
+ *                 format: date
+ *               checkOut:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Frais de modification calculés
  *         content:
  *           application/json:
  *             schema:
@@ -424,31 +507,18 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Reservation'
+ *                   type: object
+ *                   properties:
+ *                     modificationFee:
+ *                       type: number
+ *                     newTotalPrice:
+ *                       type: number
  *       401:
  *         description: Non autorisé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       403:
- *         description: Accès interdit
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  *       404:
  *         description: Réservation non trouvée
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
- *       500:
- *         description: Erreur serveur
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiError'
  */
+
+// Ce fichier sert uniquement à documenter les endpoints pour Swagger
+// Il n'exporte rien car il est uniquement lu par swagger-jsdoc

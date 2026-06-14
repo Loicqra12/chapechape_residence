@@ -15,6 +15,21 @@ const mongoose = require('mongoose');
 const logger = require('./utils/logger');
 const connectDB = require('./config/database');
 
+function validateCriticalEnv() {
+  const isProd = process.env.NODE_ENV === 'production';
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret || jwtSecret.length < 32) {
+    const msg = 'JWT_SECRET manquant ou trop court (min. 32 caractères requis)';
+    if (isProd) {
+      throw new Error(msg);
+    }
+    logger.warn(`[DEV] ${msg}`);
+  }
+  if (isProd && !process.env.WAVE_SIGNING_SECRET && !process.env.WAVE_WEBHOOK_SECRET) {
+    logger.warn('Production: WAVE_SIGNING_SECRET / WAVE_WEBHOOK_SECRET non défini — webhooks paiement Wave rejetés');
+  }
+}
+
 // Configuration du proxy global AVANT MongoDB (Atlas derrière proxy entreprise)
 const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy;
 const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy;
@@ -39,6 +54,7 @@ let server;
 let isShuttingDown = false;
 
 async function bootstrap() {
+  validateCriticalEnv();
   await connectDB();
 
   // Charger l’app APRÈS MongoDB prêt — sinon Agenda / Mongoose bufferise createIndex et timeout à 10s

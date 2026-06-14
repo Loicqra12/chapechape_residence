@@ -29,9 +29,7 @@ const csrfMiddleware = (req, res, next) => {
     req.headers["x-mobile-app"] === "true" ||
     req.headers["user-agent"]?.includes("ChapeChapeApp") ||
     req.headers["user-agent"]?.includes("Dart/") ||
-    req.headers["user-agent"]?.includes("Flutter") ||
-    req.headers["content-type"]?.includes("application/json") ||
-    (req.path.startsWith("/api/auth/") && req.headers["content-type"]?.includes("application/json"))
+    req.headers["user-agent"]?.includes("Flutter")
   ) {
     return next();
   }

@@ -47,7 +47,7 @@ class PayoutService {
                 .populate('partner')
                 .populate({
                     path: 'payments',
-                    match: { status: 'completed' }
+                    match: { status: 'paid' }
                 });
 
             if (!reservation) {
@@ -101,7 +101,7 @@ class PayoutService {
                 channel: partnerInfo.preferred_channel || 'orange_money',
                 recipient_info: partnerInfo.recipient_info,
                 scheduled_for: this.calculateScheduledTime(), // Programmé dans 1h par défaut
-                notify_url: `${process.env.APP_URL}/api/payouts/cinetpay/webhook`,
+                notify_url: require('../utils/cinetpay-transfer-webhook.util').getCinetPayTransferWebhookUrl(),
                 metadata: new Map([
                     ['reservation_id', reservationId],
                     ['partner_id', reservation.partner._id.toString()],

@@ -28,6 +28,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<LoadPaymentHistory>(_onLoadPaymentHistory);
     on<CancelPayment>(_onCancelPayment);
     on<InitiateExternalPayment>(_onInitiateExternalPayment);
+    on<RequestRefund>(_onRequestRefund);
   }
 
   Future<void> _onPreparePayment(
@@ -49,16 +50,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
           amount: amount,
         ));
       } catch (bookingError) {
-        // Fallback: utiliser un montant par défaut si impossible de récupérer la réservation
-        if (kDebugMode) {
-          print('⚠️ Impossible de récupérer le prix de la réservation: $bookingError');
-        }
-        double amount = 5000.0; // Montant par défaut réduit
-        
-        emit(PaymentPrepared(
-          reservationId: event.reservationId,
-          method: event.method,
-          amount: amount,
+        emit(PaymentError(
+          message:
+              'Impossible de charger le montant de la réservation. Vérifiez votre connexion et réessayez.',
         ));
       }
     } catch (e) {

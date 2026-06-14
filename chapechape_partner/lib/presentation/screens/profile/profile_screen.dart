@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/blocs/auth/auth_bloc.dart';
 import '../../../core/blocs/dashboard/dashboard_bloc.dart';
 import '../settings/settings_screen.dart';
-// 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-// import '../payments/payments_screen.dart' hide PaymentBloc;
+import '../payments/payments_screen.dart' hide PaymentBloc;
 import '../notifications/notifications_screen.dart';
 import '../help/help_screen.dart' hide HelpBloc;
 import 'edit_profile_screen.dart';
@@ -639,18 +638,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             theme: theme,
                           ),
                         ),
-                        // 🚫 MASQUÉ POUR GOOGLE PLAY SUBMISSION
-                        // const SizedBox(width: 16),
-                        // Expanded(
-                        //   child: _buildStatCard(
-                        //     icon: Icons.monetization_on_outlined,
-                        //     value: dashboardState is DashboardLoaded 
-                        //         ? _formatRevenueFcfa(dashboardState.dashboardData.revenue.totalRevenue)
-                        //         : '-',
-                        //     label: 'Revenus',
-                        //     theme: theme,
-                        //   ),
-                        // ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            icon: Icons.monetization_on_outlined,
+                            value: dashboardState is DashboardLoaded 
+                                ? _formatRevenueFcfa(dashboardState.dashboardData.revenue.totalRevenue)
+                                : '-',
+                            label: 'Revenus',
+                            theme: theme,
+                          ),
+                        ),
                       ],
                     ).animate().fadeIn().slideY(),
 
@@ -735,22 +733,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                           ),
-                          // 🚫 TEMPORAIREMENT MASQUÉ POUR GOOGLE PLAY SUBMISSION
-                          // const Divider(height: 1),
-                          // _buildMenuTile(
-                          //   icon: Icons.payment_outlined,
-                          //   title: 'Paiements',
-                          //   onTap: () {
-                          //     Navigator.push(
-                          //       context,
-                          //       MaterialPageRoute(
-                          //         builder: (context) => PaymentsScreen.withBloc(context),
-                          //       ),
-                          //     );
-                          //   },
-                          //   theme: theme,
-                          // ),
-                          // const Divider(height: 1),
+                          const Divider(height: 1),
+                          _buildMenuTile(
+                            icon: Icons.payment_outlined,
+                            title: 'Paiements',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PaymentsScreen.withBloc(context),
+                                ),
+                              );
+                            },
+                            theme: theme,
+                          ),
+                          const Divider(height: 1),
                           _buildMenuTile(
                             icon: Icons.notifications_outlined,
                             title: 'Notifications',

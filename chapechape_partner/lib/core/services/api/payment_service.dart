@@ -44,60 +44,69 @@ class PaymentService {
     }
   }
   
-  /// Récupère les transactions avec pagination
+  /// Historique financier partenaire (reversements / payouts).
   Future<TransactionResult> getTransactions({
-    int page = 1, 
+    int page = 1,
     int limit = 20,
   }) async {
     try {
-      final response = await _apiService.get(
-        '/payments/my-payments', // ✅ Correction: suppression du /api dupliqué
-        queryParameters: {
-          'page': page.toString(),
-          'limit': limit.toString(),
-        },
+      final stats = await getPayoutStats();
+      final payouts = await getPayouts(
+        page: page,
+        limit: limit,
       );
-      
-      return TransactionResult.fromJson(response.data);
+
+      final transactions = payouts.map(_payoutToPaymentModel).toList();
+
+      return TransactionResult(
+        transactions: transactions,
+        balance: stats.availableBalance,
+        monthlyRevenue: stats.monthlyRevenue,
+        totalWithdrawals: stats.totalPaidOut,
+      );
     } catch (e) {
       throw Exception('Impossible de récupérer les transactions: $e');
     }
   }
-  
-  /// Demande un retrait (via création d'un payout)
+
+  PaymentModel _payoutToPaymentModel(PayoutModel payout) {
+    final statusLabel = switch (payout.status) {
+      PayoutStatus.success => 'completed',
+      PayoutStatus.failed => 'failed',
+      PayoutStatus.pending => 'pending',
+      PayoutStatus.scheduled => 'pending',
+    };
+
+    return PaymentModel(
+      id: payout.id,
+      amount: payout.netAmount,
+      type: PaymentType.credit,
+      source: 'Reversement ${payout.payoutId}',
+      date: payout.processedDate ?? payout.scheduledDate,
+      status: statusLabel,
+      sourceId: payout.payoutId,
+      commissionRate: payout.commissionRate,
+      commissionAmount: payout.commissionAmount,
+      originalAmount: payout.grossAmount,
+    );
+  }
+
+  /// Retrait manuel : non disponible — les reversements sont automatiques côté plateforme.
   Future<PaymentModel> requestWithdrawal({
     required double amount,
     required String method,
   }) async {
-    try {
-      // Note: Le backend n'a pas d'endpoint direct pour withdrawals
-      // Les retraits se font via le système de payouts pour les partners
-      final response = await _apiService.post(
-        '/payments/create-payment-intent',
-        data: {
-          'amount': amount,
-          'paymentMethod': method,
-        },
-      );
-      
-      return PaymentModel.fromJson(response.data['data']);
-    } catch (e) {
-      throw Exception('Impossible de traiter la demande de retrait: $e');
-    }
+    throw UnsupportedError(
+      'Les retraits manuels ne sont pas encore disponibles. '
+      'Vos reversements sont traités automatiquement après chaque réservation payée.',
+    );
   }
-  
-  /// Annule une demande de retrait en attente (via refund)
+
+  /// Annulation de retrait : non applicable aux payouts automatiques.
   Future<void> cancelWithdrawal({required String transactionId}) async {
-    try {
-      await _apiService.post(
-        '/payments/$transactionId/refund',
-        data: {
-          'reason': 'Annulation demandée par le partenaire'
-        },
-      );
-    } catch (e) {
-      throw Exception('Impossible d\'annuler le retrait: $e');
-    }
+    throw UnsupportedError(
+      'L\'annulation d\'un reversement en cours n\'est pas disponible depuis l\'application.',
+    );
   }
   
   /// Récupère le détail d'une transaction
@@ -150,6 +159,19 @@ class PaymentService {
     }
   }
 
+  String _mapPayoutStatusQuery(PayoutStatus status) {
+    switch (status) {
+      case PayoutStatus.success:
+        return 'PAYOUT_SUCCESS';
+      case PayoutStatus.failed:
+        return 'PAYOUT_FAILED';
+      case PayoutStatus.pending:
+        return 'PAYOUT_PENDING';
+      case PayoutStatus.scheduled:
+        return 'PAYOUT_SCHEDULED';
+    }
+  }
+
   // ========== MÉTHODES PAYOUT ==========
   
   /// Récupère la liste des payouts pour le partenaire connecté
@@ -159,24 +181,27 @@ class PaymentService {
     PayoutStatus? status,
   }) async {
     try {
+      final offset = ((page - 1) * limit).toString();
       final queryParams = <String, String>{
-        'page': page.toString(),
+        'offset': offset,
         'limit': limit.toString(),
       };
-      
+
       if (status != null) {
-        queryParams['status'] = status.name;
+        queryParams['status'] = _mapPayoutStatusQuery(status);
       }
-      
-      // Récupérer l'ID du partner connecté depuis AuthService
+
       final partnerId = await _getCurrentPartnerId();
       final response = await _apiService.get(
         '/payouts/partner/$partnerId',
         queryParameters: queryParams,
       );
-      
-      final payoutsData = response.data['payouts'] as List;
-      return payoutsData.map((p) => PayoutModel.fromJson(p)).toList();
+
+      final data = response.data['data'] as Map<String, dynamic>? ?? response.data;
+      final payoutsData = data['payouts'] as List? ?? [];
+      return payoutsData
+          .map((p) => PayoutModel.fromJson(Map<String, dynamic>.from(p as Map)))
+          .toList();
     } catch (e) {
       throw Exception('Impossible de récupérer les reversements: $e');
     }
@@ -189,7 +214,9 @@ class PaymentService {
         '/payouts/$payoutId',
       );
       
-      return PayoutModel.fromJson(response.data['payout']);
+      final data = response.data['data'] as Map<String, dynamic>? ?? response.data;
+      final payout = data['payout'] ?? data;
+      return PayoutModel.fromJson(Map<String, dynamic>.from(payout as Map));
     } catch (e) {
       throw Exception('Impossible de récupérer les détails du reversement: $e');
     }
@@ -204,7 +231,9 @@ class PaymentService {
         '/payouts/stats/$partnerId',
       );
       
-      return PayoutStats.fromJson(response.data['stats']);
+      final data = response.data['data'] as Map<String, dynamic>? ?? response.data;
+      final stats = data['stats'] ?? data;
+      return PayoutStats.fromJson(Map<String, dynamic>.from(stats as Map));
     } catch (e) {
       throw Exception('Impossible de récupérer les statistiques des reversements: $e');
     }

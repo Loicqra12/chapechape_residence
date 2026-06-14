@@ -161,7 +161,7 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
         listener: (context, state) {
           if (state is PaymentConfirmed) {
             // Paiement confirmé, rediriger vers la page de succès
-            context.go('/payment/success/${state.payment.id}');
+            context.go('/payment-success/${state.payment.id}');
           } else if (state is PaymentError) {
             // Erreur de paiement
             ScaffoldMessenger.of(context).showSnackBar(

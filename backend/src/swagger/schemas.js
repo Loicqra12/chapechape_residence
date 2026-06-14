@@ -69,103 +69,144 @@
  *     Residence:
  *       type: object
  *       required:
- *         - name
+ *         - title
  *         - description
- *         - location
  *         - price
- *         - owner
+ *         - address
+ *         - city
+ *         - partner
+ *         - bedrooms
+ *         - bathrooms
+ *         - area
+ *         - type
  *       properties:
  *         _id:
  *           type: string
  *           description: ID unique de la résidence
- *         name:
+ *         title:
  *           type: string
- *           description: Nom de la résidence
+ *           description: Titre de la résidence
  *         description:
  *           type: string
  *           description: Description détaillée de la résidence
+ *         price:
+ *           type: number
+ *           description: Prix de base
+ *         pricePeriod:
+ *           type: string
+ *           enum: [hour, day, week, month]
+ *           default: month
+ *           description: Période de tarification
+ *         address:
+ *           type: string
+ *           description: Adresse complète
+ *         city:
+ *           type: string
+ *           description: Ville
  *         images:
  *           type: array
  *           items:
  *             type: string
- *           description: Liste des URLs des images
- *         location:
- *           type: object
- *           properties:
- *             address:
- *               type: string
- *               description: Adresse complète
- *             city:
- *               type: string
- *               description: Ville
- *             country:
- *               type: string
- *               description: Pays
- *             coordinates:
- *               type: array
- *               items:
- *                 type: number
- *               description: Coordonnées GPS [longitude, latitude]
- *             displayAddress:
- *               type: string
- *               description: Adresse formatée pour l'affichage
- *         price:
- *           type: number
- *           description: Prix par nuit
- *         capacity:
- *           type: number
- *           description: Nombre maximal de personnes
+ *           description: URLs des images (Cloudinary)
  *         bedrooms:
- *           type: number
+ *           type: integer
  *           description: Nombre de chambres
  *         bathrooms:
- *           type: number
+ *           type: integer
  *           description: Nombre de salles de bain
+ *         area:
+ *           type: number
+ *           description: Surface en m²
+ *         type:
+ *           type: string
+ *           enum: [apartment, house, villa, studio, room, appartement_meuble, studio_meuble, villa_meublee, hotel, bungalow, other]
+ *           description: Type de propriété
+ *         status:
+ *           type: string
+ *           enum: [available, unavailable, maintenance]
+ *           default: available
+ *         reservationMode:
+ *           type: string
+ *           enum: [instant, approval_required]
+ *           default: instant
+ *           description: Mode de réservation — instant ou avec approbation partenaire
+ *         paymentTTLMinutes:
+ *           type: integer
+ *           default: 60
+ *           description: Délai de paiement en minutes (5-1440)
+ *         partner:
+ *           type: string
+ *           description: ID du partenaire propriétaire
  *         amenities:
  *           type: array
  *           items:
  *             type: string
- *           description: Liste des équipements disponibles
- *         owner:
+ *           description: Liste des équipements (wifi, parking, pool, etc.)
+ *         rating:
+ *           type: object
+ *           properties:
+ *             overall:
+ *               type: number
+ *             cleanliness:
+ *               type: number
+ *             comfort:
+ *               type: number
+ *             facilities:
+ *               type: number
+ *             reviewCount:
+ *               type: integer
+ *         stars:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 5
+ *         locationData:
+ *           type: object
+ *           properties:
+ *             coordinates:
+ *               type: object
+ *               properties:
+ *                 latitude:
+ *                   type: number
+ *                 longitude:
+ *                   type: number
+ *             commune:
+ *               type: string
+ *             quartier:
+ *               type: string
+ *         isFurnished:
+ *           type: boolean
+ *         deleted:
+ *           type: boolean
+ *           default: false
+ *         createdAt:
  *           type: string
- *           description: ID du propriétaire (partenaire)
- *         isAvailable:
- *           type: boolean
- *           description: Indique si la résidence est disponible
- *         status:
+ *           format: date-time
+ *         updatedAt:
  *           type: string
- *           description: Statut disponible ou non disponible (calculé)
- *         hasPool:
- *           type: boolean
- *           description: Indique si la résidence a une piscine
- *         isVacationResidence:
- *           type: boolean
- *           description: Indique s'il s'agit d'une résidence de vacances
- *         isSpecialResidence:
- *           type: boolean
- *           description: Indique s'il s'agit d'une résidence spéciale
+ *           format: date-time
  *       example:
  *         _id: "60d21b4667d0d8992e610c86"
- *         name: "Villa Paradise"
- *         description: "Magnifique villa avec vue sur la mer"
- *         images: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
- *         location:
- *           address: "123 Avenue Example"
- *           city: "Nice"
- *           country: "France"
- *           coordinates: [7.2620, 43.7102]
- *           displayAddress: "123 Avenue Example, Nice, France"
- *         price: 150
- *         capacity: 6
+ *         title: "Villa Paradise Cocody"
+ *         description: "Magnifique villa meublée avec piscine à Cocody"
+ *         price: 150000
+ *         pricePeriod: "month"
+ *         address: "Rue des Jardins, Cocody"
+ *         city: "Abidjan"
+ *         images: ["https://res.cloudinary.com/chapechape/image1.jpg"]
  *         bedrooms: 3
  *         bathrooms: 2
- *         amenities: ["wifi", "pool", "airConditioning"]
- *         owner: "60d21b4667d0d8992e610c85"
- *         isAvailable: true
+ *         area: 120
+ *         type: "villa_meublee"
  *         status: "available"
- *         hasPool: true
- *         isVacationResidence: true
- *         isSpecialResidence: false
+ *         reservationMode: "instant"
+ *         paymentTTLMinutes: 60
+ *         partner: "60d21b4667d0d8992e610c85"
+ *         amenities: ["wifi", "pool", "parking", "air_conditioning"]
+ *         rating:
+ *           overall: 4.8
+ *           reviewCount: 12
+ *         stars: 4
+ *         isFurnished: true
  *
  *     Booking:
  *       type: object
@@ -245,7 +286,7 @@
  *         notes: "Arrivée prévue vers 14h"
  *         createdAt: "2023-05-15T12:00:00Z"
  *         updatedAt: "2023-05-16T10:30:00Z"
- * 
+ *
  *     Payment:
  *       type: object
  *       required:
@@ -290,7 +331,7 @@
  *         status: "completed"
  *         transactionId: "tx_123456789"
  *         createdAt: "2023-05-15T12:05:00Z"
- *         
+ *
  *     ApiError:
  *       type: object
  *       properties:
@@ -395,5 +436,5 @@
  *           limit: 10
  */
 
- // Ce fichier sert uniquement à documenter les schémas pour Swagger
- // Il n'exporte rien car il est uniquement lu par swagger-jsdoc
+// Ce fichier sert uniquement à documenter les schémas pour Swagger
+// Il n'exporte rien car il est uniquement lu par swagger-jsdoc

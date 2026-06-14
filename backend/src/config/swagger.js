@@ -64,11 +64,13 @@ const options = {
         './src/swagger/routes/sms.routes.js',
         './src/swagger/routes/user.routes.js',
         './src/swagger/routes/payout.routes.js',
-        './src/swagger/routes/blog.routes.js'
-        // Nouveaux fichiers temporairement désactivés pour diagnostic
-        // './src/swagger/routes/country-management.routes.js',
-        // './src/swagger/routes/partner-verification.routes.js',
-        // './src/swagger/routes/pricing.routes.js'
+        './src/swagger/routes/blog.routes.js',
+        './src/swagger/routes/country-management.routes.js',
+        './src/swagger/routes/partner-verification.routes.js',
+        './src/swagger/routes/pricing.routes.js',
+        './src/swagger/routes/superadmin.routes.js',
+        './src/swagger/routes/support.routes.js',
+        './src/swagger/routes/maintenance.routes.js'
     ]
 };
 

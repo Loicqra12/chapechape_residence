@@ -1,6 +1,9 @@
 const axios = require('axios');
-const crypto = require('crypto');
 const logger = require('../utils/logger');
+const {
+    getWavePaymentWebhookSecret,
+    verifyWaveWebhookHmac,
+} = require('../utils/wave-webhook-signature.util');
 
 /**
  * Service d'intégration Wave pour ChapeChape Residence
@@ -15,7 +18,7 @@ class WaveService {
         this.errorUrl = process.env.WAVE_ERROR_URL || `${process.env.CLIENT_URL}/payment/error`;
         this.webhookUrl = process.env.WAVE_WEBHOOK_URL || `${process.env.APP_URL}/api/payments/wave/webhook`;
         // Supporte les deux noms de variable d'environnement pour compatibilité
-        this.signingSecret = process.env.WAVE_SIGNING_SECRET || process.env.WAVE_WEBHOOK_SECRET;
+        this.signingSecret = getWavePaymentWebhookSecret();
 
         // Flag d'activation pour éviter de faire crasher l'app si la config est incomplète
         this.enabled = true;
@@ -72,7 +75,7 @@ class WaveService {
      * @returns {string} Numéro formaté
      */
     formatPhoneNumber(phoneNumber) {
-        if (!phoneNumber) return '+2250500000000';
+        if (!phoneNumber) return null; // Pas de fallback fictif — laisser Wave gérer
         
         // Nettoyer le numéro
         let clean = phoneNumber.replace(/\D/g, '');
@@ -211,26 +214,7 @@ class WaveService {
             console.warn('WAVE_SIGNING_SECRET/WAVE_WEBHOOK_SECRET non configuré');
             return false;
         }
-
-        const hmac = crypto.createHmac('sha256', this.signingSecret);
-        
-        // Utiliser directement le Buffer sans stringify
-        hmac.update(payloadBuffer);
-        const calculatedSignature = hmac.digest('hex');
-
-        // Vérification avec timingSafeEqual pour éviter les timing attacks
-        try {
-            const sigBuf = Buffer.from(signature);
-            const calcBuf = Buffer.from(calculatedSignature);
-            if (sigBuf.length !== calcBuf.length) {
-                logger.warn('Wave webhook signature length mismatch');
-                return false;
-            }
-            return crypto.timingSafeEqual(sigBuf, calcBuf);
-        } catch (error) {
-            logger.error('Erreur lors de la vérification de signature Wave:', error);
-            return false;
-        }
+        return verifyWaveWebhookHmac(payloadBuffer, signature, this.signingSecret);
     }
 
     /**

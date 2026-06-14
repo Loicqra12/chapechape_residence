@@ -12,7 +12,7 @@ class CinetPayService {
   final ApiService _apiService;
 
   // Configuration URLs
-  static const String _successUrl = '/payment/success';
+  static const String _successUrl = '/payment-success';
   static const String _cancelUrl = '/payment/cancel';
 
   CinetPayService._({required ApiService apiService})
@@ -88,104 +88,35 @@ class CinetPayService {
     }
   }
 
-  /// Vérifier le statut d'un paiement CinetPay
+  /// Vérifier le statut d'un paiement CinetPay via l'endpoint dédié (rapide)
+  /// PROB #7 CORRIGÉ : lookup direct, ne charge plus tous les paiements
   Future<CinetPayPaymentStatus> checkPaymentStatus(String transactionId) async {
     try {
-      print('🔍 === CINETPAY STATUS CHECK ===');
-      print('🆔 TransactionId reçu: $transactionId');
-      print('📏 Longueur: ${transactionId.length}');
-      print(
-          '🏷️ Format: ${transactionId.startsWith('CHAPE') ? 'Format CinetPay valide' : 'Format non-standard'}');
+      // Endpoint dédié : GET /payments/status/:transactionId (index direct MongoDB)
+      final response = await _apiService.get('/payments/status/$transactionId');
 
-      // SOLUTION: Utiliser l'endpoint de vérification CinetPay directe
-      print('🚀 Utilisation de l\'endpoint de vérification CinetPay temps réel');
-      
-      try {
-        // Essayer d'abord la vérification directe CinetPay
-        final response = await _apiService.get('payments/cinetpay/verify/$transactionId');
-        
-        if (response.data['success'] == true && response.data['payment'] != null) {
-          final payment = response.data['payment'];
-          print('✅ Paiement trouvé via vérification CinetPay directe');
-          print('📊 Statut: ${payment['status']}');
-          print('🔄 Données CinetPay: ${response.data['cinetpayData']}');
-          
-          return CinetPayPaymentStatus(
-            transactionId: transactionId,
-            status: _mapPaymentStatus(payment['status']),
-            amount: payment['amount']?.toDouble(),
-            currency: payment['currency'] ?? 'XOF',
-            message: payment['statusMessage']?.toString() ?? '',
-            processedAt: payment['updatedAt'] != null 
-                ? DateTime.tryParse(payment['updatedAt'].toString()) 
-                : null,
-          );
-        }
-      } catch (directError) {
-        print('⚠️ Erreur vérification directe CinetPay: $directError');
-        print('🔄 Fallback vers my-payments...');
-      }
-      
-      // Fallback: utiliser my-payments si la vérification directe échoue
-      final response = await _apiService.get('payments/my-payments');
-
-      final List<dynamic> payments = response.data['data'] ?? [];
-      print('📋 Total paiements en base: ${payments.length}');
-
-      // Afficher tous les IDs disponibles pour debug
-      print('🔍 IDs disponibles dans la base:');
-      for (var payment in payments.take(5)) {
-        print('  - _id: ${payment['_id']}');
-        print('  - transactionId: ${payment['transactionId']}');
-        print('  - paymentMethod: ${payment['paymentMethod']}');
-        print('  - status: ${payment['status']}');
-        print('  - createdAt: ${payment['createdAt']}');
-        if (payment['paymentDetails']?['providerResponse'] != null) {
-          print(
-              '  - providerResponse keys: ${payment['paymentDetails']['providerResponse'].keys}');
-        }
-        print('  ---');
-      }
-
-      // Recherche robuste par transactionId (SANS filtres de statut)
-      final payment = _findPaymentByTransactionId(transactionId, payments);
-
-      if (payment == null) {
-        print('❌ Paiement CinetPay non trouvé avec ID: $transactionId');
-        print('📊 Total paiements en base: ${payments.length}');
-
+      if (response.data['success'] == true && response.data['payment'] != null) {
+        final p = response.data['payment'] as Map<String, dynamic>;
         return CinetPayPaymentStatus(
           transactionId: transactionId,
-          status: PaymentStatus.pending,
-          message: 'Paiement non trouvé',
+          status: _mapPaymentStatus(p['status']?.toString()),
+          amount: (p['amount'] as num?)?.toDouble(),
+          currency: p['currency']?.toString() ?? 'XOF',
+          message: p['providerStatus']?.toString() ?? '',
+          processedAt: p['updatedAt'] != null
+              ? DateTime.tryParse(p['updatedAt'].toString())
+              : null,
         );
       }
-      
-      print('✅ Paiement CinetPay trouvé: ${payment['_id']}');
-      print('📊 Status: ${payment['status']}, ProviderStatus: ${payment['providerStatus']}');
-
-      print('✅ Paiement trouvé: ${payment['transactionId']}');
-      print('📊 Status: ${payment['status']}');
 
       return CinetPayPaymentStatus(
         transactionId: transactionId,
-        status: _mapPaymentStatus(payment['status']),
-        amount: payment['amount']?.toDouble(),
-        currency: payment['currency'] ?? 'XOF',
-        message: payment['statusMessage']?.toString() ?? '',
-        processedAt: payment['processedAt'] != null
-            ? DateTime.tryParse(payment['processedAt'].toString())
-            : null,
+        status: PaymentStatus.pending,
+        message: 'Paiement non trouvé',
       );
     } on DioException catch (e) {
-      print('❌ Erreur DioException: ${e.message}');
       throw CinetPayException(
           'Erreur lors de la vérification du statut: ${e.message}');
-    } catch (e) {
-      print('❌ Erreur générale: $e');
-      rethrow;
-    } finally {
-      print('🔍 === FIN CINETPAY STATUS CHECK ===');
     }
   }
 
@@ -220,12 +151,15 @@ class CinetPayService {
   }
 
   /// Mapper le statut backend vers enum PaymentStatus
+  /// PROB #8 CORRIGÉ : retourne PaymentStatus.succeeded (comme wave_service)
+  /// L'enum PaymentStatus n'a PAS de valeur 'completed' — évite un crash silencieux
   PaymentStatus _mapPaymentStatus(String? backendStatus) {
     switch (backendStatus?.toLowerCase()) {
       case 'paid':
       case 'completed':
+      case 'succeeded':
       case 'success':
-        return PaymentStatus.completed;
+        return PaymentStatus.succeeded; // Unifié avec wave_service.dart
       case 'failed':
       case 'error':
       case 'rejected':
@@ -233,8 +167,9 @@ class CinetPayService {
       case 'cancelled':
       case 'canceled':
         return PaymentStatus.cancelled;
-      case 'pending':
       case 'processing':
+        return PaymentStatus.processing;
+      case 'pending':
       default:
         return PaymentStatus.pending;
     }
@@ -343,27 +278,7 @@ class CinetPayPaymentStatus {
     this.processedAt,
   });
 
-  bool get isPaid => status == PaymentStatus.completed;
+  bool get isPaid => status == PaymentStatus.succeeded;
   bool get isFailed => status == PaymentStatus.failed;
   bool get isPending => status == PaymentStatus.pending;
-}
-
-/// Exception spécifique CinetPay
-class CinetPayException implements Exception {
-  final String message;
-  final String? code;
-
-  CinetPayException(this.message, [this.code]);
-
-  @override
-  String toString() =>
-      'CinetPayException: $message${code != null ? ' (Code: $code)' : ''}';
-}
-
-/// Enum pour les statuts de paiement
-enum PaymentStatus {
-  pending,
-  completed,
-  failed,
-  cancelled,
 }
