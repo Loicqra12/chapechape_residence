@@ -85,7 +85,13 @@ app.post(
 // IMPORTANT: Configurer les middlewares de base AVANT toute définition de route
 app.use(express.json()); // Pour parser les requêtes avec JSON payloads
 app.use(express.urlencoded({ extended: true })); // Pour parser les requêtes avec URL-encoded payloads
-app.use(cookieParser(process.env.COOKIE_SECRET || "chapechape-secret-key"));
+app.use(cookieParser(process.env.COOKIE_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('COOKIE_SECRET non défini — obligatoire en production');
+  }
+  logger.warn('[DEV] COOKIE_SECRET non défini — utilisation d\'une clé temporaire de développement uniquement');
+  return 'dev-cookie-secret-not-for-production';
+})()));
 
 // Routes publiques de test et promotions (APRÈS les middlewares de parsing mais AVANT la sécurité)
 // Protection des routes de test en production

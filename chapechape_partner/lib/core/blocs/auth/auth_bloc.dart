@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../models/partner/partner_model.dart';
 import '../../services/api/auth_service.dart';
 import '../../services/api/media_service.dart';

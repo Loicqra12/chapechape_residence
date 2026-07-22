@@ -75,7 +75,7 @@ android {
     defaultConfig {
         applicationId "com.chapechape.client"
         minSdkVersion = flutter.minSdkVersion // Version minimale requise pour Firebase Auth
-        targetSdk = 35 // Exigence Google Play 2024+
+        targetSdk = 36 // Exigence Google Play : Android 16 (API 36) — dès 31 août 2026
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         

@@ -17,17 +17,19 @@ class CinetPayService {
         this.secretKey = process.env.CINETPAY_SECRET_KEY;
         this.baseUrl = process.env.CINETPAY_BASE_URL || 'https://api-checkout.cinetpay.com/v2';
         this.mode = process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'TEST';
-        
+
         // URLs de callback
         this.notifyUrl = process.env.CINETPAY_NOTIFY_URL || `${process.env.APP_URL}/api/payments/cinetpay/webhook`;
         this.returnUrl = process.env.CINETPAY_RETURN_URL || `${process.env.CLIENT_URL}/payment/success`;
-        
+
         // Validation des paramètres obligatoires
         if (!this.apiKey || !this.siteId || !this.secretKey) {
-            logger.error('CinetPay mal configuré : variables d\'environnement manquantes');
-            throw new Error('Configuration CinetPay incomplète');
+            logger.error('CinetPay mal configuré : variables d\'environnement manquantes (CINETPAY_API_KEY, CINETPAY_SITE_ID, CINETPAY_SECRET_KEY)');
+            this.enabled = false;
+            return; // Désactiver le service sans planter le serveur
         }
-        
+
+        this.enabled = true;
         logger.info(`CinetPay Service initialisé en mode ${this.mode}`);
     }
 
@@ -66,6 +68,16 @@ class CinetPayService {
      */
     async initiatePayment(paymentData, user, reservation) {
         try {
+            // Vérifier que le service est configuré
+            if (!this.enabled) {
+                logger.error('CinetPay désactivé — variables d\'environnement manquantes');
+                return {
+                    success: false,
+                    error: 'Service CinetPay non configuré. Contactez l\'administrateur.',
+                    provider: 'cinetpay'
+                };
+            }
+
             // Validation du montant
             const amountValidation = this.validateAmount(paymentData.amount);
             if (!amountValidation.valid) {
@@ -74,7 +86,7 @@ class CinetPayService {
 
             // Générer un ID de transaction unique
             const transactionId = this.generateTransactionId();
-            
+
             // Construction du payload CinetPay
             const payload = {
                 // Paramètres obligatoires
@@ -88,14 +100,14 @@ class CinetPayService {
                 return_url: this.returnUrl,
                 channels: this.determineChannels(paymentData.paymentMethod),
                 lang: 'FR',
-                
+
                 // Métadonnées pour traçabilité
                 metadata: JSON.stringify({
                     reservationId: reservation._id.toString(),
                     userId: user._id.toString(),
                     appVersion: 'ChapeChape-v1.0'
                 }),
-                
+
                 // Informations client (requises pour carte bancaire)
                 customer_id: user._id.toString(),
                 customer_name: user.lastName || 'Client',
@@ -107,7 +119,7 @@ class CinetPayService {
                 customer_country: 'CI', // Côte d'Ivoire
                 customer_state: 'CI',
                 customer_zip_code: '00225',
-                
+
                 // Données de facture (optionnel)
                 invoice_data: {
                     'Réservation': reservation._id.toString(),
@@ -226,17 +238,17 @@ class CinetPayService {
      */
     formatPhoneNumber(phoneNumber) {
         if (!phoneNumber) return '+2250500000000';
-        
+
         // Nettoyer le numéro
         let clean = phoneNumber.replace(/\D/g, '');
-        
+
         // Ajouter le préfixe ivoirien si nécessaire
         if (clean.length === 10 && clean.startsWith('0')) {
             clean = '225' + clean.substring(1);
         } else if (clean.length === 8) {
             clean = '225' + clean;
         }
-        
+
         return '+' + clean;
     }
 
@@ -267,6 +279,9 @@ class CinetPayService {
      */
     async checkPaymentStatus(transactionId) {
         try {
+            if (!this.enabled) {
+                return { success: false, error: 'Service CinetPay non configuré' };
+            }
             const payload = {
                 apikey: this.apiKey,
                 site_id: this.siteId,
@@ -334,7 +349,7 @@ class CinetPayService {
             'CANCELLED': 'cancelled',
             'EXPIRED': 'failed'
         };
-        
+
         return statusMapping[cinetpayStatus] || 'pending';
     }
 

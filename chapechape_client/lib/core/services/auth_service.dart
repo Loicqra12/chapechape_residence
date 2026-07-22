@@ -190,7 +190,8 @@ class AuthService {
   Future<User> updateProfile(Map<String, dynamic> userData) async {
     try {
       final response = await _apiService.put('/auth/profile', data: userData);
-      return User.fromJson(response.data);
+      // Le backend retourne { success: true, user: {...} }
+      return User.fromJson(response.data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

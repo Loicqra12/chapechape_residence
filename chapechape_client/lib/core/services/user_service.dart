@@ -66,7 +66,7 @@ class UserService {
         if (isPhoneVerified != null) 'isPhoneVerified': isPhoneVerified,
       });
 
-      return User.fromJson(response.data);
+      return User.fromJson(response.data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

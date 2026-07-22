@@ -271,18 +271,21 @@ Future<void> main() async {
               context.read<ResidenceService>(),
               eventBus: context.read<event_bus.ResidenceEventBus>(),
               notificationRepository: context.read<NotificationRepository>(),
-            )..add(LoadMyResidences()),
+            ),
+            // Ne pas déclencher LoadMyResidences ici — attendre AuthAuthenticated
           ),
           BlocProvider<DashboardBloc>(
             create: (context) => DashboardBloc(
               dashboardService,
-            )..add(LoadDashboardData()),
+            ),
+            // Ne pas déclencher LoadDashboardData ici — attendre AuthAuthenticated
           ),
           BlocProvider<MessageBloc>(
             create: (context) => MessageBloc(context.read<MessageService>()),
           ),
           BlocProvider<ReservationBloc>(
-            create: (context) => ReservationBloc(context.read<ReservationService>())..add(LoadPartnerReservations()),
+            create: (context) => ReservationBloc(context.read<ReservationService>()),
+            // Ne pas déclencher LoadPartnerReservations ici — attendre AuthAuthenticated
           ),
           BlocProvider<SyncBloc>.value(
             value: syncBloc,
@@ -317,31 +320,41 @@ Future<void> main() async {
         ],
         child: BlocBuilder<ThemeBloc, ThemeState>(
           buildWhen: (prev, curr) => prev.themeMode != curr.themeMode,
-          builder: (context, state) {
-            return MaterialApp.router(
-              title: 'ChapeChape Partner',
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                fontFamily: 'Poppins',
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: const Color(0xFF1A237E),
-                  brightness: Brightness.light,
-                ),
-                useMaterial3: true,
-                appBarTheme: const AppBarTheme(
-                  centerTitle: true,
-                  elevation: 0,
-                ),
-                cardTheme: CardThemeData(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+          builder: (context, themeState) {
+            return BlocListener<AuthBloc, AuthState>(
+              // Déclencher les chargements uniquement une fois l'auth confirmée
+              listenWhen: (previous, current) =>
+                  previous is! AuthAuthenticated && current is AuthAuthenticated,
+              listener: (context, state) {
+                context.read<ResidenceBloc>().add(LoadMyResidences());
+                context.read<DashboardBloc>().add(LoadDashboardData());
+                context.read<ReservationBloc>().add(LoadPartnerReservations());
+              },
+              child: MaterialApp.router(
+                title: 'ChapeChape Partner',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(
+                  fontFamily: 'Poppins',
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xFF1A237E),
+                    brightness: Brightness.light,
+                  ),
+                  useMaterial3: true,
+                  appBarTheme: const AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                  ),
+                  cardTheme: CardThemeData(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
+                darkTheme: AppTheme.darkTheme,
+                themeMode: themeState.themeMode,
+                routerConfig: appRouter.router,
               ),
-              darkTheme: AppTheme.darkTheme,
-              themeMode: state.themeMode,
-              routerConfig: appRouter.router,
             );
           },
         ),

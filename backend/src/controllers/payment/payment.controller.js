@@ -86,8 +86,8 @@ exports.createPaymentIntent = async (req, res) => {
             paymentProvider = 'stripe';
         } else if (normalizedPaymentMethod === 'wave') {
             paymentProvider = 'wave';
-        } else if (normalizedPaymentMethod === 'cinetpay' || normalizedPaymentMethod === 'mobile_money' || 
-                   normalizedPaymentMethod === 'orange_money' || normalizedPaymentMethod === 'mtn_money' || normalizedPaymentMethod === 'moov_money') {
+        } else if (normalizedPaymentMethod === 'cinetpay' || normalizedPaymentMethod === 'mobile_money' ||
+            normalizedPaymentMethod === 'orange_money' || normalizedPaymentMethod === 'mtn_money' || normalizedPaymentMethod === 'moov_money') {
             paymentProvider = 'cinetpay';
         } else {
             return res.status(400).json({
@@ -105,7 +105,7 @@ exports.createPaymentIntent = async (req, res) => {
 
         if (existingPayment) {
             console.log(`🔄 Paiement actif existant trouvé: ${existingPayment.transactionId}`);
-            
+
             // Vérifier si le paiement n'est pas expiré (30 minutes)
             const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
             if (existingPayment.createdAt > thirtyMinutesAgo) {
@@ -288,7 +288,7 @@ async function updateReservationStatus(reservationId) {
     if (!reservation) return;
 
     const payments = await Payment.find({ reservation: reservationId });
-    
+
     const completedPayments = payments.filter(p => p.status === 'paid'); // ✅ HARMONISÉ - était 'completed'
     const refundedPayments = payments.filter(p => p.status === 'refunded');
 
@@ -351,24 +351,22 @@ exports.requestRefund = async (req, res) => {
             });
         }
 
-        // TODO: appeler le PSP (Wave/CinetPay/Stripe) — marquage manuel admin en attendant
-        logger.warn('Remboursement admin sans appel PSP', {
+        // TODO: appeler le PSP (Wave/CinetPay/Stripe) — remboursement PSP non implémenté
+        // SÉCURITÉ : Ne pas marquer en base sans avoir déclenché le remboursement réel côté PSP.
+        // Cette action admin génèrerait une perte financière (argent reste chez le PSP).
+        logger.warn('Tentative de remboursement admin bloquée — PSP non implémenté', {
             paymentId,
             adminId: req.user._id,
             reason,
         });
 
-        payment.status = 'refunded';
-        payment.refundAmount = payment.amount;
-        payment.refundReason = reason || 'Remboursement administrateur';
-        await payment.save();
-
-        await updateReservationStatus(payment.reservation);
-
-        res.status(200).json({
-            success: true,
-            data: payment,
-            warning: 'Remboursement enregistré en base — vérifiez le remboursement côté PSP.',
+        return res.status(501).json({
+            success: false,
+            message: 'Remboursement PSP non implémenté. Effectuez le remboursement directement depuis le dashboard CinetPay/Wave/Stripe, puis contactez le support technique pour mise à jour manuelle.',
+            action_required: 'refund_via_psp_dashboard',
+            paymentId,
+            paymentProvider: payment.paymentProvider,
+            amount: payment.amount,
         });
     } catch (error) {
         res.status(400).json({
@@ -622,17 +620,17 @@ exports.verifyCinetPayPayment = async (req, res) => {
     try {
         const { transactionId } = req.params;
         const cinetPayService = require('../../services/cinetpay.service');
-        
+
         console.log(`🔍 Vérification CinetPay pour transaction: ${transactionId}`);
-        
+
         // Vérifier directement avec l'API CinetPay
         const cinetPayStatus = await cinetPayService.checkPaymentStatus(transactionId);
-        
+
         if (cinetPayStatus.success) {
             // Rechercher le paiement local
             const Payment = require('../../models/payment.model');
             let payment = await Payment.findOne({ transactionId }).populate('reservation');
-            
+
             if (payment) {
                 // Mettre à jour le statut local si différent
                 if (payment.status !== cinetPayStatus.status) {
@@ -649,7 +647,7 @@ exports.verifyCinetPayPayment = async (req, res) => {
                     }
                     payment = await Payment.findById(payment._id).populate('reservation');
                 }
-                
+
                 // Ajouter des informations contextuelles selon le statut
                 const responsePayment = {
                     _id: payment._id,
@@ -662,14 +660,14 @@ exports.verifyCinetPayPayment = async (req, res) => {
                     updatedAt: payment.updatedAt,
                     reservation: payment.reservation
                 };
-                
+
                 // Ajouter des informations contextuelles
                 const response = {
                     success: true,
                     payment: responsePayment,
                     cinetpayData: cinetPayStatus.data
                 };
-                
+
                 // Informations spécifiques selon le statut
                 if (payment.status === 'pending') {
                     response.statusInfo = {
@@ -690,7 +688,7 @@ exports.verifyCinetPayPayment = async (req, res) => {
                         canRetry: true
                     };
                 }
-                
+
                 res.json(response);
             } else {
                 res.status(404).json({
@@ -720,7 +718,7 @@ exports.verifyCinetPayPayment = async (req, res) => {
                 retryAfter: '10 secondes'
             });
         }
-        
+
     } catch (error) {
         console.error('Erreur vérification CinetPay:', error);
         res.status(500).json({
@@ -740,9 +738,9 @@ exports.getPaymentStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'transactionId requis' });
         }
 
-        // Lookup direct par index transactionId — pas besoin de charger tous les paiements
+        // Une seule requête incluant reservation pour éviter le bypass d'autorisation
         const payment = await Payment.findOne({ transactionId })
-            .select('_id transactionId status providerStatus amount currency paymentMethod paymentProvider createdAt updatedAt')
+            .select('_id transactionId status providerStatus amount currency paymentMethod paymentProvider reservation createdAt updatedAt')
             .lean();
 
         if (!payment) {
@@ -753,24 +751,27 @@ exports.getPaymentStatus = async (req, res) => {
             });
         }
 
-        // Vérification que la réservation appartient bien à l'utilisateur connecté
-        const Reservation = require('../../models/reservation.model');
-        const reservation = await Reservation.findById(
-            payment.reservation || (await Payment.findOne({ transactionId }).select('reservation').lean())?.reservation
-        ).select('user').lean();
-
-        // Charger la réservation depuis le payment si non peuplée
-        const fullPayment = await Payment.findOne({ transactionId }).select('reservation').lean();
-        if (fullPayment?.reservation) {
-            const res2 = await Reservation.findById(fullPayment.reservation).select('user').lean();
-            if (res2 && res2.user.toString() !== req.user._id.toString()) {
-                return res.status(403).json({ success: false, message: 'Non autorisé' });
-            }
+        // Vérification obligatoire : le paiement doit avoir une réservation
+        if (!payment.reservation) {
+            return res.status(403).json({ success: false, message: 'Non autorisé' });
         }
+
+        // Vérifier que la réservation appartient à l'utilisateur connecté
+        const Reservation = require('../../models/reservation.model');
+        const reservation = await Reservation.findById(payment.reservation)
+            .select('user')
+            .lean();
+
+        if (!reservation || reservation.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: 'Non autorisé' });
+        }
+
+        // Retourner sans le champ reservation pour ne pas exposer l'ID
+        const { reservation: _omit, ...paymentData } = payment;
 
         res.status(200).json({
             success: true,
-            payment,
+            payment: paymentData,
         });
     } catch (error) {
         logger.error('Erreur getPaymentStatus:', error);

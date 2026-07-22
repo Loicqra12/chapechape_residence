@@ -14,7 +14,7 @@ pluginManagement {
         flutterConfig = [:]
         flutterConfig.compileSdkVersion = 36
         flutterConfig.minSdkVersion = 21
-        flutterConfig.targetSdkVersion = 34
+        flutterConfig.targetSdkVersion = 36
         ndkVersion = "25.1.8937393"
     }
     

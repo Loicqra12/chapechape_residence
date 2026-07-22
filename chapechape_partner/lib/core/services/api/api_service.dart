@@ -174,17 +174,19 @@ class ApiService {
       ),
     );
 
-    // Ajouter le logger en mode debug
-    _dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseHeader: true,
-        responseBody: true,
-        error: true,
-        compact: true,
-      ),
-    );
+    // Ajouter le logger uniquement en mode debug — ne jamais logger les tokens en production
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDioLogger(
+          requestHeader: true,
+          requestBody: true,
+          responseHeader: true,
+          responseBody: true,
+          error: true,
+          compact: true,
+        ),
+      );
+    }
   }
   
   // Configuration pour la gestion des limites de taux (rate limiting)
@@ -230,8 +232,9 @@ class ApiService {
   Future<bool> _refreshToken() async {
     // Si un rafraîchissement est déjà en cours, attendre sa fin
     if (_isRefreshing) {
-      await _refreshCompleter?.future;
-      return true;
+      final newToken = await _refreshCompleter?.future;
+      // Retourner false si le refresh a échoué (token null)
+      return newToken != null;
     }
     
     _isRefreshing = true;
@@ -352,7 +355,9 @@ class ApiService {
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
     await _respectRequestDelay();
     try {
-      return await _retryRequest(() => _dio.get(path, queryParameters: queryParameters));
+      final response = await _retryRequest(() => _dio.get(path, queryParameters: queryParameters));
+      _validateResponse(response);
+      return response;
     } catch (e) {
       throw ErrorHandler.handleError(e);
     }
@@ -361,7 +366,9 @@ class ApiService {
   Future<Response> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
     await _respectRequestDelay();
     try {
-      return await _retryRequest(() => _dio.post(path, data: data, queryParameters: queryParameters));
+      final response = await _retryRequest(() => _dio.post(path, data: data, queryParameters: queryParameters));
+      _validateResponse(response);
+      return response;
     } catch (e) {
       throw ErrorHandler.handleError(e);
     }
@@ -370,7 +377,9 @@ class ApiService {
   Future<Response> put(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
     await _respectRequestDelay();
     try {
-      return await _retryRequest(() => _dio.put(path, data: data, queryParameters: queryParameters));
+      final response = await _retryRequest(() => _dio.put(path, data: data, queryParameters: queryParameters));
+      _validateResponse(response);
+      return response;
     } catch (e) {
       throw ErrorHandler.handleError(e);
     }
@@ -379,7 +388,9 @@ class ApiService {
   Future<Response> patch(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
     await _respectRequestDelay();
     try {
-      return await _retryRequest(() => _dio.patch(path, data: data, queryParameters: queryParameters));
+      final response = await _retryRequest(() => _dio.patch(path, data: data, queryParameters: queryParameters));
+      _validateResponse(response);
+      return response;
     } catch (e) {
       throw ErrorHandler.handleError(e);
     }
@@ -388,7 +399,9 @@ class ApiService {
   Future<Response> delete(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
     await _respectRequestDelay();
     try {
-      return await _retryRequest(() => _dio.delete(path, data: data, queryParameters: queryParameters));
+      final response = await _retryRequest(() => _dio.delete(path, data: data, queryParameters: queryParameters));
+      _validateResponse(response);
+      return response;
     } catch (e) {
       throw ErrorHandler.handleError(e);
     }

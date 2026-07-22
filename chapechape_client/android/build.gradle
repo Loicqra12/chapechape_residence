@@ -17,9 +17,9 @@ buildscript {
 // Définir des variables globales pour les plugins (sans interférer avec le plugin Flutter)
 gradle.beforeProject { project ->
     project.ext {
-        compileSdkVersion = 34
+        compileSdkVersion = 36
         minSdkVersion = 21 
-        targetSdkVersion = 34
+        targetSdkVersion = 36
         ndkVersion = "25.1.8937393"
     }
 }
@@ -65,15 +65,15 @@ allprojects {
         if (project.name == 'geolocator_android') {
             if (project.hasProperty('android')) {
                 project.ext.flutter = [
-                    compileSdkVersion: 34,
+                    compileSdkVersion: 36,
                     minSdkVersion: 21,
-                    targetSdkVersion: 34
+                    targetSdkVersion: 36
                 ]
                 
                 // Définir explicitement les propriétés SDK
-                project.android.compileSdkVersion 34
+                project.android.compileSdkVersion 36
                 project.android.defaultConfig.minSdkVersion 21
-                project.android.defaultConfig.targetSdkVersion 34
+                project.android.defaultConfig.targetSdkVersion 36
                 
                 println "✅ Fixed geolocator_android configuration in root build.gradle"
             }
