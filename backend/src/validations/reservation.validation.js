@@ -141,10 +141,52 @@ const checkAvailabilitySchema = {
     }).min(1)
 };
 
+const calculatePriceSchema = {
+    body: Joi.object().keys({
+        residenceId: Joi.string()
+            .required()
+            .regex(/^[0-9a-fA-F]{24}$/)
+            .messages({
+                'string.pattern.base': 'ID de résidence invalide'
+            }),
+        checkIn: Joi.alternatives()
+            .try(Joi.date(), Joi.string())
+            .required(),
+        checkOut: Joi.alternatives()
+            .try(Joi.date(), Joi.string())
+            .required(),
+        numberOfGuests: Joi.number()
+            .integer()
+            .min(1)
+            .optional()
+            .default(1),
+    })
+};
+
+const addNoteSchema = {
+    params: Joi.object().keys({
+        id: Joi.string()
+            .required()
+            .regex(/^[0-9a-fA-F]{24}$/)
+            .messages({
+                'string.pattern.base': 'ID de réservation invalide',
+            }),
+    }),
+    body: Joi.object().keys({
+        note: Joi.string().required().trim().min(1).max(1000).messages({
+            'any.required': 'La note est obligatoire',
+            'string.min': 'La note ne peut pas être vide',
+            'string.max': 'La note ne peut pas dépasser 1000 caractères',
+        }),
+    }),
+};
+
 module.exports = {
     createReservationSchema,
     modifyReservationSchema,
     updateStatusSchema,
     calculateModificationFeesSchema,
-    checkAvailabilitySchema
+    checkAvailabilitySchema,
+    calculatePriceSchema,
+    addNoteSchema,
 };

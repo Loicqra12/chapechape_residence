@@ -20,7 +20,7 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy', 10);
 // @access  Public
 exports.register = asyncHandler(async (req, res) => {
     try {
-        const { email, password, firstName, lastName, phoneNumber, role } = req.body;
+        const { email, password, firstName, lastName, phoneNumber } = req.body;
 
         // Vérifier si l'utilisateur existe déjà
         const userExists = await User.findOne({ email });
@@ -28,14 +28,15 @@ exports.register = asyncHandler(async (req, res) => {
             throw new apiError('Un utilisateur avec cet email existe déjà', 400);
         }
 
-        // Créer l'utilisateur
+        // Sécurité : ignorer tout role fourni par le client — inscription publique = client uniquement
+        // Les rôles admin/superadmin/partner passent par des routes protégées dédiées
         const user = await User.create({
             email,
             password,
             firstName,
             lastName,
             phoneNumber,
-            role: role || 'client' // Par défaut, c'est un client
+            role: 'client'
         });
 
         // Générer le token d'accès avec la nouvelle fonction

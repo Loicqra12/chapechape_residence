@@ -5,7 +5,9 @@ const waveService = require('../../services/wave.service');
 const logger = require('../../utils/logger');
 const cinetPayService = require('../../services/cinetpay.service');
 const {
-    registerWebhookEvent,
+    claimWebhookEvent,
+    completeWebhookEvent,
+    failWebhookEvent,
     applyPaymentPaid,
 } = require('../../services/payment-confirmation.service');
 const { getWavePaymentWebhookSecret } = require('../../utils/wave-webhook-signature.util');
@@ -106,9 +108,12 @@ exports.createPaymentIntent = async (req, res) => {
         if (existingPayment) {
             console.log(`🔄 Paiement actif existant trouvé: ${existingPayment.transactionId}`);
 
-            // Vérifier si le paiement n'est pas expiré (30 minutes)
+            const amountMatches =
+                Number(existingPayment.amount) === Number(reservation.totalPrice);
             const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-            if (existingPayment.createdAt > thirtyMinutesAgo) {
+            const stillFresh = existingPayment.createdAt > thirtyMinutesAgo;
+
+            if (stillFresh && amountMatches) {
                 // Retourner le paiement existant (idempotence)
                 return res.status(200).json({
                     success: true,
@@ -120,12 +125,16 @@ exports.createPaymentIntent = async (req, res) => {
                         expiresAt: new Date(existingPayment.createdAt.getTime() + 30 * 60 * 1000).toISOString()
                     }
                 });
-            } else {
-                // Marquer l'ancien comme expiré
-                existingPayment.status = 'expired';
-                await existingPayment.save();
-                console.log(`⏰ Paiement expiré marqué: ${existingPayment.transactionId}`);
             }
+
+            // Montant divergé ou trop vieux → invalider et recréer
+            existingPayment.status = 'expired';
+            await existingPayment.save();
+            console.log(
+                amountMatches
+                    ? `⏰ Paiement expiré marqué: ${existingPayment.transactionId}`
+                    : `💱 Montant divergé (${existingPayment.amount} ≠ ${reservation.totalPrice}) — intent invalidé: ${existingPayment.transactionId}`
+            );
         }
 
         // Vérifier le numéro de téléphone pour les méthodes mobiles avec regex plus souple
@@ -309,12 +318,20 @@ async function updateReservationStatus(reservationId) {
 exports.requestRefund = async (req, res) => {
     try {
         const { paymentId } = req.params;
-        const { reason } = req.body;
+        const { reason, amount, markExternalRefund = false } = req.body;
+        const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
 
-        if (!['admin', 'superadmin'].includes(req.user.role)) {
-            const payment = await Payment.findById(paymentId).populate('reservation');
+        const payment = await Payment.findById(paymentId).populate('reservation');
+        if (!payment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Paiement non trouvé',
+            });
+        }
+
+        if (!isAdmin) {
             if (
-                !payment?.reservation ||
+                !payment.reservation ||
                 payment.reservation.user?.toString() !== req.user._id.toString()
             ) {
                 return res.status(403).json({
@@ -326,14 +343,6 @@ exports.requestRefund = async (req, res) => {
                 success: false,
                 message:
                     'Le remboursement automatique n’est pas encore disponible. Contactez le support.',
-            });
-        }
-
-        const payment = await Payment.findById(paymentId);
-        if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Paiement non trouvé',
             });
         }
 
@@ -351,24 +360,109 @@ exports.requestRefund = async (req, res) => {
             });
         }
 
-        // TODO: appeler le PSP (Wave/CinetPay/Stripe) — remboursement PSP non implémenté
-        // SÉCURITÉ : Ne pas marquer en base sans avoir déclenché le remboursement réel côté PSP.
-        // Cette action admin génèrerait une perte financière (argent reste chez le PSP).
-        logger.warn('Tentative de remboursement admin bloquée — PSP non implémenté', {
-            paymentId,
-            adminId: req.user._id,
-            reason,
-        });
+        const refundAmount = amount != null ? Number(amount) : payment.amount;
+        if (refundAmount <= 0 || refundAmount > payment.amount) {
+            return res.status(400).json({
+                success: false,
+                message: 'Montant de remboursement invalide',
+            });
+        }
 
-        return res.status(501).json({
-            success: false,
-            message: 'Remboursement PSP non implémenté. Effectuez le remboursement directement depuis le dashboard CinetPay/Wave/Stripe, puis contactez le support technique pour mise à jour manuelle.',
-            action_required: 'refund_via_psp_dashboard',
-            paymentId,
-            paymentProvider: payment.paymentProvider,
-            amount: payment.amount,
+        let pspRefund = null;
+
+        // Stripe : remboursement PSP réel
+        if (payment.paymentProvider === 'stripe') {
+            if (!stripe) {
+                return res.status(503).json({
+                    success: false,
+                    message: 'Stripe non configuré (STRIPE_SECRET_KEY manquant)',
+                });
+            }
+            const intentId = payment.transactionId;
+            if (!intentId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'transactionId Stripe manquant sur le paiement',
+                });
+            }
+            pspRefund = await stripe.refunds.create({
+                payment_intent: intentId,
+                amount: Math.round(refundAmount), // XOF = pas de décimales
+                reason: 'requested_by_customer',
+                metadata: {
+                    paymentId: String(payment._id),
+                    adminId: String(req.user._id),
+                    reason: String(reason).slice(0, 400),
+                },
+            });
+        } else if (!markExternalRefund) {
+            // Wave / CinetPay : pas d’API refund auto — sync admin après dashboard PSP
+            logger.warn('Remboursement admin bloqué — PSP sans API auto', {
+                paymentId,
+                provider: payment.paymentProvider,
+                adminId: req.user._id,
+                reason,
+            });
+            return res.status(501).json({
+                success: false,
+                message:
+                    'Remboursement automatique indisponible pour ce PSP. Remboursez via le dashboard, puis rappelez avec markExternalRefund: true.',
+                action_required: 'refund_via_psp_dashboard_then_mark',
+                paymentId,
+                paymentProvider: payment.paymentProvider,
+                amount: payment.amount,
+            });
+        }
+
+        payment.status = 'refunded';
+        payment.refundAmount = refundAmount;
+        payment.refundReason = reason;
+        payment.paymentDetails = payment.paymentDetails || {};
+        payment.paymentDetails.providerResponse = {
+            ...(payment.paymentDetails.providerResponse || {}),
+            refund: pspRefund || {
+                mode: 'external',
+                markedBy: req.user._id,
+                markedAt: new Date().toISOString(),
+                reason,
+            },
+        };
+        await payment.save();
+
+        await updateReservationStatus(payment.reservation._id || payment.reservation);
+
+        // Libérer les dates si réservation passée en refunded
+        try {
+            const reservation = await Reservation.findById(payment.reservation);
+            if (reservation && reservation.status === 'refunded') {
+                const availabilityService = require('../../services/availability.service');
+                await availabilityService.updateAvailabilityForReservation(
+                    reservation.residence,
+                    reservation.checkIn,
+                    reservation.checkOut,
+                    reservation._id,
+                    'available',
+                    reservation.bookingType || 'day'
+                );
+            }
+        } catch (availErr) {
+            logger.warn('Libération dispo après refund échouée:', availErr?.message);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: pspRefund
+                ? 'Remboursement Stripe effectué'
+                : 'Paiement marqué remboursé (sync externe)',
+            data: {
+                payment,
+                pspRefund: pspRefund
+                    ? { id: pspRefund.id, status: pspRefund.status, amount: pspRefund.amount }
+                    : null,
+            },
         });
     } catch (error) {
+        logger.error('Erreur requestRefund:', error);
         res.status(400).json({
             success: false,
             message: error.message,
@@ -389,35 +483,43 @@ exports.handleStripeWebhook = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Signature Stripe requise' });
         }
 
+        // req.body doit être un Buffer (route montée avant express.json)
         const event = stripe.webhooks.constructEvent(
             req.body,
             signature,
             process.env.STRIPE_WEBHOOK_SECRET
         );
 
-        const isNew = await registerWebhookEvent('stripe', event.id);
-        if (!isNew) {
+        const claim = await claimWebhookEvent('stripe', event.id);
+        if (!claim.claimed) {
             return res.json({ received: true, duplicate: true });
         }
 
-        if (event.type === 'payment_intent.succeeded') {
-            const intent = event.data.object;
-            const payment = await Payment.findOne({ transactionId: intent.id });
-            if (payment) {
-                await applyPaymentPaid(payment, {
-                    providerResponse: intent,
-                    triggerPayout: true,
-                });
+        try {
+            if (event.type === 'payment_intent.succeeded') {
+                const intent = event.data.object;
+                const payment = await Payment.findOne({ transactionId: intent.id });
+                if (payment) {
+                    await applyPaymentPaid(payment, {
+                        providerResponse: intent,
+                        triggerPayout: true,
+                        allowExpired: true,
+                    });
+                }
+            } else if (event.type === 'payment_intent.payment_failed') {
+                const intent = event.data.object;
+                await Payment.updateOne(
+                    { transactionId: intent.id },
+                    { $set: { status: 'failed', providerStatus: 'processing' } }
+                );
             }
-        } else if (event.type === 'payment_intent.payment_failed') {
-            const intent = event.data.object;
-            await Payment.updateOne(
-                { transactionId: intent.id },
-                { $set: { status: 'failed', providerStatus: 'processing' } }
-            );
-        }
 
-        res.json({ received: true });
+            await completeWebhookEvent('stripe', event.id);
+            res.json({ received: true });
+        } catch (processError) {
+            await failWebhookEvent('stripe', event.id, processError.message);
+            throw processError;
+        }
     } catch (error) {
         logger.error('Erreur webhook Stripe:', error);
         res.status(400).json({
@@ -429,6 +531,7 @@ exports.handleStripeWebhook = async (req, res) => {
 
 // Webhook pour les événements de paiement CinetPay
 exports.handleCinetPayWebhook = async (req, res) => {
+    let eventId = null;
     try {
         const webhookData = req.body || {};
         const xToken = req.get('x-token') || req.headers['x-token'];
@@ -458,21 +561,26 @@ exports.handleCinetPayWebhook = async (req, res) => {
             }
         }
 
-        const eventId =
+        eventId = String(
             webhookData.cpm_trans_id ||
             webhookData.transaction_id ||
-            `${webhookData.cpm_custom}_${webhookData.cpm_amount}`;
+            `${webhookData.cpm_custom}_${webhookData.cpm_amount}`
+        );
 
-        const isNew = await registerWebhookEvent('cinetpay', String(eventId));
-        if (!isNew) {
-            return res.json({ success: true, message: 'Événement déjà traité' });
+        const claim = await claimWebhookEvent('cinetpay', eventId);
+        if (!claim.claimed) {
+            return res.json({ success: true, message: 'Événement déjà traité', duplicate: true });
         }
 
         logger.info('Webhook CinetPay reçu (HMAC valide)', { cpm_trans_id: webhookData.cpm_trans_id });
 
-        const result = await cinetPayService.processWebhook(webhookData);
+        try {
+            const result = await cinetPayService.processWebhook(webhookData);
 
-        if (result.success) {
+            if (!result.success) {
+                throw new Error(result.error || 'Erreur traitement webhook');
+            }
+
             const payment = await Payment.findOne({
                 transactionId: result.transactionId,
             });
@@ -481,6 +589,7 @@ exports.handleCinetPayWebhook = async (req, res) => {
                 await applyPaymentPaid(payment, {
                     providerResponse: result.webhookData,
                     triggerPayout: true,
+                    allowExpired: true,
                 });
             } else if (payment && result.status) {
                 payment.status = result.status;
@@ -489,12 +598,14 @@ exports.handleCinetPayWebhook = async (req, res) => {
                 await payment.save();
             }
 
+            await completeWebhookEvent('cinetpay', eventId);
             res.json({
                 success: true,
                 message: 'Webhook traité avec succès',
             });
-        } else {
-            throw new Error(result.error || 'Erreur traitement webhook');
+        } catch (processError) {
+            await failWebhookEvent('cinetpay', eventId, processError.message);
+            throw processError;
         }
 
     } catch (error) {
@@ -569,15 +680,18 @@ exports.handleWaveWebhook = async (req, res) => {
             });
         }
 
-        const waveEventId = extractWaveWebhookEventId(webhookData);
-        const isNew = await registerWebhookEvent('wave', String(waveEventId));
+        const waveEventId = String(extractWaveWebhookEventId(webhookData));
+        const claim = await claimWebhookEvent('wave', waveEventId);
+        if (!claim.claimed) {
+            // Déjà traité ou en cours — ACK 200 pour éviter retries inutiles
+            return res.json({ received: true, duplicate: true });
+        }
 
-        const result = await waveService.processWebhook(webhookData);
+        // ⚠️ TOUJOURS répondre 200 à Wave après claim (retries indéfinis sinon).
+        try {
+            const result = await waveService.processWebhook(webhookData);
 
-        if (result.success) {
-            // ⚠️  TOUJOURS répondre 200 à Wave même en cas d'erreur interne.
-            // Si on renvoie 400+, Wave retente indéfiniment → risque de double-paiement.
-            try {
+            if (result.success) {
                 const payment = await Payment.findOne({
                     transactionId: result.transactionId,
                 });
@@ -586,6 +700,7 @@ exports.handleWaveWebhook = async (req, res) => {
                     await applyPaymentPaid(payment, {
                         providerResponse: result.webhookData,
                         triggerPayout: true,
+                        allowExpired: true,
                     });
                 } else if (payment && result.status) {
                     payment.status = result.status;
@@ -595,16 +710,18 @@ exports.handleWaveWebhook = async (req, res) => {
                 } else {
                     logger.warn('Aucun paiement pour transaction Wave:', result.transactionId);
                 }
-            } catch (updateError) {
-                // Loguer mais NE PAS propager — Wave doit recevoir un 200
-                logger.error('Erreur mise à jour paiement Wave (webhook accepté quand même):', {
-                    error: updateError.message,
-                    transactionId: result.transactionId,
-                });
             }
-        }
 
-        res.json({ received: true, duplicate: !isNew });
+            await completeWebhookEvent('wave', waveEventId);
+            res.json({ received: true });
+        } catch (processError) {
+            await failWebhookEvent('wave', waveEventId, processError.message);
+            logger.error('Erreur traitement webhook Wave (ACK 200, retry possible):', {
+                error: processError.message,
+                eventId: waveEventId,
+            });
+            res.json({ received: true, processingError: true });
+        }
 
     } catch (error) {
         console.error('Erreur webhook Wave:', error);
@@ -638,6 +755,7 @@ exports.verifyCinetPayPayment = async (req, res) => {
                         await applyPaymentPaid(payment, {
                             providerResponse: cinetPayStatus.data,
                             triggerPayout: true,
+                            allowExpired: true,
                         });
                     } else {
                         payment.status = cinetPayStatus.status;

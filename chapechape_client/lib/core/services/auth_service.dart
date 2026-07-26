@@ -1,32 +1,28 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:chapechape_client/core/utils/secure_storage.dart';
 import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/core/config/google_auth_config.dart';
 import 'package:chapechape_client/core/config/environment.dart';
 import 'package:chapechape_client/core/models/user_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
   final ApiService _apiService;
-  final FlutterSecureStorage _storage;
+  final _storage = AppSecureStorage.instance;
 
   AuthService._({
     required ApiService apiService,
-    required FlutterSecureStorage storage,
-  })  : _apiService = apiService,
-        _storage = storage;
+  }) : _apiService = apiService;
 
   static Future<AuthService> initialize() async {
     final apiService = await ApiService.initialize();
-    const storage = FlutterSecureStorage();
     
     return AuthService._(
       apiService: apiService,
-      storage: storage,
     );
   }
 

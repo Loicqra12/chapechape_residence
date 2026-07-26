@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import '../../../core/repositories/notification_repository.dart';
 import '../../../core/models/notification/notification_preference.dart';
 import '../../../core/config/twilio_config.dart';
@@ -40,7 +41,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     
     try {
       // Récupérer l'ID de l'utilisateur depuis le stockage sécurisé
-      final storage = const FlutterSecureStorage();
+      final storage = AppSecureStorage.instance;
       _userId = await storage.read(key: 'userId');
       
       // Si l'ID utilisateur n'est pas trouvé, afficher une erreur

@@ -9,6 +9,7 @@ import '../../../core/services/api/reservation_service.dart';
 import '../../../core/services/api/api_service.dart';
 import '../../../core/services/event_bus/residence_event_bus.dart' as event_bus;
 import '../../config/app_config_manager.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 // Events
 abstract class DashboardEvent extends Equatable {
@@ -133,6 +134,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final DashboardService _dashboardService;
   final ResidenceService _residenceService;
   StreamSubscription? _residenceEventSubscription;
+  bool _loadInFlight = false;
   
   DashboardBloc(this._dashboardService) : 
     _residenceService = ResidenceService(baseUrl: AppConfigManager.apiUrl),
@@ -215,6 +217,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     LoadDashboardData event,
     Emitter<DashboardState> emit,
   ) async {
+    if (_loadInFlight) {
+      debugPrint('⏭️ DashboardBloc: LoadDashboardData ignoré (déjà en cours)');
+      return;
+    }
+    _loadInFlight = true;
     try {
       emit(DashboardLoading());
       
@@ -397,6 +404,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     } catch (e) {
       debugPrint('Erreur globale du dashboard: $e');
       emit(DashboardError('Une erreur est survenue, veuillez réessayer.'));
+    } finally {
+      _loadInFlight = false;
     }
   }
   
@@ -433,7 +442,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         if (isRateLimited && attempt < maxRetries - 1) {
           // Attendre avec backoff exponentiel
           final delay = Duration(milliseconds: baseDelay.inMilliseconds * (attempt + 1));
-          print('🔄 Rate limit détecté, retry #${attempt + 1} dans ${delay.inMilliseconds}ms...');
+          AppLogger.d('🔄 Rate limit détecté, retry #${attempt + 1} dans ${delay.inMilliseconds}ms...');
           await Future.delayed(delay);
           continue;
         }

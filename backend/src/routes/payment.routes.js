@@ -17,12 +17,6 @@ router.get('/status/:transactionId', protect, paymentController.getPaymentStatus
 router.get('/cinetpay/verify/:transactionId', protect, paymentController.verifyCinetPayPayment);
 router.post('/:paymentId/refund', protect, validate(paymentValidation.requestRefund), paymentController.requestRefund);
 
-// Webhook Stripe (pas de protection car appelé par Stripe)
-router.post('/webhook', express.raw({ type: 'application/json' }), paymentController.handleStripeWebhook);
-
-// Webhook CinetPay (pas de protection car appelé par CinetPay)
-router.post('/cinetpay/webhook', express.urlencoded({ extended: true }), paymentController.handleCinetPayWebhook);
-
-// Webhook Wave : enregistré dans app.js avant express.json() (corps brut pour HMAC)
+// Webhook Stripe + Wave + CinetPay paiement : montés dans app.js (hors paymentLimiter)
 
 module.exports = router;

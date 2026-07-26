@@ -184,7 +184,7 @@ exports.config = {
       // Group API endpoints
       { pattern: '/api/auth/*', name: 'AuthAPI/*' },
       { pattern: '/api/residences/*', name: 'ResidencesAPI/*' },
-      { pattern: '/api/bookings/*', name: 'BookingsAPI/*' },
+      { pattern: '/api/reservations/*', name: 'ReservationsAPI/*' },
       { pattern: '/api/partners/*', name: 'PartnersAPI/*' }
     ],
     

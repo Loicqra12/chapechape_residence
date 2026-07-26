@@ -60,29 +60,27 @@ class FavoriteRepository {
   // Méthode privée pour convertir des IDs en objets Residence
   Future<List<Residence>> _convertIdsToResidences(List<String> ids) async {
     if (ids.isEmpty) return [];
-    
-    final List<Residence> residences = [];
-    
-    for (final String id in ids) {
-      try {
-        // Récupérer la résidence qui peut être null
-        final residence = await _residenceService.getResidenceById(id);
-        
-        // Ajouter la résidence à la liste seulement si elle existe
-        if (residence != null) {
-          // Marquer comme favori
-          final updatedPriceDetails = Map<String, dynamic>.from(residence.priceDetails ?? {});
-          updatedPriceDetails['isFavorite'] = true;
-          
-          residences.add(residence.copyWith(
-            priceDetails: updatedPriceDetails,
-          ));
+
+    final results = await Future.wait(
+      ids.map((id) async {
+        try {
+          return await _residenceService.getResidenceById(id);
+        } catch (e) {
+          debugPrint(
+              'Erreur lors de la récupération de la résidence favorite $id: $e');
+          return null;
         }
-      } catch (e) {
-        debugPrint('Erreur lors de la récupération de la résidence favorite $id: $e');
-      }
+      }),
+    );
+
+    final residences = <Residence>[];
+    for (final residence in results.whereType<Residence>()) {
+      final updatedPriceDetails =
+          Map<String, dynamic>.from(residence.priceDetails ?? {});
+      updatedPriceDetails['isFavorite'] = true;
+      residences.add(residence.copyWith(priceDetails: updatedPriceDetails));
     }
-    
+
     return residences;
   }
 }

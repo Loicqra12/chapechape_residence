@@ -25,6 +25,9 @@ class AuthLoginRequested extends AuthEvent {
 
   @override
   List<Object?> get props => [email, password];
+
+  @override
+  String toString() => 'AuthLoginRequested($email, ***)';
 }
 
 // Événement d'inscription
@@ -47,6 +50,10 @@ class AuthRegisterRequested extends AuthEvent {
 
   @override
   List<Object?> get props => [firstName, lastName, email, phoneNumber, password, countryCode];
+
+  @override
+  String toString() =>
+      'AuthRegisterRequested($firstName, $lastName, $email, $phoneNumber, ***, $countryCode)';
 }
 
 // Événement de déconnexion
@@ -98,6 +105,9 @@ class AuthDeleteAccountRequested extends AuthEvent {
   
   @override
   List<Object> get props => [password];
+
+  @override
+  String toString() => 'AuthDeleteAccountRequested(***)';
 }
 
 // Événement de demande de réinitialisation de mot de passe
@@ -122,4 +132,7 @@ class ResetPasswordRequested extends AuthEvent {
   
   @override
   List<Object> get props => [token, newPassword];
+
+  @override
+  String toString() => 'ResetPasswordRequested(***, ***)';
 }

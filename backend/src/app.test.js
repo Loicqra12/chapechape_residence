@@ -81,7 +81,6 @@ app.use('/api/auth/login', generateCsrfToken);
 app.use('/api/auth/register', generateCsrfToken);
 
 // Mock des protections CSRF pour les routes sensibles
-app.use('/api/bookings', csrfMiddleware);
 app.use('/api/payments', csrfMiddleware);
 app.use('/api/users', csrfMiddleware);
 app.use('/api/residences', (req, res, next) => {

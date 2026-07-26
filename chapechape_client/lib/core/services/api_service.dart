@@ -15,12 +15,13 @@ import 'package:chapechape_client/core/services/api/interceptors/retry_intercept
 import 'package:chapechape_client/core/services/cache_service.dart';
 import 'package:chapechape_client/core/services/optimized_connectivity_service.dart';
 import 'package:chapechape_client/core/services/logger_service.dart';
+import 'package:chapechape_client/core/utils/secure_storage.dart';
 
 /// Service d'accès à l'API
 class ApiService {
   static ApiService? _instance;
   late final Dio _dio;
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = AppSecureStorage.instance;
   final CacheService _cacheService = CacheService();
   final OptimizedConnectivityService _connectivityService = OptimizedConnectivityService();
   final LoggerService _logger = LoggerService();

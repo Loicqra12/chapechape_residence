@@ -19,8 +19,14 @@ import 'package:chapechape_client/presentation/widgets/booking/reservation_mode_
 
 class BookingScreen extends StatefulWidget {
   final String residenceId;
-  
-  const BookingScreen({super.key, required this.residenceId});
+  /// Si fourni (ex. depuis Details), évite un second GET /residences/:id
+  final Residence? initialResidence;
+
+  const BookingScreen({
+    super.key,
+    required this.residenceId,
+    this.initialResidence,
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
@@ -53,12 +59,17 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Charger les détails de la résidence
-    context.read<ResidenceBloc>().add(
-      LoadResidenceDetails(residenceId: widget.residenceId)
-    );
-    
+
+    // Réutiliser la résidence déjà chargée si disponible
+    if (widget.initialResidence != null &&
+        widget.initialResidence!.id == widget.residenceId) {
+      _residence = widget.initialResidence;
+    } else {
+      context.read<ResidenceBloc>().add(
+            LoadResidenceDetails(residenceId: widget.residenceId),
+          );
+    }
+
     // Initialiser les dates par défaut
     _checkInDate = DateTime.now().add(const Duration(days: 1));
     _checkOutDate = DateTime.now().add(const Duration(days: 3));
@@ -232,11 +243,21 @@ class _BookingScreenState extends State<BookingScreen> {
       builder: (context, state) {
         if (state is ResidenceDetailsLoaded) {
           _residence = state.residence;
-          
+        }
+        // Prefill depuis Details si le Bloc n'a pas encore émis DetailsLoaded
+        _residence ??= widget.initialResidence;
+
+        if (_residence == null) {
+          if (state is ResidenceLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return const SizedBox.shrink();
+        }
+
           // Mettre à jour le prix estimé
           // Calculer le prix par défaut SEULEMENT si aucun pricing flexible n'est déjà défini
           // (évite d'écraser le prix horaire/hebdo sélectionné par FlexibleBookingDateSelector)
-          if (_residence != null && _checkInDate != null && _checkOutDate != null &&
+          if (_checkInDate != null && _checkOutDate != null &&
               !_isAvailabilityChecked && _pricingDetails.isEmpty) {
             _estimatedPrice = _residence!.estimateTotalPrice(_checkInDate!, _checkOutDate!);
             _checkAvailability();
@@ -317,17 +338,6 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
           );
-        }
-        
-        // État de chargement ou d'erreur
-        return const Card(
-          child: Padding(
-            padding: AppSpacing.cardPadding,
-            child: Center(
-              child: Text('Chargement des informations...'),
-            ),
-          ),
-        );
       },
     );
   }

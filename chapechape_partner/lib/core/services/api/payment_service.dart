@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/payment/payment_model.dart';
 import '../../models/payment/payout_model.dart';
 import '../../models/payment/wave_model.dart';
 import './api_service.dart';
 import './auth_service.dart';
 import '../wave_transfer_service.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 
 class PaymentService {
   final ApiService _apiService;
@@ -37,6 +39,13 @@ class PaymentService {
   /// Récupère l'ID du partner connecté
   Future<String> _getCurrentPartnerId() async {
     try {
+      // Préférer l'ID déjà stocké (évite /auth/me si Dio sans baseUrl)
+      final storage = AppSecureStorage.instance;
+      final storedId = await storage.read(key: 'userId');
+      if (storedId != null && storedId.isNotEmpty) {
+        return storedId;
+      }
+
       final partner = await _authService.getProfile();
       return partner.id;
     } catch (e) {

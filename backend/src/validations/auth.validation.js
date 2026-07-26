@@ -17,8 +17,9 @@ const register = {
         phoneNumber: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required().messages({
             'string.pattern.base': 'Numéro de téléphone invalide',
             'any.required': 'Le numéro de téléphone est obligatoire'
-        }),
-        role: Joi.string().valid('client', 'partner', 'admin', 'superadmin').default('client')
+        })
+        // role interdit sur l'inscription publique — forcé à 'client' côté contrôleur
+        // (admins via /api/superadmin/admins ou /api/admin/admins uniquement)
     })
 };
 

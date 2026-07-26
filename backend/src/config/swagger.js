@@ -53,7 +53,6 @@ const options = {
         './src/swagger/routes/partner.routes.js',
         './src/swagger/routes/admin.routes.js',
         './src/swagger/routes/availability.routes.js',
-        './src/swagger/routes/booking.routes.js',
         './src/swagger/routes/cancellation-policy.routes.js',
         './src/swagger/routes/device.routes.js',
         './src/swagger/routes/favorite.routes.js',

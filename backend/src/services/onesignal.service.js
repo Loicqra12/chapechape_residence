@@ -1,6 +1,19 @@
 const logger = require('../utils/logger');
 const axios = require('axios');
 const Notification = require('../models/notification.model');
+const { getCategoryByNotificationType } = require('../utils/notification-types');
+
+const ANDROID_CHANNELS = {
+  bookings: 'chapechape_bookings',
+  payments: 'chapechape_payments',
+  messages: 'chapechape_messages',
+  promotions: 'chapechape_promotions',
+  system: 'chapechape_system',
+};
+
+function isHttpsUrl(url) {
+  return typeof url === 'string' && /^https:\/\/\S+/i.test(url.trim());
+}
 
 class OneSignalService {
     constructor() {
@@ -9,14 +22,14 @@ class OneSignalService {
         // Priorité à la variable REST dédiée, fallback rétro-compatible
         this.restApiKey = process.env.ONESIGNAL_REST_API_KEY || process.env.ONESIGNAL_API_KEY;
         this.enabled = false;
-        this.baseUrl = 'https://api.onesignal.com';  // URL correcte dans la documentation la plus récente
+        this.baseUrl = 'https://api.onesignal.com';
+        this.defaultLargeIconUrl = process.env.CHAPECHAPE_NOTIFICATION_LOGO_URL || null;
 
         this.initialize();
     }
 
     initialize() {
         try {
-            // Ne pas initialiser si les clés ne sont pas définies
             if (!this.appId || !this.restApiKey) {
                 logger.warn('OneSignal non initialisé: APP_ID ou REST_API_KEY manquant');
                 return;
@@ -29,6 +42,61 @@ class OneSignalService {
         }
     }
 
+    /**
+     * Construit un payload Android enrichi (titre métier + icônes + groupe + canal).
+     * Les URL optionnelles ne sont ajoutées que si HTTPS valide.
+     */
+    buildRichNotificationPayload(title, message, data = {}, targets = {}) {
+        const type = data.type || data.pushType || '';
+        const category = data.category || getCategoryByNotificationType(type);
+        const channelId = ANDROID_CHANNELS[category] || ANDROID_CHANNELS.system;
+
+        // data métier sans champs purement visuels (évite doublons inutiles côté app)
+        const {
+            imageUrl,
+            largeIconUrl,
+            bigPicture,
+            ...restData
+        } = data || {};
+
+        const payload = {
+            contents: {
+                en: message,
+                fr: message,
+            },
+            headings: {
+                en: title,
+                fr: title,
+            },
+            small_icon: 'ic_stat_chapechape',
+            android_accent_color: 'FFFF9800',
+            existing_android_channel_id: channelId,
+            android_group: `chapechape_${category}`,
+            priority: 10,
+            ttl: 86400,
+            data: {
+                ...restData,
+                type: restData.type || type,
+                category,
+            },
+            ...targets,
+        };
+
+        const largeIcon = largeIconUrl || this.defaultLargeIconUrl;
+        if (isHttpsUrl(largeIcon)) {
+            payload.large_icon = largeIcon.trim();
+        }
+
+        const picture = bigPicture || imageUrl;
+        if (isHttpsUrl(picture)) {
+            payload.big_picture = picture.trim();
+            // iOS rich media (best effort, ignoré si non supporté)
+            payload.ios_attachments = { image: picture.trim() };
+        }
+
+        return payload;
+    }
+
     async sendNotification(notificationData) {
         if (!this.enabled) {
             logger.warn('OneSignal désactivé, notification non envoyée');
@@ -36,7 +104,6 @@ class OneSignalService {
         }
 
         try {
-            // S'assurer que l'app_id est inclus
             const notification = {
                 app_id: this.appId,
                 ...notificationData
@@ -55,12 +122,15 @@ class OneSignalService {
                 targetCount,
                 segments,
                 hasData: dataKeys.length > 0,
-                dataKeys
+                dataKeys,
+                channel: notification.existing_android_channel_id || null,
+                group: notification.android_group || null,
+                hasBigPicture: !!notification.big_picture,
+                hasLargeIcon: !!notification.large_icon,
             });
 
-            // Créer l'URL complète
             const url = `${this.baseUrl}/notifications`;
-            
+
             const response = await axios({
                 method: 'POST',
                 url: url,
@@ -71,12 +141,29 @@ class OneSignalService {
                 data: notification
             });
 
+            const result = {
+                success: true,
+                status: 'sent',
+                providerId: response.data?.id || null,
+                recipients: response.data?.recipients ?? 0,
+                raw: response.data,
+            };
+
+            if (!result.providerId || result.recipients <= 0) {
+                logger.warn('OneSignal a répondu sans destinataire utile', result);
+                return {
+                    ...result,
+                    success: false,
+                    status: 'skipped',
+                    reason: 'no_recipients',
+                };
+            }
+
             logger.info('Réponse OneSignal reçue', {
-                notificationId: response.data?.id,
-                recipients: response.data?.recipients,
-                externalId: response.data?.external_id
+                notificationId: result.providerId,
+                recipients: result.recipients,
             });
-            return response.data;
+            return result;
         } catch (error) {
             logger.error('Erreur lors de l\'envoi de la notification OneSignal:', {
                 message: error.message,
@@ -87,127 +174,63 @@ class OneSignalService {
         }
     }
 
-    /**
-     * Envoie une notification à un utilisateur spécifique
-     * @param {string} playerId - ID de l'appareil OneSignal
-     * @param {string} title - Titre de la notification
-     * @param {string} message - Contenu de la notification
-     * @param {Object} data - Données additionnelles
-     * @returns {Promise} - Résultat de l'envoi
-     */
     async sendToUser(playerId, title, message, data = {}) {
         if (!this.enabled || !playerId) {
             logger.warn('OneSignal désactivé ou ID manquant, notification non envoyée');
             return null;
         }
 
-        return this.sendNotification({
-            contents: {
-                'en': message,
-                'fr': message
-            },
-            headings: {
-                'en': title,
-                'fr': title
-            },
-            include_subscription_ids: [playerId],
-            data
-        });
+        return this.sendNotification(
+            this.buildRichNotificationPayload(title, message, data, {
+                include_subscription_ids: [playerId],
+            })
+        );
     }
 
-    /**
-     * Envoie une notification à plusieurs utilisateurs par leurs IDs d'appareils
-     * @param {Array<string>} playerIds - Liste des IDs d'appareils OneSignal
-     * @param {string} title - Titre de la notification
-     * @param {string} message - Contenu de la notification
-     * @param {Object} data - Données additionnelles
-     * @returns {Promise} - Résultat de l'envoi
-     */
     async sendToMultipleUsers(playerIds, title, message, data = {}) {
         if (!this.enabled || !playerIds || !playerIds.length) {
             logger.warn('OneSignal désactivé ou aucun destinataire, notification non envoyée');
             return null;
         }
 
-        return this.sendNotification({
-            contents: {
-                'en': message,
-                'fr': message
-            },
-            headings: {
-                'en': title,
-                'fr': title
-            },
-            include_subscription_ids: playerIds,
-            data
-        });
+        return this.sendNotification(
+            this.buildRichNotificationPayload(title, message, data, {
+                include_subscription_ids: playerIds,
+            })
+        );
     }
 
-    /**
-     * Envoie une notification à un segment d'utilisateurs
-     * @param {string} segment - Nom du segment OneSignal
-     * @param {string} title - Titre de la notification
-     * @param {string} message - Contenu de la notification
-     * @param {Object} data - Données additionnelles
-     * @returns {Promise} - Résultat de l'envoi
-     */
     async sendToSegment(segment, title, message, data = {}) {
         if (!this.enabled) {
             logger.warn('OneSignal désactivé, notification segment non envoyée');
             return null;
         }
 
-        return this.sendNotification({
-            contents: {
-                'en': message,
-                'fr': message
-            },
-            headings: {
-                'en': title,
-                'fr': title
-            },
-            included_segments: [segment],
-            data
-        });
+        return this.sendNotification(
+            this.buildRichNotificationPayload(title, message, data, {
+                included_segments: [segment],
+            })
+        );
     }
 
-    /**
-     * Envoie une notification à tous les utilisateurs
-     * @param {string} title - Titre de la notification
-     * @param {string} message - Contenu de la notification
-     * @param {Object} data - Données additionnelles
-     * @returns {Promise} - Résultat de l'envoi
-     */
     async sendToAll(title, message, data = {}) {
         if (!this.enabled) {
             logger.warn('OneSignal désactivé, notification à tous non envoyée');
             return null;
         }
 
-        return this.sendNotification({
-            contents: {
-                'en': message,
-                'fr': message
-            },
-            headings: {
-                'en': title,
-                'fr': title
-            },
-            included_segments: ['All'],
-            data
-        });
+        return this.sendNotification(
+            this.buildRichNotificationPayload(title, message, data, {
+                included_segments: ['All'],
+            })
+        );
     }
 
-    /**
-     * Compte les notifications non lues d'un utilisateur
-     * @param {string} userId - ID de l'utilisateur
-     * @returns {Promise<number>} - Nombre de notifications non lues
-     */
     async countUnreadNotifications(userId) {
         try {
-            const count = await Notification.countDocuments({ 
-                user: userId, 
-                read: false 
+            const count = await Notification.countDocuments({
+                user: userId,
+                read: false
             });
             return count;
         } catch (error) {

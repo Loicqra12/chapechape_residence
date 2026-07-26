@@ -2,12 +2,13 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_client/core/utils/secure_storage.dart';
 import '../models/chat_model.dart';
 import '../services/api_service.dart';
 
 class ChatService {
   final ApiService _apiService;
-  final _storage = const FlutterSecureStorage();
+  final _storage = AppSecureStorage.instance;
 
   ChatService({required ApiService apiService}) : _apiService = apiService;
 

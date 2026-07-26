@@ -9,10 +9,15 @@ class NotificationService {
     // Créer une notification
     async createNotification(userId, type, message, data = {}) {
         try {
+            const safeMessage =
+                (message && String(message).trim()) ||
+                notificationTypes.getTitleByType(type) ||
+                'Notification ChapeChape';
+
             const notification = await Notification.create({
                 user: userId,
                 type,
-                message,
+                message: safeMessage,
                 data,
                 read: false
             });
@@ -24,10 +29,13 @@ class NotificationService {
                 return notification;
             }
 
-
-            // Envoyer un email de notification si activé dans les préférences de l'utilisateur
+            // Email isolé : un échec SMTP ne doit pas bloquer le push
             if (user.email && (!user.notificationSettings || user.notificationSettings.emailEnabled !== false)) {
-                await emailService.sendNotificationEmail(user, notification);
+                try {
+                    await emailService.sendNotificationEmail(user, notification);
+                } catch (emailError) {
+                    logger.error(`Erreur email notification (push continue):`, emailError);
+                }
             }
 
             // Envoyer notification push via OneSignal si l'utilisateur a des tokens d'appareils
@@ -35,6 +43,7 @@ class NotificationService {
                 (!user.notificationSettings || user.notificationSettings.pushEnabled !== false)) {
                 try {
                     const pushType = notificationTypes.getPushTypeByNotificationType(type);
+                    const category = notificationTypes.getCategoryByNotificationType(type);
                     const deepLink = notificationTypes.getDeepLinkByNotificationType(type, data);
                     const entityId =
                         data.conversationId ||
@@ -44,21 +53,37 @@ class NotificationService {
                         data.paymentId ||
                         data.payoutId ||
                         null;
+                    const title =
+                        notificationTypes.getTitleByType(type) || 'ChapeChape Notification';
 
-                    await oneSignalService.sendToMultipleUsers(
+                    const pushResult = await oneSignalService.sendToMultipleUsers(
                         user.deviceTokens,
-                        'ChapeChape Notification',
-                        message,
+                        title,
+                        safeMessage,
                         {
                             notificationId: notification._id.toString(),
                             type,
                             pushType,
+                            category,
                             deepLink,
                             entityId,
                             ...data
                         }
                     );
-                    logger.info(`Notification push envoyée à l'utilisateur ${userId}`);
+
+                    if (!pushResult || pushResult.success === false) {
+                        logger.warn(`Push OneSignal non envoyé user=${userId}`, {
+                            status: pushResult?.status || 'null',
+                            reason: pushResult?.reason || 'provider_disabled_or_empty',
+                            recipients: pushResult?.recipients ?? 0,
+                        });
+                    } else {
+                        logger.info(`Notification push envoyée à l'utilisateur ${userId}`, {
+                            providerId: pushResult.providerId,
+                            recipients: pushResult.recipients,
+                            category,
+                        });
+                    }
                 } catch (pushError) {
                     logger.error(`Erreur lors de l'envoi de la notification push:`, pushError);
                     // On continue même si la notification push échoue
@@ -221,6 +246,17 @@ class NotificationService {
             case notificationTypes.CLIENT.LOGIN_ALERT:
                 message = `Nouvelle connexion détectée${data.location ? ` depuis ${data.location}` : ''}${data.device ? ` sur ${data.device}` : ''}.`;
                 break;
+            case notificationTypes.CLIENT.REENGAGE:
+                message = data.message || 'De nouvelles résidences vous attendent sur ChapeChape. Revenez découvrir les offres près de chez vous.';
+                break;
+            case notificationTypes.CLIENT.REVIEW_REQUEST:
+                message = `Comment s'est passé votre séjour${data.residenceName ? ` à "${data.residenceName}"` : ''} ? Votre avis aide la communauté.`;
+                break;
+            case notificationTypes.CLIENT.ABANDONED_SEARCH:
+                message = data.residenceName
+                  ? `Toujours intéressé par "${data.residenceName}" ? Vérifiez les disponibilités.`
+                  : 'Une résidence que vous avez consultée est peut-être encore disponible.';
+                break;
 
             case notificationTypes.COMMON.NEW_MESSAGE:
                 message = `Vous avez reçu un nouveau message${data.senderName ? ` de ${data.senderName}` : ''}.`;
@@ -264,6 +300,9 @@ class NotificationService {
                 break;
             case notificationTypes.PARTNER.BOOKING_CANCELED:
                 message = `Une réservation a été annulée${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
+                break;
+            case notificationTypes.PARTNER.BOOKING_EXPIRED:
+                message = `Une réservation a expiré (délai de paiement dépassé)${data.residenceName ? ` pour "${data.residenceName}"` : ''}${data.clientName ? ` — ${data.clientName}` : ''}.`;
                 break;
             case notificationTypes.PARTNER.PAYMENT_RECEIVED:
                 message = `Vous avez reçu un paiement de ${data.amount || 'montant non spécifié'}${data.currency ? ` ${data.currency}` : ''}${data.residenceName ? ` pour "${data.residenceName}"` : ''}.`;
@@ -317,6 +356,11 @@ class NotificationService {
             case notificationTypes.PARTNER.LOGIN_ALERT:
                 message = `Nouvelle connexion détectée${data.location ? ` depuis ${data.location}` : ''}${data.device ? ` sur ${data.device}` : ''}.`;
                 break;
+            case notificationTypes.PARTNER.PENDING_DIGEST:
+                message = data.summary
+                  ? `Bonjour ! Vous avez ${data.summary}.`
+                  : 'Vous avez des actions en attente sur ChapeChape.';
+                break;
 
             default:
                 message = 'Nouvelle notification';
@@ -355,7 +399,8 @@ class NotificationService {
     }
 
     /**
-     * Notifier la confirmation de paiement — appelé par payment-timer.service.js
+     * Notifier la confirmation de paiement (chemin unique webhook + timer).
+     * Idempotent : une seule notif client BOOKING_CONFIRMED par réservation/event.
      * @param {Object} reservation - Réservation avec user, residence et partner peuplés
      */
     async sendPaymentConfirmationNotification(reservation) {
@@ -365,22 +410,68 @@ class NotificationService {
                 return null;
             }
 
+            const userId = reservation.user._id || reservation.user;
+            const reservationId = reservation._id.toString();
             const residenceName = reservation.residence?.title || 'votre résidence';
-            const message = `Paiement confirme ! Votre reservation a "${residenceName}" du ${new Date(reservation.checkIn).toLocaleDateString('fr-FR')} est confirmee.`;
 
-            // Notification in-app client
+            // Idempotence : éviter doublon timer + webhook
+            const existing = await Notification.findOne({
+                user: userId,
+                type: notificationTypes.CLIENT.BOOKING_CONFIRMED,
+                'data.reservationId': reservationId,
+                'data.event': 'payment_confirmed',
+            });
+            if (existing) {
+                logger.info(`Notification paiement déjà envoyée (idempotent) résa ${reservationId}`);
+                return existing;
+            }
+
+            const message = `Paiement confirmé ! Votre réservation à "${residenceName}" du ${new Date(reservation.checkIn).toLocaleDateString('fr-FR')} est confirmée.`;
+
             const notification = await this.createNotification(
-                reservation.user._id,
+                userId,
                 notificationTypes.CLIENT.BOOKING_CONFIRMED,
                 message,
                 {
-                    reservationId: reservation._id.toString(),
+                    reservationId,
                     residenceName,
                     checkIn: reservation.checkIn,
                     checkOut: reservation.checkOut,
-                    amount: reservation.totalPrice
+                    amount: reservation.totalPrice,
+                    event: 'payment_confirmed',
+                    deepLink: `/booking-details/${reservationId}`,
                 }
             );
+
+            // Partner : paiement reçu (idempotent aussi)
+            const partnerId = reservation.partner?._id || reservation.partner;
+            if (partnerId) {
+                try {
+                    const partnerExisting = await Notification.findOne({
+                        user: partnerId,
+                        type: notificationTypes.PARTNER.PAYMENT_RECEIVED,
+                        'data.reservationId': reservationId,
+                        'data.event': 'payment_confirmed',
+                    });
+                    if (!partnerExisting) {
+                        await this.notifyPartner(
+                            partnerId,
+                            notificationTypes.PARTNER.PAYMENT_RECEIVED,
+                            {
+                                reservationId,
+                                residenceName,
+                                amount: reservation.totalPrice,
+                                currency: 'XOF',
+                                clientName: reservation.user.firstName || 'Client',
+                                event: 'payment_confirmed',
+                                deepLink: `/reservations/${reservationId}`,
+                            }
+                        );
+                    }
+                } catch (partnerErr) {
+                    logger.error('Erreur notif partner paiement:', partnerErr);
+                }
+            }
 
             // Email de confirmation de paiement (template 8)
             if (reservation.user.email) {
@@ -397,12 +488,13 @@ class NotificationService {
                 }
             }
 
-            logger.info(`Notification confirmation paiement envoyee pour reservation ${reservation._id}`);
+            logger.info(`Notification confirmation paiement envoyée pour réservation ${reservationId}`);
             return notification;
 
         } catch (error) {
             logger.error('Erreur notification confirmation paiement:', error);
-            throw error;
+            // Ne pas faire échouer le flux paiement
+            return null;
         }
     }
 
@@ -450,51 +542,6 @@ class NotificationService {
     }
 
     /**
-     * Programme des rappels d'arrivée et de départ pour une réservation
-     * ✅ MIGRÉ: Utilise maintenant Agenda au lieu de setTimeout
-     * @param {Object} booking - Objet de réservation
-     * @returns {Promise} - Résultat des programmations
-     */
-    async scheduleBookingReminders(booking) {
-        try {
-            const bookingId = booking._id.toString();
-
-            // Importer Agenda service
-            const { scheduleBookingReminder } = require('./agenda.service');
-
-            // Calculer les dates pour les rappels
-            const now = new Date();
-            const arrivalDate = new Date(booking.checkInDate);
-            const departureDate = new Date(booking.checkOutDate);
-
-            let scheduledReminders = 0;
-
-            // ✅ Rappel 24h avant l'arrivée via Agenda (persistant)
-            if (arrivalDate > now) {
-                try {
-                    await scheduleBookingReminder(bookingId, arrivalDate);
-                    scheduledReminders++;
-                    logger.info(`Rappel d'arrivée Agenda programmé pour booking ${bookingId}`);
-                } catch (err) {
-                    logger.warn(`Impossible de programmer rappel arrivée: ${err.message}`);
-                }
-            }
-
-            // ✅ Note: Le rappel de départ peut être ajouté comme job séparé si nécessaire
-            // Pour l'instant, le job sendBookingReminder gère le rappel principal
-
-            return {
-                success: true,
-                message: `${scheduledReminders} rappel(s) programmé(s) via Agenda`,
-                scheduledReminders
-            };
-        } catch (error) {
-            logger.error('Erreur lors de la programmation des rappels Agenda:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Programme des rappels d'arrivée et de départ pour une Réservation (Reservation)
      * ✅ MIGRÉ: Utilise maintenant Agenda au lieu de setTimeout
      * @param {Object} reservation - Objet Reservation (peut contenir différents alias de champs)
@@ -505,13 +552,18 @@ class NotificationService {
             const reservationId = reservation._id.toString();
 
             // Importer Agenda service
-            const { scheduleReservationReminder } = require('./agenda.service');
+            const {
+                scheduleReservationReminder,
+                scheduleReservationDepartureReminder,
+            } = require('./agenda.service');
 
             // Support de multiples champs selon variantes de modèle
             const checkInRaw = reservation.checkIn || reservation.checkInDate || reservation.startDate;
+            const checkOutRaw = reservation.checkOut || reservation.checkOutDate || reservation.endDate;
 
             const now = new Date();
             const arrivalDate = checkInRaw ? new Date(checkInRaw) : null;
+            const departureDate = checkOutRaw ? new Date(checkOutRaw) : null;
 
             let scheduledReminders = 0;
 
@@ -520,9 +572,20 @@ class NotificationService {
                 try {
                     await scheduleReservationReminder(reservationId, arrivalDate);
                     scheduledReminders++;
-                    logger.info(`Rappel de réservation Agenda programmé pour ${reservationId}`);
+                    logger.info(`Rappel arrivée Agenda programmé pour ${reservationId}`);
                 } catch (err) {
-                    logger.warn(`Impossible de programmer rappel réservation: ${err.message}`);
+                    logger.warn(`Impossible de programmer rappel arrivée: ${err.message}`);
+                }
+            }
+
+            // ✅ Rappel 24h avant le départ
+            if (departureDate && departureDate > now) {
+                try {
+                    await scheduleReservationDepartureReminder(reservationId, departureDate);
+                    scheduledReminders++;
+                    logger.info(`Rappel départ Agenda programmé pour ${reservationId}`);
+                } catch (err) {
+                    logger.warn(`Impossible de programmer rappel départ: ${err.message}`);
                 }
             }
 
@@ -737,7 +800,7 @@ class NotificationService {
             // Notification push/email partner
             await this.createNotification(
                 partner._id,
-                'PAYOUT_CREATED',
+                notificationTypes.PARTNER.PAYOUT_INITIATED,
                 message,
                 {
                     payout_id: payoutData.payout_id,
@@ -781,7 +844,7 @@ class NotificationService {
 
             await this.createNotification(
                 partner._id,
-                'PAYOUT_INITIATED',
+                notificationTypes.PARTNER.PAYOUT_INITIATED,
                 message,
                 {
                     transaction_id: payoutData.transaction_id,
@@ -824,7 +887,7 @@ class NotificationService {
 
             await this.createNotification(
                 partner._id,
-                'PAYOUT_COMPLETED',
+                notificationTypes.PARTNER.PAYOUT_SUCCESS,
                 message,
                 {
                     transaction_id: payoutData.transaction_id,
@@ -879,7 +942,7 @@ class NotificationService {
 
             await this.createNotification(
                 partner._id,
-                'PAYOUT_FAILED',
+                notificationTypes.PARTNER.PAYOUT_FAILED,
                 message,
                 {
                     payout_id: payoutData.payout_id,
@@ -943,7 +1006,7 @@ class NotificationService {
             for (const admin of admins) {
                 await this.createNotification(
                     admin._id,
-                    'INSUFFICIENT_BALANCE',
+                    notificationTypes.PARTNER.PAYOUT_FAILED,
                     message,
                     {
                         current_balance: currentBalance,

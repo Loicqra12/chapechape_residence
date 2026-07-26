@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../models/pricing/pricing_model.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 
 /// Service pour l'intégration du système de pricing dynamique
 class PricingService {
@@ -90,6 +92,12 @@ class PricingService {
   /// Récupère l'ID du partner connecté
   Future<String> _getCurrentPartnerId() async {
     try {
+      final storage = AppSecureStorage.instance;
+      final storedId = await storage.read(key: 'userId');
+      if (storedId != null && storedId.isNotEmpty) {
+        return storedId;
+      }
+
       final AuthService authService = AuthService(_apiService.dio);
       final partner = await authService.getProfile();
       return partner.id;

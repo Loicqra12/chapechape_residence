@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Reservation = require('../models/reservation.model');
 const notificationService = require('./notification.service');
 const availabilityService = require('./availability.service');
-const { scheduleReservationExpiration, cancelReservationExpiration } = require('./agenda.service');
+const { scheduleReservationExpiration, cancelReservationExpiration, schedulePaymentReminders } = require('./agenda.service');
 
 /**
 
@@ -48,6 +48,13 @@ const startPaymentTimer = async (reservationId, durationMinutes = 30) => {
 
     // ✅ Programmer l'expiration automatique via Agenda (persistant au restart)
     await scheduleReservationExpiration(reservationId, deadline);
+
+    // ✅ Phase 2 : rappels milieu / fin de fenêtre (annulés au paiement)
+    try {
+      await schedulePaymentReminders(reservationId, deadline, durationMinutes);
+    } catch (reminderErr) {
+      console.error('Erreur programmation rappels paiement:', reminderErr);
+    }
 
     console.log(`Timer de paiement démarré pour réservation ${reservationId}: ${durationMinutes} min (via Agenda)`);
     return {
@@ -96,17 +103,18 @@ const checkAndExpireReservation = async (reservationId) => {
     }
 
     // ✅ Expirer la réservation
+    // C2 fix : ne PAS écrire paymentStatus:'expired' (hors enum → ValidationError).
+    // status:'expired' suffit ; paymentStatus reste 'pending' (impayé).
     await Reservation.findByIdAndUpdate(
       reservationId,
       {
         $set: {
           status: 'expired',
-          paymentStatus: 'expired'
         },
         $push: {
           statusHistory: {
             status: 'expired',
-            paymentStatus: 'expired',
+            paymentStatus: reservation.paymentStatus || 'pending',
             changedAt: now,
             reason: 'Délai de paiement expiré'
           }
@@ -232,63 +240,62 @@ const checkAllExpiredReservations = async () => {
 
 /**
  * ✅ Confirmer le paiement et arrêter le timer
+ * Délègue au chemin canonique applyPaymentPaid (conversation + payout + notifs).
  * @param {string} reservationId - ID de la réservation
- * @param {Object} paymentData - Données de paiement
+ * @param {Object} paymentData - Données de paiement (providerResponse optionnel)
  * @returns {Promise<Object>} - Résultat de la confirmation
  */
 const confirmPaymentAndStopTimer = async (reservationId, paymentData = {}) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const Payment = require('../models/payment.model');
+  const { applyPaymentPaid } = require('./payment-confirmation.service');
 
-  try {
-    const reservation = await Reservation.findByIdAndUpdate(
-      reservationId,
-      {
-        $set: {
-          status: 'confirmed',
-          paymentStatus: 'paid',
-          paymentDeadline: null // Arrêter le timer
-        },
-        $push: {
-          statusHistory: {
-            status: 'confirmed',
-            paymentStatus: 'paid',
-            changedAt: new Date(),
-            reason: 'Paiement confirmé - Timer arrêté'
-          }
-        }
-      },
-      { new: true, session }
-    ).populate('user residence partner');
+  let payment = await Payment.findOne({
+    reservation: reservationId,
+    status: { $in: ['pending', 'failed', 'expired'] },
+  }).sort({ createdAt: -1 });
 
-    if (!reservation) {
-      throw new Error('Réservation non trouvée');
+  if (!payment) {
+    const alreadyPaid = await Payment.findOne({
+      reservation: reservationId,
+      status: 'paid',
+    }).sort({ createdAt: -1 });
+
+    if (alreadyPaid) {
+      await cancelReservationExpiration(reservationId);
+      return {
+        success: true,
+        alreadyPaid: true,
+        reservationId,
+        status: 'confirmed',
+        paymentStatus: 'paid',
+        confirmedAt: new Date(),
+      };
     }
 
-    // ✅ Annuler le job d'expiration Agenda
-    await cancelReservationExpiration(reservationId);
-
-    // ✅ Envoyer confirmations de paiement
-    await notificationService.sendPaymentConfirmationNotification(reservation);
-
-    await session.commitTransaction();
-    console.log(`Paiement confirmé et timer Agenda annulé pour réservation ${reservationId}`);
-
-    return {
-      success: true,
-      reservationId,
-      status: 'confirmed',
-      paymentStatus: 'paid',
-      confirmedAt: new Date()
-    };
-
-  } catch (error) {
-    await session.abortTransaction();
-    console.error('Erreur confirmation paiement:', error);
-    throw error;
-  } finally {
-    session.endSession();
+    throw new Error(
+      'Aucun paiement trouvé pour cette réservation — confirmation refusée (chemin webhook/PSP requis)'
+    );
   }
+
+  const confirmation = await applyPaymentPaid(payment, {
+    providerResponse: paymentData,
+    triggerPayout: true,
+  });
+
+  // applyPaymentPaid annule déjà les jobs d'expiration ; double appel idempotent
+  await cancelReservationExpiration(reservationId);
+
+  const reservation = await Reservation.findById(reservationId);
+
+  return {
+    success: true,
+    applied: confirmation.applied,
+    alreadyPaid: confirmation.alreadyPaid,
+    reservationId,
+    status: reservation?.status || 'confirmed',
+    paymentStatus: reservation?.paymentStatus || 'paid',
+    confirmedAt: new Date(),
+  };
 };
 
 module.exports = {

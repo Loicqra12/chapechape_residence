@@ -329,110 +329,78 @@ class ResidenceService {
   Future<List<Residence>> searchResidences({
     String? query,
     String? city,
+    String? neighborhood,
+    String? region,
     double? minPrice,
     double? maxPrice,
     int? bedrooms,
     int? bathrooms,
+    int? minGuests,
     List<String>? amenities,
+    String? residenceType,
+    List<String>? types,
+    String? period,
+    bool? allowsPets,
+    bool? allowsSmoking,
+    bool? allowsParties,
+    String? reservationMode,
+    double? minRating,
     DateTime? checkIn,
     DateTime? checkOut,
     int page = 1,
     int limit = 20,
     bool forceRefresh = false,
   }) async {
-    // Construire une clé de cache basée sur les critères de recherche
-    final cacheKey = 'search_${query ?? ''}_city${city ?? ''}_price${minPrice ?? 0}-${maxPrice ?? 0}_bed${bedrooms ?? 0}_bath${bathrooms ?? 0}_am${amenities?.join('-') ?? ''}_dates${checkIn?.day ?? ''}-${checkOut?.day ?? ''}';
-    
+    final cacheKey =
+        'search_${query ?? ''}_city${city ?? ''}_n${neighborhood ?? ''}_r${region ?? ''}_price${minPrice ?? 0}-${maxPrice ?? 0}_bed${bedrooms ?? 0}_bath${bathrooms ?? 0}_am${amenities?.join('-') ?? ''}_t${residenceType ?? ''}_types${types?.join('-') ?? ''}_p${period ?? ''}_mr${minRating ?? 0}_page$page';
+
     try {
-      // Vérifier si on a des données en cache
       final cachedData = await _cacheService.get(cacheKey);
       if (cachedData != null && !forceRefresh) {
         return (cachedData as List).cast<Residence>();
       }
-      
-      // Liste pour stocker tous les résultats de recherche
-      List<Residence> allResults = [];
-      
-      // 1. Rechercher dans les résidences générales
-      try {
-        final response = await _apiService.get(
-          '/residences/search',
-          queryParameters: {
-            if (query != null) 'query': query,
-            if (city != null) 'location': city,
-            if (minPrice != null) 'minPrice': minPrice,
-            if (maxPrice != null) 'maxPrice': maxPrice,
-            if (bedrooms != null) 'bedrooms': bedrooms,
-            if (bathrooms != null) 'bathrooms': bathrooms,
-            if (amenities != null) 'amenities': amenities.join(','),
-            if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
-            if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
-            'page': page,
-            'limit': limit,
-          },
-        );
 
-        if (response.data['data'] is List) {
-          final residences = (response.data['data'] as List)
-              .map((json) => _adaptBackendResidenceToClient(json))
-              .toList();
-          
-          allResults.addAll(residences);
-        }
-      } catch (e) {
-        print('Erreur lors de la recherche de résidences générales: $e');
-        // Continuer pour rechercher dans les résidences partenaires
-      }
-      
-      // 2. Rechercher dans les résidences partenaires
-      try {
-        final partnerResponse = await _apiService.get(
-          '/residences/all',
-          queryParameters: {
-            if (query != null) 'query': query,
-            if (city != null) 'city': city,
-          },
-        );
+      final response = await _apiService.get(
+        '/residences/search',
+        queryParameters: {
+          if (query != null && query.isNotEmpty) 'query': query,
+          if (city != null && city.isNotEmpty) 'location': city,
+          if (neighborhood != null && neighborhood.isNotEmpty)
+            'neighborhood': neighborhood,
+          if (region != null && region.isNotEmpty) 'region': region,
+          if (minPrice != null) 'minPrice': minPrice,
+          if (maxPrice != null) 'maxPrice': maxPrice,
+          if (bedrooms != null) 'bedrooms': bedrooms,
+          if (bathrooms != null) 'bathrooms': bathrooms,
+          if (minGuests != null) 'minGuests': minGuests,
+          if (amenities != null && amenities.isNotEmpty)
+            'amenities': amenities.join(','),
+          if (residenceType != null && residenceType.isNotEmpty)
+            'residenceType': residenceType,
+          if (types != null && types.isNotEmpty) 'types': types.join(','),
+          if (period != null && period.isNotEmpty) 'period': period,
+          if (allowsPets == true) 'allowsPets': true,
+          if (allowsSmoking == true) 'allowsSmoking': true,
+          if (allowsParties == true) 'allowsParties': true,
+          if (reservationMode != null && reservationMode.isNotEmpty)
+            'reservationMode': reservationMode,
+          if (minRating != null && minRating > 0) 'minRating': minRating,
+          if (checkIn != null) 'checkIn': checkIn.toIso8601String(),
+          if (checkOut != null) 'checkOut': checkOut.toIso8601String(),
+          'page': page,
+          'limit': limit,
+        },
+      );
 
-        if (partnerResponse.data['data'] is List) {
-          // Filtrer manuellement les résultats des partenaires
-          final partnerResidences = (partnerResponse.data['data'] as List)
-              .map((json) => _adaptBackendResidenceToClient(json))
-              .where((residence) {
-                bool matches = true;
-                
-                // Filtrer par prix si spécifié
-                if (minPrice != null && residence.price < minPrice) matches = false;
-                if (maxPrice != null && residence.price > maxPrice) matches = false;
-                
-                // Filtrer par nombre de chambres/salles de bain si spécifié
-                if (bedrooms != null && residence.bedrooms < bedrooms) matches = false;
-                if (bathrooms != null && residence.bathrooms < bathrooms) matches = false;
-                
-                // Filtrer par disponibilité si spécifié
-                if (checkIn != null && checkOut != null) {
-                  // Logique de vérification de disponibilité à implémenter
-                }
-                
-                return matches;
-              })
-              .toList();
-          
-          // Ajouter les résidences partenaires qui ne sont pas déjà dans les résultats
-          for (var residence in partnerResidences) {
-            if (!allResults.any((r) => r.id == residence.id)) {
-              allResults.add(residence);
-            }
-          }
-        }
-      } catch (e) {
-        print('Erreur lors de la recherche de résidences partenaires: $e');
+      List<Residence> results = [];
+      if (response.data['data'] is List) {
+        results = (response.data['data'] as List)
+            .map((json) => _adaptBackendResidenceToClient(json))
+            .toList();
       }
-      
-      // Mettre en cache pour 5 minutes
-      await _cacheService.put(cacheKey, allResults, expiryInMinutes: 5);
-      
-      return allResults;
+
+      await _cacheService.put(cacheKey, results, expiryInMinutes: 5);
+      return results;
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -678,6 +646,16 @@ class ResidenceService {
         }
         return [];
       }
+
+      // Vidéos de présentation (modération : pending_review / approved / rejected)
+      List<Map<String, dynamic>> _extractVideos(Map<String, dynamic> data) {
+        final raw = data['videos'];
+        if (raw is! List) return const [];
+        return raw
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
       
       // Extraction des tarifs
       double hourlyRate = _safeParseDouble(data['hourlyRate']);
@@ -702,12 +680,14 @@ class ResidenceService {
       final List<Map<String, String>> faqs = _extractFaqs(data);
       final Map<String, dynamic> enhancedAmenities = _extractEnhancedAmenities(data);
       final List<String> paymentMethods = _extractPaymentMethods(data);
+      final List<Map<String, dynamic>> videos = _extractVideos(data);
       
       // Récupérer les informations sur les étoiles/classification
       final int stars = _safeParseInt(data['stars'], 0);
       
       print('✅ Règles extraites: ${rules.join(', ')}');
       print('✅ Équipements améliorés: ${enhancedAmenities.keys.join(', ')}');
+      print('✅ Vidéos: ${videos.length} (statuts: ${videos.map((v) => v['status']).join(', ')})');
       
       return Residence(
         id: residenceId,
@@ -715,6 +695,8 @@ class ResidenceService {
         description: data['description'] ?? 'Aucune description disponible',
         shortDescription: data['shortDescription'] ?? '',
         images: images,
+        videoUrl: data['videoUrl']?.toString(),
+        videos: videos,
         price: _safeParseDouble(data['price']),
         location: locationMap,
         bedrooms: _safeParseInt(data['bedrooms']),

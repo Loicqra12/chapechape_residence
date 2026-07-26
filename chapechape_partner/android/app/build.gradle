@@ -33,11 +33,14 @@ if (flutterRoot == null) {
 // Appliquer le fichier de correction des plugins
 apply from: 'fix_plugin.gradle'
 
-// ✅ Configuration de signature de production
+// ✅ Configuration de signature de production (secrets hors dépôt — fichier android/key.properties)
 def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('android/key.properties')
+def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    println "INFO: Keystore properties loaded successfully"
+} else {
+    println "WARNING: key.properties file not found - release signing will be skipped"
 }
 
 android {
@@ -81,7 +84,7 @@ android {
         
         // Configuration OneSignal
         manifestPlaceholders = [
-            onesignal_app_id: '43531899-4645-4f52-a2bf-f4e4a4095513',
+            onesignal_app_id: '45b31099-4645-4f52-ad2f-f464a4095513',
             onesignal_channel_id: "b80d5093-5e1f-480e-a42f-a0ccb009e3f2",
             onesignal_firebase_default_notification_icon: "@drawable/ic_stat_notification",
             applicationName: "androidx.multidex.MultiDexApplication" // Classe d'application valide pour gérer multidex
@@ -90,17 +93,21 @@ android {
 
     signingConfigs {
         release {
-            keyAlias 'upload'
-            keyPassword 'chapechape2024'
-            storeFile file('upload-keystore.jks')
-            storePassword 'chapechape2024'
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
 
     buildTypes {
         release {
-            // ✅ Réactiver la signature pour Google Play Console
-            signingConfig signingConfigs.release
+            // Signature release uniquement si key.properties est présent (local / CI)
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -140,3 +147,6 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+// Appliquer le plugin Google Services (FCM / OneSignal)
+apply plugin: 'com.google.gms.google-services'

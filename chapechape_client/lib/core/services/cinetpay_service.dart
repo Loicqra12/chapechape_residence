@@ -33,6 +33,12 @@ class CinetPayService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      _validatePaymentParams(
+        reservationId: reservationId,
+        amount: amount,
+        phoneNumber: phoneNumber,
+      );
+
       // Appel au backend pour créer l'intention de paiement CinetPay
       // Plus de conversion - le backend gère la normalisation
       final response =
@@ -118,36 +124,6 @@ class CinetPayService {
       throw CinetPayException(
           'Erreur lors de la vérification du statut: ${e.message}');
     }
-  }
-
-  /// Recherche robuste par transactionId (root ou nested) avec filtrage CinetPay
-  Map<String, dynamic>? _findPaymentByTransactionId(String wantedId, List<dynamic> payments) {
-    // Filtrer d'abord les paiements CinetPay uniquement
-    final cinetpayPayments = payments.cast<Map<String, dynamic>>().where((payment) {
-      final provider = payment['paymentProvider']?.toString().toLowerCase();
-      final method = payment['paymentMethod']?.toString().toLowerCase();
-      
-      // Vérifier que c'est un paiement CinetPay (Orange Money, MTN Money, Moov Money, Card)
-      return provider == 'cinetpay' && 
-             (method == 'orange_money' || method == 'mtn_money' || 
-              method == 'moov_money' || method == 'credit_card');
-    }).toList();
-    
-    print('🔍 Paiements CinetPay filtrés: ${cinetpayPayments.length}/${payments.length}');
-    
-    for (final raw in cinetpayPayments) {
-      final txnRoot = raw['transactionId']?.toString();
-      final txnNested = raw['paymentDetails']?['providerResponse']?['transactionId']?.toString();
-      
-      print('🔍 Comparaison: $wantedId vs Root:$txnRoot, Nested:$txnNested');
-      
-      if (wantedId == txnRoot || wantedId == txnNested) {
-        print('✅ Match CinetPay trouvé: ${wantedId == txnRoot ? 'root' : 'nested'} transactionId');
-        print('📱 Méthode: ${raw['paymentMethod']}, Provider: ${raw['paymentProvider']}');
-        return raw;
-      }
-    }
-    return null;
   }
 
   /// Mapper le statut backend vers enum PaymentStatus

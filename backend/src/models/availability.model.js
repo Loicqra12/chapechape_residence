@@ -118,49 +118,79 @@ availabilitySchema.statics.findForPeriod = async function(residenceId, startDate
 };
 
 // Méthode statique pour vérifier si une plage de dates est disponible
-availabilitySchema.statics.isPeriodAvailable = async function(residenceId, startDate, endDate) {
-  // Calculer le nombre de jours entre les dates
+// Convention hôtel : [start, end) — le jour de checkout n'est pas bloqué
+// options: { session, excludeReservationId }
+availabilitySchema.statics.isPeriodAvailable = async function(residenceId, startDate, endDate, options = {}) {
+  const { session = null, excludeReservationId = null } = options;
   const start = new Date(startDate);
   const end = new Date(endDate);
-  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
-  console.log(`DEBUG: Vérification de disponibilité pour résidence ${residenceId}, du ${start.toISOString()} au ${end.toISOString()} (${totalDays} jours)`);
-  
-  // Chercher uniquement les entrées NON disponibles
-  const blockedAvailabilities = await this.find({
+  const query = {
     residenceId,
     date: {
       $gte: start,
-      $lte: end
+      $lt: end, // checkout exclusif (aligné updateAvailabilityForReservation)
     },
-    status: { $ne: 'available' } // Uniquement les statuts non disponibles
-  });
-  
-  console.log(`DEBUG: ${blockedAvailabilities.length} dates bloquées trouvées sur ${totalDays} jours`);
-  
-  // Si aucune date bloquée n'a été trouvée, la période est disponible
-  // Cela signifie qu'une date soit n'a pas d'entrée, soit a une entrée avec status='available'
-  const isAvailable = blockedAvailabilities.length === 0;
+    status: { $ne: 'available' },
+  };
 
-  console.log(`DEBUG: La résidence est ${isAvailable ? 'disponible' : 'NON disponible'} pour cette période`);
-  
-  return isAvailable;
+  // Ne pas compter les jours déjà réservés par la réservation en cours de modification
+  if (excludeReservationId) {
+    query.reservationId = { $ne: excludeReservationId };
+  }
+
+  let findQuery = this.find(query);
+  if (session) findQuery = findQuery.session(session);
+
+  const blockedAvailabilities = await findQuery;
+
+  return blockedAvailabilities.length === 0;
 };
 
-// Méthode statique pour créer ou mettre à jour plusieurs disponibilités en une seule opération
-availabilitySchema.statics.upsertBulk = async function(records) {
-  const operations = records.map(record => ({
-    updateOne: {
-      filter: {
-        residenceId: record.residenceId,
-        date: record.date
-      },
-      update: { $set: record },
-      upsert: true
+/**
+ * Upsert bulk avec option anti-écrasement.
+ * Si failIfReservedByOther=true et status=reserved :
+ * - n'écrase pas une date déjà réservée par une autre réservation
+ * - upsert crée le doc si absent ; conflit unique → erreur Mongo (course concurrente)
+ */
+availabilitySchema.statics.upsertBulk = async function(records, options = {}) {
+  const { session = null, failIfReservedByOther = false } = options;
+
+  const operations = records.map((record) => {
+    if (failIfReservedByOther && record.status === 'reserved') {
+      return {
+        updateOne: {
+          filter: {
+            residenceId: record.residenceId,
+            date: record.date,
+            $or: [
+              { status: { $ne: 'reserved' } },
+              { reservationId: null },
+              { reservationId: { $exists: false } },
+              { reservationId: record.reservationId },
+            ],
+          },
+          update: { $set: record },
+          upsert: true,
+        },
+      };
     }
-  }));
-  
-  return this.bulkWrite(operations);
+
+    return {
+      updateOne: {
+        filter: {
+          residenceId: record.residenceId,
+          date: record.date,
+        },
+        update: { $set: record },
+        upsert: true,
+      },
+    };
+  });
+
+  const writeOpts = { ordered: true };
+  if (session) writeOpts.session = session;
+  return this.bulkWrite(operations, writeOpts);
 };
 
 const Availability = mongoose.model('Availability', availabilitySchema);

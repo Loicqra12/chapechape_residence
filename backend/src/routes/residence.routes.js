@@ -6,6 +6,7 @@ const residenceValidation = require('../validations/residence.validation');
 const upload = require('../middlewares/upload.middleware');
 const { uploadResidenceImages } = require('../config/cloudinary');
 const residenceController = require('../controllers/residence/residence.controller');
+const videoController = require('../controllers/residence/residence.video.controller');
 const {
   createResidence,
   getResidences,
@@ -58,10 +59,12 @@ router.get('/partner/:partnerId', async (req, res) => {
       partner: partnerId,
       deleted: { $ne: true }
     }).lean();
-    if (!residences || residences.length === 0) {
-      return res.status(404).json({ success: false, message: 'Aucune résidence trouvée pour ce partenaire' });
-    }
-    return res.json({ success: true, count: residences.length, data: residences });
+    // Liste vide = succès (compte neuf) — pas 404 (évite fallbacks inutiles côté apps)
+    return res.json({
+      success: true,
+      count: residences.length,
+      data: residences,
+    });
   } catch (error) {
     logger.error('Erreur GET /partner/:partnerId', { message: error.message, stack: error.stack });
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -120,14 +123,14 @@ router.get('/:id/reviews', (req, res) => {
 });
 
 // Route générique — DOIT RESTER EN DERNIÈRE position dans les routes GET publiques
-router.get('/:id', getResidence);
+router.get('/:id', require('../middlewares/optional-auth.middleware').optionalProtect, getResidence);
 
 // -----------------------------------------------------------------------------
 // BLOC 4 — Middleware global protect + authorize pour toutes les routes suivantes
 // Toutes les routes définies après ce bloc héritent de protect et authorize.
 // -----------------------------------------------------------------------------
 router.use(protect);
-router.use(authorize('partner', 'admin'));
+router.use(authorize('partner', 'admin', 'superadmin'));
 
 // Création et modification (validation Joi incluse)
 router.post('/', validate(residenceValidation.createResidence), createResidence);
@@ -155,9 +158,21 @@ router.put('/:id/payment-methods', validate(residenceValidation.updatePaymentMet
 router.put('/:id/enhanced-amenities', validate(residenceValidation.updateEnhancedAmenities), residenceController.updateEnhancedAmenities);
 
 // Étoiles (admin seulement — protect + authorize('admin') inline pour surcharger le authorize global)
-router.put('/:id/stars', authorize('admin'), residenceController.updateStars);
+router.put('/:id/stars', authorize('admin', 'superadmin'), residenceController.updateStars);
 
 // Notations (clients authentifiés — accessible via protect global)
 router.put('/:id/ratings', residenceController.updateRatings);
+
+// ---------------------------------------------------------------------------
+// Vidéos résidence (MVP — 1 vidéo max, modération admin requise)
+// ---------------------------------------------------------------------------
+// POST   /:id/videos                        — partner owner: ajouter une vidéo
+// DELETE /:id/videos/:videoId              — partner owner ou admin: supprimer
+// PUT    /:id/videos/:videoId/approve      — admin seulement: approuver
+// PUT    /:id/videos/:videoId/reject       — admin seulement: rejeter
+router.post('/:id/videos', videoController.addVideo);
+router.delete('/:id/videos/:videoId', videoController.deleteVideo);
+router.put('/:id/videos/:videoId/approve', authorize('admin', 'superadmin'), videoController.approveVideo);
+router.put('/:id/videos/:videoId/reject',  authorize('admin', 'superadmin'), videoController.rejectVideo);
 
 module.exports = router;

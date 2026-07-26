@@ -13,7 +13,7 @@ const reservationSchema = new mongoose.Schema({
     },
     partner: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Partner',
+        ref: 'User', // Partner = User.role partner (pas le discriminator __t)
         required: true
     },
     checkIn: {
@@ -185,6 +185,12 @@ const reservationSchema = new mongoose.Schema({
     specialRequests: {
         type: String
     },
+    // Notes internes partenaire (affichées côté Partner app)
+    notes: {
+        type: String,
+        maxlength: 5000,
+        default: ''
+    },
     cancellationPolicy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'CancellationPolicy',
@@ -197,6 +203,11 @@ const reservationSchema = new mongoose.Schema({
             ref: 'User'
         },
         reason: String,
+        // true si rejet partenaire (status backend reste 'cancelled')
+        rejectedByHost: {
+            type: Boolean,
+            default: false
+        },
         refundAmount: Number,
         refundStatus: {
             type: String,
@@ -303,7 +314,10 @@ reservationSchema.methods.getDurationInDays = function() {
 };
 
 reservationSchema.methods.canBeCancelled = async function() {
-    const policy = await this.populate('cancellationPolicy');
+    if (!this.populated('cancellationPolicy') && this.cancellationPolicy) {
+        await this.populate('cancellationPolicy');
+    }
+    const policy = this.cancellationPolicy;
     const now = new Date();
     const hoursBeforeCheckIn = (this.checkIn - now) / (1000 * 60 * 60);
     
@@ -311,9 +325,7 @@ reservationSchema.methods.canBeCancelled = async function() {
         return false;
     }
     
-    // Vérifier que policy et policy.rules sont définis avant d'utiliser .some()
     if (!policy || !policy.rules || !Array.isArray(policy.rules)) {
-        // Si pas de règles définies, par défaut permettre l'annulation
         return true;
     }
     
@@ -321,7 +333,10 @@ reservationSchema.methods.canBeCancelled = async function() {
 };
 
 reservationSchema.methods.canBeModified = async function() {
-    const policy = await this.populate('cancellationPolicy');
+    if (!this.populated('cancellationPolicy') && this.cancellationPolicy) {
+        await this.populate('cancellationPolicy');
+    }
+    const policy = this.cancellationPolicy;
     const now = new Date();
     const hoursBeforeCheckIn = (this.checkIn - now) / (1000 * 60 * 60);
     
@@ -329,9 +344,7 @@ reservationSchema.methods.canBeModified = async function() {
         return false;
     }
     
-    // Vérifier que policy et policy.rules sont définis avant d'utiliser .some()
-    if (!policy || !policy.rules || !Array.isArray(policy.rules)) {
-        // Si pas de règles définies, par défaut permettre la modification
+    if (!policy || typeof policy.isModificationAllowed !== 'function') {
         return true;
     }
     
@@ -357,25 +370,33 @@ reservationSchema.pre('save', function(next) {
     next();
 });
 
-// ✅ Hook pour findOneAndUpdate - Couvre les bypasses de pre('save')
-reservationSchema.pre('findOneAndUpdate', function(next) {
-    // Activer les validateurs pour ce hook
+// ✅ Garde métier : confirmed / in_stay exigent paymentStatus=paid
+// Couvre findOneAndUpdate ET updateOne ; lit status dans $set (pas seulement update.status)
+function enforcePaidOnStatusUpdate(next) {
     this.setOptions({ runValidators: true, context: 'query' });
-    
-    const update = this.getUpdate();
-    const filter = this.getFilter();
-    
-    // Vérifier les règles métier pour les updates directs
-    if (update.status === 'confirmed' || update.status === 'in_stay') {
-        // Si paymentStatus n'est pas dans le filtre, c'est dangereux
-        if (!filter.paymentStatus) {
-            const error = new Error(`Transition vers ${update.status} requiert paymentStatus='paid' dans le filtre de l'update`);
+
+    const update = this.getUpdate() || {};
+    const filter = this.getFilter() || {};
+    const newStatus = update.status ?? update.$set?.status;
+    const newPaymentStatus = update.paymentStatus ?? update.$set?.paymentStatus;
+
+    if (newStatus === 'confirmed' || newStatus === 'in_stay') {
+        const setsPaidInSameUpdate = newPaymentStatus === 'paid';
+        const filterRequiresPaid = filter.paymentStatus === 'paid';
+
+        if (!setsPaidInSameUpdate && !filterRequiresPaid) {
+            const error = new Error(
+                `Transition vers ${newStatus} requiert paymentStatus='paid' (dans $set ou dans le filtre)`
+            );
             error.name = 'ValidationError';
             return next(error);
         }
     }
-    
+
     next();
-});
+}
+
+reservationSchema.pre('findOneAndUpdate', enforcePaidOnStatusUpdate);
+reservationSchema.pre('updateOne', enforcePaidOnStatusUpdate);
 
 module.exports = mongoose.model('Reservation', reservationSchema);

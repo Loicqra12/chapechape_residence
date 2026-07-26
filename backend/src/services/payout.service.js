@@ -42,13 +42,10 @@ class PayoutService {
      */
     async createPayoutForReservation(reservationId) {
         try {
-            // Récupérer la réservation avec payment
+            // Pas de virtual `payments` sur Reservation — charger via Payment
             const reservation = await Reservation.findById(reservationId)
                 .populate('partner')
-                .populate({
-                    path: 'payments',
-                    match: { status: 'paid' }
-                });
+                .populate('residence', 'title');
 
             if (!reservation) {
                 throw new Error('Réservation non trouvée');
@@ -62,9 +59,18 @@ class PayoutService {
                 throw new Error('Partner non trouvé pour cette réservation');
             }
 
+            const paidPayments = await Payment.find({
+                reservation: reservationId,
+                status: 'paid',
+            });
+
+            if (!paidPayments.length) {
+                throw new Error('Aucun paiement payé trouvé pour cette réservation');
+            }
+
             // Vérifier si payout déjà créé
             const existingPayout = await Payout.findOne({
-                source_transactions: { $in: reservation.payments.map(p => p._id) }
+                source_transactions: { $in: paidPayments.map(p => p._id) }
             });
 
             if (existingPayout) {
@@ -73,8 +79,8 @@ class PayoutService {
             }
 
             // Calculer les montants
-            const paymentIds = reservation.payments.map(p => p._id);
-            const totalAmount = reservation.payments.reduce((sum, p) => sum + p.amount, 0);
+            const paymentIds = paidPayments.map(p => p._id);
+            const totalAmount = paidPayments.reduce((sum, p) => sum + p.amount, 0);
             
             const commissionRate = reservation.partner.commissionRate || this.defaultCommissionRate;
             const commissionAmount = Math.round(totalAmount * commissionRate);
@@ -328,23 +334,64 @@ class PayoutService {
      * @returns {Object} Informations de payout
      */
     async getPartnerPayoutInfo(partner) {
-        // Informations depuis le profil partner
-        const payoutInfo = {
-            preferred_channel: partner.payoutPreferences?.channel || 'orange_money',
-            recipient_info: {
-                phone_prefix: partner.payoutPreferences?.phonePrefix || '225',
-                phone_number: partner.payoutPreferences?.phoneNumber || partner.phone,
-                full_name: partner.businessName || `${partner.firstName} ${partner.lastName}`,
-                email: partner.email
-            }
-        };
+        const rawPhone =
+            partner.payoutPreferences?.phoneNumber ||
+            partner.phoneNumber ||
+            partner.phone;
 
-        // Validation
-        if (!payoutInfo.recipient_info.phone_number) {
+        if (!rawPhone || !String(rawPhone).trim()) {
             throw new Error('Numéro de téléphone partner manquant pour payout');
         }
 
-        return payoutInfo;
+        const digits = String(rawPhone).replace(/\D/g, '');
+        let phone_prefix = partner.payoutPreferences?.phonePrefix || '225';
+        let phone_number = digits;
+
+        if (digits.startsWith('225') && digits.length >= 12) {
+            phone_prefix = '225';
+            phone_number = digits.slice(3);
+        } else if (digits.startsWith('0') && digits.length === 10) {
+            phone_number = digits.slice(1);
+        }
+
+        let preferred_channel = partner.payoutPreferences?.channel;
+        if (!preferred_channel) {
+            // Même logique CI-safe que AutomaticPayoutService.determinePayoutChannel
+            const digits = String(rawPhone).replace(/\D/g, '');
+            let national = digits;
+            let isCI = false;
+            if (digits.startsWith('225') && digits.length >= 12) {
+                national = digits.slice(3);
+                isCI = true;
+            } else if (/^0[0-9]{9}$/.test(digits) || /^[0-9]{8,10}$/.test(digits)) {
+                national = digits.startsWith('0') ? digits.slice(1) : digits;
+                isCI = true;
+            }
+            if (!isCI) {
+                preferred_channel = 'wave';
+            } else if (national.startsWith('07')) {
+                preferred_channel = 'orange_money';
+            } else if (national.startsWith('05')) {
+                preferred_channel = 'mtn_money';
+            } else if (national.startsWith('01')) {
+                preferred_channel = 'moov_money';
+            } else {
+                preferred_channel = 'wave';
+            }
+        }
+
+        return {
+            preferred_channel,
+            recipient_info: {
+                phone_prefix,
+                phone_number,
+                full_name:
+                    partner.businessName ||
+                    partner.company?.name ||
+                    `${partner.firstName || ''} ${partner.lastName || ''}`.trim(),
+                email: partner.email,
+            },
+        };
     }
 
     /**

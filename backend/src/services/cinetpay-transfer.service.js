@@ -17,9 +17,9 @@ const { getCinetPayTransferWebhookUrl } = require('../utils/cinetpay-transfer-we
  */
 class CinetPayTransferService {
     constructor() {
-        // Configuration depuis variables d'environnement
+        // Configuration depuis variables d'environnement — JAMAIS de fallback credential
         this.apiKey = process.env.CINETPAY_TRANSFER_API_KEY || process.env.CINETPAY_API_KEY;
-        this.password = process.env.CINETPAY_TRANSFER_PASSWORD || 'default_password'; // ⚠️ À configurer
+        this.password = process.env.CINETPAY_TRANSFER_PASSWORD;
         this.baseUrl = 'https://client.cinetpay.com/v1';
         this.mode = process.env.NODE_ENV === 'production' ? 'production' : 'test';
         
@@ -38,8 +38,11 @@ class CinetPayTransferService {
         
         // Validation configuration (sans throw pour ne pas tuer le serveur)
         if (!this.apiKey || !this.password) {
-            logger.error('CinetPay Transfer mal configuré: API Key ou Password manquant');
+            logger.error(
+                'CinetPay Transfer mal configuré: CINETPAY_TRANSFER_API_KEY et CINETPAY_TRANSFER_PASSWORD requis (aucun fallback)'
+            );
             this.enabled = false;
+            this.password = null;
         }
         
         logger.info(`CinetPay Transfer Service initialisé en mode ${this.mode}`, {
@@ -47,6 +50,20 @@ class CinetPayTransferService {
             hasApiKey: !!this.apiKey,
             hasPassword: !!this.password
         });
+    }
+
+    invalidateTokenCache(reason = 'manual') {
+        this.tokenCache.token = null;
+        this.tokenCache.expiresAt = null;
+        logger.warn(`Cache token CinetPay Transfer invalidé (${reason})`);
+    }
+
+    /** True si erreur HTTP/auth token */
+    _isAuthError(error) {
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) return true;
+        const msg = String(error?.message || error?.response?.data?.message || '');
+        return /INVALID_TOKEN|unauthorized|token.*(expir|invalid)/i.test(msg);
     }
 
     // ===============================
@@ -58,6 +75,9 @@ class CinetPayTransferService {
      * @returns {string} Token d'authentification
      */
     async getValidToken() {
+        if (!this.enabled) {
+            throw new Error('CinetPay Transfer désactivé — configuration manquante');
+        }
         try {
             // Vérifier si token en cache est encore valide
             if (this.tokenCache.token && this.tokenCache.expiresAt > Date.now()) {
@@ -76,7 +96,8 @@ class CinetPayTransferService {
             return token;
             
         } catch (error) {
-            logger.error('Erreur génération token CinetPay:', error);
+            this.invalidateTokenCache('generate_failed');
+            logger.error('Erreur génération token CinetPay:', error?.message || error);
             throw error;
         }
     }
@@ -273,6 +294,10 @@ class CinetPayTransferService {
      */
     async sendMoney(payout) {
         try {
+            if (!this.enabled) {
+                throw new Error('CinetPay Transfer désactivé — CINETPAY_TRANSFER_PASSWORD / API KEY requis');
+            }
+
             // Validation préalable
             const validation = payout.validateAmount();
             if (!validation.valid) {
@@ -361,17 +386,25 @@ class CinetPayTransferService {
             
         } catch (error) {
             // Gestion d'erreurs spécifiques
+            if (this._isAuthError(error)) {
+                this.invalidateTokenCache('http_401_403');
+                // Un seul retry avec nouveau token
+                if (!payout._tokenRetryDone) {
+                    payout._tokenRetryDone = true;
+                    logger.warn('Retry sendMoney après invalidation token');
+                    return this.sendMoney(payout);
+                }
+            }
             if (error.message.includes('INSUFFICIENT_BALANCE')) {
                 payout.markAsFailed('Solde insuffisant', '602');
             } else if (error.message.includes('INVALID_TOKEN')) {
-                // Invalider le cache token et réessayer
-                this.tokenCache.token = null;
+                this.invalidateTokenCache('INVALID_TOKEN');
                 throw new Error('Token expiré, veuillez réessayer');
             } else {
                 payout.markAsFailed(error.message);
             }
             
-            logger.error('Erreur transfert CinetPay:', error);
+            logger.error('Erreur transfert CinetPay:', error?.message || error);
             throw error;
         }
     }

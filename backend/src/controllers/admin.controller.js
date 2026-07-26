@@ -583,10 +583,11 @@ exports.rejectResidence = asyncHandler(async (req, res) => {
     const residence = await Residence.findByIdAndUpdate(
         req.params.id,
         { 
-            status: 'rejected',
+            // Pas d'enum 'rejected' sur Residence.status — indisponible + motif
+            status: 'unavailable',
             rejectionReason: reason
         },
-        { new: true }
+        { new: true, runValidators: true }
     );
 
     if (!residence) {
@@ -603,15 +604,8 @@ exports.rejectResidence = asyncHandler(async (req, res) => {
 });
 
 exports.verifyResidence = asyncHandler(async (req, res) => {
-    const residence = await Residence.findByIdAndUpdate(
-        req.params.id,
-        { 
-            status: 'verified',
-            verifiedAt: Date.now(),
-            verifiedBy: req.user.id
-        },
-        { new: true }
-    );
+    // Ne pas écrire status:'verified' (invalide) — champ booléen dédié
+    const residence = await Residence.findById(req.params.id);
 
     if (!residence) {
         return res.status(404).json({
@@ -619,6 +613,17 @@ exports.verifyResidence = asyncHandler(async (req, res) => {
             message: 'Résidence non trouvée'
         });
     }
+
+    residence.verified = true;
+    residence.verifiedAt = new Date();
+    residence.verifiedBy = req.user.id;
+
+    // Réparer un status corrompu éventuel (ex. "verified" / "rejected")
+    if (!['available', 'unavailable', 'maintenance'].includes(residence.status)) {
+        residence.status = 'available';
+    }
+
+    await residence.save();
 
     res.status(200).json({
         success: true,

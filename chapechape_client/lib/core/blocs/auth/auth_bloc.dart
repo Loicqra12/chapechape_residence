@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:chapechape_client/core/services/auth_service.dart';
+import 'package:chapechape_client/core/services/onesignal_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -20,6 +21,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
   }
 
+  Future<void> _syncPushForUser(String userId) async {
+    try {
+      await OneSignalService().syncAfterLogin(userId);
+    } catch (_) {
+      // Push ne doit jamais bloquer l'auth
+    }
+  }
+
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
     Emitter<AuthState> emit,
@@ -36,6 +45,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await _authService.getCurrentUser();
       if (user != null) {
         emit(Authenticated(user));
+        await _syncPushForUser(user.id);
       } else {
         emit(const Unauthenticated());
       }
@@ -58,6 +68,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       
       emit(Authenticated(user));
+      await _syncPushForUser(user.id);
     } catch (e) {
       emit(AuthError(e.toString()));
     }
@@ -79,6 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       emit(Authenticated(user));
+      await _syncPushForUser(user.id);
     } catch (e) {
       emit(AuthError(e.toString()));
     }
@@ -90,6 +102,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       emit(const AuthLoading());
+      // Unregister device AVANT purge du JWT
+      try {
+        await OneSignalService().onLogout();
+      } catch (_) {}
       await _authService.logout();
       emit(const Unauthenticated());
     } catch (e) {
@@ -134,6 +150,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(const AuthLoading());
       final user = await _authService.signInWithGoogle();
       emit(Authenticated(user));
+      await _syncPushForUser(user.id);
     } catch (e) {
       emit(AuthError(e.toString()));
     }
@@ -147,6 +164,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(const AuthLoading());
       final user = await _authService.signInWithFacebook();
       emit(Authenticated(user));
+      await _syncPushForUser(user.id);
     } catch (e) {
       emit(AuthError(e.toString()));
     }

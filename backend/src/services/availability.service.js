@@ -455,97 +455,74 @@ class AvailabilityService {
         };
     }
 
-    // Mettre à jour les disponibilités pour une réservation
-    async updateAvailabilityForReservation(residenceId, startDate, endDate, reservationId, status = 'reserved', bookingType = 'day') {
-        // ✅ CORRECTION RÉSERVATIONS HORAIRES : Ne pas bloquer la disponibilité pour les réservations horaires
-        // Les réservations horaires utilisent uniquement la collection Reservation pour détecter les conflits
+    /**
+     * Met à jour les disponibilités pour une réservation.
+     * Signature stable (utilisée par reservation.service, payment-timer, controller) :
+     * (residenceId, startDate, endDate, reservationId, status = 'reserved', bookingType = 'day')
+     *
+     * - bookingType === 'hour' : no-op (conflits gérés via collection Reservation)
+     * - checkOut exclusif (convention hôtel) : [checkIn, checkOut)
+     * - champ modèle : residenceId (pas residence)
+     */
+    async updateAvailabilityForReservation(residenceId, startDate, endDate, reservationId, status = 'reserved', bookingType = 'day', session = null) {
+        if (!residenceId || !startDate || !endDate || !reservationId) {
+            throw new Error('Paramètres insuffisants pour mise à jour disponibilité');
+        }
+
+        // Réservations horaires : pas de blocage jour par jour
         if (bookingType === 'hour') {
-            console.log(`[Availability] Réservation horaire détectée pour ${residenceId} - pas de blocage de disponibilité`);
+            logger.info(`[Availability] Réservation horaire ${reservationId} — pas de blocage disponibilité`);
             return { acknowledged: true, message: 'Hourly booking - no availability block', modifiedCount: 0 };
         }
 
-        // Logique existante pour les réservations journalières/hebdomadaires/mensuelles
-        const dates = [];
-        let currentDate = new Date(startDate);
+        const start = new Date(startDate);
         const end = new Date(endDate);
 
-        while (currentDate <= end) {
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+            throw new Error('Date de départ doit être ultérieure à la date d\'arrivée');
+        }
+
+        let residenceQuery = require('../models/residence.model').findById(residenceId).select('_id');
+        if (session) residenceQuery = residenceQuery.session(session);
+        const residence = await residenceQuery;
+        if (!residence) {
+            throw new Error(`Résidence ${residenceId} non trouvée`);
+        }
+
+        const dates = [];
+        const currentDate = new Date(start);
+
+        // checkOut exclusif : une nuit du 1 au 2 bloque uniquement le 1er
+        while (currentDate < end) {
             dates.push({
                 residenceId,
                 date: new Date(currentDate),
                 status,
-                reservationId: status === 'reserved' ? reservationId : null
+                reservationId: status === 'reserved' ? reservationId : null,
+                lastModified: new Date()
             });
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        return Availability.upsertBulk(dates);
-    }
+        if (dates.length === 0) {
+            return { acknowledged: true, message: 'Aucune date à mettre à jour', modifiedCount: 0 };
+        }
 
-    // ✅ PHASE 0 BIS : Méthode manquante critique pour payment-timer.service.js
-
-    /**
-     * Met à jour la disponibilité pour une réservation spécifique
-     * Utilisé lors d'expiration, annulation ou confirmation de réservation
-     * @param {string} residenceId - ID de la résidence
-     * @param {Date} checkIn - Date d'arrivée  
-     * @param {Date} checkOut - Date de départ
-     * @param {string} reservationId - ID de la réservation
-     * @param {string} status - Nouveau statut ('available', 'reserved', 'blocked')
-     * @returns {Promise<Object>} - Résultat de la mise à jour
-     */
-    async updateAvailabilityForReservation(residenceId, checkIn, checkOut, reservationId, status = 'available') {
         try {
-            if (!residenceId || !checkIn || !checkOut || !reservationId) {
-                throw new Error('Paramètres insuffisants pour mise à jour disponibilité');
-            }
-
-            const startDate = new Date(checkIn);
-            const endDate = new Date(checkOut);
-
-            if (startDate >= endDate) {
-                throw new Error('Date de départ doit être ultérieure à la date d\'arrivée');
-            }
-
-            // Vérifier que la résidence existe
-            const residence = await require('../models/residence.model').findById(residenceId);
-            if (!residence) {
-                throw new Error(`Résidence ${residenceId} non trouvée`);
-            }
-
-            // Générer toutes les dates concernées
-            const dates = [];
-            const currentDate = new Date(startDate);
-
-            while (currentDate < endDate) {
-                dates.push({
-                    residence: residenceId,
-                    date: new Date(currentDate),
-                    status: status,
-                    reservationId: status === 'reserved' ? reservationId : null,
-                    lastModified: new Date()
-                });
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-
-            // Mettre à jour en masse
-            const result = await Availability.upsertBulk(dates);
-
+            const result = await Availability.upsertBulk(dates, {
+                session,
+                failIfReservedByOther: status === 'reserved',
+            });
             logger.info(`Disponibilité mise à jour pour réservation ${reservationId}: ${dates.length} dates → ${status}`);
-
-            return {
-                success: true,
-                residenceId,
-                reservationId,
-                status,
-                datesUpdated: dates.length,
-                checkIn: startDate,
-                checkOut: endDate
-            };
-
-        } catch (error) {
-            logger.error(`Erreur mise à jour disponibilité réservation ${reservationId}:`, error);
-            throw error;
+            return result;
+        } catch (err) {
+            // Course concurrente : index unique residenceId+date ou filtre anti-écrasement
+            if (err?.code === 11000 || err?.code === 11001 || /E11000|duplicate/i.test(err?.message || '')) {
+                const conflict = new Error('Ces dates viennent d\'être réservées par un autre client');
+                conflict.statusCode = 409;
+                throw conflict;
+            }
+            throw err;
         }
     }
 }

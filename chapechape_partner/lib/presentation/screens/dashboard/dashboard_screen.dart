@@ -2455,7 +2455,14 @@ class DashboardScreen extends StatelessWidget {
   /// Récupère les statistiques des payouts via l'API
   Future<PayoutStats?> _getPayoutStats(BuildContext context) async {
     try {
-      final dio = Dio();
+      final dio = Dio(BaseOptions(
+        baseUrl: AppConfigManager.apiUrl,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'x-mobile-app': 'true',
+        },
+      ));
       final paymentService = PaymentService(dio);
       return await paymentService.getPayoutStats();
     } catch (e) {

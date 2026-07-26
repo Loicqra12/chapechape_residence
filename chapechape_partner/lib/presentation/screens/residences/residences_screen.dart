@@ -21,32 +21,31 @@ import '../../../core/services/event_bus/residence_event_bus.dart';
 import '../../widgets/residence/residence_grid_widget.dart';
 import '../../widgets/skeletons/skeletons.dart';
 
-class ResidencesScreen extends StatelessWidget {
+class ResidencesScreen extends StatefulWidget {
   const ResidencesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Créer un nouveau bloc avec le service de résidence
-    // tout en s'assurant qu'il est configuré avec le bus d'événements
-    final residenceService = ResidenceService(
-      baseUrl: AppConfigManager.apiUrl,
-    );
-    
-    return BlocProvider(
-      create: (context) {
-        // Créer un nouveau bloc avec le service
-        final bloc = ResidenceBloc(residenceService);
-        
-        // Écouter le bus d'événements pour les résidences (plutôt que subscribe qui n'existe pas)
-        // Cette ligne sera gérée directement dans le bloc, on peut la retirer ici
-        
-        // Charger les résidences
+  State<ResidencesScreen> createState() => _ResidencesScreenState();
+}
+
+class _ResidencesScreenState extends State<ResidencesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Réutiliser le ResidenceBloc global (main.dart) — ne pas en créer un second
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bloc = context.read<ResidenceBloc>();
+      // Auth listener a déjà déclenché LoadMyResidences ; ne recharger que si vide
+      if (bloc.state is ResidenceInitial) {
         bloc.add(RefreshResidences());
-        
-        return bloc;
-      },
-      child: const _ResidencesView(),
-    );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const _ResidencesView();
   }
 }
 
@@ -72,12 +71,14 @@ class _ResidencesViewState extends State<_ResidencesView> {
   void initState() {
     super.initState();
     
-    // S'abonner au bus d'événements pour les résidences
+    // S'abonner au bus : uniquement CRUD (pas refreshNeeded → boucle)
     _eventBusSubscription = ResidenceEventBus().stream.listen((event) {
       debugPrint('🔔 ResidencesScreen: Événement reçu: $event');
-      
-      // Rafraîchir la liste des résidences lorsqu'un événement est reçu
-      _loadResidences();
+      if (event == ResidenceEventType.created ||
+          event == ResidenceEventType.updated ||
+          event == ResidenceEventType.deleted) {
+        _loadResidences();
+      }
     });
   }
   

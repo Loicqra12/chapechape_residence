@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../documentation/api_documentation.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Service pour gérer la génération et l'exportation de la documentation API
 class ApiDocumentationService {
@@ -65,13 +66,13 @@ class ApiDocumentationService {
       await file.writeAsString(content);
       
       if (kDebugMode) {
-        print('Documentation API exportée avec succès à: $filePath');
+        AppLogger.d('Documentation API exportée avec succès à: $filePath');
       }
       
       return filePath;
     } catch (e) {
       if (kDebugMode) {
-        print('Erreur lors de l\'exportation de la documentation: $e');
+        AppLogger.d('Erreur lors de l\'exportation de la documentation: $e');
       }
       throw Exception('Échec de l\'exportation de la documentation: $e');
     }

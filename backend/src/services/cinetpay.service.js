@@ -237,19 +237,19 @@ class CinetPayService {
      * @returns {string} Numéro formaté avec préfixe
      */
     formatPhoneNumber(phoneNumber) {
-        if (!phoneNumber) return '+2250500000000';
-
-        // Nettoyer le numéro
-        let clean = phoneNumber.replace(/\D/g, '');
-
-        // Ajouter le préfixe ivoirien si nécessaire
-        if (clean.length === 10 && clean.startsWith('0')) {
-            clean = '225' + clean.substring(1);
-        } else if (clean.length === 8) {
-            clean = '225' + clean;
+        if (!phoneNumber || !String(phoneNumber).trim()) {
+            throw new Error('Numéro de téléphone requis pour le paiement Mobile Money');
         }
-
-        return '+' + clean;
+        let phone = String(phoneNumber).trim().replace(/\s+/g, '');
+        // Normaliser vers E.164 approximatif CI
+        if (phone.startsWith('00')) phone = `+${phone.slice(2)}`;
+        if (/^0[0-9]{9}$/.test(phone)) phone = `+225${phone.slice(1)}`;
+        if (/^[0-9]{10}$/.test(phone)) phone = `+225${phone}`;
+        if (!phone.startsWith('+')) phone = `+${phone}`;
+        if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+            throw new Error(`Numéro de téléphone invalide: ${phoneNumber}`);
+        }
+        return phone;
     }
 
     /**

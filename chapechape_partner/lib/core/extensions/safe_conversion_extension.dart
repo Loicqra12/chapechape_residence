@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Extension pour convertir de façon sécurisée différents types de données
 /// vers double, int, String, etc.
@@ -14,7 +15,7 @@ extension SafeConversion on dynamic {
     }
     // En mode debug, journaliser les tentatives de conversion étranges
     if (kDebugMode && this is! num && this is! String) {
-      print('⚠️ Tentative de conversion en double d\'un type non numérique: ${this.runtimeType}');
+      AppLogger.d('⚠️ Tentative de conversion en double d\'un type non numérique: ${this.runtimeType}');
     }
     return defaultValue;
   }
@@ -30,7 +31,7 @@ extension SafeConversion on dynamic {
     }
     // En mode debug, journaliser les tentatives de conversion étranges
     if (kDebugMode && this is! num && this is! String) {
-      print('⚠️ Tentative de conversion en int d\'un type non numérique: ${this.runtimeType}');
+      AppLogger.d('⚠️ Tentative de conversion en int d\'un type non numérique: ${this.runtimeType}');
     }
     return defaultValue;
   }

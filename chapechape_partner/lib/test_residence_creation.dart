@@ -1,20 +1,22 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'core/services/api/residence_service.dart';
 import 'core/models/residence/residence_image.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Petit script à exécuter pour tester la création d'une résidence
 Future<void> testResidenceCreation() async {
-  print('=== Début du test de création de résidence ===');
+  AppLogger.d('=== Début du test de création de résidence ===');
   
   // Créer une instance du service
   final service = ResidenceService(
     baseUrl: 'http://localhost:4000/api',
-    storage: const FlutterSecureStorage(),
+    storage: AppSecureStorage.instance,
   );
   
   // Préparer les données de test
@@ -40,12 +42,12 @@ Future<void> testResidenceCreation() async {
   }
   
   try {
-    print('Envoi de la requête de création...');
+    AppLogger.d('Envoi de la requête de création...');
     final result = await service.createResidence(testData, testImages);
-    print('Résidence créée avec succès: ${result.name}');
+    AppLogger.d('Résidence créée avec succès: ${result.name}');
   } catch (e) {
-    print('Erreur lors de la création: $e');
+    AppLogger.d('Erreur lors de la création: $e');
   }
   
-  print('=== Fin du test de création de résidence ===');
+  AppLogger.d('=== Fin du test de création de résidence ===');
 } 

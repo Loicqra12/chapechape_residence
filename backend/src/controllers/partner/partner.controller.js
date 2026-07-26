@@ -272,40 +272,74 @@ exports.getTrends = asyncHandler(async (req, res) => {
     });
 });
 
-// Revenus
+// Revenus (via réservations — Payment n'a pas de champ partner)
 exports.getEarnings = asyncHandler(async (req, res) => {
-    const partnerId = req.user.id;
+    const mongoose = require('mongoose');
+    const partnerId = req.user.id || req.user._id;
     const { startDate, endDate } = req.query;
+
+    const partnerOid = new mongoose.Types.ObjectId(String(partnerId));
+    const createdAtMatch = {};
+    if (startDate) createdAtMatch.$gte = new Date(startDate);
+    if (endDate) createdAtMatch.$lte = new Date(endDate);
 
     const earnings = await Payment.aggregate([
         {
+            $lookup: {
+                from: 'reservations',
+                localField: 'reservation',
+                foreignField: '_id',
+                as: 'reservationDoc',
+            },
+        },
+        { $unwind: '$reservationDoc' },
+        {
             $match: {
-                partner: partnerId,
-                status: 'completed',
-                createdAt: {
-                    ...(startDate && { $gte: new Date(startDate) }),
-                    ...(endDate && { $lte: new Date(endDate) })
-                }
-            }
+                'reservationDoc.partner': partnerOid,
+                status: 'paid',
+                ...(Object.keys(createdAtMatch).length
+                    ? { createdAt: createdAtMatch }
+                    : {}),
+            },
         },
         {
             $group: {
                 _id: {
                     year: { $year: '$createdAt' },
-                    month: { $month: '$createdAt' }
+                    month: { $month: '$createdAt' },
                 },
                 totalEarnings: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
+                count: { $sum: 1 },
+            },
         },
-        {
-            $sort: { '_id.year': -1, '_id.month': -1 }
-        }
+        { $sort: { '_id.year': -1, '_id.month': -1 } },
     ]);
+
+    const periods = earnings.map((e) => ({
+        date: new Date(Date.UTC(e._id.year, e._id.month - 1, 1)).toISOString(),
+        amount: e.totalEarnings,
+        count: e.count,
+    }));
+
+    const totalEarnings = periods.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const averagePerPeriod = periods.length ? totalEarnings / periods.length : 0;
+    let growth = 0;
+    if (periods.length >= 2) {
+        const [latest, previous] = periods;
+        growth =
+            Number(previous.amount) === 0
+                ? 0
+                : ((Number(latest.amount) - Number(previous.amount)) / Number(previous.amount)) * 100;
+    }
 
     res.status(200).json({
         success: true,
-        data: earnings
+        data: {
+            earnings: periods,
+            total_earnings: totalEarnings,
+            average_per_period: averagePerPeriod,
+            growth,
+        },
     });
 });
 

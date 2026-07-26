@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/services/api/audit_service.dart';
 import '../../../core/config/app_config_manager.dart';
+import '../../../core/utils/secure_storage.dart';
 import '../../widgets/layout/screen_app_bars.dart';
 
 /// Écran d'historique de sécurité pour les partenaires
@@ -65,7 +66,7 @@ class _SecurityHistoryScreenState extends State<SecurityHistoryScreen>
     // Ajouter l'intercepteur d'authentification
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        const storage = FlutterSecureStorage();
+        final storage = AppSecureStorage.instance;
         final token = await storage.read(key: 'token');
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';

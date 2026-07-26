@@ -169,7 +169,10 @@ exports.getResidences = asyncHandler(async (req, res) => {
     const sortBy = req.query.sortBy || 'createdAt';
     const order = req.query.order || 'desc';
 
-    const query = Residence.find()
+    // Aligné avec search/popular : ne pas exposer les soft-deleted
+    const filter = { deleted: { $ne: true } };
+
+    const query = Residence.find(filter)
         .populate('partner', 'firstName lastName email phoneNumber')
         .skip(skip)
         .limit(limit)
@@ -178,7 +181,7 @@ exports.getResidences = asyncHandler(async (req, res) => {
 
     const [residences, total] = await Promise.all([
         query,
-        Residence.countDocuments()
+        Residence.countDocuments(filter)
     ]);
 
     res.json({
@@ -300,12 +303,30 @@ exports.getResidence = asyncHandler(async (req, res) => {
         .populate('partner', 'firstName lastName email phoneNumber')
         .lean();
 
-    if (!residence) {
+    if (!residence || residence.deleted) {
         throw new apiError('Résidence non trouvée', 404);
     }
 
-    console.log('Résidence récupérée - ID:', req.params.id);
-    console.log('Images dans la résidence:', residence.images);
+    // Phase 3 — tracking vue authentifiée (recherche abandonnée)
+    if (req.user && req.user.role === 'client') {
+        try {
+            const { trackResidenceViewForEngagement } = require('../../services/agenda.service');
+            trackResidenceViewForEngagement(req.user._id, residence._id).catch((err) => {
+                console.warn('Track vue résidence échoué:', err?.message);
+            });
+        } catch (_) {
+            // non bloquant
+        }
+    }
+
+    // Filtrage vidéos : les non-admins ne voient que les vidéos approuvées
+    const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+    const isPartnerOwner =
+        req.user && String(req.user._id || req.user.id) === String(residence.partner?._id || residence.partner);
+
+    if (!isAdmin && !isPartnerOwner && Array.isArray(residence.videos)) {
+        residence.videos = residence.videos.filter((v) => v.status === 'approved');
+    }
 
     res.json({
         success: true,
@@ -440,16 +461,26 @@ exports.searchResidences = asyncHandler(async (req, res) => {
     const {
         query,
         location,
-        city,         // alias de location (compatibilité client Flutter)
+        city,
+        neighborhood,
+        region,
         minPrice,
         maxPrice,
         features,
+        amenities,
         type,
-        residenceType, // alias de type (compatibilité client Flutter)
-        period,        // pricePeriod
+        types,
+        residenceType,
+        period,
         bedrooms,
         bathrooms,
-        duration, // NOUVEAU: Support recherche par durée
+        minGuests,
+        allowsPets,
+        allowsSmoking,
+        allowsParties,
+        reservationMode,
+        minRating,
+        duration,
         page = 1,
         limit = 10,
         sortBy = 'createdAt',
@@ -457,31 +488,75 @@ exports.searchResidences = asyncHandler(async (req, res) => {
     } = req.query;
 
     const searchQuery = {
-        deleted: { $ne: true } // Exclure les résidences supprimées
+        deleted: { $ne: true }
     };
 
+    const andClauses = [];
+
     if (query) {
-        searchQuery.$or = [
-            { title: { $regex: query, $options: 'i' } },
-            { description: { $regex: query, $options: 'i' } },
-            { 'location.city': { $regex: query, $options: 'i' } },
-            { 'location.address': { $regex: query, $options: 'i' } }
-        ];
+        andClauses.push({
+            $or: [
+                { title: { $regex: query, $options: 'i' } },
+                { description: { $regex: query, $options: 'i' } },
+                { city: { $regex: query, $options: 'i' } },
+                { address: { $regex: query, $options: 'i' } },
+                { 'locationData.city': { $regex: query, $options: 'i' } },
+                { 'locationData.address': { $regex: query, $options: 'i' } },
+                { 'locationData.commune': { $regex: query, $options: 'i' } },
+                { 'locationData.quartier': { $regex: query, $options: 'i' } },
+            ]
+        });
     }
 
-    // Accepte "location" ou "city" (envoyé par le client Flutter)
     const cityFilter = location || city;
     if (cityFilter) {
-        searchQuery['location.city'] = { $regex: cityFilter, $options: 'i' };
+        andClauses.push({
+            $or: [
+                { city: { $regex: cityFilter, $options: 'i' } },
+                { 'locationData.city': { $regex: cityFilter, $options: 'i' } },
+                { 'locationData.commune': { $regex: cityFilter, $options: 'i' } },
+            ]
+        });
     }
 
-    // Accepte "type" ou "residenceType" (envoyé par le client Flutter)
-    const typeFilter = type || residenceType;
-    if (typeFilter) {
-        searchQuery.type = typeFilter;
+    if (neighborhood) {
+        andClauses.push({
+            $or: [
+                { address: { $regex: neighborhood, $options: 'i' } },
+                { 'locationData.address': { $regex: neighborhood, $options: 'i' } },
+                { 'locationData.quartier': { $regex: neighborhood, $options: 'i' } },
+                { 'locationData.commune': { $regex: neighborhood, $options: 'i' } },
+            ]
+        });
     }
 
-    // Filtrer par pricePeriod si fourni directement
+    if (region) {
+        andClauses.push({
+            $or: [
+                { address: { $regex: region, $options: 'i' } },
+                { city: { $regex: region, $options: 'i' } },
+                { 'locationData.city': { $regex: region, $options: 'i' } },
+                { 'locationData.commune': { $regex: region, $options: 'i' } },
+            ]
+        });
+    }
+
+    if (andClauses.length) {
+        searchQuery.$and = andClauses;
+    }
+
+    if (types) {
+        const typeList = String(types).split(',').map((t) => t.trim()).filter(Boolean);
+        if (typeList.length) {
+            searchQuery.type = { $in: typeList };
+        }
+    } else {
+        const typeFilter = type || residenceType;
+        if (typeFilter) {
+            searchQuery.type = typeFilter;
+        }
+    }
+
     if (period) {
         searchQuery.pricePeriod = period;
     }
@@ -492,34 +567,51 @@ exports.searchResidences = asyncHandler(async (req, res) => {
         if (maxPrice) searchQuery.price.$lte = Number(maxPrice);
     }
 
-    if (features) {
-        const featuresList = features.split(',');
-        searchQuery.features = { $all: featuresList };
+    const amenitiesParam = amenities || features;
+    if (amenitiesParam) {
+        const amenitiesList = String(amenitiesParam)
+            .split(',')
+            .map((a) => a.trim())
+            .filter(Boolean);
+        if (amenitiesList.length) {
+            searchQuery.amenities = { $all: amenitiesList };
+        }
     }
 
     if (bedrooms) {
-        searchQuery.bedrooms = Number(bedrooms);
+        searchQuery.bedrooms = { $gte: Number(bedrooms) };
     }
-
     if (bathrooms) {
-        searchQuery.bathrooms = Number(bathrooms);
+        searchQuery.bathrooms = { $gte: Number(bathrooms) };
     }
 
-    // NOUVEAU: Filtrage par durée (période de tarification compatible)
+    if (minGuests) {
+        searchQuery['rules.maxGuests'] = { $gte: Number(minGuests) };
+    }
+
+    const truthy = (v) => v === true || v === 'true' || v === '1';
+    if (truthy(allowsPets)) searchQuery['rules.pets'] = true;
+    if (truthy(allowsSmoking)) searchQuery['rules.smoking'] = true;
+    if (truthy(allowsParties)) searchQuery['rules.parties'] = true;
+
+    if (reservationMode) {
+        searchQuery.reservationMode = reservationMode;
+    }
+
+    if (minRating) {
+        searchQuery['rating.overall'] = { $gte: Number(minRating) };
+    }
+
     let durationData = null;
     if (duration) {
         try {
-            // Supporter format JSON string ou objet
             durationData = typeof duration === 'string' ? JSON.parse(duration) : duration;
-
-            // Filtrer par pricePeriod compatible
             if (durationData.periods && Array.isArray(durationData.periods)) {
                 searchQuery.pricePeriod = { $in: durationData.periods };
                 console.log(`[Search] Filtrage par durée: ${durationData.label}, périodes compatibles: ${durationData.periods.join(', ')}`);
             }
         } catch (error) {
             console.error('[Search] Erreur parsing duration:', error);
-            // Continuer sans filtrage durée en cas d'erreur
         }
     }
 

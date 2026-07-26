@@ -5,127 +5,177 @@ const logger = require('../utils/logger');
 const errorCodes = require('../utils/errorCodes');
 
 /**
- * Service de gestion des transitions d'état des réservations
- * Implémente une machine à états avec updates atomiques pour éviter les race conditions
+ * Machine à états réelle pour les réservations.
+ * Transitions autorisées + update atomique (filtre sur statut source).
  */
 class ReservationStateService {
-    
-    /**
-     * Statuts nécessitant un paiement complet
-     */
-    static PAYMENT_REQUIRED_STATUSES = ['confirmed', 'in_stay', 'completed'];
+  /** Statuts nécessitant paymentStatus === 'paid' */
+  static PAYMENT_REQUIRED_STATUSES = ['confirmed', 'in_stay', 'completed'];
 
-    /**
-     * Effectue une transition d'état atomique avec validation
-     * @param {string} reservationId - ID de la réservation
-     * @param {string} newStatus - Nouveau statut
-     * @param {string} userId - ID de l'utilisateur effectuant la transition
-     * @param {Object} options - Options supplémentaires
-     * @returns {Promise<Object>} - Réservation mise à jour
-     */
-    static async updateStatus(reservationId, newStatus, userId, options = {}) {
-        const { reason = null } = options;
+  /**
+   * Graphe des transitions autorisées (from → [to...])
+   * Aligné sur l'enum reservation.model.js
+   */
+  static ALLOWED_TRANSITIONS = {
+    pending: ['awaiting_approval', 'payment_pending', 'confirmed', 'cancelled', 'expired'],
+    awaiting_approval: ['payment_pending', 'cancelled'],
+    payment_pending: ['confirmed', 'expired', 'cancelled'],
+    confirmed: ['in_stay', 'cancelled', 'completed', 'refunded'],
+    in_stay: ['completed', 'cancelled'],
+    expired: [],
+    cancelled: ['refunded'],
+    completed: ['refunded'],
+    refunded: [],
+  };
 
-        logger.info(`Transition atomique: ${reservationId} -> ${newStatus}`, {
-            userId,
-            reason
-        });
+  /** Statuts sources possibles pour atteindre newStatus */
+  static getAllowedSourceStatuses(newStatus) {
+    return Object.entries(this.ALLOWED_TRANSITIONS)
+      .filter(([, targets]) => targets.includes(newStatus))
+      .map(([from]) => from);
+  }
 
-        // 1. Construire le filtre atomique avec conditions
-        const atomicFilter = {
-            _id: reservationId
-        };
+  static isTransitionAllowed(fromStatus, toStatus) {
+    const allowed = this.ALLOWED_TRANSITIONS[fromStatus];
+    return Array.isArray(allowed) && allowed.includes(toStatus);
+  }
 
-        // 2. Ajouter condition de paiement si nécessaire
-        if (this.PAYMENT_REQUIRED_STATUSES.includes(newStatus)) {
-            atomicFilter.paymentStatus = 'paid';
-        }
+  /**
+   * Transition atomique avec validation du graphe d'états
+   */
+  static async updateStatus(reservationId, newStatus, userId, options = {}) {
+    const { reason = null } = options;
 
-        // 3. Préparer la mise à jour
-        const updateData = {
-            status: newStatus,
-            $push: {
-                statusHistory: {
-                    newStatus: newStatus,
-                    changedAt: new Date(),
-                    changedBy: userId,
-                    reason: reason
-                }
-            }
-        };
+    logger.info(`Transition atomique: ${reservationId} -> ${newStatus}`, {
+      userId,
+      reason,
+    });
 
-        // Ajouter des champs spécifiques selon le statut
-        if (newStatus === 'in_stay') {
-            updateData.actualCheckIn = new Date();
-        } else if (newStatus === 'completed') {
-            updateData.actualCheckOut = new Date();
-        } else if (newStatus === 'cancelled') {
-            updateData.cancelledAt = new Date();
-            updateData.cancellationReason = reason;
-        }
-
-        // 4. Effectuer l'update atomique
-        const updatedReservation = await Reservation.findOneAndUpdate(
-            atomicFilter,
-            updateData,
-            {
-                new: true,
-                runValidators: true,
-                context: 'query'
-            }
-        ).populate(['residence', 'user', 'partner']);
-
-        // 5. Vérifier le succès de l'opération atomique
-        if (!updatedReservation) {
-            // Diagnostiquer la cause de l'échec
-            const currentReservation = await Reservation.findById(reservationId, 'status paymentStatus');
-            
-            if (!currentReservation) {
-                throw new ApiError('Réservation non trouvée', 404, errorCodes.RESERVATION.NOT_FOUND);
-            }
-
-            // Échec dû aux conditions non remplies
-            if (this.PAYMENT_REQUIRED_STATUSES.includes(newStatus) && currentReservation.paymentStatus !== 'paid') {
-                throw new ApiError(
-                    `Impossible de passer au statut ${newStatus} : paiement requis (statut actuel: ${currentReservation.paymentStatus})`,
-                    400,
-                    errorCodes.RESERVATION.PAYMENT_REQUIRED
-                );
-            }
-
-            // Échec dû à une modification concurrente
-            throw new ApiError(
-                `Échec de la transition atomique vers ${newStatus}. État actuel: ${currentReservation.status}`,
-                409,
-                errorCodes.RESERVATION.CONCURRENT_MODIFICATION
-            );
-        }
-
-        logger.info(`Transition réussie: ${updatedReservation.status}`, {
-            reservationId,
-            userId
-        });
-
-        return updatedReservation;
+    const sourceStatuses = this.getAllowedSourceStatuses(newStatus);
+    if (sourceStatuses.length === 0) {
+      throw new ApiError(
+        `Aucune transition autorisée vers le statut ${newStatus}`,
+        400,
+        errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+      );
     }
 
-    /**
-     * Valide le statut de paiement depuis la source de vérité
-     * @param {string} reservationId - ID de la réservation
-     * @returns {Promise<string>} - Statut de paiement validé
-     */
-    static async validatePaymentStatus(reservationId) {
-        // Récupérer le dernier paiement pour cette réservation
-        const latestPayment = await Payment.findOne({ 
-            reservation: reservationId 
-        }).sort({ createdAt: -1 });
+    const atomicFilter = {
+      _id: reservationId,
+      status: { $in: sourceStatuses },
+    };
 
-        if (!latestPayment) {
-            return 'pending';
-        }
-
-        return latestPayment.status === 'completed' ? 'paid' : latestPayment.status;
+    if (this.PAYMENT_REQUIRED_STATUSES.includes(newStatus)) {
+      atomicFilter.paymentStatus = 'paid';
     }
+
+    const updateData = {
+      status: newStatus,
+      $push: {
+        statusHistory: {
+          status: newStatus,
+          changedAt: new Date(),
+          changedBy: userId,
+          reason: reason,
+        },
+      },
+    };
+
+    if (newStatus === 'in_stay') {
+      updateData.actualCheckIn = new Date();
+    } else if (newStatus === 'completed') {
+      updateData.actualCheckOut = new Date();
+    } else if (newStatus === 'cancelled') {
+      updateData.cancelledAt = new Date();
+      updateData.cancellationReason = reason;
+    }
+
+    const updatedReservation = await Reservation.findOneAndUpdate(
+      atomicFilter,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+        context: 'query',
+      }
+    ).populate(['residence', 'user', 'partner']);
+
+    if (!updatedReservation) {
+      const currentReservation = await Reservation.findById(
+        reservationId,
+        'status paymentStatus'
+      );
+
+      if (!currentReservation) {
+        throw new ApiError(
+          'Réservation non trouvée',
+          404,
+          errorCodes.RESERVATION.NOT_FOUND
+        );
+      }
+
+      if (
+        this.PAYMENT_REQUIRED_STATUSES.includes(newStatus) &&
+        currentReservation.paymentStatus !== 'paid'
+      ) {
+        throw new ApiError(
+          `Impossible de passer au statut ${newStatus} : paiement requis (statut actuel: ${currentReservation.paymentStatus})`,
+          400,
+          errorCodes.RESERVATION.PAYMENT_REQUIRED
+        );
+      }
+
+      if (!this.isTransitionAllowed(currentReservation.status, newStatus)) {
+        throw new ApiError(
+          `Transition interdite: ${currentReservation.status} → ${newStatus}`,
+          400,
+          errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+        );
+      }
+
+      throw new ApiError(
+        `Échec de la transition atomique vers ${newStatus}. État actuel: ${currentReservation.status}`,
+        409,
+        errorCodes.RESERVATION.CONCURRENT_MODIFICATION
+      );
+    }
+
+    logger.info(`Transition réussie: ${updatedReservation.status}`, {
+      reservationId,
+      userId,
+    });
+
+    // Phase 3 — post-séjour : programmer demande d'avis
+    if (newStatus === 'completed') {
+      try {
+        const { scheduleReviewReminder } = require('./agenda.service');
+        await scheduleReviewReminder(updatedReservation._id, 24);
+      } catch (err) {
+        logger.warn('scheduleReviewReminder échoué:', err?.message);
+      }
+    }
+
+    return updatedReservation;
+  }
+
+  /**
+   * Valide le statut de paiement depuis la source de vérité (Payment)
+   */
+  static async validatePaymentStatus(reservationId) {
+    const latestPayment = await Payment.findOne({
+      reservation: reservationId,
+    }).sort({ createdAt: -1 });
+
+    if (!latestPayment) {
+      return 'pending';
+    }
+
+    // Aligné sur les statuts métier Payment (paid, pas completed)
+    if (latestPayment.status === 'paid' || latestPayment.status === 'completed') {
+      return 'paid';
+    }
+    return latestPayment.status;
+  }
 }
 
 module.exports = ReservationStateService;

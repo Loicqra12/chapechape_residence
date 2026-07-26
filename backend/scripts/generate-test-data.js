@@ -3,7 +3,6 @@ const { faker } = require('@faker-js/faker');
 const bcrypt = require('bcryptjs');
 const User = require('../src/models/user.model');
 const Residence = require('../src/models/residence.model');
-const Booking = require('../src/models/booking.model');
 const Review = require('../src/models/review.model');
 
 require('dotenv').config();
@@ -11,7 +10,6 @@ require('dotenv').config();
 // Configuration
 const NUM_USERS = 100;
 const NUM_RESIDENCES = 50;
-const NUM_BOOKINGS = 200;
 const NUM_REVIEWS = 300;
 
 // Connexion à MongoDB
@@ -99,35 +97,6 @@ const generateResidences = async (users) => {
     return residences;
 };
 
-// Fonction pour générer des réservations
-const generateBookings = async (users, residences) => {
-    console.log('Génération des réservations...');
-    const bookings = [];
-    const statuses = ['pending', 'confirmed', 'cancelled', 'completed'];
-
-    for (let i = 0; i < NUM_BOOKINGS; i++) {
-        const checkIn = faker.date.future();
-        const checkOut = new Date(checkIn);
-        checkOut.setDate(checkOut.getDate() + faker.number.int({ min: 2, max: 14 }));
-
-        bookings.push({
-            residence: residences[faker.number.int({ min: 0, max: residences.length - 1 })]._id,
-            user: users[faker.number.int({ min: 0, max: users.length - 1 })]._id,
-            checkIn,
-            checkOut,
-            guests: faker.number.int({ min: 1, max: 6 }),
-            totalPrice: faker.number.int({ min: 100, max: 2000 }),
-            status: faker.helpers.arrayElement(statuses),
-            paymentStatus: faker.helpers.arrayElement(['pending', 'paid', 'refunded']),
-            specialRequests: faker.lorem.sentence()
-        });
-    }
-
-    await Booking.insertMany(bookings);
-    console.log(`${bookings.length} réservations créées`);
-    return bookings;
-};
-
 // Fonction pour générer des avis
 const generateReviews = async (users, residences) => {
     console.log('Génération des avis...');
@@ -155,14 +124,13 @@ const generateTestData = async () => {
         await Promise.all([
             User.deleteMany({}),
             Residence.deleteMany({}),
-            Booking.deleteMany({}),
             Review.deleteMany({})
         ]);
 
         // Générer les données
+        // Note: legacy Booking retiré — utiliser Reservation via l'API pour des jeux de données métier
         const users = await generateUsers();
         const residences = await generateResidences(users);
-        await generateBookings(users, residences);
         await generateReviews(users, residences);
 
         console.log('Génération des données de test terminée avec succès!');

@@ -1,14 +1,23 @@
 const mongoose = require('mongoose');
 
 /**
- * Idempotence des webhooks PSP (éviter double traitement).
+ * Idempotence des webhooks PSP.
+ * status: processing → completed | failed
+ * Un événement failed peut être retraité ; completed ne l'est jamais.
  */
 const webhookEventSchema = new mongoose.Schema(
   {
     provider: { type: String, required: true, index: true },
     eventId: { type: String, required: true },
     payloadHash: { type: String },
-    processedAt: { type: Date, default: Date.now },
+    status: {
+      type: String,
+      enum: ['processing', 'completed', 'failed'],
+      default: 'processing',
+      index: true,
+    },
+    lastError: { type: String },
+    processedAt: { type: Date },
   },
   { timestamps: true }
 );

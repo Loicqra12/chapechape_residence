@@ -3,13 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-// Import des modèles
-import '../../core/models/residence_model.dart';
-
-// Import des blocs
+// Import des blocs (residence_bloc exporte déjà Residence)
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/blocs/auth/auth_state.dart';
-import '../../core/blocs/residence/residence_bloc.dart'; // Contient déjà l'export de residence_event.dart
+import '../../core/blocs/residence/residence_bloc.dart';
 import '../../core/theme/app_theme.dart';
 
 class ResidenceCard extends StatelessWidget {

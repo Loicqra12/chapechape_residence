@@ -7,17 +7,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:chapechape_maps/chapechape_maps.dart';
-
 import '../../core/blocs/auth/auth_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/blocs/auth/auth_state.dart';
-import '../../core/blocs/residence/residence_bloc.dart';
+import '../../core/blocs/residence/residence_bloc.dart'; // exporte Residence
 import '../../core/blocs/booking/booking_bloc.dart';
-import '../../core/models/residence_model.dart';
 import '../../core/services/booking_service.dart';
 import '../../core/services/residence_service.dart';
 import '../../core/services/recently_viewed_service.dart';
 import '../screens/booking_screen.dart';
+import '../widgets/residence_video_player.dart';
 import '../widgets/skeletons/residence_details_skeleton.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -289,6 +288,11 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
               _sectionBadges(r),
               _sep(),
               _sectionDescription(r),
+              // Section vidéo — visible seulement si au moins une vidéo approuvée
+              if (_approvedVideoUrl(r) != null) ...[
+                _sep(),
+                _sectionVideo(r),
+              ],
               _sep(),
               _sectionAmenities(r),
               if (_hasRates(r)) ...[_sep(), _sectionRates(r)],
@@ -467,6 +471,32 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
             fontSize: 13, fontWeight: FontWeight.w500, color: fgColor)),
         ],
       ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // VIDÉO (MVP — lazy init au tap, feature flag implicite via données)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// Retourne l'URL de la première vidéo approuvée, ou null si aucune.
+  String? _approvedVideoUrl(Residence r) {
+    final approved = r.videos
+        .where((v) => v['status'] == 'approved')
+        .toList();
+    if (approved.isEmpty) return null;
+    return approved.first['url'] as String?;
+  }
+
+  Widget _sectionVideo(Residence r) {
+    final url = _approvedVideoUrl(r);
+    if (url == null) return const SizedBox.shrink();
+
+    return ResidenceVideoPlayer(
+      url: url,
+      thumbnail: r.videos
+          .where((v) => v['status'] == 'approved')
+          .firstOrNull?['thumbnail'] as String?,
+      sectionTitleStyle: _sectionTitleStyle,
     );
   }
 
@@ -1286,7 +1316,10 @@ class _ResidenceDetailsScreenState extends State<ResidenceDetailsScreen> {
           BlocProvider(create: (_) => BookingBloc(bookingService: svc)),
           BlocProvider.value(value: context.read<ResidenceBloc>()),
         ],
-        child: BookingScreen(residenceId: r.id),
+        child: BookingScreen(
+          residenceId: r.id,
+          initialResidence: r,
+        ),
       ),
     ));
   }
@@ -1415,3 +1448,4 @@ class _GalleryViewerScreenState extends State<GalleryViewerScreen> {
     );
   }
 }
+

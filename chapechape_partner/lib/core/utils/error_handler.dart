@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../exceptions/api_exception.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Gestionnaire d'erreurs centralisé pour traiter les erreurs API
 class ErrorHandler {
@@ -28,14 +29,14 @@ class ErrorHandler {
         }
         
         final message = _getErrorMessage(statusCode, data);
-        print('🔴 Erreur API: $message (Code: $statusCode)');
+        AppLogger.d('🔴 Erreur API: $message (Code: $statusCode)');
         return ApiException(message, statusCode, data);
       }
       
       // Erreur réseau
       if (error.type == DioExceptionType.connectionError || 
           error.type == DioExceptionType.connectionTimeout) {
-        print('🔴 Erreur réseau: ${error.message}');
+        AppLogger.d('🔴 Erreur réseau: ${error.message}');
         return ApiException(
           'Impossible de se connecter au serveur. Vérifiez votre connexion.',
           0,
@@ -45,7 +46,7 @@ class ErrorHandler {
     }
     
     // Erreur générique (message sobre, pas technique)
-    print('🔴 Erreur non gérée: $error');
+    AppLogger.d('🔴 Erreur non gérée: $error');
     return ApiException(
       'Un problème est survenu. Réessayez.',
       500,

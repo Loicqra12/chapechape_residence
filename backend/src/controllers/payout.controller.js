@@ -22,6 +22,37 @@ const logger = require('../utils/logger');
  * - GET /api/payouts/balance - Solde compte CinetPay
  */
 
+function isAdminUser(user) {
+    return user?.role === 'admin' || user?.role === 'superadmin';
+}
+
+function isPartnerUser(user) {
+    return user?.role === 'partner';
+}
+
+/**
+ * Deny-by-default : admin OK ; partner uniquement si propriétaire ; sinon 403.
+ * Les clients / autres rôles n'ont jamais accès aux payouts.
+ */
+function assertPartnerOwnership(req, resourcePartnerId) {
+    if (isAdminUser(req.user)) {
+        return { ok: true };
+    }
+    if (isPartnerUser(req.user) && resourcePartnerId != null) {
+        const ownerId = resourcePartnerId._id
+            ? resourcePartnerId._id.toString()
+            : resourcePartnerId.toString();
+        if (req.user._id.toString() === ownerId) {
+            return { ok: true };
+        }
+    }
+    return { ok: false, status: 403, message: 'Accès non autorisé' };
+}
+
+function forbidden(res, message = 'Accès non autorisé') {
+    return res.status(403).json({ success: false, message });
+}
+
 // ===============================
 // CRÉATION DE PAYOUTS
 // ===============================
@@ -45,14 +76,9 @@ exports.createPayoutForReservation = async (req, res) => {
             });
         }
 
-        // Vérifier authorization
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-            if (req.user.role === 'partner' && reservation.partner._id.toString() !== req.user._id.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Vous n'êtes pas autorisé à créer ce payout"
-                });
-            }
+        const access = assertPartnerOwnership(req, reservation.partner);
+        if (!access.ok) {
+            return forbidden(res, "Vous n'êtes pas autorisé à créer ce payout");
         }
 
         // Créer le payout
@@ -159,14 +185,9 @@ exports.getPartnerPayouts = async (req, res) => {
             sortOrder = 'desc'
         } = req.query;
 
-        // Vérifier authorization
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-            if (req.user.role === 'partner' && req.user._id.toString() !== partnerId) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Vous ne pouvez voir que vos propres payouts"
-                });
-            }
+        const access = assertPartnerOwnership(req, partnerId);
+        if (!access.ok) {
+            return forbidden(res, 'Vous ne pouvez voir que vos propres payouts');
         }
 
         // Construction du filtre
@@ -233,14 +254,9 @@ exports.getPayoutById = async (req, res) => {
             });
         }
 
-        // Vérifier authorization
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-            if (req.user.role === 'partner' && payout.partner._id.toString() !== req.user._id.toString()) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Accès non autorisé à ce payout"
-                });
-            }
+        const access = assertPartnerOwnership(req, payout.partner);
+        if (!access.ok) {
+            return forbidden(res, 'Accès non autorisé à ce payout');
         }
 
         res.json({
@@ -417,14 +433,9 @@ exports.getPartnerPayoutStats = async (req, res) => {
         const { partnerId } = req.params;
         const { startDate, endDate } = req.query;
 
-        // Vérifier authorization
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-            if (req.user.role === 'partner' && req.user._id.toString() !== partnerId) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Accès non autorisé"
-                });
-            }
+        const access = assertPartnerOwnership(req, partnerId);
+        if (!access.ok) {
+            return forbidden(res);
         }
 
         const stats = await payoutService.getPartnerPayoutStats(
@@ -710,6 +721,11 @@ exports.initiateCinetPayTransfer = async (req, res) => {
             });
         }
 
+        const transferAccess = assertPartnerOwnership(req, payout.partner);
+        if (!transferAccess.ok) {
+            return forbidden(res, 'Vous ne pouvez initier un transfert que sur vos propres payouts');
+        }
+
         // Vérifier que le payout peut être traité
         if (payout.status !== 'PENDING') {
             return res.status(400).json({
@@ -784,6 +800,26 @@ exports.getCinetPayTransferStatus = async (req, res) => {
                 success: false,
                 message: "ID de transfert requis"
             });
+        }
+
+        // Lier au payout local et vérifier ownership avant d'exposer le statut PSP
+        const localPayout = await Payout.findOne({
+            $or: [
+                { 'cinetpay_info.transaction_id': transferId },
+                { 'cinetpay_info.client_transaction_id': transferId },
+                { 'cinetpay_info.lot_id': transferId },
+                { payout_id: transferId },
+            ],
+        });
+
+        if (!localPayout && !isAdminUser(req.user)) {
+            return forbidden(res, 'Transfert non accessible');
+        }
+        if (localPayout) {
+            const access = assertPartnerOwnership(req, localPayout.partner);
+            if (!access.ok) {
+                return forbidden(res);
+            }
         }
 
         // Vérifier le statut via CinetPay
@@ -939,25 +975,32 @@ exports.getCinetPayTransferHistory = async (req, res) => {
             end_date
         } = req.query;
 
-        // Construction du filtre
+        // Construction du filtre (champs alignés sur le modèle Payout)
         const filter = {
             channel: { $in: ['cinetpay_transfer', 'orange_money', 'mtn_money', 'moov_money'] },
             'cinetpay_info.transaction_id': { $exists: true }
         };
+
+        // Deny-by-default : partner → ses payouts uniquement ; admin → filtre optionnel
+        if (isPartnerUser(req.user)) {
+            filter.partner = req.user._id;
+        } else if (isAdminUser(req.user)) {
+            if (partner_id) {
+                filter.partner = partner_id;
+            }
+        } else {
+            return forbidden(res);
+        }
 
         // Filtres optionnels
         if (status) {
             filter.status = status;
         }
 
-        if (partner_id) {
-            filter.partner_id = partner_id;
-        }
-
         if (start_date || end_date) {
-            filter.created_at = {};
-            if (start_date) filter.created_at.$gte = new Date(start_date);
-            if (end_date) filter.created_at.$lte = new Date(end_date);
+            filter.createdAt = {};
+            if (start_date) filter.createdAt.$gte = new Date(start_date);
+            if (end_date) filter.createdAt.$lte = new Date(end_date);
         }
 
         // Pagination
@@ -970,24 +1013,24 @@ exports.getCinetPayTransferHistory = async (req, res) => {
             {
                 $lookup: {
                     from: 'partners',
-                    localField: 'partner_id',
-                    foreignField: 'partner_id',
+                    localField: 'partner',
+                    foreignField: '_id',
                     as: 'partner_info'
                 }
             },
             {
                 $addFields: {
-                    partner_name: { $arrayElemAt: ['$partner_info.business_name', 0] },
+                    partner_name: { $arrayElemAt: ['$partner_info.businessName', 0] },
                     partner_email: { $arrayElemAt: ['$partner_info.email', 0] }
                 }
             },
-            { $sort: { created_at: -1 } },
+            { $sort: { createdAt: -1 } },
             { $skip: skip },
             { $limit: limitNum },
             {
                 $project: {
                     payout_id: 1,
-                    partner_id: 1,
+                    partner: 1,
                     partner_name: 1,
                     partner_email: 1,
                     gross_amount: 1,
@@ -999,7 +1042,7 @@ exports.getCinetPayTransferHistory = async (req, res) => {
                     'cinetpay_info.treatment_status': 1,
                     'cinetpay_info.sending_status': 1,
                     'recipient_info.phone_number': 1,
-                    created_at: 1,
+                    createdAt: 1,
                     processed_at: 1,
                     failure_reason: 1
                 }
@@ -1087,11 +1130,17 @@ exports.getCinetPayTransferStats = async (req, res) => {
         // Filtre de base
         const baseFilter = {
             channel: { $in: ['cinetpay_transfer', 'orange_money', 'mtn_money', 'moov_money'] },
-            created_at: { $gte: startDate }
+            createdAt: { $gte: startDate }
         };
 
-        if (partner_id) {
-            baseFilter.partner_id = partner_id;
+        if (isPartnerUser(req.user)) {
+            baseFilter.partner = req.user._id;
+        } else if (isAdminUser(req.user)) {
+            if (partner_id) {
+                baseFilter.partner = partner_id;
+            }
+        } else {
+            return forbidden(res);
         }
 
         // Statistiques globales
@@ -1155,9 +1204,9 @@ exports.getCinetPayTransferStats = async (req, res) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: '$created_at' },
-                        month: { $month: '$created_at' },
-                        day: { $dayOfMonth: '$created_at' }
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' },
+                        day: { $dayOfMonth: '$createdAt' }
                     },
                     count: { $sum: 1 },
                     total_amount: { $sum: '$net_amount' },
@@ -1374,7 +1423,26 @@ exports.initiateWaveTransfer = async (req, res) => {
 exports.getWaveTransferStatus = async (req, res) => {
     try {
         const { waveId } = req.params;
-        
+
+        // Admin : accès libre ; partner : uniquement si le payout local lui appartient
+        if (!isAdminUser(req.user)) {
+            const localPayout = await Payout.findOne({
+                $or: [
+                    { 'wave_info.wave_id': waveId },
+                    { 'provider_info.wave_id': waveId },
+                    { payout_id: waveId },
+                ],
+            });
+            if (!localPayout) {
+                return forbidden(res, 'Transfert Wave non accessible');
+            }
+            const access = assertPartnerOwnership(req, localPayout.partner);
+            if (!access.ok) {
+                return forbidden(res);
+            }
+        }
+
+        const wavePayoutService = getWavePayoutService();
         const result = await wavePayoutService.getPayoutStatus(waveId);
         
         if (result.success) {
@@ -1413,7 +1481,18 @@ exports.searchWaveTransfers = async (req, res) => {
                 message: "Référence client requise"
             });
         }
-        
+
+        // Partner : la référence doit contenir son suffixe userId (format initiateWaveTransfer)
+        if (isPartnerUser(req.user)) {
+            const suffix = req.user._id.toString().slice(-6);
+            if (!String(client_reference).includes(suffix)) {
+                return forbidden(res, 'Référence Wave non accessible');
+            }
+        } else if (!isAdminUser(req.user)) {
+            return forbidden(res);
+        }
+
+        const wavePayoutService = getWavePayoutService();
         const result = await wavePayoutService.searchPayouts(client_reference);
         
         if (result.success) {

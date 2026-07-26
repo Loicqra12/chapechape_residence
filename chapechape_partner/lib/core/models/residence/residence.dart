@@ -73,6 +73,10 @@ class Residence {
   final List<String> paymentMethods;
   final String reservationMode; // 'instant' ou 'approval_required'
 
+  /// Vidéos de présentation (MVP : 1 max).
+  /// Chaque élément est un Map avec : url, publicId, thumbnail, status, _id…
+  final List<Map<String, dynamic>> videos;
+
   Residence({
     required this.id,
     required this.name,
@@ -129,11 +133,15 @@ class Residence {
     this.enhancedAmenities = const {},
     this.paymentMethods = const [],
     this.reservationMode = 'instant', // Valeur par défaut
+    this.videos = const [],
   });
 
   factory Residence.fromJson(Map<String, dynamic> json) {
     // Convertir les amenities en propriétés booléennes
-    final amenities = (json['amenities'] as List<dynamic>?)?.cast<String>() ?? [];
+    final amenities = (json['amenities'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
     
     // Ajouter les propriétés du partenaire si présentes
     Map<String, dynamic>? partnerInfo;
@@ -255,13 +263,30 @@ class Residence {
     
     // Extraire le statut de suppression
     final deleted = json['deleted'] as bool?;
-    
-    // Extraire les nouveaux champs
-    final stars = json['stars'] as int? ?? 0;
-    final nearbyPlaces = (json['nearbyPlaces'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [];
-    final faqs = (json['faqs'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [];
-    final enhancedAmenities = json['enhancedAmenities'] as Map<String, dynamic>? ?? {};
-    final paymentMethods = (json['paymentMethods'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [];
+
+    final nearbyPlaces = (json['nearbyPlaces'] as List<dynamic>?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        [];
+    final faqs = (json['faqs'] as List<dynamic>?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        [];
+    final enhancedAmenities =
+        json['enhancedAmenities'] is Map
+            ? Map<String, dynamic>.from(json['enhancedAmenities'] as Map)
+            : <String, dynamic>{};
+    final paymentMethods = (json['paymentMethods'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
+    final videos = (json['videos'] as List<dynamic>?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        [];
 
     return Residence(
       id: json['_id']?.toString() ?? '',
@@ -269,20 +294,28 @@ class Residence {
       description: json['description']?.toString() ?? '',
       images: json['images'] ?? [],
       mainImage: json['mainImage']?.toString(),
-      address: json['address']?.toString() ?? json['location']?['address']?.toString() ?? '',
-      city: json['city']?.toString() ?? json['location']?['city']?.toString() ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      bedrooms: json['bedrooms'] as int? ?? 0,
-      bathrooms: json['bathrooms'] as int? ?? 0,
-      surface: (json['area'] as num?)?.toDouble() ?? (json['surface'] as num?)?.toDouble() ?? 0.0,
+      address: json['address']?.toString() ??
+          json['location']?['address']?.toString() ??
+          '',
+      city:
+          json['city']?.toString() ?? json['location']?['city']?.toString() ?? '',
+      price: _toDouble(json['price']) ?? 0.0,
+      bedrooms: _toInt(json['bedrooms']) ?? 0,
+      bathrooms: _toInt(json['bathrooms']) ?? 0,
+      surface: _toDouble(json['area']) ?? _toDouble(json['surface']) ?? 0.0,
       hasPool: amenities.contains('pool'),
       hasWifi: amenities.contains('wifi'),
       hasRestaurant: amenities.contains('kitchen'),
       isVacationResidence: json['type'] == 'villa',
       isSpecialResidence: false,
       isAvailable: json['status']?.toString().toLowerCase() == 'available',
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
+      rating: _parseRating(json['rating']),
+      reviewCount: _toInt(json['reviewCount']) ??
+          _toInt(json['reviewsCount']) ??
+          (json['rating'] is Map
+              ? _toInt((json['rating'] as Map)['reviewCount'])
+              : null) ??
+          0,
       type: json['type']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       createdAt: json['createdAt'] != null
@@ -293,10 +326,10 @@ class Residence {
           : DateTime.now(),
       isFurnished: json['isFurnished'] as bool? ?? false,
       partnerInfo: partnerInfo,
-      maxGuests: maxGuests,
-      allowsSmoking: allowsSmoking,
-      allowsPets: allowsPets,
-      allowsParties: allowsParties,
+      maxGuests: maxGuests is int ? maxGuests : int.tryParse('$maxGuests') ?? 2,
+      allowsSmoking: allowsSmoking == true,
+      allowsPets: allowsPets == true,
+      allowsParties: allowsParties == true,
       amenities: amenities,
       pricePeriod: pricePeriod,
       hourlyRate: hourlyRate,
@@ -317,13 +350,39 @@ class Residence {
       formattedAddress: formattedAddress,
       deleted: deleted,
       currency: currency,
-      stars: stars,
+      stars: _toInt(json['stars']) ?? 0,
       nearbyPlaces: nearbyPlaces,
       faqs: faqs,
       enhancedAmenities: enhancedAmenities,
       paymentMethods: paymentMethods,
       reservationMode: json['reservationMode'] as String? ?? 'instant',
+      videos: videos,
     );
+  }
+
+  /// Backend stocke `rating` comme objet `{ overall, cleanliness, ... }` ou parfois un nombre.
+  static double _parseRating(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is Map) {
+      final overall = value['overall'] ?? value['average'] ?? value['score'];
+      if (overall is num) return overall.toDouble();
+      return double.tryParse('$overall') ?? 0.0;
+    }
+    return double.tryParse('$value') ?? 0.0;
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value');
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value');
   }
 
   Map<String, dynamic> toJson() {

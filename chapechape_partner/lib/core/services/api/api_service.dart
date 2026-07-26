@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:flutter/foundation.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 import '../../config/app_config.dart';
 import './interceptors/auth_interceptor.dart';
 import './interceptors/image_url_interceptor.dart';
@@ -9,17 +12,16 @@ import './interceptors/retry_interceptor.dart';
 import '../../utils/error_handler.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
-import 'dart:async';
 
 class ApiService {
   late final Dio _dio;
-  final _storage = const FlutterSecureStorage();
+  final _storage = AppSecureStorage.instance;
   final String _baseUrl = AppConfig.apiUrl;
   
   // Clés de stockage des tokens
-  static const String _accessTokenKey = 'token';
-  static const String _refreshTokenKey = 'refresh_token';
-  static const String _tokenExpiryKey = 'token_expiry';
+  static const String _accessTokenKey = AppSecureStorage.tokenKey;
+  static const String _refreshTokenKey = AppSecureStorage.refreshTokenKey;
+  static const String _tokenExpiryKey = AppSecureStorage.tokenExpiryKey;
   
   // Variables pour le refresh token
   static bool _isRefreshing = false;
@@ -71,7 +73,7 @@ class ApiService {
               final newToken = await _storage.read(key: _accessTokenKey);
               if (newToken != null) {
                 options.headers['Authorization'] = 'Bearer $newToken';
-                print('🔄 Token rafraîchi et ajouté à la requête');
+                AppLogger.d('🔄 Token rafraîchi et ajouté à la requête');
               }
             } else {
               // Échec du rafraîchissement, déconnexion
@@ -87,7 +89,7 @@ class ApiService {
               
               // Log sécurisé du token
               final maskedToken = _maskToken(token);
-              print('🔐 Token ajouté à la requête: $maskedToken');
+              AppLogger.d('🔐 Token ajouté à la requête: $maskedToken');
             }
           }
           
@@ -96,7 +98,7 @@ class ApiService {
         onError: (DioException error, handler) async {
           // Si l'erreur est 401 (token expiré), essayer de rafraîchir
           if (error.response?.statusCode == 401) {
-            print('🔑 Erreur 401 détectée, tentative de rafraîchissement du token');
+            AppLogger.d('🔑 Erreur 401 détectée, tentative de rafraîchissement du token');
             
             // Vérifier si nous sommes déjà en train de rafraîchir
             if (!_isRefreshing) {
@@ -108,7 +110,7 @@ class ApiService {
                 error.requestOptions.headers['Authorization'] = 'Bearer $token';
                 
                 try {
-                  print('🔄 Réessai de la requête avec le nouveau token');
+                  AppLogger.d('🔄 Réessai de la requête avec le nouveau token');
                   final response = await _dio.fetch(error.requestOptions);
                   return handler.resolve(response);
                 } catch (e) {
@@ -174,13 +176,13 @@ class ApiService {
       ),
     );
 
-    // Ajouter le logger uniquement en mode debug — ne jamais logger les tokens en production
+    // Logger debug sans headers (évite de dump le JWT Bearer en clair)
     if (kDebugMode) {
       _dio.interceptors.add(
         PrettyDioLogger(
-          requestHeader: true,
+          requestHeader: false,
           requestBody: true,
-          responseHeader: true,
+          responseHeader: false,
           responseBody: true,
           error: true,
           compact: true,
@@ -223,7 +225,7 @@ class ApiService {
       // Rafraîchir si le token expire dans moins de 5 minutes
       return now.isAfter(expiry.subtract(const Duration(minutes: 5)));
     } catch (e) {
-      print('❌ Erreur lors de la vérification de l\'expiration du token: $e');
+      AppLogger.d('❌ Erreur lors de la vérification de l\'expiration du token: $e');
       return false;
     }
   }
@@ -248,7 +250,7 @@ class ApiService {
         return false;
       }
       
-      print('🔄 Début du rafraîchissement du token...');
+      AppLogger.d('🔄 Début du rafraîchissement du token...');
       
       final response = await _dio.post(
         '/auth/refresh-token',
@@ -270,19 +272,19 @@ class ApiService {
         await _storage.write(key: _refreshTokenKey, value: newRefreshToken);
         await _storage.write(key: _tokenExpiryKey, value: expiry.toIso8601String());
         
-        print('✅ Token rafraîchi avec succès');
+        AppLogger.d('✅ Token rafraîchi avec succès');
         
         _isRefreshing = false;
         _refreshCompleter?.complete(newAccessToken);
         return true;
       } else {
-        print('❌ Échec du rafraîchissement du token: ${response.statusCode}');
+        AppLogger.d('❌ Échec du rafraîchissement du token: ${response.statusCode}');
         _isRefreshing = false;
         _refreshCompleter?.complete(null);
         return false;
       }
     } catch (e) {
-      print('❌ Exception lors du rafraîchissement du token: $e');
+      AppLogger.d('❌ Exception lors du rafraîchissement du token: $e');
       _isRefreshing = false;
       _refreshCompleter?.completeError(e);
       return false;
@@ -303,7 +305,7 @@ class ApiService {
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
     await _storage.write(key: _tokenExpiryKey, value: expiry.toIso8601String());
     
-    print('📝 Tokens enregistrés (expire le ${expiry.toLocal()})');
+    AppLogger.d('📝 Tokens enregistrés (expire le ${expiry.toLocal()})');
   }
 
   Future<String?> getToken() async {
