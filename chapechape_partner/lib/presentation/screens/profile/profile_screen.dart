@@ -46,6 +46,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isOffline = result == ConnectivityResult.none;
       });
     });
+    // Une seule fois — JAMAIS dans build() (IndexedStack rebuild = storm de requêtes)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final dash = context.read<DashboardBloc>();
+      if (dash.state is! DashboardLoaded && dash.state is! DashboardLoading) {
+        dash.add(LoadDashboardData());
+      }
+    });
   }
 
   @override
@@ -267,11 +275,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Déclencher le chargement des statistiques si nécessaire
-    if (context.read<DashboardBloc>().state is! DashboardLoaded) {
-      context.read<DashboardBloc>().add(LoadDashboardData());
-    }
-    
     // Récupérer les données du partenaire avec validation
     final partner = context.select((AuthBloc bloc) {
       if (bloc.state is AuthAuthenticated) {

@@ -29,4 +29,8 @@ class FeatureFlags {
   /// 
   /// Stocke plus d'images en local et prolonge leur durée de validité
   static const bool aggressiveImageCaching = true;
+
+  /// Active la section Vidéo dans l'onglet Médias (upload + preview).
+  /// Passer à true une fois le backend en prod et la modération opérationnelle.
+  static const bool enableResidenceVideo = true;
 }

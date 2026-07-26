@@ -8,7 +8,9 @@ const {
     modifyReservationSchema,
     updateStatusSchema,
     calculateModificationFeesSchema,
-    checkAvailabilitySchema
+    checkAvailabilitySchema,
+    calculatePriceSchema,
+    addNoteSchema,
 } = require('../validations/reservation.validation');
 const ApiError = require('../utils/apiError');
 
@@ -28,6 +30,13 @@ router.route('/partner-reservations')
 router.route('/residence/:residenceId')
     .get(reservationController.getResidenceReservations);
 
+// C5 — avant /:id pour ne pas être capturé
+router.post(
+  '/calculate-price',
+  validate(calculatePriceSchema),
+  reservationController.calculatePrice
+);
+
 router.route('/:id')
     .get(reservationController.getReservationById)
     .patch(validate(modifyReservationSchema), reservationController.modifyReservation);
@@ -37,6 +46,9 @@ router.route('/:id/status')
 
 router.route('/:id/cancel')
     .patch(reservationController.cancelReservation);
+
+router.route('/:id/notes')
+    .post(authorize('partner', 'admin', 'superadmin'), validate(addNoteSchema), reservationController.addNote);
 
 router.route('/:id/check-availability')
     .get(validate(checkAvailabilitySchema), reservationController.checkAvailability);
@@ -51,6 +63,9 @@ router.route('/:id/approve')
 
 router.route('/:id/reject')
     .patch(authorize('partner'), reservationController.rejectReservation);
+
+// Confirmation paiement (client / admin) — chemin canonique aussi via POST /payments/:id/confirm
+router.patch('/:id/confirm-payment', reservationController.confirmPayment);
 
 // Routes de check-in/out (Partner seulement)
 router.route('/:id/checkin')

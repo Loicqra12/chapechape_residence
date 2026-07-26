@@ -2,13 +2,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../models/partner/partner_model.dart';
 import '../../services/api/auth_service.dart';
 import '../../services/api/media_service.dart';
 import 'package:dio/dio.dart';
 import 'dart:convert';
 import '../../exceptions/api_exception.dart';
+import '../../services/onesignal_service.dart';
 import 'auth_event.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 // Note: Les événements sont maintenant définis dans auth_event.dart
 
@@ -59,6 +62,14 @@ class AuthAuthenticated extends AuthState {
 
   @override
   List<Object?> get props => [token, partner];
+
+  @override
+  String toString() {
+    final masked = token.length <= 12
+        ? '***'
+        : '${token.substring(0, 6)}…${token.substring(token.length - 4)}';
+    return 'AuthAuthenticated($masked, $partner)';
+  }
 }
 
 class AuthUnauthenticated extends AuthState {}
@@ -100,6 +111,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     add(AuthCheckRequested());
   }
 
+  Future<void> _syncPushForPartner(String partnerId) async {
+    try {
+      await OneSignalService().syncAfterLogin(partnerId);
+    } catch (_) {}
+  }
+
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
     Emitter<AuthState> emit,
@@ -108,19 +125,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final token = await storage.read(key: 'token');
       if (token != null) {
-        // Sauvegarder également dans SharedPreferences pour la persistance à travers les hot reloads
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
-        
+        // Nettoyage one-shot : ancien JWT éventuellement stocké en clair
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('token');
+        } catch (_) {}
+
         final partner = await _authService.getProfile();
         
         // Stocker l'ID du partenaire pour filtrer les résidences
         await storage.write(key: 'userId', value: partner.id);
-        print("ID partenaire stocké lors de la vérification: ${partner.id}");
+        AppLogger.d("ID partenaire stocké lors de la vérification: ${partner.id}");
         
         // Stocker le rôle du partenaire
         await storage.write(key: 'userRole', value: 'partner');
-        print("Rôle partenaire stocké lors de la vérification: partner");
+        AppLogger.d("Rôle partenaire stocké lors de la vérification: partner");
         
         // Sauvegarder les données du partenaire pour persistance après hot reload
         // Mais seulement si on a des données valides
@@ -129,104 +148,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             partner.profilePictureUrl != "" &&
             partner.profilePictureUrl!.startsWith('http')) {
           await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
-          print("✅ Données partenaire sauvegardées avec photo valide: ${partner.profilePictureUrl}");
+          AppLogger.d("✅ Données partenaire sauvegardées avec photo valide: ${partner.profilePictureUrl}");
         } else {
-          print("⚠️ Photo de profil invalide détectée, sauvegarde sélective sans écraser le cache existant");
+          AppLogger.d("⚠️ Photo de profil invalide détectée, sauvegarde sélective sans écraser le cache existant");
         }
         
         emit(AuthAuthenticated(token: token, partner: partner));
+        await _syncPushForPartner(partner.id);
       } else {
-        // Si pas de token dans le secure storage, vérifier dans SharedPreferences
+        // Nettoyage legacy SharedPreferences (JWT ne doit plus y vivre)
         try {
           final prefs = await SharedPreferences.getInstance();
-          final savedToken = prefs.getString('token');
-          if (savedToken != null && savedToken.isNotEmpty) {
-            print("Restauration de la session après hot reload");
-            // Restaurer le token dans le secure storage
-            await storage.write(key: 'token', value: savedToken);
-            
-            try {
-              final partner = await _authService.getProfile();
-              
-              // Stocker l'ID du partenaire pour filtrer les résidences
-              await storage.write(key: 'userId', value: partner.id);
-              print("ID partenaire stocké lors de la restauration: ${partner.id}");
-              
-              // Stocker le rôle du partenaire
-              await storage.write(key: 'userRole', value: 'partner');
-              print("Rôle partenaire stocké lors de la restauration: partner");
-              
-              // Sauvegarder les données du partenaire pour persistance après hot reload
-              // Mais seulement si on a des données valides
-              if (partner.profilePictureUrl != null && 
-                  partner.profilePictureUrl!.isNotEmpty && 
-                  partner.profilePictureUrl != "" &&
-                  partner.profilePictureUrl!.startsWith('http')) {
-                await storage.write(key: 'partner_data', value: jsonEncode(partner.toJson()));
-                print("✅ Données partenaire sauvegardées lors de la restauration avec photo valide: ${partner.profilePictureUrl}");
-              } else {
-                print("⚠️ Photo de profil invalide lors de la restauration, préservation du cache existant");
-              }
-              
-              emit(AuthAuthenticated(token: savedToken, partner: partner));
-              return;
-            } catch (profileError) {
-              print("Impossible de récupérer le profil: $profileError");
-              
-              // Tenter de récupérer les données partenaire sauvegardées
-              try {
-                final partnerDataStr = await storage.read(key: 'partner_data');
-                if (partnerDataStr != null && partnerDataStr.isNotEmpty) {
-                  print("Restauration des données partenaire depuis le cache local");
-                  // Parse les données JSON sauvegardées correctement
-                  final partnerData = jsonDecode(partnerDataStr) as Map<String, dynamic>;
-                  
-                  final partner = Partner.fromJson(partnerData);
-                  print("Partenaire restauré depuis le cache: ${partner.profilePictureUrl}");
-                  
-                  emit(AuthAuthenticated(token: savedToken, partner: partner));
-                  return;
-                }
-              } catch (cacheError) {
-                print("Impossible de récupérer les données depuis le cache: $cacheError");
-              }
-              
-              // Si tout échoue, continuer à la déconnexion ci-dessous
-            }
-          }
-        } catch (e) {
-          print("Erreur lors de la récupération des préférences: $e");
-        }
-        
+          await prefs.remove('token');
+        } catch (_) {}
         emit(AuthUnauthenticated());
       }
     } catch (e) {
-      // Vérifier SharedPreferences en cas d'erreur avec le secure storage
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final savedToken = prefs.getString('token');
-        if (savedToken != null && savedToken.isNotEmpty) {
-          print("Restauration de la session après erreur: $e");
-          // Restaurer le token dans le secure storage
-          await storage.write(key: 'token', value: savedToken);
-          
-          try {
-            final partner = await _authService.getProfile();
-            
-            // Stocker l'ID du partenaire pour filtrer les résidences
-            await storage.write(key: 'userId', value: partner.id);
-            print("ID partenaire stocké après récupération d'erreur: ${partner.id}");
-            
-            emit(AuthAuthenticated(token: savedToken, partner: partner));
-            return;
-          } catch (profileError) {
-            print("Impossible de récupérer le profil: $profileError");
-          }
-        }
-      } catch (prefsError) {
-        print("Erreur lors de la récupération des préférences: $prefsError");
-      }
-      
       emit(AuthUnauthenticated());
     }
   }
@@ -252,30 +189,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // Calculer et stocker la date d'expiration (90 jours pour rester connecté longtemps)
         final expiryDate = DateTime.now().add(Duration(days: 90));
         await storage.write(key: 'token_expiry', value: expiryDate.toIso8601String());
-        print('📝 Token et refresh token stockés (expire le ${expiryDate.toLocal()})');
+        AppLogger.d('📝 Token et refresh token stockés (expire le ${expiryDate.toLocal()})');
       }
       
       // Utiliser l'ID réel du partenaire depuis la réponse backend
       String partnerId = loginResult.partner.id;
       
-      print("ID du partenaire authentifié: $partnerId");
+      AppLogger.d("ID du partenaire authentifié: $partnerId");
       
       // Stocker l'ID du partenaire pour filtrer les résidences
       await storage.write(key: 'userId', value: partnerId);
-      print("ID partenaire stocké: $partnerId");
+      AppLogger.d("ID partenaire stocké: $partnerId");
       
       // Stocker le rôle réel du partenaire (peut être partner_pending)
       await storage.write(key: 'userRole', value: loginResult.partner.role);
-      print("Rôle partenaire stocké: ${loginResult.partner.role}");
+      AppLogger.d("Rôle partenaire stocké: ${loginResult.partner.role}");
       
       // Vérifier que l'ID a bien été enregistré
       final storedId = await storage.read(key: 'userId');
-      print("ID partenaire lu depuis le storage: $storedId");
+      AppLogger.d("ID partenaire lu depuis le storage: $storedId");
       
       emit(AuthAuthenticated(
         token: loginResult.token,
         partner: loginResult.partner,
       ));
+      await _syncPushForPartner(loginResult.partner.id);
     } catch (e) {
       final message = e is ApiException ? e.message : 'Un problème est survenu. Réessayez.';
       emit(AuthFailure(message));
@@ -307,21 +245,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // Calculer et stocker la date d'expiration (90 jours pour rester connecté longtemps)
         final expiryDate = DateTime.now().add(Duration(days: 90));
         await storage.write(key: 'token_expiry', value: expiryDate.toIso8601String());
-        print('📝 Token et refresh token stockés (expire le ${expiryDate.toLocal()})');
+        AppLogger.d('📝 Token et refresh token stockés (expire le ${expiryDate.toLocal()})');
       }
       
       // Stocker l'ID du partenaire pour filtrer les résidences
       await storage.write(key: 'userId', value: registerResult.partner.id);
-      print("ID partenaire stocké: ${registerResult.partner.id}");
+      AppLogger.d("ID partenaire stocké: ${registerResult.partner.id}");
       
       // Stocker le rôle réel du partenaire (peut être partner_pending après inscription)
       await storage.write(key: 'userRole', value: registerResult.partner.role);
-      print("Rôle partenaire stocké: ${registerResult.partner.role}");
+      AppLogger.d("Rôle partenaire stocké: ${registerResult.partner.role}");
       
       emit(AuthAuthenticated(
         token: registerResult.token,
         partner: registerResult.partner,
       ));
+      await _syncPushForPartner(registerResult.partner.id);
     } catch (e) {
       final message = e is ApiException ? e.message : 'Un problème est survenu. Réessayez.';
       emit(AuthFailure(message));
@@ -334,13 +273,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
+      // Unregister device AVANT purge du JWT
+      try {
+        await OneSignalService().onLogout();
+      } catch (_) {}
       await storage.delete(key: 'token');
       await storage.delete(key: 'refresh_token');
       await storage.delete(key: 'token_expiry');
       await storage.delete(key: 'userId');
       await storage.delete(key: 'userRole');
       await storage.delete(key: 'partner_data'); // Supprimer le cache des données partenaire
-      print("🧹 Cache des données partenaire effacé lors de la déconnexion");
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('token');
+      } catch (_) {}
+      AppLogger.d("🧹 Cache des données partenaire effacé lors de la déconnexion");
       emit(AuthUnauthenticated());
     } catch (e) {
       emit(AuthFailure(e.toString()));
@@ -378,24 +325,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthLoading());
         
         final imageUrl = await _mediaService.uploadProfilePicture(event.imageFile);
-        print('Mise à jour du profil avec les données: {profilePictureUrl: $imageUrl}');
+        AppLogger.d('Mise à jour du profil avec les données: {profilePictureUrl: $imageUrl}');
         
         // Au lieu de mettre à jour le profil localement,
         // récupérer le profil complet depuis le serveur
         final updatedPartner = await _authService.getProfile();
         
-        print('Profil récupéré après upload: ${updatedPartner.profilePictureUrl}');
+        AppLogger.d('Profil récupéré après upload: ${updatedPartner.profilePictureUrl}');
         
         // Sauvegarder les nouvelles données du partenaire avec la photo mise à jour
         await storage.write(key: 'partner_data', value: jsonEncode(updatedPartner.toJson()));
-        print('Nouvelles données partenaire sauvegardées après upload photo: ${updatedPartner.profilePictureUrl}');
+        AppLogger.d('Nouvelles données partenaire sauvegardées après upload photo: ${updatedPartner.profilePictureUrl}');
         
         emit(AuthAuthenticated(
           token: currentState.token,
           partner: updatedPartner,
         ));
         
-        print('Profil mis à jour avec succès');
+        AppLogger.d('Profil mis à jour avec succès');
       }
     } catch (e) {
       emit(AuthFailure(e.toString()));
@@ -434,7 +381,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (state is AuthAuthenticated) {
       emit(state.copyWith(isLoading: true, errorMessage: null));
       try {
-        // Utiliser le service d'authentification pour supprimer le compte
+        // Désenregistrer le device tant que le JWT est encore valide
+        try {
+          await OneSignalService().onLogout();
+        } catch (_) {}
+
         final success = await _authService.deleteAccount(event.password);
         
         if (success) {

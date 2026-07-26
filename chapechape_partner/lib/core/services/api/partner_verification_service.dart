@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/config/app_config_manager.dart';
 import '../../../core/theme/colors.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 
 /// Service pour gérer la vérification SMS des partenaires
 class PartnerVerificationService {
@@ -199,11 +201,11 @@ class AuthInterceptor extends Interceptor {
   
   Future<String?> _getAuthToken() async {
     try {
-      const storage = FlutterSecureStorage();
+      final storage = AppSecureStorage.instance;
       final token = await storage.read(key: 'token');
       return token;
     } catch (e) {
-      print('❌ Erreur lors de la récupération du token: $e');
+      AppLogger.d('❌ Erreur lors de la récupération du token: $e');
       return null;
     }
   }

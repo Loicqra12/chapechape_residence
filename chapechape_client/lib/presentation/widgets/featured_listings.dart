@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_client/core/utils/secure_storage.dart';
 import 'package:intl/intl.dart'; // Importer Intl pour utiliser NumberFormat
 
 import '../../core/models/listing_model.dart';
@@ -499,7 +500,7 @@ class _FeaturedListingsState extends State<FeaturedListings> {
     // Si c'est une URL réseau, utiliser CachedNetworkImage
     // Récupérer le token d'authentification pour les images
     return FutureBuilder<String?>(
-      future: const FlutterSecureStorage().read(key: 'token'),
+      future: AppSecureStorage.instance.read(key: 'token'),
       builder: (context, snapshot) {
         // Afficher un placeholder pendant le chargement du token
         if (snapshot.connectionState == ConnectionState.waiting) {

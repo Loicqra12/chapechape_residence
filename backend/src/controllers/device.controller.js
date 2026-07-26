@@ -9,17 +9,34 @@ const logger = require('../utils/logger');
  * @access    Privé
  */
 exports.registerDevice = asyncHandler(async (req, res, next) => {
-    const { deviceToken } = req.body;
-    const userId = req.user.id;
+    const { deviceToken, appKind, platform } = req.body;
+    const userId = req.user._id;
 
     if (!deviceToken) {
         return next(new ErrorResponse('Token d\'appareil requis', 400));
     }
 
-    // Mettre à jour l'utilisateur en ajoutant le token à la liste s'il n'existe pas déjà
+    // Exclusivité : une subscription OneSignal ne doit appartenir qu'à un compte
+    // (évite qu'un téléphone partagé reçoive les notifs de l'ancien user)
+    const pullResult = await User.updateMany(
+        { _id: { $ne: userId }, deviceTokens: deviceToken },
+        { $pull: { deviceTokens: deviceToken } }
+    );
+
+    if (pullResult.modifiedCount > 0) {
+        logger.info('Subscription retirée d\'autres comptes avant rattachement', {
+            userId: userId.toString(),
+            modifiedCount: pullResult.modifiedCount,
+            appKind: appKind || 'unknown',
+        });
+    }
+
     const user = await User.findByIdAndUpdate(
         userId,
-        { $addToSet: { deviceTokens: deviceToken } },
+        {
+            $addToSet: { deviceTokens: deviceToken },
+            $set: { lastAppActivity: new Date() },
+        },
         { new: true }
     );
 
@@ -27,7 +44,12 @@ exports.registerDevice = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse('Utilisateur non trouvé', 404));
     }
 
-    logger.info(`Token d'appareil enregistré pour l'utilisateur ${userId}`);
+    logger.info(`Token d'appareil enregistré pour l'utilisateur ${userId}`, {
+        appKind: appKind || null,
+        platform: platform || null,
+        role: user.role,
+        tokenCount: user.deviceTokens?.length || 0,
+    });
     
     res.status(200).json({
         success: true,
@@ -45,7 +67,7 @@ exports.registerDevice = asyncHandler(async (req, res, next) => {
  */
 exports.unregisterDevice = asyncHandler(async (req, res, next) => {
     const { deviceToken } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     if (!deviceToken) {
         return next(new ErrorResponse('Token d\'appareil requis', 400));

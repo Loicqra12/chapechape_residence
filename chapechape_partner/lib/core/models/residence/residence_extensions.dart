@@ -4,6 +4,7 @@ import '../../../core/constants/app_images.dart';
 import '../../../core/config/app_config.dart';
 import '../../utils/formatters.dart';
 import '../../utils/string_utils.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 extension ResidenceProperties on Residence {
   /// Nom affiché avec majuscule à chaque mot (ex. "désir amina" → "Désir Amina").
@@ -43,7 +44,7 @@ extension ResidenceProperties on Residence {
     
     // Si déjà une URL complète avec le domaine mais pas /residences/
     if (imagePath.startsWith('http') && imagePath.contains('/uploads/') && !imagePath.contains('/uploads/residences/')) {
-      print('Correction d\'URL: ajout de /residences/ dans: $imagePath');
+      AppLogger.d('Correction d\'URL: ajout de /residences/ dans: $imagePath');
       return imagePath.replaceAll('/uploads/', '/uploads/residences/');
     }
     
@@ -73,22 +74,22 @@ extension ResidenceProperties on Residence {
   
   String get imageUrl {
     final imagePath = mainImage ?? (images.isNotEmpty ? images.first : AppImages.residencePlaceholder);
-    print('ResidenceProperties - Image originale: $imagePath');
+    AppLogger.d('ResidenceProperties - Image originale: $imagePath');
     
     // Si c'est un objet et pas une chaîne, essayer d'extraire l'URL
     if (imagePath is Map) {
-      print('ResidenceProperties - L\'image est une Map: $imagePath');
+      AppLogger.d('ResidenceProperties - L\'image est une Map: $imagePath');
       final String? url = imagePath['url'];
       if (url != null) {
         final fullUrl = _getCompleteImageUrl(url);
-        print('ResidenceProperties - URL extraite de la Map: $fullUrl');
+        AppLogger.d('ResidenceProperties - URL extraite de la Map: $fullUrl');
         return fullUrl;
       }
     }
     
     // Vérifier si l'image est un élément du tableau images mais pas une chaîne
     if (images.isNotEmpty && imagePath == images.first && imagePath is! String) {
-      print('ResidenceProperties - L\'image n\'est pas une chaîne: $imagePath (type: ${imagePath.runtimeType})');
+      AppLogger.d('ResidenceProperties - L\'image n\'est pas une chaîne: $imagePath (type: ${imagePath.runtimeType})');
       
       // Si c'est une liste d'images avec structure différente
       if (images.first is Map) {
@@ -96,26 +97,26 @@ extension ResidenceProperties on Residence {
         if (firstImage.containsKey('url')) {
           final String imageUrl = firstImage['url'];
           final fullUrl = _getCompleteImageUrl(imageUrl);
-          print('ResidenceProperties - URL extraite d\'une Map dans images: $fullUrl');
+          AppLogger.d('ResidenceProperties - URL extraite d\'une Map dans images: $fullUrl');
           return fullUrl;
         }
       }
       
       // Si on ne peut pas extraire une URL, retourner l'image par défaut
-      print('ResidenceProperties - Impossible d\'extraire l\'URL, retour à l\'image par défaut');
+      AppLogger.d('ResidenceProperties - Impossible d\'extraire l\'URL, retour à l\'image par défaut');
       return AppImages.residencePlaceholder;
     }
     
-    print('ResidenceProperties - Conversion en chaîne et création de l\'URL complète');
+    AppLogger.d('ResidenceProperties - Conversion en chaîne et création de l\'URL complète');
     final fullUrl = _getCompleteImageUrl(imagePath.toString());
-    print('ResidenceProperties - URL complète: $fullUrl');
+    AppLogger.d('ResidenceProperties - URL complète: $fullUrl');
     return fullUrl;
   }
   
   List<String> get imageUrls {
     return images.map((image) {
       final fullUrl = _getCompleteImageUrl(image);
-      print('Image in list: $fullUrl');  // Debug: afficher chaque URL
+      AppLogger.d('Image in list: $fullUrl');  // Debug: afficher chaque URL
       return fullUrl;
     }).toList();
   }

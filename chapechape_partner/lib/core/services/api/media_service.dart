@@ -9,6 +9,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../media/cloudinary_service.dart';
 import '../../config/feature_flags.dart';
 import '../../config/app_config_manager.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 
 class MediaService {
   final Dio _dio;
@@ -24,7 +26,7 @@ class MediaService {
     if (_dio.options.baseUrl.isEmpty) {
       // URL de base non configurée, utiliser l'URL du serveur local de développement
       final String url = AppConfigManager.apiUrl;
-      print('⚠️ URL de base non configurée, utilisation de l\'URL de développement locale: $url');
+      AppLogger.d('⚠️ URL de base non configurée, utilisation de l\'URL de développement locale: $url');
       return url;
     }
     return _dio.options.baseUrl;
@@ -34,14 +36,14 @@ class MediaService {
   /// Télécharge une photo de profil avec support Cloudinary
   Future<String> uploadProfilePicture(dynamic imageFile) async {
     try {
-      print('⬆️ Démarrage de l\'upload de la photo de profil');
-      print('🌐 Environnement: ${kIsWeb ? 'Web' : 'Mobile'}');
-      print('☁️ Mode Cloudinary: ${FeatureFlags.useCloudinary ? 'Activé' : 'Désactivé'}');
+      AppLogger.d('⬆️ Démarrage de l\'upload de la photo de profil');
+      AppLogger.d('🌐 Environnement: ${kIsWeb ? 'Web' : 'Mobile'}');
+      AppLogger.d('☁️ Mode Cloudinary: ${FeatureFlags.useCloudinary ? 'Activé' : 'Désactivé'}');
       
       // Si Cloudinary est activé, utiliser l'upload direct
       if (FeatureFlags.useCloudinary) {
         try {
-          print('☁️ Utilisation de Cloudinary pour l\'upload de la photo de profil');
+          AppLogger.d('☁️ Utilisation de Cloudinary pour l\'upload de la photo de profil');
           
           // Initialiser le service Cloudinary
           final cloudinaryService = CloudinaryService();
@@ -52,14 +54,14 @@ class MediaService {
             folder: 'chapechape/profiles',
           );
           
-          print('☁️ Image uploadée sur Cloudinary: $cloudinaryUrl');
+          AppLogger.d('☁️ Image uploadée sur Cloudinary: $cloudinaryUrl');
           
           // Mettre à jour le profil avec l'URL Cloudinary
-          print('🔍 URL de base Dio: ${_dio.options.baseUrl}');
+          AppLogger.d('🔍 URL de base Dio: ${_dio.options.baseUrl}');
           
           // S'assurer que l'URL est complète avec l'URL de base
           final completeUrl = '$_baseUrl/partners/profile';
-          print('🔍 URL complète API: $completeUrl');
+          AppLogger.d('🔍 URL complète API: $completeUrl');
           
           final profileResponse = await _dio.put(
             completeUrl, // Utiliser l'URL complète avec hôte
@@ -74,23 +76,23 @@ class MediaService {
             ),
           );
           
-          print('📥 Réponse reçue: ${profileResponse.statusCode}');
+          AppLogger.d('📥 Réponse reçue: ${profileResponse.statusCode}');
           
           if (profileResponse.statusCode == 200) {
             final data = profileResponse.data;
             if (data['success'] == true) {
-              print('✅ Profil mis à jour avec succès via Cloudinary');
+              AppLogger.d('✅ Profil mis à jour avec succès via Cloudinary');
               return cloudinaryUrl;
             } else {
-              print('❌ Erreur retournée par le serveur: ${data['message']}');
+              AppLogger.d('❌ Erreur retournée par le serveur: ${data['message']}');
               throw Exception(data['message'] ?? 'Erreur lors de la mise à jour du profil');
             }
           } else {
             throw Exception('Erreur lors de la mise à jour du profil: ${profileResponse.statusCode}');
           }
         } catch (cloudinaryError) {
-          print('☁️❌ Erreur Cloudinary: $cloudinaryError');
-          print('🔄 Retour à la méthode traditionnelle d\'upload');
+          AppLogger.d('☁️❌ Erreur Cloudinary: $cloudinaryError');
+          AppLogger.d('🔄 Retour à la méthode traditionnelle d\'upload');
           // En cas d'erreur avec Cloudinary, revenir à la méthode traditionnelle
         }
       }
@@ -102,7 +104,7 @@ class MediaService {
         // Mobile
         final fileName = path.basename(imageFile.path);
         final extension = path.extension(fileName).toLowerCase().replaceAll('.', '');
-        print('📱 Mobile: Préparation de l\'image $fileName (.$extension)');
+        AppLogger.d('📱 Mobile: Préparation de l\'image $fileName (.$extension)');
         
         formData = FormData.fromMap({
           'profileImage': await MultipartFile.fromFile(
@@ -113,7 +115,7 @@ class MediaService {
         });
       } else if (imageFile is Uint8List && kIsWeb) {
         // Web
-        print('🖥️ Web: Préparation de l\'image en bytes (${imageFile.length} bytes)');
+        AppLogger.d('🖥️ Web: Préparation de l\'image en bytes (${imageFile.length} bytes)');
         
         formData = FormData.fromMap({
           'profileImage': MultipartFile.fromBytes(
@@ -123,13 +125,13 @@ class MediaService {
           ),
         });
       } else {
-        print('❌ Format non supporté: ${imageFile.runtimeType}');
+        AppLogger.d('❌ Format non supporté: ${imageFile.runtimeType}');
         throw Exception('Format de fichier non pris en charge');
       }
 
       // Utiliser l'URL dynamique à partir du gestionnaire de configuration
       final String url = '$_baseUrl/partners/profile';
-      print('📤 Envoi vers: $url');
+      AppLogger.d('📤 Envoi vers: $url');
       
       try {
         final response = await _dio.put(
@@ -143,14 +145,14 @@ class MediaService {
           ),
         );
         
-        print('📥 Réponse reçue: ${response.statusCode}');
+        AppLogger.d('📥 Réponse reçue: ${response.statusCode}');
         
         if (response.statusCode == 200) {
           final data = response.data;
-          print('📈 Données reçues: $data');
+          AppLogger.d('📈 Données reçues: $data');
 
           if (data['success'] == true) {
-            print('✅ Profil mis à jour avec succès');
+            AppLogger.d('✅ Profil mis à jour avec succès');
             // Retourner l'URL de l'image si disponible
             String imageUrl = '';
             if (data['data'] != null && data['data']['profilePictureUrl'] != null) {
@@ -164,22 +166,22 @@ class MediaService {
               imageUrl = _buildCompleteUrl(imageUrl);
             }
             
-            print('🖼️ URL d\'image finale: $imageUrl');
+            AppLogger.d('🖼️ URL d\'image finale: $imageUrl');
             return imageUrl;
           } else {
-            print('❌ Erreur retournée par le serveur: ${data['message']}');
+            AppLogger.d('❌ Erreur retournée par le serveur: ${data['message']}');
             throw Exception(data['message'] ?? 'Erreur lors du téléchargement de l\'image');
           }
         } else {
-          print('❌ Mauvais code de statut: ${response.statusCode}');
+          AppLogger.d('❌ Mauvais code de statut: ${response.statusCode}');
           throw Exception(response.data['message'] ?? 'Erreur lors du téléchargement de l\'image');
         }
       } catch (dioError) {
-        print('❌ Erreur Dio lors de l\'upload: $dioError');
+        AppLogger.d('❌ Erreur Dio lors de l\'upload: $dioError');
         throw ErrorHandler.handleError(dioError);
       }
     } catch (e) {
-      print('❌ Erreur lors du téléchargement de la photo de profil: $e');
+      AppLogger.d('❌ Erreur lors du téléchargement de la photo de profil: $e');
       throw ErrorHandler.handleError(e);
     }
   }
@@ -205,7 +207,7 @@ class MediaService {
         correctedUrl = '/$correctedUrl';
       }
       
-      print('⚠️ URL corrigée: $url -> $correctedUrl');
+      AppLogger.d('⚠️ URL corrigée: $url -> $correctedUrl');
       url = correctedUrl;
     }
     
@@ -230,18 +232,18 @@ class MediaService {
   Future<String> _getAuthHeader() async {
     try {
       // Récupérer le token d'authentification (même clé que dans AuthService)
-      const storage = FlutterSecureStorage();
+      final storage = AppSecureStorage.instance;
       final token = await storage.read(key: 'token');
       
       if (token != null) {
-        print('🔑 Token d\'authentification trouvé');
+        AppLogger.d('🔑 Token d\'authentification trouvé');
         return 'Bearer $token';
       }
       
-      print('⚠️ Aucun token d\'authentification trouvé');
+      AppLogger.d('⚠️ Aucun token d\'authentification trouvé');
       return '';
     } catch (e) {
-      print('❌ Erreur lors de la récupération du token: $e');
+      AppLogger.d('❌ Erreur lors de la récupération du token: $e');
       return '';
     }
   }
@@ -299,7 +301,7 @@ class MediaService {
         throw Exception(response.data['message'] ?? 'Erreur lors du téléchargement du document');
       }
     } catch (e) {
-      print('Erreur lors du téléchargement du document: $e');
+      AppLogger.d('Erreur lors du téléchargement du document: $e');
       throw ErrorHandler.handleError(e);
     }
   }

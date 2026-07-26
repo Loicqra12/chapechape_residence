@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/reservation/reservation.dart';
 import '../../services/api/reservation_service.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 // Events
 abstract class ReservationEvent {}
@@ -162,14 +163,14 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       
       // Si ça échoue, revenir à la méthode indirecte
       if (reservations.isEmpty) {
-        print("Utilisation de la méthode indirecte pour récupérer les réservations...");
+        AppLogger.d("Utilisation de la méthode indirecte pour récupérer les réservations...");
         reservations = await _reservationService.getPartnerReservations();
       }
       
-      print("Réservations partenaire chargées: ${reservations.length}");
+      AppLogger.d("Réservations partenaire chargées: ${reservations.length}");
       emit(ReservationLoaded(reservations));
     } catch (e) {
-      print("Erreur lors du chargement des réservations partenaire: $e");
+      AppLogger.d("Erreur lors du chargement des réservations partenaire: $e");
       emit(ReservationError(e.toString()));
     }
   }
@@ -271,24 +272,17 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     }
   }
 
-  // Ajouter la nouvelle méthode pour ajouter une note à une réservation
   Future<void> _onAddReservationNote(
     AddReservationNote event,
     Emitter<ReservationState> emit,
   ) async {
     try {
       emit(ReservationLoading());
-      
-      try {
-        await _reservationService.addNote(event.reservationId, event.note);
-      } catch (e) {
-        print("Erreur lors de l'ajout de la note: $e");
-        // Continuer même si l'ajout de note échoue
-      }
-      
-      // Recharger la réservation pour avoir les données à jour
+
+      await _reservationService.addNote(event.reservationId, event.note);
+
       final reservation = await _reservationService.getReservation(event.reservationId);
-      
+
       if (reservation != null) {
         emit(ReservationDetailsLoaded(reservation));
       } else {

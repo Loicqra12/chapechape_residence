@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform, kReleaseMode;
+    show defaultTargetPlatform, kIsWeb, TargetPlatform, kReleaseMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +8,7 @@ import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'core/utils/secure_storage.dart';
 import 'core/config/api_config.dart';
 import 'core/config/app_config_manager.dart';
 import 'core/theme/app_theme.dart';
@@ -57,6 +57,7 @@ import 'core/blocs/settings/settings_bloc.dart';
 import 'presentation/blocs/pricing/pricing_bloc.dart';
 import 'core/services/api/pricing_service.dart';
 import 'core/utils/app_bloc_observer.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 // Temporairement désactivé pour résoudre les problèmes de build
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -85,28 +86,15 @@ Future<void> main() async {
   await cacheService.initialize();
 
   // Services
-  final storage = const FlutterSecureStorage();
+  final storage = AppSecureStorage.instance;
   
   // Sélectionner automatiquement l'environnement selon le mode de compilation
   const environment = kReleaseMode ? Environment.production : Environment.development;
   await AppConfigManager.initialize(environment: environment);
-  debugPrint('🔧 [Partner] Initialisation en ${environment == Environment.production ? 'PRODUCTION' : 'DEVELOPPEMENT'}');
-  debugPrint('🌐 [Partner] URL API finale: ${AppConfigManager.apiUrl}');
-  
-  // Ajouter des logs pour le token d'authentification
-  storage.read(key: 'token').then((token) {
-    if (token != null && token.isNotEmpty) {
-      // Masquer le token dans les logs pour sécurité
-      final maskedToken = token.length > 20 
-          ? '${token.substring(0, 10)}...${token.substring(token.length - 5)}'
-          : '****';
-      Logger.root.info('Token d\'authentification trouvé: $maskedToken');
-    } else {
-      Logger.root.info('Aucun token d\'authentification trouvé');
-    }
-  }).catchError((error) {
-    Logger.root.severe('Erreur lors de la lecture du token: $error');
-  });
+  if (!kReleaseMode) {
+    debugPrint('🔧 [Partner] Initialisation en ${environment == Environment.production ? 'PRODUCTION' : 'DEVELOPPEMENT'}');
+    debugPrint('🌐 [Partner] URL API finale: ${AppConfigManager.apiUrl}');
+  }
   
   // 🔧 UTILISER AppConfigManager.apiUrl au lieu de l'ancienne configuration
   final dio = Dio(BaseOptions(
@@ -135,8 +123,9 @@ Future<void> main() async {
   final apiService = ApiService(authBloc: authBloc);
   final residenceService = ResidenceService(baseUrl: AppConfigManager.apiUrl, storage: storage);
   
-  // Initialiser le service OneSignal
+  // Initialiser le service OneSignal (async — sync post-login via AuthBloc)
   final oneSignalService = OneSignalService();
+  // ignore: unawaited_futures
   oneSignalService.init(authService);
   debugPrint('✅ Service OneSignal initialisé avec succès pour les partenaires');
 
@@ -198,7 +187,7 @@ Future<void> main() async {
   await notificationManager.initialize();
   debugPrint('✅ NotificationManager unifié initialisé avec succès');
   
-  print('Services de devises initialisés avec succès');
+  AppLogger.d('Services de devises initialisés avec succès');
   
   // Configurer la barre de navigation système Android pour une meilleure visibilité
   SystemChrome.setSystemUIOverlayStyle(
@@ -271,18 +260,21 @@ Future<void> main() async {
               context.read<ResidenceService>(),
               eventBus: context.read<event_bus.ResidenceEventBus>(),
               notificationRepository: context.read<NotificationRepository>(),
-            )..add(LoadMyResidences()),
+            ),
+            // Ne pas déclencher LoadMyResidences ici — attendre AuthAuthenticated
           ),
           BlocProvider<DashboardBloc>(
             create: (context) => DashboardBloc(
               dashboardService,
-            )..add(LoadDashboardData()),
+            ),
+            // Ne pas déclencher LoadDashboardData ici — attendre AuthAuthenticated
           ),
           BlocProvider<MessageBloc>(
             create: (context) => MessageBloc(context.read<MessageService>()),
           ),
           BlocProvider<ReservationBloc>(
-            create: (context) => ReservationBloc(context.read<ReservationService>())..add(LoadPartnerReservations()),
+            create: (context) => ReservationBloc(context.read<ReservationService>()),
+            // Ne pas déclencher LoadPartnerReservations ici — attendre AuthAuthenticated
           ),
           BlocProvider<SyncBloc>.value(
             value: syncBloc,
@@ -317,31 +309,41 @@ Future<void> main() async {
         ],
         child: BlocBuilder<ThemeBloc, ThemeState>(
           buildWhen: (prev, curr) => prev.themeMode != curr.themeMode,
-          builder: (context, state) {
-            return MaterialApp.router(
-              title: 'ChapeChape Partner',
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                fontFamily: 'Poppins',
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: const Color(0xFF1A237E),
-                  brightness: Brightness.light,
-                ),
-                useMaterial3: true,
-                appBarTheme: const AppBarTheme(
-                  centerTitle: true,
-                  elevation: 0,
-                ),
-                cardTheme: CardThemeData(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+          builder: (context, themeState) {
+            return BlocListener<AuthBloc, AuthState>(
+              // Déclencher les chargements uniquement une fois l'auth confirmée
+              listenWhen: (previous, current) =>
+                  previous is! AuthAuthenticated && current is AuthAuthenticated,
+              listener: (context, state) {
+                context.read<ResidenceBloc>().add(LoadMyResidences());
+                context.read<DashboardBloc>().add(LoadDashboardData());
+                context.read<ReservationBloc>().add(LoadPartnerReservations());
+              },
+              child: MaterialApp.router(
+                title: 'ChapeChape Partner',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(
+                  fontFamily: 'Poppins',
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xFF1A237E),
+                    brightness: Brightness.light,
+                  ),
+                  useMaterial3: true,
+                  appBarTheme: const AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                  ),
+                  cardTheme: CardThemeData(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
+                darkTheme: AppTheme.darkTheme,
+                themeMode: themeState.themeMode,
+                routerConfig: appRouter.router,
               ),
-              darkTheme: AppTheme.darkTheme,
-              themeMode: state.themeMode,
-              routerConfig: appRouter.router,
             );
           },
         ),
@@ -386,18 +388,18 @@ Future<void> _initializeServices() async {
     final currencyService = CurrencyService();
     await currencyService.initialize();
     
-    print('Services de devises initialisés avec succès');
+    AppLogger.d('Services de devises initialisés avec succès');
     
     // Les nouveaux services (favoris, promotions, avis) seront initialisés au besoin
     // via leur constructeur avec apiService quand ils seront utilisés
     // dans les écrans ou composants appropriés
-    print('Services API prêts pour favoris, promotions et avis');
+    AppLogger.d('Services API prêts pour favoris, promotions et avis');
     
     // Exemple d'utilisation d'un service :
     // final favoriteService = FavoriteService.withApiService(apiService: apiService);
     // final promotionService = PromotionService.withApiService(apiService: apiService);
     // final reviewService = ReviewService.withApiService(apiService: apiService);
   } catch (e) {
-    print('Erreur lors de l\'initialisation des services: $e');
+    AppLogger.d('Erreur lors de l\'initialisation des services: $e');
   }
 }

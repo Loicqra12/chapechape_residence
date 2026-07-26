@@ -17,11 +17,11 @@ COPY . .
 RUN mkdir -p logs
 
 # Exposer le port
-EXPOSE 5000
+EXPOSE 4000
 
 # Variables d'environnement par défaut
 ENV NODE_ENV=production
-ENV PORT=5000
+ENV PORT=4000
 
 # Créer un utilisateur non-root
 RUN addgroup -g 1001 -S nodejs

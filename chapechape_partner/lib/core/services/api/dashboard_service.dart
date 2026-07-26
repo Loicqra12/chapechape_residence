@@ -2,14 +2,16 @@ import '../../../core/models/dashboard/dashboard_data.dart';
 import '../api_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import 'residence_service.dart';
 import 'package:flutter/foundation.dart';
 import '../../exceptions/api_exception.dart';
 import '../../../core/services/event_bus/residence_event_bus.dart' as event_bus;
 import '../../../core/config/app_config.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 class DashboardService extends ApiService {
-  final storage = const FlutterSecureStorage();
+  final storage = AppSecureStorage.instance;
   
   // Cache local pour stocker les dernières réponses
   final Map<String, dynamic> _responseCache = {};
@@ -28,11 +30,11 @@ class DashboardService extends ApiService {
   // Construit un endpoint API correct avec le préfixe /api selon l'environnement
   String _ep(String path) => AppConfig.getApiEndpoint(path);
   
-  // Méthode de journalisation qui remplace print()
+  // Méthode de journalisation qui remplace AppLogger.d()
   void _log(String message) {
     // En production, ces logs pourraient être envoyés à un service de télémétrie
     // Pour l'instant, on les désactive simplement
-    // print(message);
+    // AppLogger.d(message);
   }
 
   // Méthode pour s'assurer que le token est ajouté aux requêtes
@@ -174,7 +176,7 @@ class DashboardService extends ApiService {
         ).toList();
         
         if (filteredResidences.length != residences.length) {
-          print('🧹 Résidences filtrées par getResidenceStats: ${residences.length - filteredResidences.length} supprimées');
+          AppLogger.d('🧹 Résidences filtrées par getResidenceStats: ${residences.length - filteredResidences.length} supprimées');
         }
         
         // Convertir les résidences en ResidenceStats
@@ -288,6 +290,12 @@ class DashboardService extends ApiService {
           return EarningsData.fromJson(_responseCache[cacheKey]);
         }
       }
+
+      if (e is DioException) {
+        AppLogger.d(
+          '❌ getEarnings HTTP ${e.response?.statusCode}: ${e.response?.data}',
+        );
+      }
       
       throw error;
     }
@@ -303,24 +311,24 @@ class DashboardService extends ApiService {
       );
       
       // Log détaillé pour le débogage
-      print('🔍 Dashboard Overview - Status code: ${response.statusCode}');
-      print('🔍 Dashboard Overview - Réponse brute: ${response.data}');
+      AppLogger.d('🔍 Dashboard Overview - Status code: ${response.statusCode}');
+      AppLogger.d('🔍 Dashboard Overview - Réponse brute: ${response.data}');
       
       // Mettre à jour le cache avec la nouvelle réponse
       _responseCache[cacheKey] = response.data['data'];
       
       return DashboardOverview.fromJson(response.data['data']);
     } catch (e) {
-      print('❌ Erreur détaillée dashboard overview: $e');
+      AppLogger.d('❌ Erreur détaillée dashboard overview: $e');
       
       // Essayer d'utiliser le cache si disponible
       if (_responseCache.containsKey(cacheKey)) {
-        print('🔄 Utilisation des données en cache pour: $cacheKey');
+        AppLogger.d('🔄 Utilisation des données en cache pour: $cacheKey');
         return DashboardOverview.fromJson(_responseCache[cacheKey]);
       }
       
       // Fournir un objet par défaut en cas d'erreur
-      print('⚠️ Utilisation des données par défaut pour dashboard overview');
+      AppLogger.d('⚠️ Utilisation des données par défaut pour dashboard overview');
       return DashboardOverview(
         totalResidences: 0,
         bookings: {'total': 0, 'pending': 0, 'confirmed': 0, 'completed': 0, 'cancelled': 0},
@@ -343,24 +351,24 @@ class DashboardService extends ApiService {
       );
       
       // Log détaillé pour le débogage
-      print('🔍 Dashboard Finances - Status code: ${response.statusCode}');
-      print('🔍 Dashboard Finances - Réponse brute: ${response.data}');
+      AppLogger.d('🔍 Dashboard Finances - Status code: ${response.statusCode}');
+      AppLogger.d('🔍 Dashboard Finances - Réponse brute: ${response.data}');
       
       // Mettre à jour le cache avec la nouvelle réponse
       _responseCache[cacheKey] = response.data['data'];
       
       return DashboardFinances.fromJson(response.data['data']);
     } catch (e) {
-      print('❌ Erreur détaillée dashboard finances: $e');
+      AppLogger.d('❌ Erreur détaillée dashboard finances: $e');
       
       // Essayer d'utiliser le cache si disponible
       if (_responseCache.containsKey(cacheKey)) {
-        print('🔄 Utilisation des données en cache pour: $cacheKey');
+        AppLogger.d('🔄 Utilisation des données en cache pour: $cacheKey');
         return DashboardFinances.fromJson(_responseCache[cacheKey]);
       }
       
       // Fournir un objet par défaut en cas d'erreur
-      print('⚠️ Utilisation des données par défaut pour dashboard finances');
+      AppLogger.d('⚠️ Utilisation des données par défaut pour dashboard finances');
       return DashboardFinances(
         dailyRevenue: 0,
         weeklyRevenue: 0,
@@ -382,24 +390,24 @@ class DashboardService extends ApiService {
       );
       
       // Log détaillé pour le débogage
-      print('🔍 Dashboard Realtime - Status code: ${response.statusCode}');
-      print('🔍 Dashboard Realtime - Réponse brute: ${response.data}');
+      AppLogger.d('🔍 Dashboard Realtime - Status code: ${response.statusCode}');
+      AppLogger.d('🔍 Dashboard Realtime - Réponse brute: ${response.data}');
       
       // Mettre à jour le cache avec la nouvelle réponse
       _responseCache[cacheKey] = response.data['data'];
       
       return RealtimeStats.fromJson(response.data['data']);
     } catch (e) {
-      print('❌ Erreur détaillée dashboard realtime: $e');
+      AppLogger.d('❌ Erreur détaillée dashboard realtime: $e');
       
       // Essayer d'utiliser le cache si disponible
       if (_responseCache.containsKey(cacheKey)) {
-        print('🔄 Utilisation des données en cache pour: $cacheKey');
+        AppLogger.d('🔄 Utilisation des données en cache pour: $cacheKey');
         return RealtimeStats.fromJson(_responseCache[cacheKey]);
       }
       
       // Fournir un objet par défaut en cas d'erreur
-      print('⚠️ Utilisation des données par défaut pour dashboard realtime');
+      AppLogger.d('⚠️ Utilisation des données par défaut pour dashboard realtime');
       return RealtimeStats(
         activeBookings: 0,
         pendingRequests: 0,
@@ -417,7 +425,7 @@ class DashboardService extends ApiService {
       
       // Récupérer l'instance depuis le DI plutôt que d'en créer une nouvelle
       // Utiliser l'instance existante de ResidenceService si possible
-      return ResidenceService(baseUrl: baseUrl, storage: const FlutterSecureStorage());
+      return ResidenceService(baseUrl: baseUrl, storage: AppSecureStorage.instance);
     } catch (e) {
       _log('Erreur lors de l\'initialisation de ResidenceService: $e');
       throw Exception('Impossible d\'initialiser ResidenceService');

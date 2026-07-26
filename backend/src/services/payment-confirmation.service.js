@@ -5,19 +5,93 @@ const WebhookEvent = require('../models/webhook-event.model');
 const logger = require('../utils/logger');
 
 /**
- * Enregistre un événement webhook ; retourne false si déjà traité.
+ * Réclame un événement webhook pour traitement.
+ * - Nouveau → status processing, claimed=true
+ * - Déjà completed → claimed=false
+ * - failed → reprise possible (claimed=true)
+ * - processing récent → claimed=false (évite double traitement concurrent)
+ *
+ * @returns {{ claimed: boolean, alreadyCompleted: boolean }}
+ */
+async function claimWebhookEvent(provider, eventId, payloadHash = null) {
+  try {
+    await WebhookEvent.create({
+      provider,
+      eventId,
+      payloadHash,
+      status: 'processing',
+    });
+    return { claimed: true, alreadyCompleted: false };
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+
+    const existing = await WebhookEvent.findOne({ provider, eventId });
+    if (!existing) {
+      return { claimed: false, alreadyCompleted: false };
+    }
+
+    if (existing.status === 'completed') {
+      logger.info(`Webhook déjà traité: ${provider}/${eventId}`);
+      return { claimed: false, alreadyCompleted: true };
+    }
+
+    if (existing.status === 'failed') {
+      const updated = await WebhookEvent.findOneAndUpdate(
+        { provider, eventId, status: 'failed' },
+        {
+          $set: {
+            status: 'processing',
+            lastError: null,
+            payloadHash: payloadHash || existing.payloadHash,
+          },
+        },
+        { new: true }
+      );
+      if (updated) {
+        logger.info(`Webhook retry après échec: ${provider}/${eventId}`);
+        return { claimed: true, alreadyCompleted: false };
+      }
+    }
+
+    // processing en cours (ou course concurrente)
+    logger.info(`Webhook déjà en cours: ${provider}/${eventId}`);
+    return { claimed: false, alreadyCompleted: false };
+  }
+}
+
+/**
+ * Marque l'événement comme traité avec succès (après applyPaymentPaid etc.)
+ */
+async function completeWebhookEvent(provider, eventId) {
+  await WebhookEvent.updateOne(
+    { provider, eventId },
+    { $set: { status: 'completed', processedAt: new Date(), lastError: null } }
+  );
+}
+
+/**
+ * Marque l'événement en échec pour permettre un retry PSP
+ */
+async function failWebhookEvent(provider, eventId, errorMessage) {
+  await WebhookEvent.updateOne(
+    { provider, eventId },
+    {
+      $set: {
+        status: 'failed',
+        lastError: (errorMessage || 'unknown').toString().slice(0, 500),
+        processedAt: new Date(),
+      },
+    }
+  );
+}
+
+/**
+ * @deprecated Préférer claimWebhookEvent + completeWebhookEvent
+ * Conservé pour compat : crée l'événement ; true si nouveau.
  */
 async function registerWebhookEvent(provider, eventId, payloadHash = null) {
-  try {
-    await WebhookEvent.create({ provider, eventId, payloadHash });
-    return true;
-  } catch (err) {
-    if (err.code === 11000) {
-      logger.info(`Webhook déjà traité: ${provider}/${eventId}`);
-      return false;
-    }
-    throw err;
-  }
+  const result = await claimWebhookEvent(provider, eventId, payloadHash);
+  return result.claimed;
 }
 
 /**
@@ -25,7 +99,9 @@ async function registerWebhookEvent(provider, eventId, payloadHash = null) {
  * @returns {{ applied: boolean, alreadyPaid: boolean, payment: object|null }}
  */
 async function applyPaymentPaid(payment, options = {}) {
-  const { providerResponse, triggerPayout = true } = options;
+  // allowExpired: webhooks PSP uniquement — un paiement localement « expired »
+  // peut encore être validé si le client a payé côté PSP avant/après le cutoff.
+  const { providerResponse, triggerPayout = true, allowExpired = false } = options;
 
   if (!payment) {
     return { applied: false, alreadyPaid: false, payment: null };
@@ -43,10 +119,14 @@ async function applyPaymentPaid(payment, options = {}) {
     updateFields['paymentDetails.providerResponse'] = providerResponse;
   }
 
+  const allowedStatuses = allowExpired
+    ? ['pending', 'failed', 'expired']
+    : ['pending', 'failed'];
+
   const updatedPayment = await Payment.findOneAndUpdate(
     {
       _id: payment._id,
-      status: { $in: ['pending', 'failed', 'expired'] },
+      status: { $in: allowedStatuses },
     },
     { $set: updateFields },
     { new: true }
@@ -60,21 +140,52 @@ async function applyPaymentPaid(payment, options = {}) {
 
   const reservationId = updatedPayment.reservation;
 
+  // payment_pending / awaiting_approval / pending → confirmed (filtre source)
   await Reservation.updateOne(
     {
       _id: reservationId,
       paymentStatus: { $ne: 'paid' },
+      status: { $in: ['pending', 'awaiting_approval', 'payment_pending', 'confirmed'] },
     },
     {
       $set: {
         paymentStatus: 'paid',
         status: 'confirmed',
         messagingEnabled: true,
+        paymentDeadline: null,
+      },
+      $push: {
+        statusHistory: {
+          status: 'confirmed',
+          paymentStatus: 'paid',
+          changedAt: new Date(),
+          reason: 'Paiement confirmé (webhook/PSP)',
+        },
       },
     }
   );
 
   await ensureReservationConversation(reservationId);
+
+  // Annuler expiration + rappels paiement (webhooks / PSP)
+  try {
+    const { cancelReservationExpiration } = require('./agenda.service');
+    await cancelReservationExpiration(reservationId);
+  } catch (cancelErr) {
+    logger.error('Annulation jobs paiement échouée:', cancelErr);
+  }
+
+  // Notifications Client + Partner (idempotentes) — chemin canonique webhook/PSP
+  try {
+    const reservationForNotif = await Reservation.findById(reservationId)
+      .populate('user residence partner');
+    if (reservationForNotif) {
+      const notificationService = require('./notification.service');
+      await notificationService.sendPaymentConfirmationNotification(reservationForNotif);
+    }
+  } catch (notifError) {
+    logger.error('Notification confirmation paiement non envoyée:', notifError);
+  }
 
   if (triggerPayout) {
     try {
@@ -104,10 +215,13 @@ async function ensureReservationConversation(reservationId) {
     updatedAt: Date.now(),
   });
 
+  const residenceName =
+    populated.residence?.title || populated.residence?.name || 'votre résidence';
+
   const message = await Message.create({
     conversation: conversation._id,
     sender: populated.partner._id,
-    content: `Merci pour votre réservation de "${populated.residence.name}" ! N'hésitez pas à me contacter pour toute question concernant votre séjour.`,
+    content: `Merci pour votre réservation de "${residenceName}" ! N'hésitez pas à me contacter pour toute question concernant votre séjour.`,
   });
 
   conversation.lastMessage = message._id;
@@ -116,5 +230,8 @@ async function ensureReservationConversation(reservationId) {
 
 module.exports = {
   registerWebhookEvent,
+  claimWebhookEvent,
+  completeWebhookEvent,
+  failWebhookEvent,
   applyPaymentPaid,
 };

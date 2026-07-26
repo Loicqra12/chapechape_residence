@@ -44,6 +44,9 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
   }
 
   void _loadReservations() {
+    final state = context.read<ReservationBloc>().state;
+    // Auth listener charge déjà au login — éviter le doublon IndexedStack
+    if (state is ReservationLoading || state is ReservationLoaded) return;
     context.read<ReservationBloc>().add(LoadPartnerReservations());
   }
 

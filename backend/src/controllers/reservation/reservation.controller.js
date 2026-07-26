@@ -6,6 +6,9 @@ const asyncHandler = require('../../middlewares/async');
 const Reservation = require('../../models/reservation.model');
 const Residence = require('../../models/residence.model');
 const logger = require('../../utils/logger');
+const paymentTimerService = require('../../services/payment-timer.service');
+const agendaService = require('../../services/agenda.service');
+const availabilityService = require('../../services/availability.service');
 
 /**
  * Créer une nouvelle réservation
@@ -20,6 +23,19 @@ exports.createReservation = asyncHandler(async (req, res) => {
         user: req.user._id,
         client: req.user._id  // Assurer la cohérence avec le modèle de données
     });
+
+    // Mode instant : démarrer Agenda expiration + rappels (deadline seule ne suffit pas)
+    if (reservation.status === 'payment_pending') {
+        try {
+            const paymentTTL =
+                reservation.ttlSnapshot?.paymentTTLMinutes ||
+                reservation.paymentTimerDuration ||
+                30;
+            await paymentTimerService.startPaymentTimer(reservation._id, paymentTTL);
+        } catch (timerErr) {
+            logger.warn('Timer paiement non démarré après création:', timerErr?.message);
+        }
+    }
 
     // Notifier via websocket
     await SocketService.notifyBlockedDatesUpdate(reservation.residence);
@@ -301,6 +317,44 @@ exports.updateReservationStatus = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Calculer le prix d'une réservation (avant création)
+ * @route POST /api/reservations/calculate-price
+ */
+exports.calculatePrice = asyncHandler(async (req, res) => {
+    const { residenceId, checkIn, checkOut, numberOfGuests = 1 } = req.body;
+
+    const residence = await Residence.findById(residenceId);
+    if (!residence) {
+        throw new ApiError('Résidence non trouvée', 404);
+    }
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    if (Number.isNaN(checkInDate.getTime()) || Number.isNaN(checkOutDate.getTime())) {
+        throw new ApiError('Dates invalides', 400);
+    }
+    if (checkOutDate <= checkInDate) {
+        throw new ApiError('La date de départ doit être après la date d\'arrivée', 400);
+    }
+
+    const totalPrice = await residence.calculateTotalPrice(checkInDate, checkOutDate);
+
+    res.status(200).json({
+        success: true,
+        data: {
+            totalPrice,
+            price: totalPrice,
+            total: totalPrice,
+            currency: 'XOF',
+            residenceId,
+            checkIn: checkInDate,
+            checkOut: checkOutDate,
+            numberOfGuests,
+        },
+    });
+});
+
+/**
  * Calculer les frais de modification d'une réservation
  * @route POST /api/reservations/:id/modification-fees
  */
@@ -426,39 +480,45 @@ exports.approveReservation = asyncHandler(async (req, res) => {
         throw new ApiError('Cette réservation ne peut pas être approuvée dans son état actuel', 400);
     }
 
-    // Mettre à jour le statut
+    // C1 fix : ne PAS passer en confirmed+pending (hook pre-save refuse).
+    // Intention métier = payment_pending + timer (client doit payer après approbation).
     const oldStatus = reservation.status;
-    reservation.status = 'confirmed';
-    reservation.paymentStatus = 'pending'; // Le client doit maintenant payer
-    await reservation.save();
+    const paymentTTL = reservation.ttlSnapshot?.paymentTTLMinutes || 30;
 
-    // ✅ PHASE 1 : Activer timer de paiement après approbation
+    let updatedReservation;
     try {
-        // Populate pour notifications
-        const populatedReservation = await Reservation.findById(reservation._id)
+        await paymentTimerService.startPaymentTimer(reservation._id, paymentTTL);
+
+        updatedReservation = await Reservation.findById(reservation._id)
             .populate('user', 'phoneNumber firstName lastName')
             .populate('residence', 'title')
             .populate('partner', 'phoneNumber firstName lastName');
 
-        // Démarrer timer de paiement (TTL depuis snapshot ou défaut)
-        const paymentTTL = reservation.ttlSnapshot?.paymentTTLMinutes || 30;
-        await paymentTimerService.startPaymentTimer(reservation._id, paymentTTL);
+        await agendaService.notifyReservationStatusChange(
+            reservation._id,
+            oldStatus,
+            'payment_pending'
+        );
 
-        // Notifications agenda service
-        await agendaService.notifyReservationStatusChange(reservation._id, oldStatus, 'confirmed');
-
-        // WebSocket notifications avec nouvelles méthodes
-        await SocketService.emitReservationStatusChange(populatedReservation, oldStatus, 'confirmed');
-
+        if (updatedReservation) {
+            await SocketService.emitReservationStatusChange(
+                updatedReservation,
+                oldStatus,
+                'payment_pending'
+            );
+        }
     } catch (timerError) {
-        // Log sans bloquer la réponse
-        console.error('Erreur activation timers après approbation:', timerError);
+        logger.error('Erreur activation timers après approbation:', timerError);
+        throw new ApiError(
+            'Approbation impossible : échec du démarrage du délai de paiement',
+            500
+        );
     }
 
     res.status(200).json({
         success: true,
-        message: 'Réservation approuvée avec succès',
-        data: reservation
+        message: 'Réservation approuvée — en attente de paiement client',
+        data: updatedReservation || reservation
     });
 });
 
@@ -496,17 +556,16 @@ exports.rejectReservation = asyncHandler(async (req, res) => {
         throw new ApiError('Cette réservation ne peut pas être rejetée dans son état actuel', 400);
     }
 
-    // Mettre à jour le statut
+    // Mettre à jour le statut — backend garde 'cancelled' + flag rejet hôte
     const oldStatus = reservation.status;
     reservation.status = 'cancelled';
-    if (reason) {
-        reservation.cancellationDetails = {
-            ...reservation.cancellationDetails,
-            reason: reason,
-            cancelledBy: 'partner',
-            cancelledAt: new Date()
-        };
-    }
+    reservation.cancellationDetails = {
+        cancelledAt: new Date(),
+        cancelledBy: req.user._id,
+        reason: reason || 'Rejeté par le partenaire',
+        rejectedByHost: true,
+        refundStatus: 'completed',
+    };
     await reservation.save();
 
     // ✅ PHASE 1 : Libérer inventaire et notifier après rejet
@@ -574,8 +633,11 @@ exports.confirmPayment = asyncHandler(async (req, res) => {
         throw new ApiError('Accès non autorisé pour confirmer le paiement', 403);
     }
 
-    // Vérifier que la réservation nécessite un paiement
-    if (reservation.paymentStatus !== 'pending') {
+    // Accepter pending (classique) ou réservation déjà en payment_pending
+    const needsPayment =
+        reservation.paymentStatus === 'pending' ||
+        reservation.status === 'payment_pending';
+    if (!needsPayment) {
         throw new ApiError('Cette réservation ne nécessite pas de confirmation de paiement', 400);
     }
 
@@ -727,6 +789,14 @@ exports.performCheckout = asyncHandler(async (req, res) => {
     reservation.actualCheckOut = new Date();
     await reservation.save();
 
+    // Phase 3 — demande d'avis +24 h
+    try {
+        const { scheduleReviewReminder } = require('../../services/agenda.service');
+        await scheduleReviewReminder(reservation._id, 24);
+    } catch (reviewErr) {
+        logger.warn('Programmation review reminder échouée:', reviewErr?.message);
+    }
+
     // Notifier via websocket
     await SocketService.notifyReservationStatusUpdate(reservation);
 
@@ -734,5 +804,51 @@ exports.performCheckout = asyncHandler(async (req, res) => {
         success: true,
         message: 'Check-out effectué avec succès',
         data: reservation
+    });
+});
+
+/**
+ * Ajouter une note partenaire à une réservation
+ * @route POST /api/reservations/:id/notes
+ */
+exports.addNote = asyncHandler(async (req, res) => {
+    const { note } = req.body;
+    if (!note || !String(note).trim()) {
+        throw new ApiError('La note est requise', 400);
+    }
+
+    const reservation = await Reservation.findById(req.params.id).populate('residence');
+    if (!reservation) {
+        throw new ApiError('Réservation non trouvée', 404);
+    }
+
+    const getIdValue = (input) => {
+        if (typeof input === 'string') return input;
+        return input?._id?.toString() || input?.toString();
+    };
+
+    const currentPartnerId = getIdValue(req.user._id);
+    const reservationPartnerId = getIdValue(reservation.partner);
+    const residencePartnerId = getIdValue(reservation.residence?.partner);
+
+    if (
+        currentPartnerId !== reservationPartnerId &&
+        currentPartnerId !== residencePartnerId &&
+        !['admin', 'superadmin'].includes(req.user.role)
+    ) {
+        throw new ApiError('Accès non autorisé à cette réservation', 403);
+    }
+
+    const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const entry = `[${stamp}] ${String(note).trim()}`;
+    reservation.notes = reservation.notes
+        ? `${reservation.notes}\n${entry}`
+        : entry;
+    await reservation.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Note ajoutée',
+        data: reservation,
     });
 });

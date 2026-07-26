@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter/foundation.dart';
 import '../../models/partner/partner_model.dart';
 import '../../models/auth/token_info.dart';
 import '../../utils/error_handler.dart';
+import '../../utils/secure_storage.dart';
+import '../../config/app_config_manager.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 class AuthResult {
   final String token;
@@ -19,11 +20,11 @@ class AuthResult {
 
 class AuthService {
   final Dio _dio;
-  final _storage = const FlutterSecureStorage();
+  final _storage = AppSecureStorage.instance;
   
   // Clés de stockage
-  static const String _tokenKey = 'token';
-  static const String _tokenExpiryKey = 'token_expiry';
+  static const String _tokenKey = AppSecureStorage.tokenKey;
+  static const String _tokenExpiryKey = AppSecureStorage.tokenExpiryKey;
 
   AuthService(this._dio);
 
@@ -39,14 +40,14 @@ class AuthService {
       
       // Vérifier si le token est expiré
       if (tokenInfo.isExpired) {
-        print('⚠️ Token expiré (expiré le ${tokenInfo.expiresAt.toLocal()})');
+        AppLogger.d('⚠️ Token expiré (expiré le ${tokenInfo.expiresAt.toLocal()})');
         await removeToken();
         return null;
       }
       
       return tokenInfo.token;
     } catch (e) {
-      print('❌ Erreur lors de la récupération du token: $e');
+      AppLogger.d('❌ Erreur lors de la récupération du token: $e');
       return null;
     }
   }
@@ -60,9 +61,9 @@ class AuthService {
       final expiryDate = DateTime.now().add(Duration(days: expiryDays));
       await _storage.write(key: _tokenExpiryKey, value: expiryDate.toIso8601String());
       
-      print('✅ Token stocké (expire le ${expiryDate.toLocal()})');
+      AppLogger.d('✅ Token stocké (expire le ${expiryDate.toLocal()})');
     } catch (e) {
-      print('❌ Erreur lors du stockage du token: $e');
+      AppLogger.d('❌ Erreur lors du stockage du token: $e');
     }
   }
 
@@ -71,9 +72,9 @@ class AuthService {
     try {
       await _storage.delete(key: _tokenKey);
       await _storage.delete(key: _tokenExpiryKey);
-      print('🗑️ Token supprimé');
+      AppLogger.d('🗑️ Token supprimé');
     } catch (e) {
-      print('❌ Erreur lors de la suppression du token: $e');
+      AppLogger.d('❌ Erreur lors de la suppression du token: $e');
     }
   }
 
@@ -90,7 +91,7 @@ class AuthService {
       final expiryDate = DateTime.parse(expiryStr);
       return TokenInfo(token: token, expiresAt: expiryDate);
     } catch (e) {
-      print('❌ Erreur lors de la récupération des infos du token: $e');
+      AppLogger.d('❌ Erreur lors de la récupération des infos du token: $e');
       return null;
     }
   }
@@ -104,7 +105,7 @@ class AuthService {
       }
       return !tokenInfo.isExpired;
     } catch (e) {
-      print('❌ Erreur lors de la vérification du token: $e');
+      AppLogger.d('❌ Erreur lors de la vérification du token: $e');
       return false;
     }
   }
@@ -124,10 +125,10 @@ class AuthService {
   }) async {
     try {
       // Ajout de logs pour le débogage
-      print('🔍 URL API de base: ${_dio.options.baseUrl}');
-      print('🔍 URL complète: ${_dio.options.baseUrl}/auth/login');
-      print('🔍 Headers: ${_dio.options.headers}');
-      print('🔍 Timeout configuré: ${_dio.options.connectTimeout}');
+      AppLogger.d('🔍 URL API de base: ${_dio.options.baseUrl}');
+      AppLogger.d('🔍 URL complète: ${_dio.options.baseUrl}/auth/login');
+      AppLogger.d('🔍 Headers: ${_dio.options.headers}');
+      AppLogger.d('🔍 Timeout configuré: ${_dio.options.connectTimeout}');
       
       final response = await _dio.post(
         '/auth/login',
@@ -185,10 +186,10 @@ class AuthService {
   }) async {
     try {
       // Ajout de logs pour le débogage de l'inscription
-      print('🔍 REGISTER - URL API de base: ${_dio.options.baseUrl}');
-      print('🔍 REGISTER - URL complète: ${_dio.options.baseUrl}/auth/register-partner');
-      print('🔍 REGISTER - Headers: ${_dio.options.headers}');
-      print('🔍 REGISTER - Données envoyées: firstName=$firstName, lastName=$lastName, email=$email, phoneNumber=$phoneNumber, countryCode=${countryCode ?? 'CI'}');
+      AppLogger.d('🔍 REGISTER - URL API de base: ${_dio.options.baseUrl}');
+      AppLogger.d('🔍 REGISTER - URL complète: ${_dio.options.baseUrl}/auth/register-partner');
+      AppLogger.d('🔍 REGISTER - Headers: ${_dio.options.headers}');
+      AppLogger.d('🔍 REGISTER - Données envoyées: firstName=$firstName, lastName=$lastName, email=$email, phoneNumber=$phoneNumber, countryCode=${countryCode ?? 'CI'}');
       
       final response = await _dio.post(
         '/auth/register-partner', // Utiliser l'endpoint spécifique pour les partenaires
@@ -202,8 +203,8 @@ class AuthService {
         },
       );
 
-      print('🔍 REGISTER - Status Code: ${response.statusCode}');
-      print('🔍 REGISTER - Response Data: ${response.data}');
+      AppLogger.d('🔍 REGISTER - Status Code: ${response.statusCode}');
+      AppLogger.d('🔍 REGISTER - Response Data: ${response.data}');
       
       if (response.statusCode == 201) {
         final data = response.data;
@@ -212,7 +213,7 @@ class AuthService {
           final refreshToken = data['refreshToken'];
           final user = data['user'];
           
-          print('✅ REGISTER - Inscription réussie pour: $email');
+          AppLogger.d('✅ REGISTER - Inscription réussie pour: $email');
           
           // Enregistrer les tokens
           await setToken(token);
@@ -229,16 +230,16 @@ class AuthService {
             partner: Partner.fromJson(user),
           );
         } else {
-          print('❌ REGISTER - Échec: ${data['message']}');
+          AppLogger.d('❌ REGISTER - Échec: ${data['message']}');
           throw Exception(data['message'] ?? 'Erreur lors de l\'inscription');
         }
       } else {
-        print('❌ REGISTER - Status Code inattendu: ${response.statusCode}');
-        print('❌ REGISTER - Response: ${response.data}');
+        AppLogger.d('❌ REGISTER - Status Code inattendu: ${response.statusCode}');
+        AppLogger.d('❌ REGISTER - Response: ${response.data}');
         throw Exception(response.data['message'] ?? 'Erreur lors de l\'inscription');
       }
     } catch (e) {
-      print('❌ REGISTER - Exception attrapée: $e');
+      AppLogger.d('❌ REGISTER - Exception attrapée: $e');
       throw ErrorHandler.handleError(e);
     }
   }
@@ -246,6 +247,11 @@ class AuthService {
   /// Récupère le profil du partenaire connecté
   Future<Partner> getProfile() async {
     try {
+      // Garde-fou : certains appels créent un Dio() sans baseUrl
+      if (_dio.options.baseUrl.isEmpty) {
+        _dio.options.baseUrl = AppConfigManager.apiUrl;
+      }
+
       final response = await _dio.get('/auth/me');
       
       if (response.statusCode == 200) {
@@ -268,7 +274,7 @@ class AuthService {
   /// Met à jour le profil du partenaire
   Future<Partner> updateProfile(Map<String, dynamic> userData) async {
     try {
-      print('Mise à jour du profil avec les données: $userData');
+      AppLogger.d('Mise à jour du profil avec les données: $userData');
       
       final response = await _dio.put(
         '/partners/profile',
@@ -279,7 +285,7 @@ class AuthService {
         final data = response.data;
         if (data['success'] == true) {
           final updatedUser = data['data'] ?? data['user'];
-          print('Profil mis à jour avec succès');
+          AppLogger.d('Profil mis à jour avec succès');
           return Partner.fromJson(updatedUser);
         } else {
           throw Exception(data['message'] ?? 'Erreur lors de la mise à jour du profil');
@@ -288,7 +294,7 @@ class AuthService {
         throw Exception(response.data['message'] ?? 'Erreur lors de la mise à jour du profil');
       }
     } catch (e) {
-      print('Erreur lors de la mise à jour du profil: $e');
+      AppLogger.d('Erreur lors de la mise à jour du profil: $e');
       throw ErrorHandler.handleError(e);
     }
   }
@@ -298,7 +304,7 @@ class AuthService {
     try {
       await _dio.post('/auth/logout');
     } catch (e) {
-      print('⚠️ Erreur lors de la déconnexion: $e');
+      AppLogger.d('⚠️ Erreur lors de la déconnexion: $e');
     } finally {
       // Toujours supprimer le token localement même si la déconnexion échoue
       await removeToken();
@@ -319,7 +325,7 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print('❌ Erreur lors de la demande de réinitialisation: $e');
+      AppLogger.d('❌ Erreur lors de la demande de réinitialisation: $e');
       throw ErrorHandler.handleError(e);
     }
   }
@@ -341,7 +347,7 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print('❌ Erreur lors de la réinitialisation du mot de passe: $e');
+      AppLogger.d('❌ Erreur lors de la réinitialisation du mot de passe: $e');
       throw ErrorHandler.handleError(e);
     }
   }
@@ -365,7 +371,7 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print('❌ Erreur lors de la suppression du compte: $e');
+      AppLogger.d('❌ Erreur lors de la suppression du compte: $e');
       throw ErrorHandler.handleError(e);
     }
   }

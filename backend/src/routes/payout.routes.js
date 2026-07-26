@@ -50,6 +50,7 @@ router.post(
 // MIDDLEWARE GLOBAL
 // ===============================
 router.use(authMiddleware.protect);
+router.use(authMiddleware.authorize('partner', 'admin', 'superadmin'));
 
 // ===============================
 // VALIDATION SCHEMAS

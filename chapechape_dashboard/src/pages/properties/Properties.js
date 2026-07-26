@@ -17,10 +17,12 @@ import {
   CheckIcon,
   CheckCircleIcon,
   XCircleIcon,
-  XMarkIcon
+  XMarkIcon,
+  VideoCameraIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
+import VideoModerationModal from '../../components/properties/VideoModerationModal';
 
 /** Icônes par code backend (catalogue meta) — défaut : BuildingOfficeIcon */
 const TYPE_ICON_COMPONENTS = {
@@ -62,7 +64,7 @@ const TYPE_ICON_COMPONENTS = {
   other: HomeIcon
 };
 
-const PropertyCard = ({ property, typeLabel, onValidate, onReject, onDelete, onVerify }) => {
+const PropertyCard = ({ property, typeLabel, onValidate, onReject, onDelete, onVerify, onVideoModerate }) => {
   const statusColors = {
     available: 'bg-green-100 text-green-800',
     unavailable: 'bg-red-100 text-red-800',
@@ -138,7 +140,7 @@ const PropertyCard = ({ property, typeLabel, onValidate, onReject, onDelete, onV
               {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(property.price)}
             </span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center flex-wrap gap-1">
             {property.featured && (
               <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
                 ⭐ Mise en avant
@@ -149,16 +151,50 @@ const PropertyCard = ({ property, typeLabel, onValidate, onReject, onDelete, onV
                 ✓ Vérifiée
               </span>
             )}
+            {/* Badge vidéo en attente */}
+            {property.videos?.some(v => v.status === 'pending_review') && (
+              <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full flex items-center gap-1">
+                <VideoCameraIcon className="w-3 h-3" />
+                Vidéo à valider
+              </span>
+            )}
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center justify-between space-x-2">
-          <button className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm">
-            Voir détails
+          <button
+            type="button"
+            onClick={() => {
+              if (property.videos?.length > 0 && onVideoModerate) {
+                onVideoModerate(property);
+              }
+            }}
+            className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm"
+          >
+            {property.videos?.some((v) => v.status === 'pending_review')
+              ? 'Modérer la vidéo'
+              : property.videos?.length > 0
+                ? 'Voir la vidéo'
+                : 'Voir détails'}
           </button>
           
           <div className="flex space-x-1">
+            {/* Bouton modération vidéo — visible si au moins une vidéo */}
+            {property.videos?.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onVideoModerate(property)}
+                className={`p-2 rounded-lg transition-colors duration-200 ${
+                  property.videos.some((v) => v.status === 'pending_review')
+                    ? 'bg-orange-100 hover:bg-orange-200 text-orange-700 ring-2 ring-orange-300'
+                    : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-600'
+                }`}
+                title="Modérer les vidéos"
+              >
+                <VideoCameraIcon className="w-4 h-4" />
+              </button>
+            )}
             {!property.verified && (
               <button 
                 onClick={() => onVerify(property.id)}
@@ -226,6 +262,7 @@ const Properties = () => {
   const [loading, setLoading] = useState(true);
   const [residenceTypeOptions, setResidenceTypeOptions] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [videoModalProperty, setVideoModalProperty] = useState(null);
   const [filters, setFilters] = useState({
     type: '',
     minPrice: '',
@@ -279,6 +316,7 @@ const Properties = () => {
         // Transformer les données backend pour correspondre à l'interface
         const transformedProperties = response.data.map(property => ({
           id: property._id || property.id,
+          _id: property._id || property.id,
           title: property.title,
           description: property.description,
           price: property.price,
@@ -296,7 +334,9 @@ const Properties = () => {
           // Champs additionnels pour l'interface
           stars: property.stars || 0,
           featured: property.featured || false,
-          verified: property.verified || false
+          verified: property.verified || false,
+          // Nécessaire pour le badge + bouton de modération vidéo
+          videos: Array.isArray(property.videos) ? property.videos : [],
         }));
         
         setProperties(transformedProperties);
@@ -582,10 +622,23 @@ const Properties = () => {
                 onReject={handleRejectProperty}
                 onDelete={handleDeleteProperty}
                 onVerify={handleVerifyProperty}
+                onVideoModerate={(p) => setVideoModalProperty(p)}
               />
             ))}
           </AnimatePresence>
         </motion.div>
+      )}
+
+      {/* Modale modération vidéo */}
+      {videoModalProperty && (
+        <VideoModerationModal
+          residence={videoModalProperty}
+          onClose={() => setVideoModalProperty(null)}
+          onUpdated={() => {
+            fetchProperties();
+            setVideoModalProperty(null);
+          }}
+        />
       )}
 
       {pagination.pages > 1 && (

@@ -130,16 +130,8 @@ class AppRouter {
   }
 
   Future<void> _checkPersistedAuth() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      
-      if (token != null && token.isNotEmpty) {
-        print("Session restaurée après hot reload");
-      }
-    } catch (e) {
-      print("Erreur lors de la restauration de session: $e");
-    }
+    // Session = FlutterSecureStorage uniquement (via AuthBloc)
+    // Ne plus lire de JWT depuis SharedPreferences
   }
 
   late final router = GoRouter(

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/payment/african_payment_method.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Service pour gérer le stockage local des préférences de paiement
 class PaymentPreferencesService {
@@ -16,7 +17,7 @@ class PaymentPreferencesService {
       
       return await prefs.setStringList(_acceptedMethodsKey, methodsAsStrings);
     } catch (e) {
-      print('❌ Erreur lors de la sauvegarde des méthodes de paiement: $e');
+      AppLogger.d('❌ Erreur lors de la sauvegarde des méthodes de paiement: $e');
       return false;
     }
   }
@@ -29,7 +30,7 @@ class PaymentPreferencesService {
       
       return methodsAsStrings.map(_parsePaymentMethod).toList();
     } catch (e) {
-      print('❌ Erreur lors de la récupération des méthodes de paiement: $e');
+      AppLogger.d('❌ Erreur lors de la récupération des méthodes de paiement: $e');
       return [];
     }
   }
@@ -43,7 +44,7 @@ class PaymentPreferencesService {
       
       return await prefs.setString(key, detailsJson);
     } catch (e) {
-      print('❌ Erreur lors de la sauvegarde des détails de la méthode de paiement: $e');
+      AppLogger.d('❌ Erreur lors de la sauvegarde des détails de la méthode de paiement: $e');
       return false;
     }
   }
@@ -61,7 +62,7 @@ class PaymentPreferencesService {
       
       return jsonDecode(detailsJson) as Map<String, dynamic>;
     } catch (e) {
-      print('❌ Erreur lors de la récupération des détails de la méthode de paiement: $e');
+      AppLogger.d('❌ Erreur lors de la récupération des détails de la méthode de paiement: $e');
       return null;
     }
   }
@@ -84,7 +85,7 @@ class PaymentPreferencesService {
       
       return result;
     } catch (e) {
-      print('❌ Erreur lors de la récupération des détails des méthodes de paiement: $e');
+      AppLogger.d('❌ Erreur lors de la récupération des détails des méthodes de paiement: $e');
       return {};
     }
   }
@@ -108,7 +109,7 @@ class PaymentPreferencesService {
       
       return true;
     } catch (e) {
-      print('❌ Erreur lors de la suppression de la méthode de paiement: $e');
+      AppLogger.d('❌ Erreur lors de la suppression de la méthode de paiement: $e');
       return false;
     }
   }

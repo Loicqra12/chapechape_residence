@@ -67,7 +67,9 @@ const requestRefund = {
     }),
     amount: Joi.number().optional().min(0).messages({
       'number.min': 'Le montant ne peut pas être négatif'
-    })
+    }),
+    // Admin : synchroniser après remboursement manuel dans le dashboard PSP
+    markExternalRefund: Joi.boolean().optional().default(false),
   })
 };
 

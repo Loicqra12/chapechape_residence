@@ -2,11 +2,11 @@ const Agenda = require('agenda');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const twilioService = require('./twilio.service');
-const Booking = require('../models/booking.model');
 const Reservation = require('../models/reservation.model');
 const Payout = require('../models/payout.model');
+const User = require('../models/user.model');
 const SMSMetrics = require('../models/sms_metrics.model');
-const payoutService = require('./payout.service');
+const notificationTypes = require('../utils/notification-types');
 
 // Initialiser Agenda avec la même connexion MongoDB que l'application
 const agenda = new Agenda({
@@ -16,205 +16,6 @@ const agenda = new Agenda({
   maxConcurrency: 20
 });
 
-// Définir les types de jobs
-agenda.define('sendBookingReminder', async (job) => {
-  try {
-    const { bookingId } = job.attrs.data;
-
-    const booking = await Booking.findById(bookingId)
-      .populate('user', 'phoneNumber firstName lastName')
-      .populate('residence', 'title address');
-
-    if (!booking) {
-      logger.warn(`Réservation ${bookingId} non trouvée pour l'envoi du rappel SMS`);
-      return;
-    }
-
-    // Vérifier que la réservation est toujours confirmée
-    if (booking.status !== 'confirmed') {
-      logger.info(`Rappel SMS non envoyé pour la réservation ${bookingId} car son statut est ${booking.status}`);
-      return;
-    }
-
-    // Envoyer le SMS de rappel
-    const message = await twilioService.sendBookingNotification(booking, 'reminder');
-
-    // Enregistrer les métriques
-    await SMSMetrics.create({
-      type: 'booking_reminder',
-      recipient: booking.user._id,
-      booking: bookingId,
-      messageId: message?.sid || null,
-      status: message?.status || 'failed',
-      content: `Rappel pour la réservation à ${booking.residence.title}`
-    });
-
-    logger.info(`Rappel SMS envoyé pour la réservation ${bookingId}`);
-  } catch (error) {
-    logger.error(`Erreur lors de l'envoi du rappel SMS: ${error.message}`, error);
-  }
-});
-
-agenda.define('sendStatusChangeNotification', async (job) => {
-  try {
-    const { bookingId, oldStatus, newStatus } = job.attrs.data;
-
-    const booking = await Booking.findById(bookingId)
-      .populate('user', 'phoneNumber firstName lastName')
-      .populate('residence', 'title address');
-
-    if (!booking) {
-      logger.warn(`Réservation ${bookingId} non trouvée pour l'envoi de la notification de changement de statut`);
-      return;
-    }
-
-    // Déterminer le type de notification en fonction du changement de statut
-    let notificationType;
-
-    switch (newStatus) {
-      case 'confirmed':
-        notificationType = 'confirmation';
-        break;
-      case 'cancelled':
-        notificationType = 'cancellation';
-        break;
-      case 'completed':
-        notificationType = 'completed';
-        break;
-      default:
-        notificationType = 'status_change';
-    }
-
-    // Envoyer le SMS de notification
-    const message = await twilioService.sendBookingNotification(booking, notificationType);
-
-    // Enregistrer les métriques
-    await SMSMetrics.create({
-      type: `booking_${notificationType}`,
-      recipient: booking.user._id,
-      booking: bookingId,
-      messageId: message?.sid || null,
-      status: message?.status || 'failed',
-      content: `Notification de changement de statut (${oldStatus} → ${newStatus}) pour la réservation à ${booking.residence.title}`
-    });
-
-    logger.info(`Notification SMS de changement de statut envoyée pour la réservation ${bookingId} (${oldStatus} → ${newStatus})`);
-  } catch (error) {
-    logger.error(`Erreur lors de l'envoi de la notification de changement de statut: ${error.message}`, error);
-  }
-});
-
-agenda.define('sendPaymentReminderAfricaSpecific', async (job) => {
-  try {
-    const { bookingId, paymentMethod } = job.attrs.data;
-
-    const booking = await Booking.findById(bookingId)
-      .populate('user', 'phoneNumber firstName lastName')
-      .populate('residence', 'title address');
-
-    if (!booking) {
-      logger.warn(`Réservation ${bookingId} non trouvée pour l'envoi du rappel de paiement`);
-      return;
-    }
-
-    // Personnaliser le message selon la méthode de paiement africaine
-    let paymentInstructions = '';
-
-    switch (paymentMethod) {
-      case 'wave':
-        paymentInstructions = `Pour payer avec Wave, envoyez ${booking.amount} FCFA au numéro +225 XX XX XX XX en utilisant le code de référence: CHAPE${booking._id.toString().substring(0, 6)}`;
-        break;
-      case 'orange_money':
-        paymentInstructions = `Pour payer avec Orange Money, envoyez ${booking.amount} FCFA au numéro #144*72# et utilisez le code marchand: CHAP${booking._id.toString().substring(0, 4)}`;
-        break;
-      case 'mtn_money':
-        paymentInstructions = `Pour payer avec MTN Money, composez *133# et choisissez "Payer facture". Utilisez le code marchand CHAPECHAPE et la référence: ${booking._id.toString().substring(0, 8)}`;
-        break;
-      case 'moov_money':
-        paymentInstructions = `Pour payer avec Moov Money, composez *155# et choisissez "Payer facture". Code: CHAPE${booking._id.toString().substring(0, 6)}`;
-        break;
-      default:
-        paymentInstructions = `Pour finaliser votre réservation, merci de procéder au paiement de ${booking.amount} FCFA. Pour toute assistance, contactez-nous au +225 XX XX XX XX.`;
-    }
-
-    // Message complet
-    const messageBody = `ChapeChape: Rappel de paiement pour votre réservation à "${booking.residence.title}" le ${new Date(booking.visitDate).toLocaleDateString('fr-FR')}. ${paymentInstructions}`;
-
-    // Envoyer le SMS personnalisé
-    const message = await twilioService.sendSMS(booking.user.phoneNumber, messageBody);
-
-    // Enregistrer les métriques
-    await SMSMetrics.create({
-      type: 'payment_reminder',
-      recipient: booking.user._id,
-      booking: bookingId,
-      messageId: message?.sid || null,
-      status: message?.status || 'failed',
-      content: messageBody,
-      metadata: {
-        paymentMethod
-      }
-    });
-
-    logger.info(`Rappel de paiement ${paymentMethod} envoyé pour la réservation ${bookingId}`);
-  } catch (error) {
-    logger.error(`Erreur lors de l'envoi du rappel de paiement: ${error.message}`, error);
-  }
-});
-
-// Fonction pour planifier un rappel de réservation
-const scheduleBookingReminder = async (bookingId, visitDate) => {
-  try {
-    // Calculer la date du rappel (la veille de la visite à 18h)
-    const reminderDate = new Date(visitDate);
-    reminderDate.setDate(reminderDate.getDate() - 1);
-    reminderDate.setHours(18, 0, 0, 0);
-
-    // Vérifier que la date de rappel est dans le futur
-    if (reminderDate <= new Date()) {
-      logger.warn(`La date de rappel pour la réservation ${bookingId} est déjà passée`);
-      return;
-    }
-
-    // Planifier le job
-    await agenda.schedule(reminderDate, 'sendBookingReminder', { bookingId });
-
-    logger.info(`Rappel SMS planifié pour la réservation ${bookingId} le ${reminderDate.toISOString()}`);
-    return true;
-  } catch (error) {
-    logger.error(`Erreur lors de la planification du rappel SMS: ${error.message}`);
-    return false;
-  }
-};
-
-// Fonction pour notifier un changement de statut de réservation
-const notifyBookingStatusChange = async (bookingId, oldStatus, newStatus) => {
-  try {
-    // Envoyer immédiatement la notification
-    await agenda.now('sendStatusChangeNotification', { bookingId, oldStatus, newStatus });
-
-    logger.info(`Notification de changement de statut programmée pour la réservation ${bookingId} (${oldStatus} → ${newStatus})`);
-    return true;
-  } catch (error) {
-    logger.error(`Erreur lors de la programmation de la notification de changement de statut: ${error.message}`);
-    return false;
-  }
-};
-
-// Fonction pour envoyer un rappel de paiement avec instructions spécifiques aux méthodes africaines
-const sendPaymentReminderAfricaSpecific = async (bookingId, paymentMethod) => {
-  try {
-    // Envoyer immédiatement le rappel de paiement
-    await agenda.now('sendPaymentReminderAfricaSpecific', { bookingId, paymentMethod });
-
-    logger.info(`Rappel de paiement ${paymentMethod} programmé pour la réservation ${bookingId}`);
-    return true;
-  } catch (error) {
-    logger.error(`Erreur lors de la programmation du rappel de paiement: ${error.message}`);
-    return false;
-  }
-};
-
 // Démarrer le service Agenda
 const startAgenda = async () => {
   try {
@@ -222,6 +23,8 @@ const startAgenda = async () => {
 
     // ✅ Démarrer les jobs périodiques payout
     startPayoutPeriodicJobs();
+    // ✅ Phase 2 engagement (digest Partner)
+    startEngagementPeriodicJobs();
 
     logger.info('Service Agenda démarré avec succès pour les notifications automatiques et payouts');
     return agenda;
@@ -267,9 +70,73 @@ agenda.define('sendReservationReminder', async (job) => {
       content: `Rappel pour la réservation à ${reservation.residence.title}`
     });
 
-    logger.info(`Rappel SMS envoyé pour réservation ${reservationId}`);
+    // Push OneSignal (en plus du SMS)
+    try {
+      const notificationService = require('./notification.service');
+      const arrivalDate = reservation.checkIn
+        ? new Date(reservation.checkIn).toLocaleDateString('fr-FR')
+        : undefined;
+      await notificationService.notifyClient(
+        reservation.user._id,
+        notificationTypes.CLIENT.ARRIVAL_REMINDER,
+        {
+          reservationId,
+          residenceName: reservation.residence?.title,
+          arrivalDate,
+          deepLink: `/booking-details/${reservationId}`,
+        }
+      );
+    } catch (pushErr) {
+      logger.error(`Push rappel arrivée échoué pour ${reservationId}:`, pushErr);
+    }
+
+    logger.info(`Rappel SMS+push envoyé pour réservation ${reservationId}`);
   } catch (error) {
     logger.error(`Erreur lors de l'envoi du rappel SMS pour réservation ${job.attrs.data.reservationId}:`, error);
+  }
+});
+
+// Job rappel départ (24h avant check-out)
+agenda.define('sendReservationDepartureReminder', async (job) => {
+  try {
+    const { reservationId } = job.attrs.data;
+
+    const reservation = await Reservation.findById(reservationId)
+      .populate('user', 'phoneNumber firstName lastName')
+      .populate('residence', 'title address');
+
+    if (!reservation) {
+      logger.warn(`Réservation ${reservationId} non trouvée pour rappel départ`);
+      return;
+    }
+
+    if (!['confirmed', 'in_stay'].includes(reservation.status)) {
+      logger.info(`Rappel départ ignoré pour ${reservationId} (statut=${reservation.status})`);
+      return;
+    }
+
+    try {
+      const notificationService = require('./notification.service');
+      const departureDate = reservation.checkOut
+        ? new Date(reservation.checkOut).toLocaleDateString('fr-FR')
+        : undefined;
+      await notificationService.notifyClient(
+        reservation.user._id,
+        notificationTypes.CLIENT.DEPARTURE_REMINDER,
+        {
+          reservationId,
+          residenceName: reservation.residence?.title,
+          departureDate,
+          deepLink: `/booking-details/${reservationId}`,
+        }
+      );
+    } catch (pushErr) {
+      logger.error(`Push rappel départ échoué pour ${reservationId}:`, pushErr);
+    }
+
+    logger.info(`Rappel départ push envoyé pour réservation ${reservationId}`);
+  } catch (error) {
+    logger.error(`Erreur rappel départ réservation ${job.attrs.data.reservationId}:`, error);
   }
 });
 
@@ -291,16 +158,21 @@ agenda.define('notifyPartnerReservationChange', async (job) => {
     // Message spécifique selon le changement de statut
     let messageType = 'status_change';
     let message = '';
+    let partnerPushType = null;
 
-    if (newStatus === 'confirmed' && oldStatus === 'pending_payment') {
+    if (newStatus === 'confirmed' && (oldStatus === 'pending_payment' || oldStatus === 'payment_pending' || oldStatus === 'pending')) {
       messageType = 'payment_confirmed';
       message = `✅ Paiement confirmé ! Réservation de ${reservation.user.firstName} pour ${reservation.residence.title}`;
+      // Push paiement déjà géré par applyPaymentPaid (idempotent) — SMS seulement ici
+      partnerPushType = null;
     } else if (newStatus === 'cancelled') {
       messageType = 'cancelled';
       message = `❌ Réservation annulée. ${reservation.user.firstName} a annulé sa réservation pour ${reservation.residence.title}`;
+      partnerPushType = notificationTypes.PARTNER.BOOKING_CANCELED;
     } else if (newStatus === 'expired') {
       messageType = 'expired';
       message = `⏰ Réservation expirée. Délai de paiement dépassé pour ${reservation.residence.title}`;
+      partnerPushType = notificationTypes.PARTNER.BOOKING_EXPIRED;
     }
 
     if (message && reservation.partner.phoneNumber) {
@@ -314,6 +186,25 @@ agenda.define('notifyPartnerReservationChange', async (job) => {
         status: twilioMessage?.status || 'failed',
         content: message
       });
+    }
+
+    if (partnerPushType) {
+      try {
+        const notificationService = require('./notification.service');
+        await notificationService.notifyPartner(
+          reservation.partner._id,
+          partnerPushType,
+          {
+            reservationId,
+            residenceName: reservation.residence?.title,
+            clientName: reservation.user?.firstName || 'Client',
+            event: `status_${oldStatus}_to_${newStatus}`,
+            deepLink: `/reservations/${reservationId}`,
+          }
+        );
+      } catch (pushErr) {
+        logger.error(`Push partner statut échoué pour ${reservationId}:`, pushErr);
+      }
     }
 
     logger.info(`Notification partenaire envoyée pour réservation ${reservationId} (${oldStatus} → ${newStatus})`);
@@ -338,6 +229,25 @@ const scheduleReservationReminder = async (reservationId, checkInDate) => {
     return job;
   } catch (error) {
     logger.error(`Erreur lors de la programmation du rappel pour réservation ${reservationId}:`, error);
+    throw error;
+  }
+};
+
+const scheduleReservationDepartureReminder = async (reservationId, checkOutDate) => {
+  try {
+    const reminderDate = new Date(checkOutDate);
+    reminderDate.setHours(reminderDate.getHours() - 24);
+
+    if (reminderDate <= new Date()) {
+      logger.info(`Date rappel départ déjà passée pour réservation ${reservationId}`);
+      return null;
+    }
+
+    const job = await agenda.schedule(reminderDate, 'sendReservationDepartureReminder', { reservationId });
+    logger.info(`Rappel départ programmé pour ${reservationId} à ${reminderDate}`);
+    return job;
+  } catch (error) {
+    logger.error(`Erreur programmation rappel départ ${reservationId}:`, error);
     throw error;
   }
 };
@@ -433,11 +343,112 @@ async function scheduleReservationExpiration(reservationId, deadline) {
  */
 async function cancelReservationExpiration(reservationId) {
   try {
-    const cancelled = await agenda.cancel({ name: 'expire reservation', 'data.reservationId': reservationId });
-    logger.info(`${cancelled} job(s) d'expiration annulé(s) pour réservation ${reservationId}`);
-    return cancelled;
+    const cancelledExpire = await agenda.cancel({ name: 'expire reservation', 'data.reservationId': reservationId });
+    const cancelledReminders = await agenda.cancel({
+      name: 'reservation payment reminder',
+      'data.reservationId': reservationId,
+    });
+    logger.info(
+      `${cancelledExpire} expiration + ${cancelledReminders} rappel(s) paiement annulé(s) pour réservation ${reservationId}`
+    );
+    return cancelledExpire + cancelledReminders;
   } catch (error) {
     logger.error(`Erreur lors de l'annulation de l'expiration pour réservation ${reservationId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Rappels paiement Client — adaptés à la durée du timer (souvent 30 min).
+ * - rappel milieu de fenêtre
+ * - rappel final (~5 min avant deadline)
+ * Idempotents + annulés au paiement.
+ */
+agenda.define('reservation payment reminder', async (job) => {
+  try {
+    const { reservationId, stage } = job.attrs.data;
+    const reservation = await Reservation.findById(reservationId)
+      .populate('user', 'firstName lastName phoneNumber notificationSettings deviceTokens')
+      .populate('residence', 'title');
+
+    if (!reservation) return;
+    if (reservation.status !== 'payment_pending' || reservation.paymentStatus === 'paid') {
+      logger.info(`Rappel paiement ${stage} ignoré — résa ${reservationId} plus en payment_pending`);
+      return;
+    }
+
+    const notificationService = require('./notification.service');
+    const minutesLeft = reservation.paymentDeadline
+      ? Math.max(0, Math.ceil((new Date(reservation.paymentDeadline) - Date.now()) / 60000))
+      : null;
+
+    const residenceName = reservation.residence?.title || 'votre résidence';
+    const message = stage === 'final'
+      ? `⏰ Plus que ${minutesLeft ?? 'quelques'} min pour payer "${residenceName}" — finalisez avant expiration.`
+      : `💳 Paiement toujours en attente pour "${residenceName}". Montant: ${reservation.totalPrice || 0} XOF.`;
+
+    await notificationService.createNotification(
+      reservation.user._id,
+      notificationTypes.CLIENT.PAYMENT_PENDING,
+      message,
+      {
+        reservationId,
+        stage,
+        event: `payment_reminder_${stage}`,
+        minutesLeft,
+        amount: reservation.totalPrice,
+        deepLink: `/booking-details/${reservationId}`,
+      }
+    );
+
+    logger.info(`Rappel paiement ${stage} envoyé pour réservation ${reservationId}`);
+  } catch (error) {
+    logger.error(`Erreur rappel paiement réservation ${job.attrs.data?.reservationId}:`, error);
+  }
+});
+
+async function schedulePaymentReminders(reservationId, deadline, durationMinutes = 30) {
+  try {
+    await agenda.cancel({
+      name: 'reservation payment reminder',
+      'data.reservationId': reservationId,
+    });
+
+    const now = Date.now();
+    const end = new Date(deadline).getTime();
+    const durationMs = Math.max(end - now, 0);
+    if (durationMs < 8 * 60 * 1000) {
+      logger.info(`Fenêtre paiement trop courte pour rappels (${reservationId})`);
+      return { scheduled: 0 };
+    }
+
+    let scheduled = 0;
+
+    // Milieu de fenêtre (ex. 30 min → ~15 min)
+    const midAt = new Date(now + durationMs * 0.5);
+    if (midAt.getTime() > now + 5 * 60 * 1000 && midAt.getTime() < end - 6 * 60 * 1000) {
+      await agenda.schedule(midAt, 'reservation payment reminder', {
+        reservationId,
+        stage: 'mid',
+      });
+      scheduled += 1;
+    }
+
+    // Final : ~5 min avant deadline
+    const finalOffsetMs = Math.min(5 * 60 * 1000, Math.floor(durationMs * 0.2));
+    const finalAt = new Date(end - Math.max(finalOffsetMs, 3 * 60 * 1000));
+    if (finalAt.getTime() > now + 2 * 60 * 1000 && finalAt.getTime() < end - 60 * 1000) {
+      await agenda.schedule(finalAt, 'reservation payment reminder', {
+        reservationId,
+        stage: 'final',
+      });
+      scheduled += 1;
+    }
+
+    logger.info(`Rappels paiement programmés (${scheduled}) pour réservation ${reservationId}`);
+    return { scheduled };
+  } catch (error) {
+    logger.error(`Erreur programmation rappels paiement ${reservationId}:`, error);
     throw error;
   }
 }
@@ -469,6 +480,7 @@ agenda.define('process payout', async (job) => {
     }
 
     // Exécuter le payout via le service
+    const payoutService = require('./payout.service');
     await payoutService.executePayout(payout);
 
     logger.info(`Payout ${payoutId} exécuté avec succès via job`);
@@ -491,6 +503,7 @@ agenda.define('process scheduled payouts', async (job) => {
   try {
     logger.info('Traitement périodique des payouts programmés');
 
+    const payoutService = require('./payout.service');
     const results = await payoutService.processScheduledPayouts();
 
     logger.info(`Payouts traités: ${results.successful}/${results.processed} réussis`);
@@ -513,6 +526,7 @@ agenda.define('sync pending payouts', async (job) => {
   try {
     logger.info('Synchronisation payouts en cours avec CinetPay');
 
+    const payoutService = require('./payout.service');
     const results = await payoutService.syncAllPendingPayouts();
 
     logger.info(`Payouts synchronisés: ${results.completed} complétés, ${results.failed} échecs`);
@@ -546,6 +560,7 @@ agenda.define('auto create payout', async (job) => {
     }
 
     // Créer le payout avec délai personnalisé
+    const payoutService = require('./payout.service');
     const payout = await payoutService.createPayoutForReservation(reservationId, delayHours);
 
     logger.info(`Payout créé automatiquement: ${payout.payout_id} pour réservation ${reservationId}`);
@@ -561,21 +576,33 @@ agenda.define('auto create payout', async (job) => {
  */
 agenda.define('cleanup old payouts', async (job) => {
   try {
-    logger.info('Nettoyage des payouts anciens');
+    logger.info('Archivage des payouts anciens');
 
-    // Supprimer les payouts échoués de plus de 30 jours
     const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const result = await Payout.deleteMany({
+    const stale = await Payout.find({
       status: { $in: ['PAYOUT_FAILED', 'PAYOUT_CANCELLED'] },
       updatedAt: { $lt: cutoffDate },
-      attempts: { $gte: 5 } // Seulement ceux qui ont épuisé leurs tentatives
-    });
+      attempts: { $gte: 5 },
+    }).limit(500);
 
-    logger.info(`${result.deletedCount} payouts anciens supprimés`);
+    let archived = 0;
+    for (const payout of stale) {
+      const from = payout.status;
+      payout.status = 'PAYOUT_ARCHIVED';
+      payout.history = payout.history || [];
+      payout.history.push({
+        status_from: from,
+        status_to: 'PAYOUT_ARCHIVED',
+        timestamp: new Date(),
+        reason: 'Archivage automatique (>30j, tentatives épuisées)',
+      });
+      await payout.save();
+      archived += 1;
+    }
 
+    logger.info(`${archived} payouts archivés (traçabilité conservée)`);
   } catch (error) {
-    logger.error('Erreur nettoyage payouts:', error);
+    logger.error('Erreur archivage payouts:', error);
     throw error;
   }
 });
@@ -627,21 +654,462 @@ function startPayoutPeriodicJobs() {
   logger.info('Jobs périodiques payout démarrés');
 }
 
+// ===============================
+// PHASE 2 — Messages non lus + digest Partner
+// ===============================
+
+/**
+ * Rappel si un message est toujours non lu après délai.
+ * Push immédiat éventuel déjà géré dans message.controller (si offline).
+ */
+agenda.define('remind unread message', async (job) => {
+  try {
+    const { messageId, recipientId, deepLink } = job.attrs.data;
+    const { Message } = require('../models/message.model');
+
+    const message = await Message.findById(messageId).populate('sender', 'firstName lastName name');
+    if (!message || message.read === true) {
+      logger.info(`Rappel message ignoré (lu ou absent): ${messageId}`);
+      return;
+    }
+
+    if (message.sender && message.sender._id.toString() === String(recipientId)) {
+      return;
+    }
+
+    const Notification = require('../models/notification.model');
+    const existing = await Notification.findOne({
+      user: recipientId,
+      type: notificationTypes.COMMON.NEW_MESSAGE,
+      'data.messageId': String(messageId),
+      'data.event': 'unread_message_reminder',
+    });
+    if (existing) {
+      logger.info(`Rappel message déjà envoyé (idempotent): ${messageId}`);
+      return;
+    }
+
+    const senderName =
+      message.sender?.firstName ||
+      message.sender?.name ||
+      'Quelqu\'un';
+    const preview = (message.content || '').substring(0, 50);
+    const notificationService = require('./notification.service');
+
+    await notificationService.createNotification(
+      recipientId,
+      notificationTypes.COMMON.NEW_MESSAGE,
+      `${senderName} attend votre réponse: ${preview}${(message.content || '').length > 50 ? '...' : ''}`,
+      {
+        messageId: String(messageId),
+        conversationId: message.conversation?.toString?.() || message.conversation,
+        event: 'unread_message_reminder',
+        deepLink: deepLink || '/notifications',
+      }
+    );
+
+    logger.info(`Rappel message non lu envoyé à ${recipientId} (msg ${messageId})`);
+  } catch (error) {
+    logger.error(`Erreur rappel message non lu:`, error);
+  }
+});
+
+async function scheduleUnreadMessageReminder(messageId, recipientId, delayMinutes = 60, deepLink = '/notifications') {
+  try {
+    await agenda.cancel({
+      name: 'remind unread message',
+      'data.messageId': String(messageId),
+      'data.recipientId': String(recipientId),
+    });
+
+    const when = new Date(Date.now() + delayMinutes * 60 * 1000);
+    await agenda.schedule(when, 'remind unread message', {
+      messageId: String(messageId),
+      recipientId: String(recipientId),
+      deepLink,
+    });
+
+    logger.info(`Rappel message programmé dans ${delayMinutes} min pour ${recipientId}`);
+  } catch (error) {
+    logger.error(`Erreur programmation rappel message:`, error);
+  }
+}
+
+/**
+ * Digest matinal Partner : actions en attente uniquement si count > 0
+ * Cron 09:00 (serveur UTC = Abidjan GMT)
+ */
+agenda.define('partner pending actions digest', async () => {
+  try {
+    const { Message, Conversation } = require('../models/message.model');
+    const notificationService = require('./notification.service');
+    const Notification = require('../models/notification.model');
+
+    const partners = await User.find({
+      role: { $in: ['partner', 'partner_pending'] },
+      isActive: { $ne: false },
+      'notificationSettings.pushEnabled': { $ne: false },
+    }).select('_id firstName');
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+
+    for (const partner of partners) {
+      try {
+        const awaitingApproval = await Reservation.countDocuments({
+          partner: partner._id,
+          status: 'awaiting_approval',
+        });
+
+        const conversations = await Conversation.find({
+          participants: partner._id,
+        }).select('_id');
+
+        const conversationIds = conversations.map((c) => c._id);
+        const unreadMessages = conversationIds.length
+          ? await Message.countDocuments({
+              conversation: { $in: conversationIds },
+              sender: { $ne: partner._id },
+              read: false,
+            })
+          : 0;
+
+        if (awaitingApproval + unreadMessages <= 0) continue;
+
+        const existingDigest = await Notification.findOne({
+          user: partner._id,
+          'data.event': 'partner_pending_digest',
+          'data.day': todayKey,
+        });
+        if (existingDigest) continue;
+
+        const parts = [];
+        if (awaitingApproval > 0) parts.push(`${awaitingApproval} réservation(s) en attente`);
+        if (unreadMessages > 0) parts.push(`${unreadMessages} message(s) non lus`);
+
+        await notificationService.notifyPartner(
+          partner._id,
+          notificationTypes.PARTNER.PENDING_DIGEST,
+          {
+            event: 'partner_pending_digest',
+            day: todayKey,
+            awaitingApproval,
+            unreadMessages,
+            summary: parts.join(', '),
+            deepLink: '/notifications',
+          }
+        );
+      } catch (partnerErr) {
+        logger.error(`Digest partner échoué pour ${partner._id}:`, partnerErr);
+      }
+    }
+
+    logger.info('Digest Partner pending actions terminé');
+  } catch (error) {
+    logger.error('Erreur digest Partner:', error);
+  }
+});
+
+/**
+ * Phase 3 — Relance clients inactifs 7 jours (engagement doux, max 1 / 14 j)
+ * Cron 10:00 UTC
+ */
+agenda.define('client reengage inactive', async () => {
+  try {
+    const notificationService = require('./notification.service');
+    const Notification = require('../models/notification.model');
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const clients = await User.find({
+      role: 'client',
+      isActive: { $ne: false },
+      'notificationSettings.pushEnabled': { $ne: false },
+      'notificationSettings.categories.promotions': { $ne: false },
+      $or: [
+        { lastAppActivity: { $lt: sevenDaysAgo } },
+        {
+          lastAppActivity: { $exists: false },
+          lastLogin: { $lt: sevenDaysAgo },
+        },
+        {
+          lastAppActivity: { $exists: false },
+          lastLogin: { $exists: false },
+          createdAt: { $lt: sevenDaysAgo },
+        },
+      ],
+    })
+      .select('_id firstName lastAppActivity lastLogin')
+      .limit(200);
+
+    let sent = 0;
+
+    for (const client of clients) {
+      try {
+        const lastActivity = client.lastAppActivity || client.lastLogin;
+        if (lastActivity && lastActivity > sevenDaysAgo) continue;
+
+        const activeStay = await Reservation.countDocuments({
+          user: client._id,
+          status: { $in: ['confirmed', 'in_stay', 'payment_pending', 'awaiting_approval'] },
+        });
+        if (activeStay > 0) continue;
+
+        const recentReengage = await Notification.findOne({
+          user: client._id,
+          type: notificationTypes.CLIENT.REENGAGE,
+          createdAt: { $gte: fourteenDaysAgo },
+        });
+        if (recentReengage) continue;
+
+        await notificationService.notifyClient(
+          client._id,
+          notificationTypes.CLIENT.REENGAGE,
+          {
+            event: 'client_reengage_7d',
+            deepLink: '/',
+          }
+        );
+        sent += 1;
+      } catch (clientErr) {
+        logger.error(`Reengage échoué pour ${client._id}:`, clientErr);
+      }
+    }
+
+    logger.info(`Reengage 7j terminé — ${sent} notification(s) envoyée(s)`);
+  } catch (error) {
+    logger.error('Erreur job client reengage inactive:', error);
+  }
+});
+
+/**
+ * Phase 3 — Demande d'avis ~24 h après check-out
+ */
+agenda.define('client review reminder', async (job) => {
+  try {
+    const { reservationId } = job.attrs.data || {};
+    if (!reservationId) return;
+
+    const Review = require('../models/review.model');
+    const notificationService = require('./notification.service');
+    const Notification = require('../models/notification.model');
+
+    const reservation = await Reservation.findById(reservationId)
+      .populate('residence', 'title')
+      .populate('user', '_id role');
+
+    if (!reservation || reservation.status !== 'completed') {
+      logger.info(`Review reminder ignoré (résa absente ou non completed): ${reservationId}`);
+      return;
+    }
+
+    const userId = reservation.user?._id || reservation.user;
+    if (!userId) return;
+
+    const existingReview = await Review.findOne({
+      $or: [
+        { reservation: reservation._id },
+        {
+          user: userId,
+          residence: reservation.residence?._id || reservation.residence,
+        },
+      ],
+    });
+    if (existingReview) {
+      logger.info(`Review reminder ignoré (avis déjà créé): ${reservationId}`);
+      return;
+    }
+
+    const alreadySent = await Notification.findOne({
+      user: userId,
+      type: notificationTypes.CLIENT.REVIEW_REQUEST,
+      'data.reservationId': String(reservationId),
+    });
+    if (alreadySent) return;
+
+    const residenceId = (reservation.residence?._id || reservation.residence)?.toString();
+    const residenceName = reservation.residence?.title;
+
+    await notificationService.notifyClient(
+      userId,
+      notificationTypes.CLIENT.REVIEW_REQUEST,
+      {
+        event: 'post_stay_review',
+        reservationId: String(reservationId),
+        residenceId,
+        residenceName,
+        deepLink: residenceId ? `/reviews/${residenceId}` : '/',
+      }
+    );
+
+    logger.info(`Review reminder envoyé pour réservation ${reservationId}`);
+  } catch (error) {
+    logger.error('Erreur job client review reminder:', error);
+  }
+});
+
+async function scheduleReviewReminder(reservationId, delayHours = 24) {
+  try {
+    const id = String(reservationId);
+    await agenda.cancel({
+      name: 'client review reminder',
+      'data.reservationId': id,
+    });
+
+    const when = new Date(Date.now() + delayHours * 60 * 60 * 1000);
+    await agenda.schedule(when, 'client review reminder', { reservationId: id });
+    logger.info(`Review reminder programmé dans ${delayHours}h pour ${id}`);
+  } catch (error) {
+    logger.error(`Erreur programmation review reminder:`, error);
+  }
+}
+
+/**
+ * Phase 3 — Recherche abandonnée : vue résidence sans résa sous 24 h
+ */
+agenda.define('client abandoned residence view', async (job) => {
+  try {
+    const { userId, residenceId, viewId } = job.attrs.data || {};
+    if (!userId || !residenceId) return;
+
+    const ResidenceView = require('../models/residence-view.model');
+    const Residence = require('../models/residence.model');
+    const notificationService = require('./notification.service');
+    const Notification = require('../models/notification.model');
+
+    const view = viewId
+      ? await ResidenceView.findById(viewId)
+      : await ResidenceView.findOne({ user: userId, residence: residenceId });
+
+    if (!view || view.remindedAt) {
+      logger.info(`Abandoned search ignoré (vue absente ou déjà relancée): ${userId}/${residenceId}`);
+      return;
+    }
+
+    const booked = await Reservation.exists({
+      user: userId,
+      residence: residenceId,
+      createdAt: { $gte: view.viewedAt },
+      status: { $nin: ['cancelled', 'expired'] },
+    });
+    if (booked) {
+      logger.info(`Abandoned search ignoré (réservation créée): ${userId}/${residenceId}`);
+      return;
+    }
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentAbandoned = await Notification.findOne({
+      user: userId,
+      type: notificationTypes.CLIENT.ABANDONED_SEARCH,
+      createdAt: { $gte: sevenDaysAgo },
+    });
+    if (recentAbandoned) {
+      logger.info(`Abandoned search throttled (max 1/7j): ${userId}`);
+      return;
+    }
+
+    const residence = await Residence.findById(residenceId).select('title status isAvailable');
+    if (!residence) return;
+
+    await notificationService.notifyClient(
+      userId,
+      notificationTypes.CLIENT.ABANDONED_SEARCH,
+      {
+        event: 'abandoned_residence_view',
+        residenceId: String(residenceId),
+        residenceName: residence.title,
+        deepLink: `/residence/${residenceId}`,
+      }
+    );
+
+    view.remindedAt = new Date();
+    await view.save();
+
+    logger.info(`Abandoned search envoyé: user ${userId} résidence ${residenceId}`);
+  } catch (error) {
+    logger.error('Erreur job client abandoned residence view:', error);
+  }
+});
+
+/**
+ * Enregistre une vue client et programme la relance +24 h (idempotent).
+ */
+async function trackResidenceViewForEngagement(userId, residenceId) {
+  try {
+    if (!userId || !residenceId) return;
+
+    const user = await User.findById(userId).select('role notificationSettings');
+    if (!user || user.role !== 'client') return;
+    if (user.notificationSettings?.pushEnabled === false) return;
+    if (user.notificationSettings?.categories?.promotions === false) return;
+
+    const ResidenceView = require('../models/residence-view.model');
+    const now = new Date();
+
+    const view = await ResidenceView.findOneAndUpdate(
+      { user: userId, residence: residenceId },
+      {
+        $set: { viewedAt: now },
+        $setOnInsert: { user: userId, residence: residenceId },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Ne pas reprogrammer si déjà relancé récemment (< 7 j) sur cette vue
+    if (view.remindedAt && Date.now() - view.remindedAt.getTime() < 7 * 24 * 60 * 60 * 1000) {
+      return;
+    }
+
+    await agenda.cancel({
+      name: 'client abandoned residence view',
+      'data.userId': String(userId),
+      'data.residenceId': String(residenceId),
+    });
+
+    const when = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await agenda.schedule(when, 'client abandoned residence view', {
+      userId: String(userId),
+      residenceId: String(residenceId),
+      viewId: String(view._id),
+    });
+
+    view.reminderScheduledAt = when;
+    await view.save();
+    if (view.remindedAt) {
+      await ResidenceView.updateOne({ _id: view._id }, { $unset: { remindedAt: 1 } });
+    }
+
+    logger.info(`Vue résidence trackée + relance 24h: ${userId}/${residenceId}`);
+  } catch (error) {
+    logger.error('Erreur trackResidenceViewForEngagement:', error);
+  }
+}
+
+function startEngagementPeriodicJobs() {
+  // 09:00 UTC (= 09:00 Abidjan) — Phase 2
+  agenda.every('0 9 * * *', 'partner pending actions digest');
+  // 10:00 UTC — Phase 3 reengage
+  agenda.every('0 10 * * *', 'client reengage inactive');
+  logger.info('Jobs engagement Phase 2+3 démarrés (digest 09:00, reengage 10:00)');
+}
+
 module.exports = {
   agenda,
   startAgenda,
-  // Booking methods (existing)
-  scheduleBookingReminder,
-  notifyBookingStatusChange,
-  sendPaymentReminderAfricaSpecific,
-  // ✅ NEW: Reservation methods (Phase 0 bis)
+  // Reservation methods
   scheduleReservationReminder,
+  scheduleReservationDepartureReminder,
   notifyReservationStatusChange,
-  // ✅ NEW: Reservation expiration
+  // Reservation expiration
   scheduleReservationExpiration,
   cancelReservationExpiration,
-  // ✅ NEW: Payout methods
+  schedulePaymentReminders,
+  scheduleUnreadMessageReminder,
+  scheduleReviewReminder,
+  trackResidenceViewForEngagement,
+  // Payout methods
   schedulePayoutExecution,
   scheduleAutoPayoutCreation,
-  startPayoutPeriodicJobs
+  startPayoutPeriodicJobs,
+  startEngagementPeriodicJobs,
 };

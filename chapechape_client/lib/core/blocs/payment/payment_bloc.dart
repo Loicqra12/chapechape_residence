@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 
 class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   final PaymentService _paymentService;
+  final Map<String, DateTime> _pollingStartedAt = {};
   final Map<String, DateTime> _lastCheckTimes = {};
   final Map<String, bool> _checkingStatus = {};
   final Map<String, int> _checkAttempts = {};
@@ -131,6 +132,13 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     }
   }
 
+  void _clearPollingState(String paymentId) {
+    _pollingStartedAt.remove(paymentId);
+    _lastCheckTimes.remove(paymentId);
+    _checkingStatus.remove(paymentId);
+    _checkAttempts.remove(paymentId);
+  }
+
   Future<void> _onCheckPaymentStatus(
     CheckPaymentStatus event,
     Emitter<PaymentState> emit,
@@ -151,6 +159,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       if (kDebugMode) {
         print('🚫 Limite de tentatives atteinte pour $paymentId ($attempts/$_maxAttempts)');
       }
+      _clearPollingState(paymentId);
       emit(PaymentError(
         message: 'Délai d\'attente dépassé. Veuillez vérifier manuellement le statut du paiement.',
         code: 'POLLING_TIMEOUT'
@@ -159,13 +168,14 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     }
     
     // Vérifier la durée totale de polling
-    final firstCheck = _lastCheckTimes[paymentId];
+    final firstCheck = _pollingStartedAt[paymentId];
     if (firstCheck != null) {
       final totalPollingTime = DateTime.now().difference(firstCheck);
       if (totalPollingTime > _maxPollingDuration) {
         if (kDebugMode) {
           print('⏰ Durée maximale de polling dépassée pour $paymentId (${totalPollingTime.inMinutes}min)');
         }
+        _clearPollingState(paymentId);
         emit(PaymentError(
           message: 'Vérification du paiement interrompue après ${_maxPollingDuration.inMinutes} minutes.',
           code: 'POLLING_DURATION_EXCEEDED'
@@ -174,7 +184,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       }
     }
     
-    // Vérifier le cooldown
+    // Vérifier le cooldown (dernière tentative, pas le début du polling)
     final lastCheck = _lastCheckTimes[paymentId];
     if (lastCheck != null) {
       final timeSinceLastCheck = DateTime.now().difference(lastCheck);
@@ -188,7 +198,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     
     try {
       _checkingStatus[paymentId] = true;
-      _lastCheckTimes[paymentId] ??= DateTime.now(); // Première fois seulement
+      _pollingStartedAt[paymentId] ??= DateTime.now();
+      _lastCheckTimes[paymentId] = DateTime.now();
       _checkAttempts[paymentId] = attempts + 1;
       
       if (kDebugMode) {
@@ -198,6 +209,12 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       emit(const PaymentLoading());
 
       final payment = await _paymentService.checkPaymentStatus(paymentId);
+      if (payment.status == PaymentStatus.succeeded ||
+          payment.status == PaymentStatus.failed ||
+          payment.status == PaymentStatus.cancelled ||
+          payment.status == PaymentStatus.refunded) {
+        _clearPollingState(paymentId);
+      }
       emit(PaymentStatusChecked(payment));
     } catch (e) {
       emit(PaymentError(message: e.toString()));

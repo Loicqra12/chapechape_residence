@@ -50,7 +50,9 @@ const paymentSchema = new mongoose.Schema({
         required: true
     },
     transactionId: {
-        type: String
+        type: String,
+        sparse: true,
+        unique: true,
     },
     phoneNumber: {
         type: String,
@@ -87,6 +89,6 @@ paymentSchema.index({ reservation: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ createdAt: -1 });
 paymentSchema.index({ phoneNumber: 1 });
-paymentSchema.index({ transactionId: 1 });
+// transactionId : unique sparse via le champ schema (évite doublon d'index)
 
 module.exports = mongoose.model('Payment', paymentSchema);

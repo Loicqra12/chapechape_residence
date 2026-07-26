@@ -7,11 +7,12 @@ import 'package:chapechape_client/core/config/app_config_manager.dart';
 import 'package:chapechape_client/router/app_router.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_client/core/utils/secure_storage.dart';
 
 class OneSignalService {
   static final OneSignalService _instance = OneSignalService._internal();
-  static const String _appId = '43531899-4645-4f52-a2bf-f4e4a4095513';
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const String _appId = '45b31099-4645-4f52-ad2f-f464a4095513';
+  static final FlutterSecureStorage _storage = AppSecureStorage.instance;
   
   final Dio _dio = Dio();
   // _authService est conservé pour une utilisation future dans l'implémentation réelle
@@ -19,6 +20,8 @@ class OneSignalService {
   late AuthService _authService;
   String? _userId;
   bool _isInitialized = false;
+  bool _subscriptionObserverAttached = false;
+  static const String _appKind = 'client';
   // Utiliser l'URL de l'API depuis AppConfigManager (production)
   String get _baseUrl => AppConfigManager.apiUrl;
   String _apiPath(String path) {
@@ -36,59 +39,100 @@ class OneSignalService {
 
   OneSignalService._internal();
 
-  // Initialiser avec l'authService pour pouvoir envoyer le token au backend
-  void init(AuthService authService) {
+  /// Initialise OneSignal (non bloquant pour runApp).
+  /// L'enregistrement backend se fait via [syncAfterLogin] + observer subscription.
+  Future<void> init(AuthService authService) async {
     if (_isInitialized) return;
-    
+
     _authService = authService;
-    _initPlatform();
-    _isInitialized = true;
-    
-    debugPrint('OneSignal service initialisé avec authService');
+
+    try {
+      debugPrint('🔔 Début initialisation OneSignal App ID: $_appId');
+      OneSignal.initialize(_appId);
+
+      if (kDebugMode) {
+        OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+      }
+
+      _setupListeners();
+      _setupSubscriptionObserver();
+      _isInitialized = true;
+
+      // Permission : ne bloque pas l'auth ; sync si token déjà présent
+      OneSignal.Notifications.requestPermission(true).then((granted) async {
+        debugPrint('🔔 Permission notifications: $granted');
+        if (await _hasAuthToken()) {
+          await syncCurrentSubscription();
+        }
+      });
+
+      debugPrint('✅ OneSignal service initialisé');
+    } catch (e) {
+      debugPrint('❌ Erreur initialisation OneSignal: $e');
+    }
   }
 
-  Future<void> _initPlatform() async {
+  void _setupSubscriptionObserver() {
+    if (_subscriptionObserverAttached) return;
+    _subscriptionObserverAttached = true;
+
+    OneSignal.User.pushSubscription.addObserver((state) async {
+      final subscriptionId = state.current.id;
+      debugPrint('🔔 Subscription OneSignal changée: $subscriptionId');
+      _userId = subscriptionId;
+      if (subscriptionId != null && await _hasAuthToken()) {
+        await _registerDevice();
+      }
+    });
+  }
+
+  /// À appeler après AuthAuthenticated (login, register, cold start).
+  Future<void> syncAfterLogin(String userId) async {
+    if (userId.isEmpty) return;
+
     try {
-      debugPrint('🔔🔔 Début initialisation OneSignal avec App ID: $_appId');
-      
-      // Initialiser OneSignal avec l'ID d'application
-      OneSignal.initialize(_appId);
-      
-      // Activer le mode debug (à supprimer en production)
-      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-      
-      // Forcer la journalisation de l'état de la permission actuelle
-      bool permissionStatus = await OneSignal.Notifications.permission;
-      debugPrint('🔔🔔 État actuel de la permission de notification: $permissionStatus');
-      
-      // Demander l'autorisation pour les notifications
-      final permissionResult = await OneSignal.Notifications.requestPermission(true);
-      debugPrint('🔔🔔 Résultat de la demande de permission: $permissionResult');
-      
-      debugPrint('🔔 OneSignal initialisé avec succès');
-      
-      // Configurer les écouteurs d'événements
-      _setupListeners();
-      
-      // Récupérer l'ID d'utilisateur OneSignal après un délai pour s'assurer qu'il est disponible
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // Obtenir l'ID utilisateur
-      final pushSubscription = OneSignal.User.pushSubscription;
-      _userId = pushSubscription.id;
-      
-      if (_userId != null) {
-        debugPrint('🔑 OneSignal User ID: $_userId');
-        
-        // Si l'utilisateur est authentifié, enregistrer le device
-        if (await _hasAuthToken()) {
-          await _registerDevice();
-        }
-      } else {
-        debugPrint('⚠️ OneSignal User ID non disponible pour le moment');
+      if (!_isInitialized) {
+        debugPrint('⚠️ syncAfterLogin avant init OneSignal — retry court');
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      await OneSignal.login(userId);
+      OneSignal.User.addTags({'userType': _appKind, 'appKind': _appKind});
+      await syncCurrentSubscription();
+      debugPrint('✅ OneSignal syncAfterLogin OK ($userId)');
+    } catch (e) {
+      // Ne jamais faire échouer le login pour un problème push
+      debugPrint('❌ syncAfterLogin OneSignal: $e');
+    }
+  }
+
+  /// Lit la subscription courante et enregistre côté backend si possible.
+  Future<void> syncCurrentSubscription() async {
+    try {
+      _userId = OneSignal.User.pushSubscription.id;
+      if (_userId == null) {
+        debugPrint('⚠️ Subscription OneSignal pas encore disponible');
+        return;
+      }
+      if (await _hasAuthToken()) {
+        await _registerDevice();
       }
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'initialisation de OneSignal: $e');
+      debugPrint('❌ syncCurrentSubscription: $e');
+    }
+  }
+
+  /// Désenregistre backend PUIS logout OneSignal — appeler AVANT purge JWT.
+  Future<void> onLogout() async {
+    try {
+      await unregisterDevice();
+    } catch (e) {
+      debugPrint('⚠️ unregisterDevice au logout: $e');
+    }
+    try {
+      await OneSignal.logout();
+    } catch (e) {
+      debugPrint('⚠️ OneSignal.logout: $e');
     }
   }
 
@@ -271,6 +315,8 @@ class OneSignalService {
         _apiPath('/devices/register'),
         data: {
           'deviceToken': _userId,
+          'appKind': _appKind,
+          'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
         }
       );
       

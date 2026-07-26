@@ -19,6 +19,8 @@ import '../media/cloudinary_service.dart';
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:chapechape_partner/core/services/event_bus/residence_event_bus.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 
 class ResidenceService {
   final String baseUrl;
@@ -32,7 +34,7 @@ class ResidenceService {
     http.Client? client,
     FlutterSecureStorage? storage,
   }) : client = client ?? http.Client(),
-       storage = storage ?? const FlutterSecureStorage() {
+       storage = storage ?? AppSecureStorage.instance {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -289,16 +291,6 @@ class ResidenceService {
     }
   }
 
-  // Liste complète des équipements connus pour chaque résidence
-  // Cette map persiste en mémoire tant que l'application est ouverte
-  final Map<String, List<dynamic>> _residenceAmenities = {};
-  
-  // Méthode pour conserver les équipements d'une résidence
-  void saveResidenceAmenities(String residenceId, List<dynamic> amenities) {
-    _residenceAmenities[residenceId] = List.from(amenities);
-    print('✅ Équipements sauvegardés pour la résidence $residenceId: $amenities');
-  }
-  
   Future<Residence> getResidenceById(String id) async {
     try {
       final headers = await _getAuthHeaders();
@@ -321,31 +313,6 @@ class ResidenceService {
           if (data is Map<String, dynamic> && data.containsKey('data')) {
             var residenceData = data['data'];
             if (residenceData is Map<String, dynamic>) {
-              // Vérifier si nous avons des équipements sauvegardés pour cette résidence
-              if (_residenceAmenities.containsKey(id) && 
-                  (_residenceAmenities[id]?.isNotEmpty ?? false) &&
-                  residenceData.containsKey('amenities')) {
-                
-                // Récupérer les équipements actuels du backend
-                final backendAmenities = residenceData['amenities'];
-                // Récupérer nos équipements sauvegardés
-                final savedAmenities = _residenceAmenities[id];
-                
-                // Si le backend renvoie moins d'équipements que ce que nous avons sauvegardé
-                if (backendAmenities is List && 
-                    savedAmenities != null && 
-                    backendAmenities.length < savedAmenities.length) {
-                  
-                  print('❗ Incohérence détectée dans les équipements de la résidence $id');
-                  print('ℹ️ Backend: $backendAmenities');
-                  print('ℹ️ Sauvegardés: $savedAmenities');
-                  
-                  // Remplacer les équipements du backend par nos équipements sauvegardés
-                  residenceData['amenities'] = savedAmenities;
-                  print('✅ Équipements restaurés pour la résidence $id');
-                }
-              }
-              
               return _adaptBackendResidenceToFrontend(residenceData);
             }
           }
@@ -376,7 +343,7 @@ class ResidenceService {
   // Méthode utilitaire pour adapter les données de résidence du backend au frontend
   Residence _adaptBackendResidenceToFrontend(Map<String, dynamic> json) {
     try {
-      print('Données adaptées: $json');
+      AppLogger.d('Données adaptées: $json');
       // Résidence de base à retourner en cas d'erreur
       final defaultResidence = Residence(
         id: '',
@@ -406,7 +373,7 @@ class ResidenceService {
       );
 
       if (json.isEmpty) {
-        print('Données vides reçues du backend');
+        AppLogger.d('Données vides reçues du backend');
         return defaultResidence;
       }
 
@@ -490,7 +457,7 @@ class ResidenceService {
         mainImage: json['mainImage']?.toString(),
       );
     } catch (e) {
-      print('Erreur lors de l\'adaptation des données: $e');
+      AppLogger.d('Erreur lors de l\'adaptation des données: $e');
       return Residence(
         id: json['_id']?.toString() ?? '',
         name: json['title']?.toString() ?? '',
@@ -527,7 +494,7 @@ class ResidenceService {
   // Méthode utilitaire pour adapter les données de résidence du frontend au backend
   // NOUVEAU SCHÉMA: Adaptation complète selon validation Joi stricte
   Map<String, dynamic> _adaptFrontendResidenceToBackend(Map<String, dynamic> data) {
-    print('🔄 AVANT adaptation: ${json.encode(data)}');
+    AppLogger.d('🔄 AVANT adaptation: ${json.encode(data)}');
     
     // ÉTAPE 1: Créer un objet CLEAN avec SEULEMENT les champs autorisés par le backend
     final Map<String, dynamic> backendData = {};
@@ -649,7 +616,7 @@ class ResidenceService {
     // - city: location.city
     // - area: mapping depuis 'surface' si nécessaire
     
-    print('🔄 APRÈS adaptation (backend clean + champs compatibilité): ${json.encode(backendData)}');
+    AppLogger.d('🔄 APRÈS adaptation (backend clean + champs compatibilité): ${json.encode(backendData)}');
     
     return backendData;
   }
@@ -685,7 +652,7 @@ class ResidenceService {
             return double.tryParse(extractedValue) ?? 0.0;
           } else {
             // Si on ne peut pas extraire une valeur numérique, retourner 0.0 par défaut
-            print('Impossible d\'extraire une valeur numérique de latitude: $extractedValue');
+            AppLogger.d('Impossible d\'extraire une valeur numérique de latitude: $extractedValue');
             return 0.0;
           }
         }
@@ -699,7 +666,7 @@ class ResidenceService {
             return double.tryParse(extractedValue) ?? 0.0;
           } else {
             // Si on ne peut pas extraire une valeur numérique, retourner 0.0 par défaut
-            print('Impossible d\'extraire une valeur numérique de longitude: $extractedValue');
+            AppLogger.d('Impossible d\'extraire une valeur numérique de longitude: $extractedValue');
             return 0.0;
           }
         }
@@ -707,27 +674,27 @@ class ResidenceService {
         // Si on ne trouve pas ces clés, essayer de prendre la première valeur numérique
         for (var entry in value.entries) {
           if (entry.value is num) {
-            print('Extraction de valeur numérique depuis Map: ${entry.value}');
+            AppLogger.d('Extraction de valeur numérique depuis Map: ${entry.value}');
             return entry.value;
           } else if (entry.value is String) {
             final numValue = double.tryParse(entry.value as String);
             if (numValue != null) {
-              print('Extraction de valeur numérique depuis String: $numValue');
+              AppLogger.d('Extraction de valeur numérique depuis String: $numValue');
               return numValue;
             }
           }
         }
         
         // Aucune valeur numérique trouvée dans le Map
-        print('Aucune valeur numérique trouvée dans: $value');
+        AppLogger.d('Aucune valeur numérique trouvée dans: $value');
         return 0.0;
       }
       
       // Cas par défaut: impossible d'extraire une valeur numérique
-      print('Type non supporté pour extraction numérique: ${value.runtimeType}');
+      AppLogger.d('Type non supporté pour extraction numérique: ${value.runtimeType}');
       return 0.0;
     } catch (e) {
-      print('Erreur lors de l\'extraction d\'une valeur numérique: $e');
+      AppLogger.d('Erreur lors de l\'extraction d\'une valeur numérique: $e');
       return 0.0;
     }
   }
@@ -751,8 +718,8 @@ class ResidenceService {
       // Adapter les données pour le backend
       final adaptedData = _adaptFrontendResidenceToBackend(data);
 
-      print('🏠 Création résidence - Approche en 2 étapes');
-      print('🏠 Création résidence - Étape 1: Création de la résidence sans images');
+      AppLogger.d('🏠 Création résidence - Approche en 2 étapes');
+      AppLogger.d('🏠 Création résidence - Étape 1: Création de la résidence sans images');
       
       // Préparer les headers pour la requête JSON
       final headers = {
@@ -770,10 +737,10 @@ class ResidenceService {
               adaptedData[field]['coordinates'] == null ||
               adaptedData[field]['coordinates']['latitude'] == null ||
               adaptedData[field]['coordinates']['longitude'] == null) {
-            print('⚠️ Structure location invalide');
+            AppLogger.d('⚠️ Structure location invalide');
           }
         } else if (adaptedData[field] == null || (adaptedData[field] is String && adaptedData[field].toString().isEmpty)) {
-          print('⚠️ Champ obligatoire manquant: $field');
+          AppLogger.d('⚠️ Champ obligatoire manquant: $field');
           // Ajouter des valeurs par défaut MINIMALES
           if (field == 'title') adaptedData[field] = 'Sans titre';
           if (field == 'description') adaptedData[field] = 'Aucune description';
@@ -792,13 +759,13 @@ class ResidenceService {
       
       // Convertir en JSON
       final jsonBody = jsonEncode(adaptedData);
-      print('🏠 Création résidence - Données JSON: $jsonBody');
+      AppLogger.d('🏠 Création résidence - Données JSON: $jsonBody');
       
       // Appel API pour créer la résidence
       // baseUrl contient déjà /api, donc on utilise juste /residences
       final fullUrl = '$baseUrl/residences';
       
-      print('🏠 Création résidence - URL complète: $fullUrl');
+      AppLogger.d('🏠 Création résidence - URL complète: $fullUrl');
       
       final response = await client.post(
         Uri.parse(fullUrl),
@@ -806,8 +773,8 @@ class ResidenceService {
         body: jsonBody,
       );
       
-      print('🏠 Création résidence - Statut de la réponse: ${response.statusCode}');
-        print('🏠 Création résidence - Corps de la réponse: ${response.body}');
+      AppLogger.d('🏠 Création résidence - Statut de la réponse: ${response.statusCode}');
+        AppLogger.d('🏠 Création résidence - Corps de la réponse: ${response.body}');
         
       // Vérifier si la création a réussi
       if (response.statusCode != 201 && response.statusCode != 200) {
@@ -828,25 +795,25 @@ class ResidenceService {
       }
       
       final String residenceId = responseData['data']['_id'];
-      print('🏠 Création résidence - Résidence créée avec ID: $residenceId');
+      AppLogger.d('🏠 Création résidence - Résidence créée avec ID: $residenceId');
       
       // Étape 2: Télécharger les images si disponibles
         if (images.isNotEmpty) {
-        print('🏠 Création résidence - Étape 2: Téléchargement des ${images.length} images');
+        AppLogger.d('🏠 Création résidence - Étape 2: Téléchargement des ${images.length} images');
         await uploadResidenceImages(residenceId, images);
       }
       
       // Étape 3: Récupérer les détails complets de la résidence
-      print('🏠 Création résidence - Étape 3: Récupération des détails de la résidence');
+      AppLogger.d('🏠 Création résidence - Étape 3: Récupération des détails de la résidence');
       final residence = await getResidenceById(residenceId);
       
       // Étape 4: Notifier les autres parties de l'application via le bus d'événements
-      print('🏠 Création résidence - Étape 4: Notification des autres composants');
+      AppLogger.d('🏠 Création résidence - Étape 4: Notification des autres composants');
       _eventBus.emit(ResidenceEventType.created);
       
       return residence;
           } catch (e) {
-      print('❌ Création résidence - Erreur: $e');
+      AppLogger.d('❌ Création résidence - Erreur: $e');
             if (e is ApiException) rethrow;
       throw ApiException(
         'Erreur lors de la création de la résidence: $e',
@@ -875,169 +842,107 @@ class ResidenceService {
 
   Future<Residence> updateResidence(String id, Map<String, dynamic> data, List<ResidenceImage> images) async {
     try {
-      // Vérifier le token d'authentification
       final token = await storage.read(key: 'token');
       if (token == null) throw Exception('Aucun token d\'authentification trouvé');
 
-      // Adapter les données pour le backend
       final adaptedData = _adaptFrontendResidenceToBackend(data);
 
-      print('Mise à jour de la résidence $id');
-      print('Données adaptées: $adaptedData');
-      print('Envoi de la requête avec ${images.length} images');
+      AppLogger.d('Mise à jour de la résidence $id');
+      AppLogger.d('Données adaptées: $adaptedData');
 
-      // Utiliser http.MultipartRequest pour créer une requête multipart
-      final request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/residences/$id'));
-      
-      // Ajouter le token d'authentification
-      request.headers['Authorization'] = 'Bearer $token';
-      
-      // Ajouter tous les champs du formulaire
-      adaptedData.forEach((key, value) {
-        if (value != null) {
-          if (value is List || value is Map) {
-            request.fields[key] = jsonEncode(value);
-          } else {
-            request.fields[key] = value.toString();
-          }
-        }
-      });
-      
-      // Ajouter les images si elles existent
-      if (images.isNotEmpty) {
-        for (int i = 0; i < images.length; i++) {
-          final img = images[i];
-          try {
-            if (img.isWeb && img.webImage != null) {
-              // Image web (Uint8List)
-              print('Ajout de l\'image web ${i+1}/${images.length}');
-              final multipartFile = http.MultipartFile.fromBytes(
-                'images',
-                img.webImage!,
-                filename: 'image_${i+1}.jpg',
-                contentType: MediaType('image', 'jpeg'),
-              );
-              request.files.add(multipartFile);
-            } else if (img.file != null) {
-              try {
-                // Pour mobile
-                print('Ajout de l\'image mobile ${i+1}/${images.length}');
-                if (kIsWeb) {
-                  // En environnement web, on ne peut pas utiliser fromPath ni readAsBytes()
-                  print('Environnement web détecté, utilisation directe de webImage...');
-                  
-                  // Si nous avons une image web dans ResidenceImage, l'utiliser directement
-                  if (img.webImage != null) {
-                    final multipartFile = http.MultipartFile.fromBytes(
-                      'images',
-                      img.webImage!,
-                      filename: 'image_${i+1}.jpg',
-                      contentType: MediaType('image', 'jpeg'),
-                    );
-                    request.files.add(multipartFile);
-                  } else {
-                    print('⚠️ Création résidence - Impossible de lire le fichier en environnement web sans webImage');
-                  }
-                } else {
-                  // Environnement mobile
-                  final multipartFile = await http.MultipartFile.fromPath(
-                    'images',
-                    img.file!.path,
-                    contentType: MediaType('image', 'jpeg'),
-                  );
-                  request.files.add(multipartFile);
-                }
-              } catch (e) {
-                print('❌ Création résidence - Erreur lors de l\'ajout de l\'image: $e');
-                // Continuer avec les autres images même si une échoue
-              }
-            }
-          } catch (e) {
-            print('Erreur lors de l\'ajout de l\'image: $e');
-            // Continuer avec les autres images même si une échoue
-          }
-        }
-      }
-      
-      // Afficher les données envoyées pour le debug
-      print('Champs envoyés: ${request.fields}');
-      print('Fichiers envoyés: ${request.files.length}');
-      
-      // Envoyer la requête
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      
-      // Traiter la réponse
-      print('Réponse du serveur: ${response.statusCode}');
+      // PUT JSON (la route backend n'a pas de multer → multipart laisse req.body vide)
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      final response = await client.put(
+        Uri.parse('$baseUrl/residences/$id'),
+        headers: headers,
+        body: jsonEncode(adaptedData),
+      );
+
+      AppLogger.d('Réponse du serveur: ${response.statusCode}');
       if (kDebugMode) {
-        print('Corps de la réponse: ${response.body}');
+        AppLogger.d('Corps de la réponse: ${response.body}');
       }
-      
+
       if (response.statusCode != 200) {
         final errorResponse = jsonDecode(response.body);
-        final errorMessage = errorResponse['message'] ?? 'Erreur lors de la mise à jour de la résidence';
+        final errorMessage =
+            errorResponse['message'] ?? 'Erreur lors de la mise à jour de la résidence';
         throw ApiException(errorMessage, response.statusCode, {});
       }
-      
+
+      // Nouvelles images locales uniquement (pas les URLs déjà en base)
+      final newBinaryImages = images
+          .where((img) =>
+              img.file != null ||
+              (img.webImage != null && img.webImage!.isNotEmpty))
+          .toList();
+
+      if (newBinaryImages.isNotEmpty) {
+        AppLogger.d(
+          'Upload de ${newBinaryImages.length} nouvelle(s) image(s) après mise à jour',
+        );
+        await uploadResidenceImages(id, newBinaryImages);
+      }
+
       final responseData = jsonDecode(response.body);
-      
-      // Transformer et adapter la réponse API pour éviter les erreurs de conversion de type
-      final Map<String, dynamic> residenceData = responseData['data'];
-      
-      // Préserver les équipements originaux car le backend peut ne pas tous les renvoyer
+      final Map<String, dynamic> residenceData =
+          Map<String, dynamic>.from(responseData['data'] as Map);
+
       try {
-        // Vérifier d'abord si les amenities originales sont disponibles dans les données adaptées
         if (adaptedData.containsKey('amenities')) {
-          // Utiliser les amenities originales des données adaptées
-          final originalAmenities = adaptedData['amenities'];
-          
-          // Remplacer les équipements renvoyés par ceux envoyés initialement
-          residenceData['amenities'] = originalAmenities;
-          
-          // Sauvegarder les équipements pour les futures requêtes getResidenceById
-          saveResidenceAmenities(id, originalAmenities);
-          
-          print('✅ Préservation des équipements originaux: $originalAmenities');
+          residenceData['amenities'] = adaptedData['amenities'];
         }
       } catch (e) {
-        print('⚠️ Erreur lors de la préservation des équipements: $e');
+        AppLogger.d('⚠️ Erreur lors de la préservation des équipements: $e');
       }
-      
-      // Extraire et simplifier les tarifs horaires et journaliers si présents
-      if (residenceData.containsKey('hourlyRates') && residenceData['hourlyRates'] is Map) {
+
+      if (residenceData.containsKey('hourlyRates') &&
+          residenceData['hourlyRates'] is Map) {
         try {
-          final hourlyRates = residenceData['hourlyRates'] as Map<String, dynamic>;
+          final hourlyRates =
+              residenceData['hourlyRates'] as Map<String, dynamic>;
           residenceData['hourlyRate'] = hourlyRates['oneHour'] ?? 0;
         } catch (e) {
-          print('Erreur lors de la conversion des tarifs horaires: $e');
+          AppLogger.d('Erreur lors de la conversion des tarifs horaires: $e');
           residenceData['hourlyRate'] = 0;
         }
       }
-      
-      if (residenceData.containsKey('dailyRates') && residenceData['dailyRates'] is Map) {
+
+      if (residenceData.containsKey('dailyRates') &&
+          residenceData['dailyRates'] is Map) {
         try {
-          final dailyRates = residenceData['dailyRates'] as Map<String, dynamic>;
+          final dailyRates =
+              residenceData['dailyRates'] as Map<String, dynamic>;
           residenceData['halfDayRate'] = dailyRates['halfDay'] ?? 0;
           residenceData['fullDayRate'] = dailyRates['fullDay'] ?? 0;
           residenceData['weekendRate'] = dailyRates['weekend'] ?? 0;
         } catch (e) {
-          print('Erreur lors de la conversion des tarifs journaliers: $e');
+          AppLogger.d('Erreur lors de la conversion des tarifs journaliers: $e');
           residenceData['halfDayRate'] = 0;
           residenceData['fullDayRate'] = 0;
           residenceData['weekendRate'] = 0;
         }
       }
-      
-      final residence = Residence.fromJson(residenceData);
-      return residence;
+
+      // Si de nouvelles images ont été uploadées, recharger la fiche à jour
+      if (newBinaryImages.isNotEmpty) {
+        return await getResidenceById(id);
+      }
+
+      return Residence.fromJson(residenceData);
     } catch (e) {
-      print('Exception complète lors de la mise à jour de la résidence: $e');
+      AppLogger.d('Exception complète lors de la mise à jour de la résidence: $e');
       if (e is ApiException) rethrow;
-      
+
       throw ApiException(
         'Erreur lors de la mise à jour de la résidence: $e',
         500,
-        {}
+        {},
       );
     }
   }
@@ -1314,29 +1219,29 @@ class ResidenceService {
 
   Future<void> deleteResidence(String id) async {
     try {
-      print("🗑️ Début de la suppression de la résidence $id");
+      AppLogger.d("🗑️ Début de la suppression de la résidence $id");
       final headers = await _getAuthHeaders();
       final response = await client.delete(
         Uri.parse('$baseUrl/residences/$id'),
         headers: headers,
       );
 
-      print("📊 Status code de la suppression: ${response.statusCode}");
+      AppLogger.d("📊 Status code de la suppression: ${response.statusCode}");
       
       if (response.statusCode == 200) {
-        print("✅ Résidence $id supprimée avec succès");
+        AppLogger.d("✅ Résidence $id supprimée avec succès");
         
         // Vider le cache local pour forcer un rafraîchissement
         try {
           if (storage != null) {
             storage.delete(key: 'residences_cache');
-            print("🧹 Cache des résidences effacé après suppression");
+            AppLogger.d("🧹 Cache des résidences effacé après suppression");
           }
         } catch (e) {
-          print("⚠️ Erreur lors de la suppression du cache: $e");
+          AppLogger.d("⚠️ Erreur lors de la suppression du cache: $e");
         }
       } else {
-        print("⚠️ Code de statut inattendu lors de la suppression: ${response.statusCode}");
+        AppLogger.d("⚠️ Code de statut inattendu lors de la suppression: ${response.statusCode}");
         throw ApiException(
           'Erreur lors de la suppression de la résidence',
           response.statusCode,
@@ -1350,7 +1255,7 @@ class ResidenceService {
         {'error': 'network_error'}
       );
     } catch (e) {
-      print("❌ Erreur lors de la suppression: $e");
+      AppLogger.d("❌ Erreur lors de la suppression: $e");
       rethrow;
     }
   }
@@ -1392,7 +1297,7 @@ class ResidenceService {
         final headers = await _getAuthHeaders();
         // Récupérer l'ID du partenaire actuel
         final userId = await storage.read(key: 'userId');
-        print("👤 ID du partenaire pour requête: $userId");
+        AppLogger.d("👤 ID du partenaire pour requête: $userId");
         
         if (userId == null) {
           throw ApiException(
@@ -1518,7 +1423,7 @@ class ResidenceService {
               
               imageUrl = '$serverUrl$imageUrl';
             }
-            print("URL d'image extraite: $imageUrl");
+            AppLogger.d("URL d'image extraite: $imageUrl");
             imageUrls.add(imageUrl);
           }
         }
@@ -1542,7 +1447,7 @@ class ResidenceService {
         }
         
         String fullMainImageUrl = '$serverUrl$mainImageUrl';
-        print("URL d'image principale complète: $fullMainImageUrl");
+        AppLogger.d("URL d'image principale complète: $fullMainImageUrl");
         
         // Ajouter l'image principale aux URLs si elle n'y est pas déjà
         if (!imageUrls.contains(fullMainImageUrl)) {
@@ -1554,7 +1459,7 @@ class ResidenceService {
       }
     }
     
-    print("Total d'images extraites: ${imageUrls.length}");
+    AppLogger.d("Total d'images extraites: ${imageUrls.length}");
     return imageUrls;
   }
 
@@ -1564,7 +1469,7 @@ class ResidenceService {
       // Cas 1: L'objet partner est présent avec un format standard
       if (json['partner'] is Map<String, dynamic>) {
         var partner = json['partner'] as Map<String, dynamic>;
-        print("Partner info from JSON: $partner");
+        AppLogger.d("Partner info from JSON: $partner");
         
         // Cas 1.1: Format avec _id
         if (partner.containsKey('_id')) {
@@ -1597,10 +1502,10 @@ class ResidenceService {
       }
       
       // Aucune information de partenaire trouvée
-      print("Aucune information de partenaire trouvée dans: $json");
+      AppLogger.d("Aucune information de partenaire trouvée dans: $json");
       return null;
     } catch (e) {
-      print("Erreur lors de l'extraction des infos du partenaire: $e");
+      AppLogger.d("Erreur lors de l'extraction des infos du partenaire: $e");
       return null;
     }
   }
@@ -1608,7 +1513,7 @@ class ResidenceService {
   // Récupérer seulement les résidences du partenaire connecté
   Future<List<Residence>> getMyResidences() async {
     try {
-      print("📥 Début de la récupération des résidences du partenaire");
+      AppLogger.d("📥 Début de la récupération des résidences du partenaire");
       
       final headers = await _getAuthHeaders();
       // Ajouter des en-têtes pour désactiver le cache
@@ -1618,21 +1523,21 @@ class ResidenceService {
       
       // Récupérer l'ID du partenaire pour le logging
       final userId = await storage.read(key: 'userId');
-      print("👤 ID du partenaire connecté: $userId");
+      AppLogger.d("👤 ID du partenaire connecté: $userId");
       
       // Vérifier le token
       final token = await storage.read(key: 'token');
-      print("🔑 Token présent: ${token != null ? 'Oui' : 'Non'}");
+      AppLogger.d("🔑 Token présent: ${token != null ? 'Oui' : 'Non'}");
       if (token != null) {
-        print("🔑 Token (premiers caractères): ${token.substring(0, 20)}...");
+        AppLogger.d("🔑 Token (premiers caractères): ${token.substring(0, 20)}...");
       }
       
       // Vérifier le rôle de l'utilisateur
       final userRole = await storage.read(key: 'userRole');
-      print("👤 Rôle de l'utilisateur: $userRole");
+      AppLogger.d("👤 Rôle de l'utilisateur: $userRole");
       
       if (userRole != 'partner') {
-        print("❌ L'utilisateur n'est pas un partenaire (rôle: $userRole)");
+        AppLogger.d("❌ L'utilisateur n'est pas un partenaire (rôle: $userRole)");
         throw ApiException(
           'Accès refusé: Seuls les partenaires peuvent accéder à leurs résidences',
           403,
@@ -1643,21 +1548,21 @@ class ResidenceService {
       // Ajouter un paramètre timestamp pour éviter le cache côté serveur
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final url = '$baseUrl/residences/my-residences?_t=$timestamp';
-      print("🌐 URL appelée: $url");
+      AppLogger.d("🌐 URL appelée: $url");
       
       final response = await client.get(
         Uri.parse(url),
         headers: headers,
       );
 
-      print("📊 Status code: ${response.statusCode}");
-      print("📝 Réponse brute: ${response.body}");
+      AppLogger.d("📊 Status code: ${response.statusCode}");
+      AppLogger.d("📝 Réponse brute: ${response.body}");
       
       // Si le statut n'est pas 200, afficher plus de détails
       if (response.statusCode != 200) {
-        print("❌ Erreur HTTP ${response.statusCode}");
-        print("📝 Corps de l'erreur: ${response.body}");
-        print("📋 Headers de la réponse: ${response.headers}");
+        AppLogger.d("❌ Erreur HTTP ${response.statusCode}");
+        AppLogger.d("📝 Corps de l'erreur: ${response.body}");
+        AppLogger.d("📋 Headers de la réponse: ${response.headers}");
       }
 
       return _handleResponse<List<Residence>>(
@@ -1667,36 +1572,36 @@ class ResidenceService {
             var dataList = data['data'];
             if (dataList is List) {
               List<Residence> result = [];
-              print("📋 Nombre d'éléments dans la réponse: ${dataList.length}");
+              AppLogger.d("📋 Nombre d'éléments dans la réponse: ${dataList.length}");
               
               for (var item in dataList) {
                 if (item is Map<String, dynamic>) {
                   // Ignorer les résidences marquées comme supprimées
                   if (item['deleted'] == true) {
-                    print("🗑️ Résidence ignorée car supprimée: ${item['_id']}");
+                    AppLogger.d("🗑️ Résidence ignorée car supprimée: ${item['_id']}");
                     continue;
                   }
                   
                   var residence = _adaptBackendResidenceToFrontend(item);
-                  print("🏠 Résidence trouvée - ID: ${residence.id}, Nom: ${residence.name}");
+                  AppLogger.d("🏠 Résidence trouvée - ID: ${residence.id}, Nom: ${residence.name}");
                   result.add(residence);
                 }
               }
               
-              print("✅ ${result.length} résidences actives récupérées pour le partenaire $userId");
+              AppLogger.d("✅ ${result.length} résidences actives récupérées pour le partenaire $userId");
               
               // Vider le cache local pour éviter les problèmes
               try {
                 storage.delete(key: 'residences_cache');
-                print("🧹 Cache des résidences effacé");
+                AppLogger.d("🧹 Cache des résidences effacé");
               } catch (e) {
-                print("⚠️ Erreur lors de la suppression du cache: $e");
+                AppLogger.d("⚠️ Erreur lors de la suppression du cache: $e");
               }
               
               return result;
             }
           }
-          print("⚠️ Format de données inattendu dans la réponse");
+          AppLogger.d("⚠️ Format de données inattendu dans la réponse");
           throw ApiException(
             'Format de données inattendu pour les résidences',
             500,
@@ -1705,14 +1610,14 @@ class ResidenceService {
         }
       );
     } on SocketException {
-      print("❌ Erreur de connexion réseau");
+      AppLogger.d("❌ Erreur de connexion réseau");
       throw ApiException(
         'Pas de connexion Internet. Veuillez vérifier votre connexion et réessayer.',
         0,
         {'error': 'network_error'}
       );
     } catch (e) {
-      print("❌ Erreur lors de la récupération des résidences: $e");
+      AppLogger.d("❌ Erreur lors de la récupération des résidences: $e");
       if (e is ApiException) rethrow;
       
       throw ApiException(
@@ -1726,25 +1631,25 @@ class ResidenceService {
   // Méthode pour mettre à jour une résidence avec des images
   Future<Residence> uploadImagesAndRefreshResidence(String residenceId, List<ResidenceImage> images) async {
     try {
-      print("===== DÉBUT DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
+      AppLogger.d("===== DÉBUT DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
       
       // 1. Télécharger les images
-      print("Étape 1: Téléchargement des images");
+      AppLogger.d("Étape 1: Téléchargement des images");
       await uploadResidenceImages(residenceId, images);
       
       // 2. Récupérer la résidence mise à jour pour obtenir les URLs des images
-      print("Étape 2: Récupération de la résidence mise à jour");
+      AppLogger.d("Étape 2: Récupération de la résidence mise à jour");
       final updatedResidence = await getResidenceById(residenceId);
       
       // 3. Log pour déboguer
-      print("Images dans la résidence mise à jour: ${updatedResidence.images.length}");
-      updatedResidence.images.forEach((imgUrl) => print("- Image URL: $imgUrl"));
+      AppLogger.d("Images dans la résidence mise à jour: ${updatedResidence.images.length}");
+      updatedResidence.images.forEach((imgUrl) => AppLogger.d("- Image URL: $imgUrl"));
       
       // 4. Notifier les autres parties de l'application via le bus d'événements
-      print("🔔 Notification de mise à jour de la résidence");
+      AppLogger.d("🔔 Notification de mise à jour de la résidence");
       _eventBus.emit(ResidenceEventType.updated);
       
-      print("===== FIN DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
+      AppLogger.d("===== FIN DE L'UPLOAD D'IMAGES ET RAFRAÎCHISSEMENT =====");
       
       return updatedResidence;
     } on SocketException {
@@ -1754,7 +1659,7 @@ class ResidenceService {
         {'error': 'network_error'}
       );
     } catch (e) {
-      print("Erreur lors de l'upload et du rafraîchissement: $e");
+      AppLogger.d("Erreur lors de l'upload et du rafraîchissement: $e");
       if (e is ApiException) rethrow;
       
       throw ApiException(

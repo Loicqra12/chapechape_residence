@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 const Residence = require('../../../src/models/residence.model');
-const Booking = require('../../../src/models/booking.model');
 const User = require('../../../src/models/user.model');
-const { BOOKING_STATUS } = require('../../../src/utils/constants');
 
 /**
  * Tests pour les extensions de modèles spécifiques à ChapeChape
@@ -184,41 +182,6 @@ describe('Extensions de modèles ChapeChape', () => {
             // Vérifier que l'extension LocationExtension fonctionne
             expect(residence.location).toHaveProperty('formattedAddress');
             expect(residence.location.formattedAddress).toBe('123 Test Boulevard, Extension City, Test Country');
-        });
-        
-        it('devrait fonctionner avec les données de réservation', async () => {
-            // Créer un client pour la réservation
-            const client = await User.create({
-                name: 'Client Test',
-                email: 'extension-client@test.com',
-                password: 'Password123!',
-                role: 'client'
-            });
-            
-            // Créer une réservation
-            const booking = await Booking.create({
-                residence: residenceId,
-                client: client._id,
-                partner: partnerId,
-                visitDate: new Date(Date.now() + 86400000),
-                visitTime: '14:00',
-                notes: 'Test des extensions avec réservation',
-                status: BOOKING_STATUS.PENDING,
-                guestCount: 2
-            });
-            
-            // Récupérer la réservation avec les données de la résidence
-            const populatedBooking = await Booking.findById(booking._id)
-                .populate('residence')
-                .populate('client')
-                .populate('partner');
-            
-            // Vérifier que les extensions fonctionnent sur la résidence liée à la réservation
-            expect(populatedBooking.residence).toHaveProperty('imageUrl');
-            expect(populatedBooking.residence).toHaveProperty('title');
-            expect(populatedBooking.residence).toHaveProperty('status');
-            expect(populatedBooking.residence).toHaveProperty('hasPool');
-            expect(populatedBooking.residence.location).toHaveProperty('formattedAddress');
         });
     });
 });

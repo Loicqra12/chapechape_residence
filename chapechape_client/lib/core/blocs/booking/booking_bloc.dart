@@ -226,7 +226,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       },
       onExpired: (data) {
         // Gérer l'expiration d'une réservation
-        final bookingId = data['bookingId'] as String?;
+        final bookingId = (data['bookingId'] ?? data['reservationId'])?.toString();
         if (bookingId != null) {
           add(LoadUserBookings());
           // Dispatch event spécifique pour l'expiration
@@ -235,7 +235,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       },
       onApproved: (data) {
         // Gérer l'approbation d'une réservation
-        final bookingId = data['bookingId'] as String?;
+        final bookingId = (data['bookingId'] ?? data['reservationId'])?.toString();
         if (bookingId != null) {
           add(LoadUserBookings());
           // Dispatch event spécifique pour l'approbation
@@ -244,7 +244,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       },
       onRejected: (data) {
         // Gérer le rejet d'une réservation
-        final bookingId = data['bookingId'] as String?;
+        final bookingId = (data['bookingId'] ?? data['reservationId'])?.toString();
         if (bookingId != null) {
           add(LoadUserBookings());
           // Dispatch event spécifique pour le rejet

@@ -93,8 +93,9 @@ void main() async {
   final paymentService = await PaymentService.initialize();
   final typeSyncService = await TypeSyncService.initialize();
   
-  // Initialiser le service OneSignal
+  // Initialiser le service OneSignal (async non bloquant — sync post-login via AuthBloc)
   final oneSignalService = OneSignalService();
+  // ignore: unawaited_futures
   oneSignalService.init(authService);
   debugPrint('✅ Service OneSignal initialisé avec succès');
 

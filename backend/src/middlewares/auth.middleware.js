@@ -81,6 +81,7 @@ exports.protect = async (req, res, next) => {
 };
 
 // Autoriser certains rôles
+// superadmin = rôle le plus élevé : accès à toute route déjà restreinte par authorize(...)
 exports.authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
@@ -88,10 +89,23 @@ exports.authorize = (...roles) => {
                 new apiError('Authentification requise', 401)
             );
         }
-        
-        if (!roles.includes(req.user.role)) {
+
+        const userRole = req.user.role;
+
+        if (userRole === 'superadmin') {
+            return next();
+        }
+
+        // Si la route autorise 'admin', accepter aussi 'superadmin' (déjà géré ci-dessus)
+        // et 'owner' si présent dans le modèle comme équivalent privilégié.
+        const allowed = new Set(roles);
+        if (allowed.has('admin')) {
+            allowed.add('superadmin');
+        }
+
+        if (!allowed.has(userRole)) {
             return next(
-                new apiError(`Le rôle ${req.user.role} n'est pas autorisé à accéder à cette route`, 403)
+                new apiError(`Le rôle ${userRole} n'est pas autorisé à accéder à cette route`, 403)
             );
         }
         

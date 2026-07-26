@@ -9,17 +9,21 @@ const deviceTokenSchema = {
   body: Joi.object().keys({
     deviceToken: Joi.string()
       .required()
-      .min(32) // La plupart des tokens font au moins 32 caractères
-      .max(256) // Limiter la taille maximum pour éviter les attaques par injection
-      .pattern(/^[A-Za-z0-9_\-\.]+$/) // Accepter uniquement des caractères valides pour un token
-      .message({
+      // OneSignal subscription UUID (~36), FCM/APNs (long), jamais l'externalId Mongo (24)
+      .min(32)
+      .max(512)
+      .pattern(/^[A-Za-z0-9_\-\.:]+$/)
+      .messages({
         'string.base': 'Le token doit être une chaîne de caractères',
         'string.empty': 'Le token ne peut pas être vide',
-        'string.min': 'Le token doit contenir au moins {#limit} caractères',
+        'string.min': 'Le token doit contenir au moins {#limit} caractères (subscription OneSignal / push token)',
         'string.max': 'Le token ne doit pas dépasser {#limit} caractères',
         'string.pattern.base': 'Le token contient des caractères non autorisés',
         'any.required': 'Le token d\'appareil est requis'
-      })
+      }),
+    // Optionnels — rétrocompatibles (anciennes apps n'envoient pas ces champs)
+    appKind: Joi.string().valid('client', 'partner').optional(),
+    platform: Joi.string().valid('android', 'ios', 'web').optional(),
   })
 };
 

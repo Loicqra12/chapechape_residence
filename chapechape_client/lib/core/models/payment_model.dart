@@ -390,7 +390,7 @@ class Payment {
       transactionId: json['transactionId'] as String?,
       receiptUrl: json['receiptUrl'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
-      isRefundable: json['isRefundable'] as bool? ?? true,
+      isRefundable: json['isRefundable'] as bool? ?? false,
       paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt'] as String) : null,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,

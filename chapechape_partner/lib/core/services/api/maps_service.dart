@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import '../../../core/exceptions/api_exception.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/retry_interceptor.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Convertit une DioException en ApiException
 ApiException _handleDioError(DioException e) {
@@ -28,7 +30,7 @@ ApiException _handleDioError(DioException e) {
 class MapsService {
   final String baseUrl;
   final Dio _dio;
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = AppSecureStorage.instance;
 
   MapsService({required this.baseUrl}) : _dio = Dio() {
     // Ajout des intercepteurs
@@ -75,17 +77,17 @@ class MapsService {
   Future<Map<String, dynamic>> reverseGeocode(double latitude, double longitude) async {
     try {
       // Log pour le débogage
-      print('📍 Tentative de géocodage inverse: lat=$latitude, lng=$longitude');
+      AppLogger.d('📍 Tentative de géocodage inverse: lat=$latitude, lng=$longitude');
       
       // Vérification que les coordonnées sont des nombres valides
       if (latitude == 0 && longitude == 0) {
-        print('⚠️ Coordonnées invalides (0,0) détectées lors du géocodage inverse');
+        AppLogger.d('⚠️ Coordonnées invalides (0,0) détectées lors du géocodage inverse');
       }
       
       // Vérification du token d'authentification avant l'envoi
       final token = await _storage.read(key: 'token');
       if (token == null || token.isEmpty) {
-        print('❌ Erreur: Token d\'authentification manquant pour le géocodage inverse');
+        AppLogger.d('❌ Erreur: Token d\'authentification manquant pour le géocodage inverse');
         return {'error': 'Token d\'authentification manquant'};
       }
       

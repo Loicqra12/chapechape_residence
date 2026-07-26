@@ -1,3 +1,4 @@
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 class DashboardData {
   final PerformanceStats performance;
   final RevenueStats revenue;
@@ -20,7 +21,7 @@ class DashboardData {
         realtime: RealtimeStats.fromJson(json['realtime'] ?? {}),
       );
     } catch (e) {
-      print('❌ Erreur lors de la conversion du DashboardData: $e');
+      AppLogger.d('❌ Erreur lors de la conversion du DashboardData: $e');
       return DashboardData.empty();
     }
   }
@@ -671,16 +672,39 @@ class EarningsData {
     required this.growth,
   });
 
-  factory EarningsData.fromJson(Map<String, dynamic> json) {
-    final earningsList = (json['earnings'] as List?)?.map(
-      (period) => EarningPeriod.fromJson(period),
+  factory EarningsData.fromJson(dynamic json) {
+    // Backend historique renvoyait parfois une List brute
+    if (json is List) {
+      final periods = json
+          .whereType<Map>()
+          .map((e) => EarningPeriod.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      final total = periods.fold<double>(0, (s, p) => s + p.amount);
+      return EarningsData(
+        earnings: periods,
+        totalEarnings: total,
+        averagePerPeriod: periods.isEmpty ? 0 : total / periods.length,
+        growth: 0,
+      );
+    }
+
+    final map = json is Map<String, dynamic>
+        ? json
+        : (json is Map ? Map<String, dynamic>.from(json) : <String, dynamic>{});
+
+    final earningsList = (map['earnings'] as List?)?.map(
+      (period) => EarningPeriod.fromJson(
+        period is Map<String, dynamic>
+            ? period
+            : Map<String, dynamic>.from(period as Map),
+      ),
     ).toList() ?? [];
 
     return EarningsData(
       earnings: earningsList,
-      totalEarnings: _parseDoubleSafely(json['total_earnings']),
-      averagePerPeriod: _parseDoubleSafely(json['average_per_period']),
-      growth: _parseDoubleSafely(json['growth']),
+      totalEarnings: _parseDoubleSafely(map['total_earnings']),
+      averagePerPeriod: _parseDoubleSafely(map['average_per_period']),
+      growth: _parseDoubleSafely(map['growth']),
     );
   }
   
@@ -706,9 +730,22 @@ class EarningPeriod {
   });
 
   factory EarningPeriod.fromJson(Map<String, dynamic> json) {
+    DateTime date;
+    if (json['date'] != null) {
+      date = DateTime.tryParse(json['date'].toString()) ?? DateTime.now();
+    } else if (json['_id'] is Map) {
+      final id = Map<String, dynamic>.from(json['_id'] as Map);
+      date = DateTime(
+        (id['year'] as num?)?.toInt() ?? DateTime.now().year,
+        (id['month'] as num?)?.toInt() ?? 1,
+      );
+    } else {
+      date = DateTime.now();
+    }
+
     return EarningPeriod(
-      date: DateTime.parse(json['date'] ?? ''),
-      amount: _parseDoubleSafely(json['amount']),
+      date: date,
+      amount: _parseDoubleSafely(json['amount'] ?? json['totalEarnings']),
       bookingsCount: _parseIntSafely(json['count']),
     );
   }

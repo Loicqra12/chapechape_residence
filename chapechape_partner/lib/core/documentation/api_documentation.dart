@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../config/app_config_manager.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Classe utilitaire pour générer la documentation de l'API
 class ApiDocumentation {
@@ -475,9 +476,9 @@ class ApiDocumentation {
   static void printOpenApiSpec() {
     if (kDebugMode) {
       final jsonSpec = getOpenApiJson();
-      print('=== DOCUMENTATION API ===');
-      print(jsonSpec);
-      print('========================');
+      AppLogger.d('=== DOCUMENTATION API ===');
+      AppLogger.d(jsonSpec);
+      AppLogger.d('========================');
     }
   }
 }

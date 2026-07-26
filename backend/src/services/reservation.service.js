@@ -9,6 +9,7 @@ const emailService = require('./email.service');
 const availabilityService = require('./availability.service');
 const PricingService = require('./pricing.service');
 const notificationService = require('./notification.service');
+const notificationTypes = require('../utils/notification-types');
 
 /**
  * Créer une nouvelle réservation
@@ -21,7 +22,8 @@ const createReservation = async (reservationBody) => {
 
   try {
     const residence = await Residence.findById(reservationBody.residence)
-      .populate('cancellationPolicy');
+      .populate('cancellationPolicy')
+      .session(session);
 
     if (!residence) {
       throw new ApiError('Résidence non trouvée', 404);
@@ -43,14 +45,38 @@ const createReservation = async (reservationBody) => {
       cancellationPolicyId = residence.cancellationPolicy._id;
     }
 
-    // Vérifier la disponibilité
+    const checkInDate = new Date(reservationBody.checkIn);
+    const checkOutDate = new Date(reservationBody.checkOut);
+
+    // Vérifier la disponibilité (Availability) dans la transaction
     const isAvailable = await residence.isAvailableForDates(
-      reservationBody.checkIn,
-      reservationBody.checkOut
+      checkInDate,
+      checkOutDate,
+      null,
+      session
     );
 
     if (!isAvailable) {
       throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
+    }
+
+    // Double contrôle : aucune réservation active chevauchante (checkout exclusif)
+    const ACTIVE_BLOCKING_STATUSES = [
+      'pending',
+      'awaiting_approval',
+      'payment_pending',
+      'confirmed',
+      'in_stay',
+    ];
+    const overlapping = await Reservation.findOne({
+      residence: residence._id,
+      status: { $in: ACTIVE_BLOCKING_STATUSES },
+      checkIn: { $lt: checkOutDate },
+      checkOut: { $gt: checkInDate },
+    }).session(session);
+
+    if (overlapping) {
+      throw new ApiError('Ces dates viennent d\'être réservées par un autre client', 409);
     }
 
     // ✅ AJOUT : Calcul intelligent du prix selon le type de réservation
@@ -65,8 +91,6 @@ const createReservation = async (reservationBody) => {
     }
 
     // Calculer la durée selon le type de réservation
-    const checkInDate = new Date(reservationBody.checkIn);
-    const checkOutDate = new Date(reservationBody.checkOut);
     const timeDiff = checkOutDate - checkInDate;
 
     switch (bookingType) {
@@ -209,42 +233,14 @@ const createReservation = async (reservationBody) => {
       console.warn('Utilisation du prix de base en fallback');
     }
 
-    // Vérifier si la résidence a un partenaire associé et gérer ce cas de façon robuste
-    let partnerId = null;
-
+    // Vérifier si la résidence a un partenaire associé
     if (!residence.partner) {
-      console.error(`ERREUR: La résidence ${residence._id} n'a pas de partenaire défini`);
-
-      // Rechercher le propriétaire de la résidence ou un admin comme partenaire de secours
-      try {
-        // Si nous sommes en environnement de dev/test, permettre un fallback
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('ATTENTION: Tentative de récupération d\'un partenaire de secours (NON RECOMMANDÉ en production)');
-
-          // Chercher un utilisateur avec le rôle 'partner' pour l'associer
-          const fallbackPartner = await User.findOne({ role: 'partner' }).select('_id');
-
-          if (fallbackPartner) {
-            partnerId = fallbackPartner._id;
-            console.log(`Partenaire de secours trouvé: ${partnerId}`);
-          } else {
-            // En dernier recours, utiliser l'ID de l'utilisateur (créateur de la réservation)
-            partnerId = reservationBody.user;
-            console.log(`Aucun partenaire trouvé, utilisation de l'utilisateur comme fallback: ${partnerId}`);
-          }
-        } else {
-          // En production, rejeter la création si aucun partenaire n'est défini
-          throw new ApiError('Cette résidence n\'a pas de partenaire associé. Réservation impossible.', 400);
-        }
-      } catch (error) {
-        if (error instanceof ApiError) throw error;
-        console.error('Erreur lors de la recherche d\'un partenaire de secours:', error);
-        // En cas d'erreur dans la recherche, utiliser l'ID utilisateur en dernier recours
-        partnerId = reservationBody.user;
-      }
-    } else {
-      partnerId = residence.partner;
+      throw new ApiError(
+        'Cette résidence n\'a pas de partenaire associé. Réservation impossible.',
+        400
+      );
     }
+    const partnerId = residence.partner;
 
     console.log(`Création de réservation avec partenaire: ${partnerId}`);
 
@@ -322,15 +318,23 @@ const createReservation = async (reservationBody) => {
       residenceId: residence._id
     });
 
-    // Mettre à jour la disponibilité
-    await availabilityService.updateAvailabilityForReservation(
-      residence._id,
-      reservationBody.checkIn,
-      reservationBody.checkOut,
-      reservation[0]._id,
-      'reserved',
-      bookingType  // ✅ Passer le type de réservation pour gérer les réservations horaires
-    );
+    // Mettre à jour la disponibilité (même transaction — anti double-booking)
+    try {
+      await availabilityService.updateAvailabilityForReservation(
+        residence._id,
+        reservationBody.checkIn,
+        reservationBody.checkOut,
+        reservation[0]._id,
+        'reserved',
+        bookingType,
+        session
+      );
+    } catch (availErr) {
+      if (availErr.statusCode === 409) {
+        throw new ApiError(availErr.message, 409);
+      }
+      throw availErr;
+    }
 
     // Valider la transaction
     await session.commitTransaction();
@@ -343,10 +347,13 @@ const createReservation = async (reservationBody) => {
     const clientId = reservation[0].client || reservation[0].user;
     console.log(`DEBUG: ID du client pour la réservation: ${clientId}`);
 
+    let user = null;
+    let partner = null;
+
     try {
       // Rechercher l'utilisateur et le partenaire séparément pour gérer les cas null
-      const user = clientId ? await User.findById(clientId) : null;
-      const partner = residence.partner ? await User.findById(residence.partner) : null;
+      user = clientId ? await User.findById(clientId) : null;
+      partner = residence.partner ? await User.findById(residence.partner) : null;
 
       console.log(`DEBUG: Utilisateur trouvé: ${user ? 'Oui' : 'Non'}, Partenaire trouvé: ${partner ? 'Oui' : 'Non'}`);
 
@@ -393,6 +400,36 @@ const createReservation = async (reservationBody) => {
       });
     } catch (schedErr) {
       console.error('Erreur inattendue lors du scheduling des rappels:', schedErr);
+    }
+
+    // Push Partner — nouvelle réservation (non bloquant ; email déjà tenté ci-dessus)
+    if (partner) {
+      try {
+        const firstImage = Array.isArray(residence.images) && residence.images.length
+          ? (residence.images[0]?.url || residence.images[0])
+          : null;
+        Promise.resolve(
+          notificationService.notifyPartner(
+            partner._id,
+            notificationTypes.PARTNER.NEW_BOOKING,
+            {
+              reservationId: reservation[0]._id.toString(),
+              residenceName: residence.title || 'Votre résidence',
+              clientName: user ? (user.firstName || 'Un client') : 'Un client',
+              checkIn: reservation[0].checkIn,
+              checkOut: reservation[0].checkOut,
+              guests: reservation[0].numberOfGuests,
+              price: reservation[0].totalPrice,
+              imageUrl: firstImage,
+              deepLink: `/reservations/${reservation[0]._id}`,
+            }
+          )
+        ).catch((err) => {
+          console.error('Erreur push NEW_BOOKING partner:', err);
+        });
+      } catch (pushErr) {
+        console.error('Erreur inattendue push NEW_BOOKING:', pushErr);
+      }
     }
 
     return reservation[0];
@@ -467,13 +504,15 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
 
     await reservation.save({ session });
 
-    // Libérer la disponibilité
+    // Libérer la disponibilité (même transaction)
     await availabilityService.updateAvailabilityForReservation(
       reservation.residence._id,
       reservation.checkIn,
       reservation.checkOut,
       reservation._id,
-      'available'
+      'available',
+      reservation.bookingType || 'day',
+      session
     );
 
     // Valider la transaction
@@ -552,14 +591,37 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
 
     // Vérifier la disponibilité pour les nouvelles dates
     if (updateBody.checkIn || updateBody.checkOut) {
+      const newCheckIn = updateBody.checkIn || reservation.checkIn;
+      const newCheckOut = updateBody.checkOut || reservation.checkOut;
+
       const isAvailable = await reservation.residence.isAvailableForDates(
-        updateBody.checkIn || reservation.checkIn,
-        updateBody.checkOut || reservation.checkOut,
-        reservation._id // Exclure la réservation actuelle
+        newCheckIn,
+        newCheckOut,
+        reservation._id, // Exclure la réservation actuelle
+        session
       );
 
       if (!isAvailable) {
         throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
+      }
+
+      const ACTIVE_BLOCKING_STATUSES = [
+        'pending',
+        'awaiting_approval',
+        'payment_pending',
+        'confirmed',
+        'in_stay',
+      ];
+      const overlapping = await Reservation.findOne({
+        _id: { $ne: reservation._id },
+        residence: reservation.residence._id,
+        status: { $in: ACTIVE_BLOCKING_STATUSES },
+        checkIn: { $lt: new Date(newCheckOut) },
+        checkOut: { $gt: new Date(newCheckIn) },
+      }).session(session);
+
+      if (overlapping) {
+        throw new ApiError('Ces dates viennent d\'être réservées par un autre client', 409);
       }
     }
 
@@ -596,21 +658,43 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
     });
 
     // Mettre à jour la réservation
+    const previousCheckIn = reservation.checkIn;
+    const previousCheckOut = reservation.checkOut;
+    const datesChanged = !!(updateBody.checkIn || updateBody.checkOut);
+
     reservation.modifications = [...(reservation.modifications || []), modification];
     Object.assign(reservation, updateBody);
     reservation.totalPrice = newTotalPrice + modificationFee;
 
     await reservation.save({ session });
 
-    // Mettre à jour la disponibilité si les dates ont changé
-    if (updateBody.checkIn || updateBody.checkOut) {
-      await availabilityService.updateAvailabilityForReservation(
-        reservation.residence._id,
-        updateBody.checkIn || reservation.checkIn,
-        updateBody.checkOut || reservation.checkOut,
-        reservation._id,
-        'reserved'
-      );
+    // Mettre à jour la disponibilité si les dates ont changé (libération + re-réservation atomiques)
+    if (datesChanged) {
+      try {
+        await availabilityService.updateAvailabilityForReservation(
+          reservation.residence._id,
+          previousCheckIn,
+          previousCheckOut,
+          reservation._id,
+          'available',
+          reservation.bookingType || 'day',
+          session
+        );
+        await availabilityService.updateAvailabilityForReservation(
+          reservation.residence._id,
+          reservation.checkIn,
+          reservation.checkOut,
+          reservation._id,
+          'reserved',
+          reservation.bookingType || 'day',
+          session
+        );
+      } catch (availErr) {
+        if (availErr.statusCode === 409) {
+          throw new ApiError(availErr.message, 409);
+        }
+        throw availErr;
+      }
     }
 
     // Valider la transaction

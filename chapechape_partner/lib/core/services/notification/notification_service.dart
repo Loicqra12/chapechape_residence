@@ -50,7 +50,7 @@ class NotificationService {
   
   /// Initialise les notifications locales Flutter
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_chapechape');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -118,14 +118,20 @@ class NotificationService {
     required String title,
     required String body,
     String? payload,
+    String channelId = 'chapechape_bookings',
+    String channelName = 'Réservations',
+    String groupKey = 'chapechape_bookings',
   }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'chapechape_partner_channel',
-      'ChapeChape Partner Notifications',
-      channelDescription: 'Notifications pour ChapeChape Partner',
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: 'Notifications ChapeChape Partner',
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_stat_chapechape',
+      color: const Color(0xFFFF9800),
+      groupKey: groupKey,
+      setAsGroupSummary: false,
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -134,13 +140,17 @@ class NotificationService {
       presentSound: true,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
+    // ID stable sur 32 bits (évite collisions DateTime.millisecond 0-999)
+    final notificationId =
+        DateTime.now().millisecondsSinceEpoch.remainder(100000000);
+
     await _localNotifications.show(
-      DateTime.now().millisecond,
+      notificationId,
       title,
       body,
       details,
@@ -209,11 +219,13 @@ class NotificationService {
     
     try {
       const androidDetails = AndroidNotificationDetails(
-        'chapechape_partner_reminders',
-        'ChapeChape Partner Reminders',
-        channelDescription: 'Rappels pour ChapeChape Partner',
+        'chapechape_bookings',
+        'Réservations',
+        channelDescription: 'Rappels ChapeChape Partner',
         importance: Importance.high,
         priority: Priority.high,
+        icon: '@drawable/ic_stat_chapechape',
+        groupKey: 'chapechape_bookings',
       );
 
       const iosDetails = DarwinNotificationDetails(

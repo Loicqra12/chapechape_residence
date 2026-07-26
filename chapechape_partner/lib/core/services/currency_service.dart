@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/formatters.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 /// Service pour gérer les devises dans l'application
 class CurrencyService {
@@ -35,7 +36,7 @@ class CurrencyService {
       final prefs = await SharedPreferences.getInstance();
       _currentCurrency = prefs.getString(_prefsKey) ?? _defaultCurrency;
     } catch (e) {
-      print('Erreur lors du chargement de la devise préférée: $e');
+      AppLogger.d('Erreur lors du chargement de la devise préférée: $e');
       _currentCurrency = _defaultCurrency;
     }
   }
@@ -52,7 +53,7 @@ class CurrencyService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, currency);
     } catch (e) {
-      print('Erreur lors de la sauvegarde de la devise préférée: $e');
+      AppLogger.d('Erreur lors de la sauvegarde de la devise préférée: $e');
     }
   }
   

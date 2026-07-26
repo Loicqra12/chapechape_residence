@@ -16,6 +16,7 @@ const PARTNER = {
   NEW_BOOKING: 'partner_new_booking',           // 🏠 Nouvelle réservation
   BOOKING_MODIFIED: 'partner_booking_modified', // ⚠️ Modification de réservation
   BOOKING_CANCELED: 'partner_booking_canceled', // ⚠️ Annulation de réservation
+  BOOKING_EXPIRED: 'partner_booking_expired',   // ⏰ Réservation expirée (délai paiement)
   PAYMENT_RECEIVED: 'partner_payment_received', // 💵 Paiement reçu
   DEPOSIT_RECEIVED: 'partner_deposit_received', // 💵 Dépôt de garantie reçu
   MONTHLY_STATS: 'partner_monthly_stats',       // 📈 Statistiques mensuelles
@@ -36,6 +37,7 @@ const PARTNER = {
   VERIFICATION_FAILED: 'partner_verification_failed', // ❌ Vérification échouée
   SECURITY_ALERT: 'partner_security_alert',     // 🛡️ Alerte sécurité
   LOGIN_ALERT: 'partner_login_alert',           // 🔐 Nouvelle connexion
+  PENDING_DIGEST: 'partner_pending_digest',     // 📋 Actions en attente (digest matin)
 };
 
 // Types pour les clients
@@ -65,6 +67,11 @@ const CLIENT = {
   VERIFICATION_FAILED: 'client_verification_failed', // ❌ Vérification échouée
   SECURITY_ALERT: 'client_security_alert',         // 🛡️ Alerte sécurité
   LOGIN_ALERT: 'client_login_alert',               // 🔐 Nouvelle connexion
+
+  // Phase 3 — engagement doux
+  REENGAGE: 'client_reengage',                     // 👋 Relance inactivité 7j
+  REVIEW_REQUEST: 'client_review_request',         // ⭐ Demande d'avis post-séjour
+  ABANDONED_SEARCH: 'client_abandoned_search',     // 👀 Résidence vue sans réservation
 };
 
 const getTitleByType = (type) => {
@@ -73,6 +80,7 @@ const getTitleByType = (type) => {
       [PARTNER.NEW_BOOKING]: '🏠 Nouvelle réservation',
       [PARTNER.BOOKING_MODIFIED]: '⚠️ Réservation modifiée',
       [PARTNER.BOOKING_CANCELED]: '⚠️ Réservation annulée',
+      [PARTNER.BOOKING_EXPIRED]: '⏰ Réservation expirée',
       [PARTNER.PAYMENT_RECEIVED]: '💵 Paiement reçu',
       [PARTNER.DEPOSIT_RECEIVED]: '💵 Dépôt de garantie reçu',
       [PARTNER.MONTHLY_STATS]: '📈 Vos statistiques du mois',
@@ -91,6 +99,7 @@ const getTitleByType = (type) => {
       [PARTNER.VERIFICATION_FAILED]: '❌ Vérification échouée',
       [PARTNER.SECURITY_ALERT]: '🛡️ Alerte de sécurité',
       [PARTNER.LOGIN_ALERT]: '🔐 Nouvelle connexion détectée',
+      [PARTNER.PENDING_DIGEST]: '📋 Actions en attente',
       
       // Titres pour les clients
       [CLIENT.BOOKING_CONFIRMED]: '✅ Réservation confirmée',
@@ -116,6 +125,9 @@ const getTitleByType = (type) => {
       [CLIENT.VERIFICATION_FAILED]: '❌ Vérification échouée',
       [CLIENT.SECURITY_ALERT]: '🛡️ Alerte de sécurité',
       [CLIENT.LOGIN_ALERT]: '🔐 Nouvelle connexion détectée',
+      [CLIENT.REENGAGE]: '👋 On vous a manqué',
+      [CLIENT.REVIEW_REQUEST]: '⭐ Comment s\'est passé votre séjour ?',
+      [CLIENT.ABANDONED_SEARCH]: '👀 Toujours intéressé ?',
       
       // Titres communs
       [COMMON.NEW_MESSAGE]: '💬 Nouveau message',
@@ -167,12 +179,63 @@ const getPushTypeByNotificationType = (type) => {
     type.includes('discount') ||
     type.includes('popular') ||
     type.includes('nearby') ||
-    type.includes('availability')
+    type.includes('availability') ||
+    type.includes('reengage') ||
+    type.includes('abandoned')
   ) {
     return 'promotion';
   }
 
+  if (type.includes('review')) {
+    return 'booking_update';
+  }
+
   return 'system_update';
+};
+
+const getCategoryByNotificationType = (type) => {
+  if (!type || typeof type !== 'string') return 'system';
+
+  if (type.includes('message')) return 'messages';
+
+  if (
+    type.includes('booking') ||
+    type.includes('arrival') ||
+    type.includes('departure') ||
+    type.includes('checkin') ||
+    type.includes('checkout') ||
+    type.includes('approval') ||
+    type.includes('reservation')
+  ) {
+    return 'bookings';
+  }
+
+  if (
+    type.includes('payment') ||
+    type.includes('deposit') ||
+    type.includes('payout') ||
+    type.includes('transfer')
+  ) {
+    return 'payments';
+  }
+
+  if (
+    type.includes('offer') ||
+    type.includes('discount') ||
+    type.includes('popular') ||
+    type.includes('nearby') ||
+    type.includes('availability') ||
+    type.includes('reengage') ||
+    type.includes('abandoned')
+  ) {
+    return 'promotions';
+  }
+
+  if (type.includes('review')) {
+    return 'bookings';
+  }
+
+  return 'system';
 };
 
 const getDeepLinkByNotificationType = (type, data = {}) => {
@@ -213,5 +276,6 @@ module.exports = {
   CLIENT,
   getTitleByType,
   getPushTypeByNotificationType,
+  getCategoryByNotificationType,
   getDeepLinkByNotificationType
 };

@@ -60,6 +60,32 @@ const CloudinaryService = {
       throw error;
     }
   },
+
+  // Supprimer une vidéo (resource_type: 'video' obligatoire — distinct des images)
+  async deleteVideo(publicId) {
+    try {
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: 'video',
+        invalidate: true,
+      });
+      return result;
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la vidéo:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Génère une URL thumbnail depuis un publicId vidéo Cloudinary.
+   * Utilise la transformation native Cloudinary (pas de requête réseau).
+   */
+  getVideoThumbnailUrl(publicId, { width = 640, height = 360 } = {}) {
+    return cloudinary.url(publicId, {
+      resource_type: 'video',
+      format: 'jpg',
+      transformation: [{ width, height, crop: 'fill', quality: 'auto' }],
+    });
+  },
   
   // Extraire l'ID public d'une URL
   getPublicIdFromUrl(url) {

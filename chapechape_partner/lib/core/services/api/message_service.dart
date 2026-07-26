@@ -2,14 +2,16 @@ import 'package:dio/dio.dart';
 import '../../models/message/message.dart';
 import '../../models/message/conversation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../config/feature_flags.dart';
 import '../media/cloudinary_service.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 class MessageService {
   late final Dio _dio;
-  final _storage = const FlutterSecureStorage();
+  final _storage = AppSecureStorage.instance;
 
   MessageService(Dio dio) {
     _dio = dio;
@@ -129,8 +131,8 @@ class MessageService {
         throw Exception('Erreur lors du chargement des conversations: Status ${response.statusCode}');
       }
     } catch (e, stackTrace) {
-      print('Exception détaillée: $e');
-      print('Stack trace: $stackTrace');
+      AppLogger.d('Exception détaillée: $e');
+      AppLogger.d('Stack trace: $stackTrace');
       throw Exception('Erreur lors du chargement des conversations: $e');
     }
   }
@@ -148,14 +150,14 @@ class MessageService {
           final messages = await getMessages(conversation.id);
           allMessages.addAll(messages);
         } catch (e) {
-          print('Erreur lors de la récupération des messages pour la conversation ${conversation.id}: $e');
+          AppLogger.d('Erreur lors de la récupération des messages pour la conversation ${conversation.id}: $e');
           // Continuer avec la prochaine conversation même si celle-ci échoue
         }
       }
       
       return allMessages;
     } catch (e) {
-      print('Erreur lors de la récupération de tous les messages: $e');
+      AppLogger.d('Erreur lors de la récupération de tous les messages: $e');
       return [];
     }
   }
@@ -252,7 +254,7 @@ class MessageService {
 
       throw Exception('Erreur lors de l\'envoi du message');
     } catch (e) {
-      print('Erreur détaillée lors de l\'envoi du message: $e');
+      AppLogger.d('Erreur détaillée lors de l\'envoi du message: $e');
       throw Exception('Erreur lors de l\'envoi du message');
     }
   }
@@ -297,7 +299,7 @@ class MessageService {
       }
       return [];
     } catch (e) {
-      print('Erreur lors de la récupération des messages: $e');
+      AppLogger.d('Erreur lors de la récupération des messages: $e');
       throw Exception('Erreur lors de la récupération des messages');
     }
   }
@@ -305,13 +307,13 @@ class MessageService {
   /// Upload un fichier pour une conversation avec support Cloudinary
   Future<MessageAttachment> uploadAttachment(String conversationId, String filePath, {String? name}) async {
     try {
-      print('⬆️ Début de l\'upload de pièce jointe pour la conversation $conversationId');
-      print('☁️ Mode Cloudinary: ${FeatureFlags.useCloudinary ? 'Activé' : 'Désactivé'}');
+      AppLogger.d('⬆️ Début de l\'upload de pièce jointe pour la conversation $conversationId');
+      AppLogger.d('☁️ Mode Cloudinary: ${FeatureFlags.useCloudinary ? 'Activé' : 'Désactivé'}');
       
       // Si Cloudinary est activé, utiliser l'upload direct
       if (FeatureFlags.useCloudinary) {
         try {
-          print('☁️ Utilisation de Cloudinary pour l\'upload de pièce jointe');
+          AppLogger.d('☁️ Utilisation de Cloudinary pour l\'upload de pièce jointe');
           
           // Initialiser le service Cloudinary
           final cloudinaryService = CloudinaryService();
@@ -322,7 +324,7 @@ class MessageService {
           
           if (kIsWeb) {
             // Pour le web, on utilise les données brutes du fichier
-            print('🖥️ Web: Décodage des données base64');
+            AppLogger.d('🖥️ Web: Décodage des données base64');
             fileContent = base64Decode(filePath.split(',').last);
             // Essayer de déterminer le type de fichier depuis les données base64
             if (filePath.startsWith('data:')) {
@@ -334,7 +336,7 @@ class MessageService {
             }
           } else {
             // Pour mobile/desktop, utiliser le chemin du fichier
-            print('📱 Mobile: Préparation du fichier $filePath');
+            AppLogger.d('📱 Mobile: Préparation du fichier $filePath');
             fileContent = filePath; // Le service Cloudinary peut gérer les chemins de fichier
             fileName = name ?? filePath.split('/').last;
           }
@@ -345,7 +347,7 @@ class MessageService {
             folder: 'chapechape/messages/$conversationId',
           );
           
-          print('☁️ Fichier uploadé sur Cloudinary: $cloudinaryUrl');
+          AppLogger.d('☁️ Fichier uploadé sur Cloudinary: $cloudinaryUrl');
           
           // Envoyer l'URL Cloudinary au backend
           final attachmentResponse = await _dio.post(
@@ -368,7 +370,7 @@ class MessageService {
               throw Exception('Aucune pièce jointe dans la réponse');
             }
             
-            print('✅ Pièce jointe enregistrée avec succès via Cloudinary');
+            AppLogger.d('✅ Pièce jointe enregistrée avec succès via Cloudinary');
             
             return MessageAttachment(
               id: attachmentData['_id'] ?? '',
@@ -381,14 +383,14 @@ class MessageService {
             throw Exception('Erreur lors de l\'enregistrement de la pièce jointe');
           }
         } catch (cloudinaryError) {
-          print('☁️❌ Erreur Cloudinary: $cloudinaryError');
-          print('🔄 Retour à la méthode traditionnelle d\'upload');
+          AppLogger.d('☁️❌ Erreur Cloudinary: $cloudinaryError');
+          AppLogger.d('🔄 Retour à la méthode traditionnelle d\'upload');
           // En cas d'erreur avec Cloudinary, revenir à la méthode traditionnelle
         }
       }
       
       // Méthode traditionnelle (multipart/form-data)
-      print('💾 Utilisation de la méthode traditionnelle d\'upload');
+      AppLogger.d('💾 Utilisation de la méthode traditionnelle d\'upload');
       FormData formData;
       
       if (kIsWeb) {
@@ -425,7 +427,7 @@ class MessageService {
           throw Exception('Aucune pièce jointe dans la réponse');
         }
         
-        print('✅ Pièce jointe enregistrée avec succès via méthode traditionnelle');
+        AppLogger.d('✅ Pièce jointe enregistrée avec succès via méthode traditionnelle');
         
         return MessageAttachment(
           id: attachmentData['_id'] ?? '',
@@ -437,7 +439,7 @@ class MessageService {
       }
       throw Exception('Erreur lors de l\'upload du fichier');
     } catch (e) {
-      print('Erreur détaillée lors de l\'upload: $e');
+      AppLogger.d('Erreur détaillée lors de l\'upload: $e');
       throw Exception('Erreur lors de l\'upload du fichier');
     }
   }

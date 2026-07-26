@@ -15,7 +15,7 @@ const cinetPayService = require('./cinetpay.service');
 const waveService = require('./wave.service');
 
 /** Fournisseurs sans intégration PSP réelle (simulation dev uniquement). */
-const SIMULATED_PAYMENT_PROVIDERS = new Set(['orange', 'mtn', 'moov', 'djamo']);
+const SIMULATED_PAYMENT_PROVIDERS = new Set(['djamo']);
 
 class PaymentService {
     constructor() {

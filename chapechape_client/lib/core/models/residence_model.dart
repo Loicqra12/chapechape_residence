@@ -39,6 +39,8 @@ class Residence {
   final Map<String, dynamic>? priceDetails;
   final Map<String, dynamic>? contactInfo;
   final String? videoUrl;
+  /// Vidéos structurées (API v2) — liste de Maps avec url, thumbnail, status, _id
+  final List<Map<String, dynamic>> videos;
   final String? virtualTourUrl;
   final List<String>? nearbyAttractions;
   final List<String>? rules;
@@ -209,6 +211,7 @@ class Residence {
     this.priceDetails,
     this.contactInfo,
     this.videoUrl,
+    this.videos = const [],
     this.virtualTourUrl,
     this.nearbyAttractions,
     this.rules,
@@ -370,6 +373,11 @@ class Residence {
       priceDetails: json['priceDetails'] as Map<String, dynamic>?,
       contactInfo: json['contactInfo'] as Map<String, dynamic>?,
       videoUrl: json['videoUrl'] as String?,
+      videos: (json['videos'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          const [],
       virtualTourUrl: json['virtualTourUrl'] as String?,
       nearbyAttractions: json['nearbyAttractions'] != null
           ? List<String>.from(json['nearbyAttractions'] as List)
@@ -431,6 +439,7 @@ class Residence {
       'priceDetails': priceDetails,
       'contactInfo': contactInfo,
       'videoUrl': videoUrl,
+      'videos': videos,
       'virtualTourUrl': virtualTourUrl,
       'nearbyAttractions': nearbyAttractions,
       'rules': rules,
@@ -484,6 +493,7 @@ class Residence {
     Map<String, dynamic>? priceDetails,
     Map<String, dynamic>? contactInfo,
     String? videoUrl,
+    List<Map<String, dynamic>>? videos,
     String? virtualTourUrl,
     List<String>? nearbyAttractions,
     List<String>? rules,
@@ -531,6 +541,7 @@ class Residence {
       priceDetails: priceDetails ?? this.priceDetails,
       contactInfo: contactInfo ?? this.contactInfo,
       videoUrl: videoUrl ?? this.videoUrl,
+      videos: videos ?? this.videos,
       virtualTourUrl: virtualTourUrl ?? this.virtualTourUrl,
       nearbyAttractions: nearbyAttractions ?? this.nearbyAttractions,
       rules: rules ?? this.rules,

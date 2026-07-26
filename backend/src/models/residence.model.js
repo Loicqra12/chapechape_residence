@@ -88,6 +88,24 @@ const residenceSchema = mongoose.Schema({
     }
   },
   images: [String],
+
+  // Vidéos de présentation (MVP : 1 max, modération requise)
+  videos: [{
+    url:       { type: String, required: true },  // URL MP4 Cloudinary (permanent)
+    hlsUrl:    { type: String },                  // URL HLS (optionnel, V2)
+    thumbnail: { type: String },                  // Thumbnail dérivé côté backend
+    publicId:  { type: String, required: true },  // Requis pour la suppression Cloudinary
+    duration:  { type: Number },                  // Durée en secondes
+    size:      { type: Number },                  // Poids du fichier brut (octets)
+    status: {
+      type:    String,
+      enum:    ['pending_review', 'approved', 'rejected'],
+      default: 'pending_review'
+    },
+    rejectionReason: { type: String },            // Rempli par l'admin si rejected
+    order:      { type: Number, default: 0 },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
   bedrooms: {
     type: Number,
     required: [true, 'Le nombre de chambres est requis'],
@@ -138,6 +156,18 @@ const residenceSchema = mongoose.Schema({
     type: String,
     enum: ['available', 'unavailable', 'maintenance'],
     default: 'available'
+  },
+  // Vérification admin (distinct du statut de disponibilité)
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  verifiedAt: {
+    type: Date
+  },
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   // ✅ AJOUT : Mode de réservation pour différencier les flux
   reservationMode: {
@@ -354,9 +384,12 @@ residenceSchema.virtual('averageRating').get(function () {
 });
 
 // Méthodes d'instance
-residenceSchema.methods.isAvailableForDates = async function (startDate, endDate) {
+residenceSchema.methods.isAvailableForDates = async function (startDate, endDate, excludeReservationId = null, session = null) {
   const Availability = mongoose.model('Availability');
-  return Availability.isPeriodAvailable(this._id, startDate, endDate);
+  return Availability.isPeriodAvailable(this._id, startDate, endDate, {
+    excludeReservationId,
+    session,
+  });
 };
 
 residenceSchema.methods.calculateTotalPrice = async function (startDate, endDate) {
@@ -411,8 +444,11 @@ residenceSchema.index({ featured: -1, price: 1 }); // Pour les résidences en ve
 residenceSchema.index({ createdAt: -1 }); // Pour les résidences récentes
 residenceSchema.index({ rating: -1 }); // Pour les meilleures notes
 
-// Index pour les recherches par propriétaire
-residenceSchema.index({ owner: 1 });
+// Filtres les plus utilisés (my-residences, listes publiques, soft-delete)
+residenceSchema.index({ partner: 1, status: 1 });
+residenceSchema.index({ partner: 1, deleted: 1 });
+residenceSchema.index({ status: 1 });
+residenceSchema.index({ deleted: 1 });
 
 // Index texte pour la recherche full-text
 residenceSchema.index({ title: 'text', description: 'text' }, {

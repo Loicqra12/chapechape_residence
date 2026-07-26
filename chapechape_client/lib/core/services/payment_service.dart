@@ -232,34 +232,6 @@ class PaymentService {
     }
   }
 
-  // Confirmer un paiement par virement bancaire via backend réel
-  Future<Payment> confirmBankTransferPayment({
-    required String paymentIntentId,
-    required Map<String, dynamic> bankDetails,
-    double amount = 50000, // Montant par défaut pour la simulation
-    double? commissionRate,
-  }) async {
-    try {
-      // CORRIGÉ: Utiliser le bon endpoint backend avec préfixe /api
-      final response = await _apiService
-          .post('/payments/$paymentIntentId/confirm', data: {
-        'paymentMethod': 'bank_transfer',
-        'bankDetails': {
-          'bankName': bankDetails['bankName'],
-          'accountNumber': bankDetails['accountNumber'],
-          'accountName': bankDetails['accountName'],
-          'reference': bankDetails['reference'],
-        },
-      });
-
-      // CORRIGÉ: Adapter à la structure de réponse backend
-      return Payment.fromJson(response.data);
-    } on DioException catch (e) {
-      throw Exception(
-          'Erreur lors de la confirmation du virement bancaire: ${e.message}');
-    }
-  }
-
   // Vérifier le statut d'un paiement via l'endpoint dédié (lookup direct)
   // PROB #7 CORRIGÉ : plus de chargement de tous les paiements — 1 requête directe
   Future<Payment> checkPaymentStatus(String paymentId) async {
@@ -276,20 +248,6 @@ class PaymentService {
     } on DioException catch (e) {
       throw Exception('Erreur lors de la vérification du statut: ${e.message}');
     }
-  }
-
-  /// Recherche robuste par transactionId (root ou nested)
-  Map<String, dynamic>? _findPaymentByTransactionId(String wantedId, List<dynamic> payments) {
-    for (final raw in payments.cast<Map<String, dynamic>>()) {
-      final txnRoot = raw['transactionId']?.toString();
-      final txnNested = raw['paymentDetails']?['providerResponse']?['transactionId']?.toString();
-      
-      if (wantedId == txnRoot || wantedId == txnNested) {
-        print('✅ Match trouvé: ${wantedId == txnRoot ? 'root' : 'nested'} transactionId');
-        return raw;
-      }
-    }
-    return null;
   }
 
   // Récupérer l'historique des paiements via backend réel

@@ -15,6 +15,7 @@ import '../../../core/services/event_bus/residence_event_bus.dart';
 import 'package:equatable/equatable.dart';
 import '../../repositories/notification_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 // Events
 abstract class ResidenceEvent extends Equatable {
@@ -483,7 +484,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       final images = ResidenceImage.fromMixed(event.images);
       
       if (images.isNotEmpty) {
-        print("Téléchargement et rafraîchissement des données de la résidence");
+        AppLogger.d("Téléchargement et rafraîchissement des données de la résidence");
         // Utiliser la nouvelle méthode qui télécharge les images et récupère la résidence mise à jour
         final updatedResidence = await _residenceService.uploadImagesAndRefreshResidence(event.residenceId, images);
         
@@ -710,7 +711,7 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
         emit(ResidenceDetailsLoaded(residence));
       } else {
         // Hors ligne: recherche dans le cache
-        print('📴 Appareil hors-ligne, recherche de la résidence dans le cache');
+        AppLogger.d('📴 Appareil hors-ligne, recherche de la résidence dans le cache');
         final dynamicResidences = await _cacheService.getCachedResidences();
         
         // Chercher la résidence correspondante
@@ -748,10 +749,9 @@ class ResidenceBloc extends Bloc<ResidenceEvent, ResidenceState> {
       final residences = await _residenceService.getMyResidences();
       // Mettre à jour le cache avec les nouvelles données
       await _cacheService.cacheResidences(residences);
-      
-      // Notifier via le bus d'événements
-      eventBus?.emit(ResidenceEventType.refreshNeeded);
-      
+
+      // Ne PAS émettre refreshNeeded ici : ResidencesScreen écoute le bus et
+      // rappellerait RefreshResidences → boucle infinie Loading/Loaded.
       emit(ResidenceLoaded(residences));
     } catch (e) {
       emit(ResidenceError('Erreur lors du rafraîchissement: $e'));

@@ -88,6 +88,8 @@ const userSchema = new mongoose.Schema({
         type: String
     },
     lastLogin: Date,
+    // Dernière activité app (heartbeat via register device)
+    lastAppActivity: Date,
     // Champs pour OneSignal
     deviceTokens: {
         type: [String],

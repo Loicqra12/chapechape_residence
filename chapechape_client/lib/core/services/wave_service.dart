@@ -29,6 +29,8 @@ class WaveService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      _validatePaymentParams(reservationId: reservationId, amount: amount);
+
       // Appel au backend pour créer l'intention de paiement Wave
       final response = await _apiService.post('/payments/create-payment-intent', data: {
         'reservationId': reservationId,
@@ -133,20 +135,6 @@ class WaveService {
     } on DioException catch (e) {
       throw WaveException('Erreur lors de la vérification du statut Wave: ${e.message}');
     }
-  }
-
-  /// Recherche robuste par transactionId (root ou nested)
-  Map<String, dynamic>? _findPaymentByTransactionId(String wantedId, List<dynamic> payments) {
-    for (final raw in payments.cast<Map<String, dynamic>>()) {
-      final txnRoot = raw['transactionId']?.toString();
-      final txnNested = raw['paymentDetails']?['providerResponse']?['transactionId']?.toString();
-      
-      if (wantedId == txnRoot || wantedId == txnNested) {
-        print('✅ Match trouvé: ${wantedId == txnRoot ? 'root' : 'nested'} transactionId');
-        return raw;
-      }
-    }
-    return null;
   }
 
   /// Mapper le statut backend vers enum PaymentStatus

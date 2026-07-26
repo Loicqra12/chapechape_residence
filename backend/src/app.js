@@ -33,6 +33,7 @@ const payoutRoutes = require("./routes/payout.routes"); // ✅ RÉACTIVÉ
 const pricingRoutes = require("./routes/pricing.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const messageRoutes = require("./routes/message.routes");
+const mediaRoutes = require("./routes/media.routes");
 const authRoutes = require("./routes/auth.routes");
 // const blogRoutes = require("./routes/blog.routes"); // Temporairement désactivé pour diagnostic
 const reviewRoutes = require("./routes/review.routes");
@@ -66,11 +67,21 @@ const maintenanceRoutes = require("./routes/maintenance.routes");
 
 const app = express();
 
+// Derrière Nginx / load balancer : req.ip = vraie IP client (rate-limit, audit)
+app.set('trust proxy', process.env.TRUST_PROXY_HOPS
+  ? Number(process.env.TRUST_PROXY_HOPS)
+  : 1);
+
 // Sentry middlewares sont maintenant gérés automatiquement par instrument.js
 
-// Webhooks Wave (HMAC sur corps brut) — AVANT express.json() pour garder le Buffer
+// Webhooks PSP (corps brut / signature) — AVANT express.json()
 const paymentController = require("./controllers/payment/payment.controller");
 const payoutController = require("./controllers/payout.controller");
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.handleStripeWebhook
+);
 app.post(
   "/api/payments/wave/webhook",
   express.raw({ type: "application/json" }),
@@ -81,11 +92,23 @@ app.post(
   express.raw({ type: "application/json" }),
   payoutController.handleWavePayoutWebhook
 );
+// CinetPay paiement (urlencoded) — hors paymentLimiter (monté ici, pas via payment.routes)
+app.post(
+  "/api/payments/cinetpay/webhook",
+  express.urlencoded({ extended: true }),
+  paymentController.handleCinetPayWebhook
+);
 
 // IMPORTANT: Configurer les middlewares de base AVANT toute définition de route
 app.use(express.json()); // Pour parser les requêtes avec JSON payloads
 app.use(express.urlencoded({ extended: true })); // Pour parser les requêtes avec URL-encoded payloads
-app.use(cookieParser(process.env.COOKIE_SECRET || "chapechape-secret-key"));
+app.use(cookieParser(process.env.COOKIE_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('COOKIE_SECRET non défini — obligatoire en production');
+  }
+  logger.warn('[DEV] COOKIE_SECRET non défini — utilisation d\'une clé temporaire de développement uniquement');
+  return 'dev-cookie-secret-not-for-production';
+})()));
 
 // Routes publiques de test et promotions (APRÈS les middlewares de parsing mais AVANT la sécurité)
 // Protection des routes de test en production
@@ -383,7 +406,7 @@ if (process.env.NODE_ENV !== "production") {
 app.use("/api/auth/register", generateCsrfToken);
 
 // Protection CSRF pour les routes mutatives sensibles
-app.use("/api/bookings", csrfMiddleware);
+// Note: /api/bookings legacy retiré — flux vivant = /api/reservations
 // app.use("/api/payments", csrfMiddleware); // ✅ DÉSACTIVÉ pour apps mobiles Flutter
 app.use("/api/users", csrfMiddleware);
 
@@ -431,6 +454,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/messages", messageRoutes); // Routes de messagerie
+app.use("/api/media", mediaRoutes); // Signature Cloudinary (upload signé)
 app.use("/api/availability", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
 app.use("/api/devices", deviceRoutes); // Ajout des routes pour la gestion des appareils
 app.use("/api/sms", smsRoutes); // Ajout des routes pour l'envoi de SMS via Twilio

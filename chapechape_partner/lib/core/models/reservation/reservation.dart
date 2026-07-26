@@ -124,7 +124,7 @@ enum ReservationStatus {
   }
 
   /// Créer un statut depuis le format backend
-  static ReservationStatus fromBackendFormat(String backendStatus) {
+  static ReservationStatus fromBackendFormat(String backendStatus, {bool rejectedByHost = false}) {
     switch (backendStatus.toLowerCase()) {
       case 'awaiting_approval':
         return ReservationStatus.awaitingApproval;
@@ -141,7 +141,8 @@ enum ReservationStatus {
       case 'confirmed':
         return ReservationStatus.confirmed;
       case 'cancelled':
-        return ReservationStatus.cancelled;
+        // F3 — rejet partenaire stocké comme cancelled + rejectedByHost
+        return rejectedByHost ? ReservationStatus.rejected : ReservationStatus.cancelled;
       case 'completed':
         return ReservationStatus.completed;
       case 'rejected':
@@ -252,8 +253,15 @@ class Reservation {
             : (data['totalAmount'] as num?)?.toDouble() ?? 0.0);
     
     // Extraire le statut en utilisant la méthode de conversion backend
-    final status = data['status'] != null 
-        ? ReservationStatus.fromBackendFormat(data['status'].toString())
+    final cancellationDetails = data['cancellationDetails'] is Map
+        ? data['cancellationDetails'] as Map
+        : null;
+    final rejectedByHost = cancellationDetails?['rejectedByHost'] == true;
+    final status = data['status'] != null
+        ? ReservationStatus.fromBackendFormat(
+            data['status'].toString(),
+            rejectedByHost: rejectedByHost,
+          )
         : ReservationStatus.pending;
     
     // Extraire la date de création

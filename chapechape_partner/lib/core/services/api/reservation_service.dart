@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../models/reservation/reservation.dart';
 import '../../config/app_config.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 class ReservationService {
   final Dio _dio;
@@ -50,7 +51,7 @@ class ReservationService {
 
   Future<Reservation?> getReservation(String id) async {
     try {
-      print("Récupération de la réservation avec ID: $id");
+      AppLogger.d("Récupération de la réservation avec ID: $id");
       
       final response = await _dio.get(
         _ep('reservations/$id'),
@@ -64,17 +65,17 @@ class ReservationService {
         ),
       );
 
-      print("Statut de la réponse getReservation: ${response.statusCode}");
-      print("Données de la réponse: ${response.data}");
+      AppLogger.d("Statut de la réponse getReservation: ${response.statusCode}");
+      AppLogger.d("Données de la réponse: ${response.data}");
 
       if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
         return Reservation.fromJson(response.data['data']);
       }
 
-      print("Réservation non trouvée ou réponse invalide");
+      AppLogger.d("Réservation non trouvée ou réponse invalide");
       return null;
     } catch (e) {
-      print("Exception dans getReservation: ${e.toString()}");
+      AppLogger.d("Exception dans getReservation: ${e.toString()}");
       return null;
     }
   }
@@ -94,12 +95,12 @@ class ReservationService {
         ),
       );
 
-      print("Réponse API getMyReservations: ${response.data}");
-      print("Statut de la réponse: ${response.statusCode}");
+      AppLogger.d("Réponse API getMyReservations: ${response.data}");
+      AppLogger.d("Statut de la réponse: ${response.statusCode}");
 
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> reservationsJson = response.data['data'] ?? [];
-        print("Nombre de réservations trouvées: ${reservationsJson.length}");
+        AppLogger.d("Nombre de réservations trouvées: ${reservationsJson.length}");
         return reservationsJson
             .map((json) => Reservation.fromJson(json))
             .toList();
@@ -108,7 +109,7 @@ class ReservationService {
       // Si aucune réservation trouvée, retourner une liste vide
       return [];
     } catch (e) {
-      print("Exception dans getMyReservations: ${e.toString()}");
+      AppLogger.d("Exception dans getMyReservations: ${e.toString()}");
       // Au lieu de lancer une exception, retourner une liste vide
       // pour éviter d'afficher un message d'erreur à l'utilisateur
       return [];
@@ -145,10 +146,26 @@ class ReservationService {
       if (id.isEmpty) {
         throw Exception('ID de réservation invalide ou manquant');
       }
-      
-      // ✅ Validation préventive côté client - simplifiée
-      // Note: Le modèle Reservation côté Partner n'inclut pas paymentStatus
-      // La validation complète se fait côté serveur avec des erreurs explicites
+
+      // F3 — rejeter via l'endpoint dédié (backend = cancelled + rejectedByHost)
+      if (status == ReservationStatus.rejected) {
+        final rejected = await rejectReservation(id);
+        if (rejected == null) {
+          throw Exception('Échec du rejet de la réservation');
+        }
+        return;
+      }
+
+      // Approbation via endpoint dédié (→ payment_pending + timer)
+      // L'UI legacy envoie parfois "confirmed" pour approuver une demande
+      if (status == ReservationStatus.confirmed) {
+        try {
+          final approved = await approveReservation(id);
+          if (approved != null) return;
+        } catch (_) {
+          // Pas en awaiting_approval : continuer vers PATCH status
+        }
+      }
       
       await _dio.patch(
         _ep('reservations/$id/status'),
@@ -222,14 +239,37 @@ class ReservationService {
     }
   }
 
-  // Désactivé car l'endpoint backend n'existe pas actuellement
   Future<void> addNote(String id, String note) async {
-    throw Exception('Endpoint d\'ajout de note non disponible côté backend');
+    try {
+      final response = await _dio.post(
+        _ep('reservations/$id/notes'),
+        data: {'note': note},
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'x-mobile-app': 'true',
+          },
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          response.data?['message'] ?? 'Impossible d\'ajouter la note',
+        );
+      }
+    } catch (e) {
+      if (e is DioException) {
+        final message = e.response?.data?['message'] ?? e.message;
+        throw Exception('Erreur lors de l\'ajout de la note: $message');
+      }
+      rethrow;
+    }
   }
 
   Future<List<Reservation>> getPartnerReservations() async {
     try {
-      print("Récupération des réservations partenaire...");
+      AppLogger.d("Récupération des réservations partenaire...");
       
       // D'abord, récupérer les résidences du partenaire
       final residenceResponse = await _dio.get(
@@ -251,7 +291,7 @@ class ReservationService {
           .map<String>((residence) => residence['_id'].toString())
           .toList();
       
-      print("Résidences trouvées: ${residenceIds.length}");
+      AppLogger.d("Résidences trouvées: ${residenceIds.length}");
       
       // Si aucune résidence, retourner une liste vide
       if (residenceIds.isEmpty) {
@@ -279,18 +319,18 @@ class ReservationService {
                 .map((json) => Reservation.fromJson(json))
                 .toList();
             allReservations.addAll(reservations);
-            print("Ajout de ${reservations.length} réservations pour résidence $residenceId");
+            AppLogger.d("Ajout de ${reservations.length} réservations pour résidence $residenceId");
           }
         } catch (e) {
           // Continuer même si une résidence échoue
-          print('Erreur lors de la récupération des réservations pour $residenceId: $e');
+          AppLogger.d('Erreur lors de la récupération des réservations pour $residenceId: $e');
         }
       }
       
-      print("Total des réservations trouvées: ${allReservations.length}");
+      AppLogger.d("Total des réservations trouvées: ${allReservations.length}");
       return allReservations;
     } catch (e) {
-      print("Exception dans getPartnerReservations: ${e.toString()}");
+      AppLogger.d("Exception dans getPartnerReservations: ${e.toString()}");
       return [];
     }
   }
@@ -298,7 +338,7 @@ class ReservationService {
   // Utilise le nouvel endpoint dédié aux partenaires
   Future<List<Reservation>> getPartnerReservationsDirect() async {
     try {
-      print("Récupération directe des réservations partenaire...");
+      AppLogger.d("Récupération directe des réservations partenaire...");
       
       // Utiliser l'endpoint unifié qui gère le rôle partenaire
       final response = await _dio.get(
@@ -313,7 +353,7 @@ class ReservationService {
 
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> reservationsJson = response.data['data'] ?? [];
-        print("Nombre de réservations trouvées: ${reservationsJson.length}");
+        AppLogger.d("Nombre de réservations trouvées: ${reservationsJson.length}");
         return reservationsJson
             .map((json) => Reservation.fromJson(json))
             .toList();
@@ -321,7 +361,7 @@ class ReservationService {
 
       return [];
     } catch (e) {
-      print("Exception dans getPartnerReservationsDirect: ${e.toString()}");
+      AppLogger.d("Exception dans getPartnerReservationsDirect: ${e.toString()}");
       return [];
     }
   }
@@ -352,7 +392,7 @@ class ReservationService {
   /// Met à jour une réservation existante
   Future<Reservation?> updateReservation(String id, Map<String, dynamic> reservationData) async {
     try {
-      final response = await _dio.put(
+      final response = await _dio.patch(
         _ep('reservations/$id'),
         data: reservationData,
         options: Options(

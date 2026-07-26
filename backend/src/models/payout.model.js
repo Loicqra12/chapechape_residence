@@ -14,10 +14,10 @@ const payoutSchema = new mongoose.Schema({
         index: true
     },
     
-    // Bénéficiaire du payout
+    // Bénéficiaire du payout (User avec role partner)
     partner: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Partner',
+        ref: 'User',
         required: true,
         index: true
     },
@@ -119,6 +119,7 @@ const payoutSchema = new mongoose.Schema({
             'PAYOUT_SUCCESS',
             'PAYOUT_FAILED',
             'PAYOUT_CANCELLED',
+            'PAYOUT_ARCHIVED',
             // Statuts legacy conservés pour compatibilité historique
             'scheduled',        // Programmé
             'pending',          // En attente de traitement
@@ -145,7 +146,7 @@ const payoutSchema = new mongoose.Schema({
     provider: {
         type: String,
         default: 'cinetpay',
-        enum: ['cinetpay', 'manual', 'direct_api']
+        enum: ['cinetpay', 'manual', 'direct_api', 'wave']
     },
     cinetpay_info: {
         transaction_id: {
@@ -251,6 +252,12 @@ payoutSchema.index({ scheduled_for: 1, status: 1 });
 payoutSchema.index({ 'cinetpay_info.transaction_id': 1 }); // Index nécessaire (pas unique)
 // cinetpay_info.client_transaction_id index créé automatiquement par unique: true
 payoutSchema.index({ createdAt: -1 });
+// Un Payment ne peut alimenter qu'un seul payout (anti-doublon P-C7)
+payoutSchema.index({ source_transactions: 1 }, { unique: true });
+payoutSchema.index(
+    { 'metadata.source_payment_id': 1 },
+    { unique: true, sparse: true }
+);
 
 // ===============================
 // MÉTHODES D'INSTANCE

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Alias rétrocompat : anciennes configs OneSignal pointant vers ic_stat_notification -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -6,5 +7,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,22a2,2 0,0 0,2 -2h-4a2,2 0,0 0,2 2zM18,16v-5a6,6 0,0 0,-5 -5.91V4a1,1 0,0 0,-2 0v1.09A6,6 0,0 0,6 11v5l-2,2v1h16v-1l-2,-2z" />
+        android:pathData="M12,3.2L3.5,10v11h6.2v-6.5h4.6V21h6.2V10L12,3.2zM12,5.6l6.5,5.1V19.5h-2.8v-6.5H8.3v6.5H5.5v-8.8L12,5.6z" />
 </vector>

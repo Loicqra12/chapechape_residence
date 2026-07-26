@@ -8,6 +8,7 @@ const notificationService = require('../services/notification.service');
 const socketService = require('../services/socket.service');
 const User = require('../models/user.model');
 const { COMMON } = require('../utils/notification-types');
+const { scheduleUnreadMessageReminder } = require('../services/agenda.service');
 
 // Création du dossier uploads/messages s'il n'existe pas
 const ensureUploadDirExists = async () => {
@@ -242,7 +243,7 @@ exports.sendMessage = asyncHandler(async (req, res) => {
             senderId: req.user.id
         };
 
-        // Pour chaque participant (sauf l'expéditeur) qui n'est pas en ligne (WebSocket)
+        // Pour chaque participant (sauf l'expéditeur)
         for (const participantId of conversation.participants) {
             const participantIdStr = participantId.toString();
             if (participantIdStr !== req.user.id) {
@@ -257,6 +258,23 @@ exports.sendMessage = asyncHandler(async (req, res) => {
                         notificationMessage,
                         notificationData
                     );
+                }
+
+                // Phase 2 : rappel si toujours non lu (Partner 20 min, Client 60 min)
+                try {
+                    const recipient = await User.findById(participantIdStr).select('role');
+                    const isPartner =
+                        recipient?.role === 'partner' || recipient?.role === 'partner_pending';
+                    const delayMinutes = isPartner ? 20 : 60;
+                    const deepLink = isPartner ? '/messages/support' : '/chat';
+                    await scheduleUnreadMessageReminder(
+                        message._id.toString(),
+                        participantIdStr,
+                        delayMinutes,
+                        deepLink
+                    );
+                } catch (scheduleErr) {
+                    console.error('Erreur programmation rappel message:', scheduleErr);
                 }
             }
         }

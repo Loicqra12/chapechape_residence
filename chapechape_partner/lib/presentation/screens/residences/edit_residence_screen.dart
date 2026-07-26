@@ -15,11 +15,13 @@ import '../../../core/models/residence/residence.dart';
 import '../../../core/models/residence/residence_image.dart';
 import '../../../core/services/api/residence_service.dart';
 import '../../../core/services/api/maps_service.dart';
+import '../../../core/services/api/residence_video_service.dart';
 import '../../../core/config/app_config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/exceptions/api_exception.dart';
 import 'package:chapechape_maps/chapechape_maps.dart';
 import 'widgets/hourly_pricing_card.dart';
+import '../../widgets/residence_video_section.dart';
 
 class EditResidenceScreen extends StatelessWidget {
   final Residence? residence;
@@ -64,6 +66,30 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     with SingleTickerProviderStateMixin {
   // TabController pour navigation par sections
   TabController? _tabController;
+
+  /// ID après création réussie (permet l'upload vidéo sans rouvrir).
+  String? _persistedResidenceId;
+
+  String? get _effectiveResidenceId =>
+      widget.residence?.id ?? _persistedResidenceId;
+
+  bool get _hasPersistedResidence => _effectiveResidenceId != null;
+
+  static const List<String> _stepTitles = [
+    'Infos de base',
+    'Tarifs & paiements',
+    'Équipements',
+    'Localisation',
+    'Photos & vidéo',
+  ];
+
+  static const List<String> _stepHints = [
+    'Nom, description et caractéristiques',
+    'Prix, période et modes de paiement',
+    'Équipements disponibles',
+    'Adresse et position sur la carte',
+    'Ajoutez au moins 3 photos (vidéo après création)',
+  ];
   
   final _formKey = GlobalKey<FormState>();
   final _imagePicker = ImagePicker();
@@ -257,6 +283,12 @@ class _EditResidenceViewState extends State<_EditResidenceView>
   List<String>? _existingImages;
   List<ResidenceImage> _newImages = [];
 
+  // Variables vidéo
+  String? _existingVideoUrl;
+  String? _existingVideoId;
+  String? _existingVideoStatus;
+  final _videoService = ResidenceVideoService();
+
   // Variables pour les options et règles
   bool _allowsSmoking = false;
   bool _allowsPets = false;
@@ -449,6 +481,9 @@ class _EditResidenceViewState extends State<_EditResidenceView>
     
     // Initialiser le TabController pour 5 sections
     _tabController = TabController(length: 5, vsync: this);
+    _tabController!.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     // Initialiser les contrôleurs
     _nameController = TextEditingController(
@@ -572,6 +607,15 @@ class _EditResidenceViewState extends State<_EditResidenceView>
       // Initialiser les images existantes
       _existingImages =
           widget.residence!.images.map((img) => img.toString()).toList();
+
+      // Initialiser la vidéo existante (première vidéo approuvée ou en attente)
+      final videos = widget.residence!.videos;
+      if (videos != null && videos.isNotEmpty) {
+        final firstVideo = videos.first;
+        _existingVideoUrl    = firstVideo['url'] as String?;
+        _existingVideoId     = firstVideo['_id'] as String? ?? firstVideo['id'] as String?;
+        _existingVideoStatus = firstVideo['status'] as String?;
+      }
 
       // Initialiser les méthodes de paiement
       if (widget.residence != null &&
@@ -1090,6 +1134,7 @@ class _EditResidenceViewState extends State<_EditResidenceView>
       // Afficher un indicateur de chargement
       setState(() {
         _isLoading = true;
+        _isSubmitting = true;
       });
 
       try {
@@ -1177,37 +1222,49 @@ class _EditResidenceViewState extends State<_EditResidenceView>
           }
         }
 
-        if (widget.residence == null) {
+        if (!_hasPersistedResidence) {
           // Créer une nouvelle résidence
           final residence =
               await _residenceService.createResidence(formData, images);
 
-          // Effacer le formulaire après création réussie
-          _clearForm();
-
-          // Afficher un message de succès
           if (mounted) {
+            setState(() {
+              _persistedResidenceId = residence.id;
+              if (residence.images.isNotEmpty) {
+                _existingImages = residence.images
+                    .map((img) => img.toString())
+                    .where((url) => url.isNotEmpty && url != 'null')
+                    .toList();
+              }
+              _newImages = [];
+              _selectedImages = [];
+              _webImages = [];
+              _isLoading = false;
+              _isSubmitting = false;
+            });
+            _tabController?.animateTo(4); // Médias
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Résidence créée avec succès')),
+              const SnackBar(
+                content: Text(
+                  'Résidence créée ! Vous pouvez maintenant ajouter une vidéo dans l\'onglet Médias.',
+                ),
+                duration: Duration(seconds: 5),
+              ),
             );
-            // Naviguer vers la liste des résidences
-            Navigator.of(context).pop(residence);
           }
         } else {
-          // Mettre à jour une résidence existante
+          // Mettre à jour une résidence existante (édition ou post-création)
           final updatedResidence = await _residenceService.updateResidence(
-            widget.residence!.id,
+            _effectiveResidenceId!,
             formData,
             images,
           );
 
-          // Afficher un message de succès
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text('Résidence mise à jour avec succès')),
             );
-            // Naviguer vers la liste des résidences avec la résidence mise à jour
             Navigator.of(context).pop(updatedResidence);
           }
         }
@@ -1225,6 +1282,7 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         if (mounted) {
           setState(() {
             _isLoading = false;
+            _isSubmitting = false;
           });
         }
       }
@@ -1375,7 +1433,7 @@ class _EditResidenceViewState extends State<_EditResidenceView>
             Tab(icon: Icon(Icons.payments), text: 'Tarifs'),
             Tab(icon: Icon(Icons.home_work), text: 'Équipements'),
             Tab(icon: Icon(Icons.location_on), text: 'Lieu'),
-            Tab(icon: Icon(Icons.photo_camera), text: 'Photos'),
+            Tab(icon: Icon(Icons.perm_media_outlined), text: 'Médias'),
           ],
         ) : null,
       ),
@@ -1397,14 +1455,17 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                 ],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Complétez le formulaire',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          _stepTitles[_tabController!.index],
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       Container(
@@ -1423,6 +1484,13 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _stepHints[_tabController!.index],
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
@@ -1486,9 +1554,14 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         },
         child: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
+          child: TabBarView(
+            controller: _tabController,
             children: [
+              // 0 — Infos
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+
               // Informations de base - Wrapped in Card
               Card(
                 elevation: 2,
@@ -1582,10 +1655,6 @@ class _EditResidenceViewState extends State<_EditResidenceView>
 
               const SizedBox(height: 24),
 
-              // Localisation (section à supprimer)
-
-              // Photos
-              _buildImagePreview(),
 
               // Caractéristiques
               Text(
@@ -1723,7 +1792,14 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+                      const SizedBox(height: 88),
+                    ],
+                  ),
+              // 1 — Tarifs
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+
               TextFormField(
                 controller: _priceController,
                 decoration: InputDecoration(
@@ -1896,7 +1972,60 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                 },
               ),
 
-              const SizedBox(height: 24),
+
+              // Section des méthodes de paiement
+              Text(
+                'Méthodes de paiement acceptées',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Sélectionnez les méthodes de paiement que vous acceptez. Les paiements passeront par ChapeChape qui prélèvera une commission de 10%.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: [
+                  _buildPaymentMethodChip('cash', 'Espèces', Icons.money),
+                  _buildPaymentMethodChip('wave', 'Wave', Icons.waves),
+                  _buildPaymentMethodChip(
+                      'orange_money', 'Orange Money', Icons.phone_android),
+                  _buildPaymentMethodChip(
+                      'moov_money', 'Moov Money', Icons.phone_android),
+                  _buildPaymentMethodChip(
+                      'mtn_money', 'MTN Money', Icons.phone_android),
+                  _buildPaymentMethodChip(
+                      'credit_card', 'Carte bancaire', Icons.credit_card),
+                  _buildPaymentMethodChip('bank_transfer', 'Virement bancaire',
+                      Icons.account_balance),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Section du mode de réservation
+              ReservationModeConfig(
+                currentMode: _selectedReservationMode,
+                onModeChanged: (String newMode) {
+                  setState(() {
+                    _selectedReservationMode = newMode;
+                  });
+                },
+                enabled: true,
+                title: 'Configuration des réservations',
+              ),
+                      const SizedBox(height: 88),
+                    ],
+                  ),
+              // 2 — Équipements
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
 
               // Options
               const SizedBox(height: 16),
@@ -2315,6 +2444,13 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                   ),
                 ),
               ),
+                      const SizedBox(height: 88),
+                    ],
+                  ),
+              // 3 — Lieu
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
 
               // Section localisation améliorée (à modifier)
               Text(
@@ -2593,90 +2729,108 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                   ),
                 ),
               ),
+                      const SizedBox(height: 88),
+                    ],
+                  ),
+              // 4 — Médias
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+              _buildImagePreview(),
 
-              const SizedBox(height: 32),
-
-              // Section des méthodes de paiement
-              Text(
-                'Méthodes de paiement acceptées',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Sélectionnez les méthodes de paiement que vous acceptez. Les paiements passeront par ChapeChape qui prélèvera une commission de 10%.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: [
-                  _buildPaymentMethodChip('cash', 'Espèces', Icons.money),
-                  _buildPaymentMethodChip('wave', 'Wave', Icons.waves),
-                  _buildPaymentMethodChip(
-                      'orange_money', 'Orange Money', Icons.phone_android),
-                  _buildPaymentMethodChip(
-                      'moov_money', 'Moov Money', Icons.phone_android),
-                  _buildPaymentMethodChip(
-                      'mtn_money', 'MTN Money', Icons.phone_android),
-                  _buildPaymentMethodChip(
-                      'credit_card', 'Carte bancaire', Icons.credit_card),
-                  _buildPaymentMethodChip('bank_transfer', 'Virement bancaire',
-                      Icons.account_balance),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Section du mode de réservation
-              ReservationModeConfig(
-                currentMode: _selectedReservationMode,
-                onModeChanged: (String newMode) {
+              // Vidéo de présentation (feature flag — désactivé par défaut)
+              ResidenceVideoSection(
+                videoService:        _videoService,
+                residenceId:         _effectiveResidenceId,
+                existingVideoUrl:    _existingVideoUrl,
+                existingVideoId:     _existingVideoId,
+                existingVideoStatus: _existingVideoStatus,
+                onVideoUploaded: (url, publicId) {
                   setState(() {
-                    _selectedReservationMode = newMode;
+                    _existingVideoUrl    = url;
+                    _existingVideoStatus = 'pending_review';
                   });
                 },
-                enabled: true,
-                title: 'Configuration des réservations',
+                onVideoDeleted: () {
+                  setState(() {
+                    _existingVideoUrl    = null;
+                    _existingVideoId     = null;
+                    _existingVideoStatus = null;
+                  });
+                },
               ),
-
-              const SizedBox(height: 32),
-
+                      const SizedBox(height: 88),
+                    ],
+                  ),
             ],
           ),
         ),
-         ), 
-         ),
+              ),
+            ),
+          _buildWizardBottomBar(theme),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isSubmitting ? null : _submitForm,
-        backgroundColor: _isSubmitting 
-          ? theme.colorScheme.primary.withOpacity(0.6)
-          : theme.colorScheme.primary,
-        icon: _isSubmitting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          : const Icon(Icons.check),
-        label: Text(
-          _isSubmitting
-            ? 'Enregistrement...'
-            : (widget.residence != null ? 'Enregistrer' : 'Créer'),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+    );
+  }
+
+  Widget _buildWizardBottomBar(ThemeData theme) {
+    final index = _tabController?.index ?? 0;
+    final isFirst = index <= 0;
+    final isLast = index >= 4;
+
+    return Material(
+      elevation: 8,
+      color: theme.colorScheme.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              if (!isFirst)
+                OutlinedButton.icon(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => _tabController?.animateTo(index - 1),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Précédent'),
+                )
+              else
+                const SizedBox(width: 8),
+              const Spacer(),
+              if (!isLast)
+                FilledButton.icon(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => _tabController?.animateTo(index + 1),
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Suivant'),
+                )
+              else
+                FilledButton.icon(
+                  onPressed: _isSubmitting ? null : _submitForm,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Icon(_hasPersistedResidence
+                          ? Icons.save
+                          : Icons.check),
+                  label: Text(
+                    _isSubmitting
+                        ? 'Enregistrement...'
+                        : (_hasPersistedResidence ? 'Enregistrer' : 'Créer'),
+                  ),
+                ),
+            ],
           ),
         ),
-        elevation: 8,
       ),
     );
   }

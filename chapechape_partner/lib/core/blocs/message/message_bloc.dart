@@ -4,6 +4,7 @@ import '../../models/message/message.dart';
 import '../../models/message/conversation.dart';
 import '../../services/api/message_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:chapechape_partner/core/utils/app_logger.dart';
 
 // Events
 abstract class MessageEvent extends Equatable {
@@ -206,7 +207,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         emit(MessagesLoaded(messages, {'page': event.page, 'limit': event.limit}));
       }
     } catch (e) {
-      print('ERREUR DÉTAILLÉE lors du chargement des messages: $e');
+      AppLogger.d('ERREUR DÉTAILLÉE lors du chargement des messages: $e');
       emit(MessageError('Erreur lors du chargement des messages'));
     }
   }
@@ -231,7 +232,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       // Recharger les messages pour mettre à jour la liste
       add(LoadMessages(event.conversationId));
     } catch (e) {
-      print('ERREUR DÉTAILLÉE lors de l\'envoi du message: $e');
+      AppLogger.d('ERREUR DÉTAILLÉE lors de l\'envoi du message: $e');
       emit(MessageError('Erreur lors de l\'envoi du message'));
     }
   }
@@ -251,7 +252,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         attachments: [attachment],
       ));
     } catch (e) {
-      print('ERREUR DÉTAILLÉE lors de l\'upload: $e');
+      AppLogger.d('ERREUR DÉTAILLÉE lors de l\'upload: $e');
       emit(MessageError('Erreur lors de l\'upload du fichier'));
     }
   }

@@ -10,6 +10,7 @@ const auditService = require('../../services/audit.service');
 const emailService = require('../../services/email.service');
 const LoginAttempt = require('../../models/loginAttempt.model');
 const logger = require('../../utils/logger');
+const { normalizePhoneToE164: normalizePhone } = require('../../utils/phone.util');
 
 // Hash bcrypt valide pour utilisateur inexistant (évite que bcrypt.compare lance → 500 au lieu de 401)
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy', 10);
@@ -19,7 +20,7 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy', 10);
 // @access  Public
 exports.register = asyncHandler(async (req, res) => {
     try {
-        const { email, password, firstName, lastName, phoneNumber, role } = req.body;
+        const { email, password, firstName, lastName, phoneNumber } = req.body;
 
         // Vérifier si l'utilisateur existe déjà
         const userExists = await User.findOne({ email });
@@ -27,14 +28,15 @@ exports.register = asyncHandler(async (req, res) => {
             throw new apiError('Un utilisateur avec cet email existe déjà', 400);
         }
 
-        // Créer l'utilisateur
+        // Sécurité : ignorer tout role fourni par le client — inscription publique = client uniquement
+        // Les rôles admin/superadmin/partner passent par des routes protégées dédiées
         const user = await User.create({
             email,
             password,
             firstName,
             lastName,
             phoneNumber,
-            role: role || 'client' // Par défaut, c'est un client
+            role: 'client'
         });
 
         // Générer le token d'accès avec la nouvelle fonction
@@ -322,7 +324,11 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            throw new apiError('Aucun utilisateur trouvé avec cet email', 404);
+            // Réponse générique — ne pas révéler si l'email existe ou non (anti-énumération)
+            return res.json({
+                success: true,
+                message: 'Si un compte existe avec cet email, des instructions ont été envoyées.'
+            });
         }
 
         // Générer le token de réinitialisation
@@ -336,7 +342,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 
             res.json({
                 success: true,
-                message: 'Instructions envoyées par email'
+                message: 'Si un compte existe avec cet email, des instructions ont été envoyées.'
             });
         } catch (emailError) {
             // En cas d'erreur d'envoi, réinitialiser le token
@@ -549,7 +555,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         if (lastName !== undefined) updateData.lastName = lastName;
         if (phoneNumber !== undefined) {
             // Normaliser le numéro de téléphone au format E.164
-            updateData.phoneNumber = normalizePhoneToE164(phoneNumber);
+            updateData.phoneNumber = normalizePhone(phoneNumber);
         }
         if (isPhoneVerified !== undefined) updateData.isPhoneVerified = isPhoneVerified;
 
@@ -601,15 +607,4 @@ exports.changePassword = asyncHandler(async (req, res) => {
     });
 });
 
-// Fonction utilitaire pour normaliser les numéros de téléphone
-const normalizePhoneToE164 = (phoneNumber) => {
-    if (!phoneNumber) return phoneNumber;
-
-    // Si déjà en format E.164, retourner tel quel
-    if (phoneNumber.startsWith('+')) {
-        return phoneNumber;
-    }
-
-    // Par défaut, ajouter le code pays de la Côte d'Ivoire (+225)
-    return `+225${phoneNumber}`;
-};
+// normalizePhoneToE164 est importée depuis ../../utils/phone.util en haut du fichier

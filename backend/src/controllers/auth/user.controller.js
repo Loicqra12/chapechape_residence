@@ -8,13 +8,14 @@ exports.register = async (req, res) => {
     try {
         const { firstName, lastName, email, password, phone } = req.body;
 
-        // Create user
+        // Sécurité : inscription publique = role client uniquement (ignorer tout role du body)
         const user = await User.create({
             firstName,
             lastName,
             email,
             password,
-            phone
+            phone,
+            role: 'client'
         });
 
         // Create token

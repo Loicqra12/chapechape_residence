@@ -8,7 +8,7 @@ const statsSchema = new mongoose.Schema({
     },
     partner: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Partner',
+        ref: 'User',
         required: true
     },
     date: {
