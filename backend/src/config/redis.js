@@ -1,5 +1,4 @@
 const Redis = require('ioredis');
-const RedisMock = require('ioredis-mock');
 const logger = require('../utils/logger');
 
 let clientInstance;
@@ -10,13 +9,15 @@ const createRedisClient = () => {
         return clientInstance;
     }
 
-    // Utiliser redis-mock en test et développement
+    // Utiliser redis-mock en test et développement (devDependency — lazy require)
     const useRedisMock = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     
     let client;
     
     if (useRedisMock) {
+        // ioredis-mock is a devDependency; must never be resolved in production.
+        const RedisMock = require('ioredis-mock');
         logger.info('Using Redis Mock');
         client = new RedisMock();
         client.isMock = true;
