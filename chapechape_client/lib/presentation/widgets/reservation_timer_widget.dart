@@ -78,8 +78,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget> {
       }
     }
     
-    // Ensuite vérifier le timer de paiement (pending_payment)
-    if (widget.booking.status == 'pending_payment' && 
+    if (widget.booking.status == 'payment_pending' &&
         widget.booking.paymentDeadline != null) {
       final deadline = widget.booking.paymentDeadline!;
       if (now.isBefore(deadline)) {

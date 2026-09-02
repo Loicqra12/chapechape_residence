@@ -27,15 +27,13 @@ class WavePayoutService {
         this.webhookSecret = getWavePayoutWebhookSecret();
         
         if (!this.apiKey) {
-            console.warn('⚠️  Clé API Wave manquante - Service Wave Payout désactivé');
-            console.warn('Variables cherchées: CLÉ_API_WAVE_PAYOUT ou WAVE_PAYOUT_API_KEY');
-            console.warn('Ajoutez WAVE_PAYOUT_API_KEY dans votre fichier .env pour activer ce service');
+            logger.warn('WAVE_PAYOUT_CONFIG_MISSING', { reason: 'WAVE_PAYOUT_API_KEY' });
             // Ne pas faire planter le serveur, juste désactiver le service
             this.isEnabled = false;
             return; // Sortir du constructeur sans erreur
         } else {
             this.isEnabled = true;
-            console.log('✅ Service Wave Payout initialisé avec succès');
+            logger.info('WAVE_PAYOUT_INITIALIZED');
         }
     }
 
@@ -457,7 +455,7 @@ function getInstance() {
         try {
             wavePayoutService = new WavePayoutService();
         } catch (error) {
-            console.warn('⚠️  Impossible d\'initialiser Wave Payout Service:', error.message);
+            logger.warn('WAVE_PAYOUT_INIT_FAILED', { err: error.message });
             // Retourner un service mock qui ne fait rien
             wavePayoutService = {
                 isEnabled: false,

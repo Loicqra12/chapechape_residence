@@ -1,0 +1,92 @@
+{
+  "project_info": {
+    "project_number": "39884732136",
+    "project_id": "chapchapresi",
+    "storage_bucket": "chapchapresi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:39884732136:android:e5ba7a36e6e08ff5d7fb5d",
+        "android_client_info": {
+          "package_name": "com.chapechape.chapechape_partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWn1VoGZnzQBqO62vghAm68xRnXYz99Xs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:39884732136:android:32d59cc92414025dd7fb5d",
+        "android_client_info": {
+          "package_name": "com.chapechape.client"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "39884732136-5qmq3frjsludqqck59k4an8gphhha6fd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chapechape.client",
+            "certificate_hash": "b2da25d46a3c7cda583c6c86cadaf93613c1890a"
+          }
+        },
+        {
+          "client_id": "39884732136-6b47f0q9phf9d9khms40n9bbdoc06b2k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chapechape.client",
+            "certificate_hash": "ddcea2083cb55adbef2089d7e7d438766669e659"
+          }
+        },
+        {
+          "client_id": "39884732136-hctd43lcc5lelpeevdmtqfbb29kfqiqa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chapechape.client",
+            "certificate_hash": "39234f4f76f05945f0187bc82e75559070495d9d"
+          }
+        },
+        {
+          "client_id": "39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWn1VoGZnzQBqO62vghAm68xRnXYz99Xs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "39884732136-952k7nbb1gucreafp9h33pmq4m5mnfu5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

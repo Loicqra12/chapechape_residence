@@ -3,6 +3,7 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/core/models/cancellation_policy_model.dart';
 import 'package:chapechape_client/core/models/modification_fees_model.dart';
 import 'package:chapechape_client/core/services/api_service.dart';
+import 'package:chapechape_client/core/models/stay_credential.dart';
 import 'package:chapechape_client/core/services/booking_cache_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -694,6 +695,40 @@ class BookingService {
       final response = await _apiService.get('cancellation-policies/$policyId');
       return CancellationPolicy.fromJson(response.data['data']);
     } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// P2-05D — Émettre un stay credential (QR check-in / check-out).
+  /// Le token raw n'est jamais persisté côté Client.
+  Future<StayCredential> issueStayCredential({
+    required String reservationId,
+    required String purpose,
+  }) async {
+    try {
+      final response = await _apiService.post(
+        'reservations/$reservationId/stay-credentials',
+        data: {'purpose': purpose},
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'x-mobile-app': 'true',
+          },
+        ),
+      );
+
+      final responseData = response.data;
+      if (responseData is! Map || responseData['data'] == null) {
+        throw const StayCredentialException('UNKNOWN_ERROR');
+      }
+
+      return StayCredential.fromJson(
+        Map<String, dynamic>.from(responseData['data'] as Map),
+      );
+    } on DioException catch (e) {
+      final parsed = StayCredentialException.fromResponseData(e.response?.data);
+      if (parsed != null) throw parsed;
       throw _handleDioError(e);
     }
   }

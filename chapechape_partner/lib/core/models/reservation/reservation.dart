@@ -5,7 +5,6 @@ enum ReservationStatus {
   confirmed,
   cancelled,
   completed,
-  // ✅ NOUVEAUX STATUTS - Système de Paiement Avancé (alignés avec backend)
   awaitingApproval,
   paymentPending,
   rejected,
@@ -13,7 +12,8 @@ enum ReservationStatus {
   paymentProcessing,
   inStay,
   expired,
-  refunded;
+  refunded,
+  unknown;
 
   String get displayName {
     switch (this) {
@@ -25,7 +25,6 @@ enum ReservationStatus {
         return 'Annulée';
       case ReservationStatus.completed:
         return 'Terminée';
-      // ✅ NOUVEAUX STATUTS - Affichage Partner
       case ReservationStatus.awaitingApproval:
         return 'En attente d\'approbation';
       case ReservationStatus.paymentPending:
@@ -33,15 +32,17 @@ enum ReservationStatus {
       case ReservationStatus.rejected:
         return 'Rejetée';
       case ReservationStatus.paymentExpired:
-        return 'Délai de paiement expiré';
+        return 'Expirée';
       case ReservationStatus.paymentProcessing:
-        return 'Paiement en cours';
+        return 'Paiement en attente';
       case ReservationStatus.inStay:
         return 'Séjour en cours';
       case ReservationStatus.expired:
         return 'Expiré';
       case ReservationStatus.refunded:
         return 'Remboursé';
+      case ReservationStatus.unknown:
+        return 'Statut inconnu';
     }
   }
 
@@ -72,6 +73,8 @@ enum ReservationStatus {
         return '#757575'; // Gris foncé
       case ReservationStatus.refunded:
         return '#9C27B0'; // Violet
+      case ReservationStatus.unknown:
+        return '#9E9E9E';
     }
   }
 
@@ -92,12 +95,14 @@ enum ReservationStatus {
       case ReservationStatus.expired:
       case ReservationStatus.refunded:
         return false;
+      case ReservationStatus.unknown:
+        return false;
     }
   }
 
   /// Vérifier si cette réservation peut être approuvée
   bool get canBeApproved {
-    return this == ReservationStatus.awaitingApproval || this == ReservationStatus.paymentPending;
+    return this == ReservationStatus.awaitingApproval;
   }
 
   /// Vérifier si cette réservation peut être rejetée  
@@ -111,46 +116,62 @@ enum ReservationStatus {
       case ReservationStatus.awaitingApproval:
         return 'awaiting_approval';
       case ReservationStatus.paymentPending:
+      case ReservationStatus.paymentProcessing:
         return 'payment_pending';
       case ReservationStatus.paymentExpired:
         return 'expired';
-      case ReservationStatus.paymentProcessing:
-        return 'payment_processing';
       case ReservationStatus.inStay:
         return 'in_stay';
+      case ReservationStatus.rejected:
+        return 'cancelled';
+      case ReservationStatus.unknown:
+        return 'unknown';
       default:
-        return name; // pending, confirmed, cancelled, completed, rejected, expired, refunded
+        return name;
     }
   }
 
-  /// Créer un statut depuis le format backend
   static ReservationStatus fromBackendFormat(String backendStatus, {bool rejectedByHost = false}) {
-    switch (backendStatus.toLowerCase()) {
+    switch (backendStatus.trim().toLowerCase()) {
       case 'awaiting_approval':
         return ReservationStatus.awaitingApproval;
       case 'payment_pending':
+      case 'pending_payment':
+      case 'waiting_payment':
+      case 'payment_required':
         return ReservationStatus.paymentPending;
       case 'expired':
+      case 'payment_expired':
         return ReservationStatus.expired;
-      case 'payment_processing':
-        return ReservationStatus.paymentProcessing;
       case 'in_stay':
+      case 'in_progress':
+      case 'checked_in':
+      case 'ongoing':
         return ReservationStatus.inStay;
       case 'pending':
         return ReservationStatus.pending;
       case 'confirmed':
         return ReservationStatus.confirmed;
       case 'cancelled':
-        // F3 — rejet partenaire stocké comme cancelled + rejectedByHost
+      case 'canceled':
         return rejectedByHost ? ReservationStatus.rejected : ReservationStatus.cancelled;
       case 'completed':
+      case 'checked_out':
+      case 'finished':
+      case 'complete':
         return ReservationStatus.completed;
       case 'rejected':
         return ReservationStatus.rejected;
       case 'refunded':
         return ReservationStatus.refunded;
+      case 'paymentpending':
+        return ReservationStatus.paymentPending;
+      case 'awaitingapproval':
+        return ReservationStatus.awaitingApproval;
+      case 'instay':
+        return ReservationStatus.inStay;
       default:
-        return ReservationStatus.pending;
+        return ReservationStatus.unknown;
     }
   }
 }
@@ -169,6 +190,8 @@ class Reservation {
   final DateTime createdAt;
   final int guestsCount;
   final String? notes;
+  final DateTime? hostApprovalDeadline;
+  final String? expirationReason;
 
   const Reservation({
     required this.id,
@@ -184,7 +207,15 @@ class Reservation {
     required this.createdAt,
     required this.guestsCount,
     this.notes,
+    this.hostApprovalDeadline,
+    this.expirationReason,
   });
+
+  bool get hostApprovalIsOpen {
+    if (status != ReservationStatus.awaitingApproval) return false;
+    final deadline = hostApprovalDeadline ?? createdAt.add(const Duration(hours: 8));
+    return DateTime.now().isBefore(deadline);
+  }
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
     // Vérification préliminaire des valeurs nulles
@@ -278,8 +309,12 @@ class Reservation {
     
     // Extraire les notes
     final notes = data['notes'] ?? data['specialRequests'];
-    
-    // Construire l'objet Reservation
+
+    DateTime? hostApprovalDeadline;
+    if (data['hostApprovalDeadline'] != null) {
+      hostApprovalDeadline = DateTime.parse(data['hostApprovalDeadline'].toString());
+    }
+
     return Reservation(
       id: data['id'] as String? ?? data['_id']?.toString() ?? '',
       residenceId: residenceId,
@@ -294,6 +329,8 @@ class Reservation {
       createdAt: createdAt,
       guestsCount: guestsCount,
       notes: notes,
+      hostApprovalDeadline: hostApprovalDeadline,
+      expirationReason: data['expirationReason']?.toString(),
     );
   }
 
@@ -312,6 +349,8 @@ class Reservation {
       'created_at': createdAt.toIso8601String(),
       'guests_count': guestsCount,
       'notes': notes,
+      'hostApprovalDeadline': hostApprovalDeadline?.toIso8601String(),
+      'expirationReason': expirationReason,
     };
   }
 }
@@ -348,5 +387,31 @@ extension ReservationProperties on Reservation {
   bool get isOngoing {
     final now = DateTime.now();
     return checkIn.isBefore(now) && checkOut.isAfter(now);
+  }
+}
+
+/// Actions Partner dérivées du statut canonique — pas un second lifecycle.
+class ReservationStatusPolicy {
+  static List<ReservationStatus> filterableStatuses() => ReservationStatus.values
+      .where((s) =>
+          s != ReservationStatus.unknown &&
+          s != ReservationStatus.paymentProcessing &&
+          s != ReservationStatus.paymentExpired)
+      .toList();
+
+  static List<ReservationStatus> partnerTransitionsFrom(ReservationStatus current) {
+    switch (current) {
+      case ReservationStatus.awaitingApproval:
+        return const [
+          ReservationStatus.confirmed,
+          ReservationStatus.rejected,
+        ];
+      case ReservationStatus.confirmed:
+        return const [];
+      case ReservationStatus.inStay:
+        return const [];
+      default:
+        return const [];
+    }
   }
 }

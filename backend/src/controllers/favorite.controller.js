@@ -3,7 +3,7 @@ const Residence = require('../models/residence.model');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../middlewares/async.middleware');
 const notificationService = require('../services/notification.service');
-const { NOTIFICATION_TYPES } = require('../utils/constants');
+const { LEGACY } = require('../utils/notification-types');
 
 // @desc    Add residence to favorites
 // @route   POST /api/v1/favorites
@@ -36,7 +36,7 @@ exports.addToFavorites = asyncHandler(async (req, res) => {
     // Créer une notification
     await notificationService.createNotification(
         req.user.id,
-        NOTIFICATION_TYPES.FAVORITE_ADDED,
+        LEGACY.FAVORITE_ADDED,
         `Vous avez ajouté "${residence.title}" à vos favoris`,
         { residenceId, favoriteId: favorite._id }
     );
@@ -62,12 +62,14 @@ exports.getFavorites = asyncHandler(async (req, res) => {
 });
 
 // @desc    Remove from favorites
-// @route   DELETE /api/v1/favorites/:id
+// @route   DELETE /api/favorites/:residenceId
 // @access  Private
 exports.removeFromFavorites = asyncHandler(async (req, res) => {
+    const residenceId = req.params.residenceId;
+    const userId = req.user.id || req.user._id;
     const favorite = await Favorite.findOne({
-        _id: req.params.id,
-        user: req.user.id
+        residence: residenceId,
+        user: userId,
     }).populate('residence');
 
     if (!favorite) {
@@ -79,7 +81,7 @@ exports.removeFromFavorites = asyncHandler(async (req, res) => {
     // Créer une notification
     await notificationService.createNotification(
         req.user.id,
-        NOTIFICATION_TYPES.FAVORITE_STATUS_CHANGED,
+        LEGACY.FAVORITE_STATUS_CHANGED,
         `"${favorite.residence.title}" a été retiré de vos favoris`,
         { residenceId: favorite.residence._id }
     );

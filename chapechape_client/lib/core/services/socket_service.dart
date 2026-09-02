@@ -58,9 +58,6 @@ class SocketService {
     return <String, dynamic>{};
   }
 
-  String? _bookingId(Map<String, dynamic> data) =>
-      (data['bookingId'] ?? data['reservationId'])?.toString();
-
   void _setupListeners() {
     _socket!.on('connect', (_) {
       debugPrint('🔌 Socket connecté');
@@ -95,39 +92,21 @@ class SocketService {
       onNewMessage?.call(_asMap(data));
     });
 
-    // Noms canoniques backend + alias legacy
+    // Canonique P2-06B — un seul listener statut (booking_status_updated = LEGACY backend alias)
     void handleStatus(dynamic data) {
       final map = _asMap(data);
       onBookingStatusUpdated?.call(map);
       final status = map['newStatus']?.toString() ?? map['status']?.toString();
-      if (status == 'confirmed' || status == 'payment_pending') {
+      if (status == 'expired') {
+        onBookingExpired?.call(map);
+      } else if (status == 'confirmed' || status == 'payment_pending') {
         onBookingApproved?.call(map);
-      }
-      if (status == 'cancelled' || status == 'rejected') {
+      } else if (status == 'cancelled' || status == 'rejected') {
         onBookingRejected?.call(map);
       }
     }
 
     _socket!.on('reservation_status_changed', handleStatus);
-    _socket!.on('booking_status_updated', handleStatus);
-
-    void handleExpired(dynamic data) {
-      final map = _asMap(data);
-      if (_bookingId(map) != null) {
-        onBookingExpired?.call(map);
-      }
-    }
-
-    _socket!.on('reservation_expired', handleExpired);
-    _socket!.on('booking_expired', handleExpired);
-
-    _socket!.on('booking_approved', (data) {
-      onBookingApproved?.call(_asMap(data));
-    });
-
-    _socket!.on('booking_rejected', (data) {
-      onBookingRejected?.call(_asMap(data));
-    });
   }
 
   void joinConversation(String conversationId) {

@@ -14,7 +14,6 @@ const {
 } = require("./middlewares/csrf-custom.middleware");
 const cache = require("./middlewares/cache.middleware");
 const cors = require("cors");
-const morgan = require("morgan");
 const path = require("path");
 const compression = require("compression");
 const helmet = require("helmet");
@@ -65,12 +64,14 @@ const maintenanceRoutes = require("./routes/maintenance.routes");
 // Import des routes payout (reversements partners)
 // const payoutRoutes = require("./routes/payout.routes"); // TEMPORAIREMENT DESACTIVE
 
+const { resolveTrustProxySetting } = require("./runtime/trust-proxy");
+
 const app = express();
 
-// Derrière Nginx / load balancer : req.ip = vraie IP client (rate-limit, audit)
-app.set('trust proxy', process.env.TRUST_PROXY_HOPS
-  ? Number(process.env.TRUST_PROXY_HOPS)
-  : 1);
+app.set("trust proxy", resolveTrustProxySetting());
+
+const { requestIdMiddleware } = require("./middlewares/request-id.middleware");
+app.use(requestIdMiddleware);
 
 // Sentry middlewares sont maintenant gérés automatiquement par instrument.js
 
@@ -225,12 +226,11 @@ if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !==
 }
 
 // Route de vérification de santé (health check) basique pour compatibilité
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Server is running",
-    timestamp: new Date().toISOString()
-  });
+app.get("/health", (req, res, next) => {
+  require("./controllers/health.controller").getLiveness(req, res, next);
+});
+app.get("/ready", (req, res, next) => {
+  require("./controllers/health.controller").getReadiness(req, res, next);
 });
 
 // ====================================================================
@@ -338,35 +338,43 @@ app.get("/api/promotions/:id", getPromotion);
 const {
   globalLimiter,
   authLoginLimiter,
+  authLoginAccountLimiter,
   authRegisterLimiter,
   authForgotPasswordLimiter,
+  authForgotAccountLimiter,
   authVerifyCodeLimiter,
   paymentLimiter,
+  uploadLimiter,
+  adminLimiter,
   userLimiter,
-  uploadLimiter
+  financialLimiter,
 } = require('./middlewares/rate-limit.middleware');
 
-// Rate limiter global (100 req/15min) - Appliqué à toutes les routes
+// Rate limiter global (policy PUBLIC, skip health + webhooks)
 app.use('/api/', globalLimiter);
 
 // Middleware de base
 app.use(compression());
 
-// Middlewares
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+// Access log HTTP unique : logger.http (Morgan → Winston canonique). Pas de second morgan().
 
-// Servir les fichiers statiques publiquement pour les images (AVANT sécurité)
+const {
+  denyPublicPrivateUploads,
+} = require("./security/private-uploads");
+
+// Servir uniquement les médias publics (résidences, profils). Documents / messages : auth + ownership.
 app.use(
   "/uploads",
+  denyPublicPrivateUploads,
   express.static(path.join(__dirname, "../uploads"), {
     maxAge: "1d",
     etag: true,
   })
 );
 
-// Ajouter également la route /api/uploads pour maintenir la rétrocompatibilité
 app.use(
   "/api/uploads",
+  denyPublicPrivateUploads,
   express.static(path.join(__dirname, "../uploads"), {
     maxAge: "1d",
     etag: true,
@@ -434,27 +442,29 @@ app.use("/api/reviews", cache({
 // ====================================================================
 
 // Routes d'authentification — login strict ; inscription plus tolérante (erreurs 400 comptées)
-app.use("/api/auth/login", authLoginLimiter);
+app.use("/api/auth/login", authLoginLimiter, authLoginAccountLimiter);
 app.use("/api/auth/register", authRegisterLimiter);
 app.use("/api/auth/register-partner", authRegisterLimiter);
-app.use("/api/auth/forgot-password", authForgotPasswordLimiter);
+app.use("/api/auth/forgot-password", authForgotPasswordLimiter, authForgotAccountLimiter);
 app.use("/api/auth/verify-code", authVerifyCodeLimiter);
+app.use("/api/auth/reset-password", authForgotPasswordLimiter);
 app.use("/api/auth", authRoutes);
 
 app.use("/api/users", userRoutes);
 
-// Routes de paiement - Rate limit très strict (3/1min)
+// Paiements / payouts : policy FINANCIAL (hors webhooks PSP montés plus haut)
 app.use("/api/payments", paymentLimiter, paymentRoutes);
+app.use("/api/payouts", financialLimiter, payoutRoutes);
+app.use("/api/admin", adminLimiter, adminRoutes);
+app.use("/api/dashboard", adminLimiter, dashboardRoutes);
+app.use("/api/superadmin", adminLimiter, superAdminRoutes);
 app.use("/api/reservations", reservationRoutes);
-app.use("/api/favorites", favoriteRoutes);
-app.use("/api/notifications", notificationRoutes);
+app.use("/api/favorites", userLimiter, favoriteRoutes);
+app.use("/api/notifications", userLimiter, notificationRoutes);
 app.use("/api/partners", partnerRoutes);
 app.use("/api/partners/verify-phone", partnerVerificationRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/superadmin", superAdminRoutes);
-app.use("/api/messages", messageRoutes); // Routes de messagerie
-app.use("/api/media", mediaRoutes); // Signature Cloudinary (upload signé)
+app.use("/api/messages", messageRoutes);
+app.use("/api/media", uploadLimiter, mediaRoutes);
 app.use("/api/availability", availabilityRoutes); // Ajout des routes pour la gestion des disponibilités
 app.use("/api/devices", deviceRoutes); // Ajout des routes pour la gestion des appareils
 app.use("/api/sms", smsRoutes); // Ajout des routes pour l'envoi de SMS via Twilio
@@ -463,9 +473,8 @@ app.use("/api/maps", mapsRoutes); // Ajout des routes pour la géolocalisation e
 app.use("/api/cancellation-policies", cancellationPolicyRoutes); // Routes pour les politiques d'annulation
 app.use("/api/audit", auditRoutes); // Routes pour l'audit et la sécurité
 app.use("/api/website", websiteRoutes); // Routes pour le site vitrine (contact, newsletter)
-app.use("/api/pricing", pricingRoutes); // Routes pour la tarification dynamique CinetPay - ✅ Réactivé après correction bug d'import auth
-app.use("/api/payouts", payoutRoutes); // ✅ RÉACTIVÉ - Routes pour les reversements aux partners via CinetPay
-app.use("/api/health", healthRoutes); // Routes pour les health checks avancés
+app.use("/api/pricing", pricingRoutes);
+app.use("/api/health", healthRoutes);
 app.use("/api/ping", pingRoutes); // Routes pour les pings de connectivité
 app.use("/api/support", supportRoutes); // Routes pour les tickets de support
 app.use("/api/maintenance", maintenanceRoutes); // Routes pour la maintenance système (SuperAdmin)
@@ -476,12 +485,11 @@ app.use("/api/maintenance", maintenanceRoutes); // Routes pour la maintenance sy
 // TEMPORAIREMENT DÉSACTIVÉ POUR DIAGNOSTIC DU CRASH
 /*
 if (process.env.NODE_ENV === 'development' && process.env.ENABLE_TEST_ROUTES !== 'false') {
-  console.log('⚠️ Routes de test activées en environnement de développement UNIQUEMENT');
-  console.log('🚨 CES ROUTES SONT AUTOMATIQUEMENT DÉSACTIVÉES EN PRODUCTION');
+  logger.info('DEV_ONLY: routes de test activées (désactivées en production)');
   app.use("/api/test", testRoutes);
 } else if (process.env.NODE_ENV === 'production') {
   // Log explicite en production pour confirmer la désactivation
-  console.log('✅ SÉCURITÉ : Routes de test DÉSACTIVÉES en production');
+  logger.info('Routes de test désactivées en production');
 }
 */
 if (process.env.NODE_ENV !== "production") {
@@ -525,11 +533,18 @@ app.use("/api/uploads", fileSecurityMiddleware);
 
 // Gestionnaire d'erreurs Sentry officiel - doit être ajouté AVANT les autres gestionnaires d'erreur
 const Sentry = require('@sentry/node');
-Sentry.setupExpressErrorHandler(app);
+const { shouldCaptureSentry, logLevelForError } = require('./observability/http-error-policy');
+const { extractSafeErrorInfo } = require('./utils/sanitize-error');
+Sentry.setupExpressErrorHandler(app, {
+  shouldHandleError(error) {
+    return shouldCaptureSentry(error);
+  },
+});
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {
-  logger.error("Error:", err);
+  const level = logLevelForError(err);
+  logger[level]('Error:', extractSafeErrorInfo(err, req));
 
   // Récupérer le code d'état numérique approprié
   let statusCode = 500;
@@ -540,6 +555,7 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message: err.message || "Une erreur est survenue",
+    errorCode: err.errorCode || undefined,
     status: err.status || "error",
     ...(process.env.NODE_ENV === "development" && {
       stack: err.stack,

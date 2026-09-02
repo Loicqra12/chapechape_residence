@@ -54,6 +54,28 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    /**
+     * Overlay de vérification progressive (optionnel).
+     * Source de vérité téléphone = isPhoneVerified.
+     * identity / payout / property : demandés seulement si le risque l’exige.
+     */
+    verification: {
+        identity: {
+            type: String,
+            enum: ['not_requested', 'pending', 'verified', 'rejected'],
+            default: 'not_requested',
+        },
+        payout: {
+            type: String,
+            enum: ['not_configured', 'pending', 'verified'],
+            default: 'not_configured',
+        },
+        property: {
+            type: String,
+            enum: ['not_required', 'requested', 'verified'],
+            default: 'not_required',
+        },
+    },
     role: {
         type: String,
         enum: ['client', 'partner_pending', 'partner', 'admin', 'superadmin', 'owner'],
@@ -130,6 +152,16 @@ const userSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// P2-06C — un subscription ID OneSignal → maximum 1 User (multikey unique, cross-process)
+userSchema.index(
+    { deviceTokens: 1 },
+    {
+        unique: true,
+        name: 'deviceTokens_subscription_unique',
+        partialFilterExpression: { 'deviceTokens.0': { $exists: true } },
+    }
+);
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function (next) {

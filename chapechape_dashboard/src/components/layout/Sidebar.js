@@ -62,7 +62,9 @@ const Sidebar = () => {
         submenu: [
           { name: 'Calendrier', path: '/bookings/calendar' },
           { name: 'Liste des réservations', path: '/bookings/list' },
-          { name: 'Check-in', path: '/bookings/checkin' }
+          { name: 'Check-in', path: '/bookings/checkin' },
+          { name: 'Inventaire', path: '/ops/inventory' },
+          { name: 'Anomalies', path: '/ops/anomalies' }
         ]
       },
       {
@@ -81,6 +83,7 @@ const Sidebar = () => {
         submenu: [
           { name: 'Transactions', path: '/finance/transactions' },
           { name: 'Paiements', path: '/finance/payments' },
+          { name: 'Refunds', path: '/finance/refunds' },
           { name: 'Rapports', path: '/finance/reports' }
         ]
       },

@@ -1,8 +1,12 @@
+const { ROLES: CANONICAL, isPartnerAccount } = require('../security/roles');
+
 const ROLES = {
-    SUPER_ADMIN: 'superadmin',
-    ADMIN: 'admin',
-    PARTNER: 'partner',
-    USER: 'user'
+    SUPER_ADMIN: CANONICAL.SUPERADMIN,
+    ADMIN: CANONICAL.ADMIN,
+    PARTNER: CANONICAL.PARTNER,
+    PARTNER_PENDING: CANONICAL.PARTNER_PENDING,
+    USER: 'user',
+    CLIENT: CANONICAL.CLIENT,
 };
 
 // Middleware pour vérifier si l'utilisateur est un super admin
@@ -29,14 +33,26 @@ exports.isAdmin = (req, res, next) => {
     }
 };
 
-// Middleware pour vérifier si l'utilisateur est un partenaire
+// Partner produit : partner + alias legacy partner_pending
 exports.isPartner = (req, res, next) => {
-    if (req.user && req.user.role === ROLES.PARTNER) {
+    if (req.user && (req.user.role === ROLES.PARTNER || req.user.role === ROLES.PARTNER_PENDING)) {
         next();
     } else {
         res.status(403).json({
             success: false,
             message: "Accès non autorisé. Rôle Partenaire requis."
+        });
+    }
+};
+
+// Compte partenaire (pending ou validé) — profil / documents / vérif téléphone
+exports.isPartnerAccount = (req, res, next) => {
+    if (req.user && isPartnerAccount(req.user.role)) {
+        next();
+    } else {
+        res.status(403).json({
+            success: false,
+            message: "Accès non autorisé. Compte partenaire requis."
         });
     }
 };

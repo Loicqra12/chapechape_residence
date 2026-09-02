@@ -6,34 +6,26 @@ exports.USER_ROLES = {
     SUPER_ADMIN: 'super_admin'
 };
 
-// Statuts de réservation
-exports.BOOKING_STATUS = {
-    PENDING: 'pending',
-    CONFIRMED: 'confirmed',
-    CANCELLED: 'cancelled',
-    COMPLETED: 'completed',
-    REFUNDED: 'refunded'
-};
+const {
+    RESERVATION_STATUS,
+    ACTIVE_BLOCKING_STATUSES,
+    TERMINAL_STATUSES,
+    normalizeReservationStatusInput,
+} = require('../constants/reservation-status');
 
-// Statuts de paiement (harmonisés)
+// Source unique — BOOKING_STATUS n'est plus un enum diverging.
+exports.RESERVATION_STATUS = RESERVATION_STATUS;
+exports.BOOKING_STATUS = RESERVATION_STATUS;
+exports.ACTIVE_BLOCKING_STATUSES = ACTIVE_BLOCKING_STATUSES;
+exports.TERMINAL_STATUSES = TERMINAL_STATUSES;
+exports.normalizeReservationStatusInput = normalizeReservationStatusInput;
+
+// Statuts de paiement (harmonisés) — distincts de Reservation.status
 exports.PAYMENT_STATUS = {
     PENDING: 'pending',
     PAID: 'paid',        // ✅ HARMONISÉ - était 'completed'
     FAILED: 'failed',
     CANCELLED: 'cancelled',
-    REFUNDED: 'refunded'
-};
-
-// Statuts de réservation (complets)
-exports.RESERVATION_STATUS = {
-    PENDING: 'pending',
-    AWAITING_APPROVAL: 'awaiting_approval',
-    PAYMENT_PENDING: 'payment_pending',
-    CONFIRMED: 'confirmed',
-    IN_STAY: 'in_stay',
-    COMPLETED: 'completed',
-    CANCELLED: 'cancelled',
-    EXPIRED: 'expired',
     REFUNDED: 'refunded'
 };
 
@@ -45,27 +37,6 @@ exports.PAYMENT_METHODS = {
 };
 
 // Types de notifications
-exports.NOTIFICATION_TYPES = {
-    // Notifications de favoris
-    FAVORITE_ADDED: 'favorite_added',
-    FAVORITE_PRICE_CHANGED: 'favorite_price_changed',
-    FAVORITE_STATUS_CHANGED: 'favorite_status_changed',
-    
-    // Notifications de réservation
-    BOOKING_CONFIRMED: 'booking_confirmed',
-    BOOKING_CANCELLED: 'booking_cancelled',
-    BOOKING_REMINDER: 'booking_reminder',
-    
-    // Notifications de paiement
-    PAYMENT_RECEIVED: 'payment_received',
-    PAYMENT_FAILED: 'payment_failed',
-    PAYMENT_REFUNDED: 'payment_refunded',
-    
-    // Notifications système
-    SYSTEM_MAINTENANCE: 'system_maintenance',
-    ACCOUNT_UPDATE: 'account_update'
-};
-
 // Types de médias
 exports.MEDIA_TYPES = {
     IMAGE: 'image',

@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { NotificationProvider } from './contexts/NotificationContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { AnimatePresence } from 'framer-motion';
@@ -19,8 +18,11 @@ import Media from './pages/properties/Media';
 import BookingCalendar from './pages/bookings/Calendar';
 import BookingList from './pages/bookings/List';
 import CheckInPage from './pages/bookings/CheckInPage';
+import InventoryOpsPage from './pages/ops/InventoryOpsPage';
+import AnomaliesPage from './pages/ops/AnomaliesPage';
 import TransactionsPage from './pages/finance/TransactionsPage';
 import PaymentsPage from './pages/finance/PaymentsPage';
+import RefundsPage from './pages/finance/RefundsPage';
 import ReportsPage from './pages/finance/ReportsPage';
 import MessagesPage from './pages/communication/MessagesPage';
 import NotificationsPage from './pages/communication/NotificationsPage';
@@ -48,7 +50,6 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <NotificationProvider>
           <FavoritesProvider>
             {/* Composant pour basculer entre HTTP et HTTPS en développement */}
             <HttpToggle />
@@ -79,10 +80,13 @@ function App() {
                             <Route path="/bookings/calendar" element={<BookingCalendar />} />
                             <Route path="/bookings/list" element={<BookingList />} />
                             <Route path="/bookings/checkin" element={<CheckInPage />} />
+                            <Route path="/ops/inventory" element={<InventoryOpsPage />} />
+                            <Route path="/ops/anomalies" element={<AnomaliesPage />} />
 
                             {/* Routes Finance */}
                             <Route path="/finance/transactions" element={<TransactionsPage />} />
                             <Route path="/finance/payments" element={<PaymentsPage />} />
+                            <Route path="/finance/refunds" element={<RefundsPage />} />
                             <Route path="/finance/reports" element={<ReportsPage />} />
 
                             {/* Routes Analytics */}
@@ -121,7 +125,6 @@ function App() {
             </Router>
             <Toaster position="top-right" />
           </FavoritesProvider>
-        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

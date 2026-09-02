@@ -18,7 +18,7 @@ const generateAccessToken = (userId, role) => {
     return jwt.sign(
         { id: userId, role },
         secret,
-        { expiresIn: expiresInSeconds }
+        { algorithm: 'HS256', expiresIn: expiresInSeconds }
     );
 };
 
@@ -37,7 +37,7 @@ const generateRefreshToken = (userId) => {
     return jwt.sign(
         { id: userId },
         secret,
-        { expiresIn: expiresInSeconds }
+        { algorithm: 'HS256', expiresIn: expiresInSeconds }
     );
 };
 
@@ -51,14 +51,14 @@ const verifyToken = (token, keyType = 'JWT_SECRET') => {
     try {
         // Essayer d'abord avec la clé active
         const activeSecret = keyRotation.getActiveKey(keyType);
-        return jwt.verify(token, activeSecret);
+        return jwt.verify(token, activeSecret, { algorithms: ['HS256'] });
     } catch (error) {
         // Si le token n'est pas valide avec la clé active, essayer avec la clé précédente
         try {
             const previousSecret = keyRotation.getPreviousKey(keyType);
             if (previousSecret) {
                 logger.info(`Tentative de validation du token avec la clé ${keyType} précédente`);
-                return jwt.verify(token, previousSecret);
+                return jwt.verify(token, previousSecret, { algorithms: ['HS256'] });
             }
         } catch (prevError) {
             // Si cela échoue aussi, le token est réellement invalide
@@ -82,7 +82,7 @@ const generateToken = (userId) => {
     return jwt.sign(
         { id: userId },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { algorithm: 'HS256', expiresIn: '24h' }
     );
 };
 

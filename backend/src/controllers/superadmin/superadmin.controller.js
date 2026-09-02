@@ -18,7 +18,7 @@ exports.getAllAdmins = asyncHandler(async (req, res) => {
 });
 
 exports.createAdmin = asyncHandler(async (req, res) => {
-    const admin = await superAdminService.createAdmin(req.body);
+    const admin = await superAdminService.createAdmin(req.body, req.user, req);
     res.status(201).json({
         success: true,
         data: admin
@@ -40,7 +40,7 @@ exports.getAdmin = asyncHandler(async (req, res) => {
 });
 
 exports.updateAdmin = asyncHandler(async (req, res) => {
-    const admin = await superAdminService.updateAdmin(req.params.id, req.body);
+    const admin = await superAdminService.updateAdmin(req.params.id, req.body, req.user, req);
     if (!admin) {
         return res.status(404).json({
             success: false,
@@ -54,7 +54,7 @@ exports.updateAdmin = asyncHandler(async (req, res) => {
 });
 
 exports.deleteAdmin = asyncHandler(async (req, res) => {
-    const admin = await superAdminService.deleteAdmin(req.params.id);
+    const admin = await superAdminService.deleteAdmin(req.params.id, req.user, req);
     if (!admin) {
         return res.status(404).json({
             success: false,
@@ -93,18 +93,23 @@ exports.getSystemSettings = asyncHandler(async (req, res) => {
     });
 });
 
-exports.updateSystemSettings = asyncHandler(async (req, res) => {
-    const updates = req.body;
-    const updatedSettings = [];
+exports.changeUserRole = asyncHandler(async (req, res) => {
+    const { role, reason } = req.body;
+    const user = await superAdminService.changeUserRole(
+        req.params.id,
+        role,
+        reason,
+        req.user,
+        req
+    );
+    res.status(200).json({
+        success: true,
+        data: user,
+    });
+});
 
-    for (const [key, value] of Object.entries(updates)) {
-        const setting = await SystemSetting.findOneAndUpdate(
-            { key },
-            { value },
-            { new: true, upsert: true }
-        );
-        updatedSettings.push(setting);
-    }
+exports.updateSystemSettings = asyncHandler(async (req, res) => {
+    const updatedSettings = await superAdminService.applySettingsPatch(req.body, req.user, req);
 
     res.status(200).json({
         success: true,

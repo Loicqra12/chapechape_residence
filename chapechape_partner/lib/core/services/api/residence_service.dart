@@ -823,6 +823,38 @@ class ResidenceService {
     }
   }
 
+  /// Demande de publication (draft → pending_review). Backend revalide canPublishResidence.
+  Future<Residence> requestPublication(String id) async {
+    final token = await storage.read(key: 'token');
+    if (token == null) throw Exception('Aucun token d\'authentification trouvé');
+
+    final response = await client.post(
+      Uri.parse('$baseUrl/residences/$id/publish'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: '{}',
+    );
+
+    if (response.statusCode != 200) {
+      Map<String, dynamic> errorResponse = {};
+      try {
+        errorResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {}
+      throw ApiException(
+        errorResponse['message'] ?? 'Impossible de publier cette résidence',
+        response.statusCode,
+        errorResponse,
+      );
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = body['data'] as Map<String, dynamic>? ?? {};
+    return getResidenceById(id.isNotEmpty ? id : (data['_id']?.toString() ?? id));
+  }
+
   String _getImageMimeType(String filename) {
     final extension = filename.split('.').last;
     switch (extension.toLowerCase()) {

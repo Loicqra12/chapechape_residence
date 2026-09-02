@@ -15,13 +15,14 @@ const activityLogSchema = new mongoose.Schema({
             'payout_completed', 'payout_failed', 'residence_created', 'residence_updated',
             'residence_deleted', 'reservation_created', 'reservation_updated', 'reservation_cancelled',
             'payment_initiated', 'payment_completed', 'payment_failed', 'verification_sent',
-            'verification_success', 'verification_failed', 'suspicious_activity', 'security_alert'
+            'verification_success', 'verification_failed', 'suspicious_activity', 'security_alert',
+            'ops_checkin', 'ops_checkout', 'ops_cancel', 'ops_refund_confirm'
         ]
     },
     module: {
         type: String,
         required: true,
-        enum: ['auth', 'profile', 'payment', 'residence', 'reservation', 'security', 'verification']
+        enum: ['auth', 'profile', 'payment', 'residence', 'reservation', 'security', 'verification', 'ops']
     },
     description: {
         type: String,

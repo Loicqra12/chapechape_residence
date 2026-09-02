@@ -8,6 +8,10 @@ const ActivityLog = require('../models/activityLog.model'); // Added this line
 const statsService = require('../services/stats.service');
 const availabilityService = require('../services/availability.service');
 const asyncHandler = require('../middlewares/async.middleware');
+const { pickUserSafePatch } = require('../security/roles');
+const { isStaff, assertCanRevokeSuperadmin } = require('../security/staff-guard');
+const superAdminService = require('../services/superadmin.service');
+const ApiError = require('../utils/apiError');
 
 // Dashboard et statistiques
 exports.getDashboardStats = asyncHandler(async (req, res) => {
@@ -67,11 +71,17 @@ exports.blockResidenceDates = asyncHandler(async (req, res) => {
         });
     }
 
-    const residence = await availabilityService.blockDates(residenceId, { startDate, endDate });
+    const block = await availabilityService.blockDates(
+        residenceId,
+        { startDate, endDate },
+        null,
+        null,
+        req.user
+    );
 
     res.status(200).json({
         success: true,
-        data: residence,
+        data: block,
         message: 'Dates bloquées avec succès'
     });
 });
@@ -87,11 +97,15 @@ exports.unblockResidenceDates = asyncHandler(async (req, res) => {
         });
     }
 
-    const residence = await availabilityService.unblockDates(residenceId, { startDate, endDate });
+    const released = await availabilityService.unblockDates(
+        residenceId,
+        { startDate, endDate },
+        req.user
+    );
 
     res.status(200).json({
         success: true,
-        data: residence,
+        data: released,
         message: 'Dates débloquées avec succès'
     });
 });
@@ -123,18 +137,24 @@ exports.getUser = asyncHandler(async (req, res) => {
 });
 
 exports.updateUser = asyncHandler(async (req, res) => {
+    const target = await User.findById(req.params.id);
+    if (!target) {
+        throw new ApiError('Utilisateur non trouvé', 404);
+    }
+    if (isStaff(target.role) && req.user.role !== 'superadmin') {
+        throw new ApiError('Les comptes staff se gèrent via les endpoints Superadmin', 403);
+    }
+
+    const allowActive = req.user && req.user.role === 'superadmin';
+    const patch = pickUserSafePatch(req.body, { allowActive });
+    if (patch.isActive === false) {
+        await assertCanRevokeSuperadmin(target);
+    }
     const user = await User.findByIdAndUpdate(
         req.params.id,
-        { $set: req.body },
+        { $set: patch },
         { new: true, runValidators: true }
     ).select('-password');
-
-    if (!user) {
-        return res.status(404).json({
-            success: false,
-            message: 'Utilisateur non trouvé'
-        });
-    }
 
     res.status(200).json({
         success: true,
@@ -143,14 +163,15 @@ exports.updateUser = asyncHandler(async (req, res) => {
 });
 
 exports.deleteUser = asyncHandler(async (req, res) => {
-    const user = await User.findByIdAndDelete(req.params.id);
-
-    if (!user) {
-        return res.status(404).json({
-            success: false,
-            message: 'Utilisateur non trouvé'
-        });
+    const target = await User.findById(req.params.id);
+    if (!target) {
+        throw new ApiError('Utilisateur non trouvé', 404);
     }
+    if (isStaff(target.role)) {
+        throw new ApiError('Les comptes staff se suppriment via DELETE /admins/:id (Superadmin)', 403);
+    }
+
+    await User.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
         success: true,
@@ -168,10 +189,7 @@ exports.getAllAdmins = asyncHandler(async (req, res) => {
 });
 
 exports.createAdmin = asyncHandler(async (req, res) => {
-    const admin = await User.create({
-        ...req.body,
-        role: 'admin'
-    });
+    const admin = await superAdminService.createAdmin(req.body, req.user, req);
     res.status(201).json({
         success: true,
         data: admin
@@ -198,19 +216,10 @@ exports.getAdmin = asyncHandler(async (req, res) => {
 });
 
 exports.updateAdmin = asyncHandler(async (req, res) => {
-    const admin = await User.findOneAndUpdate(
-        { _id: req.params.id, role: 'admin' },
-        req.body,
-        { new: true }
-    ).select('-password');
-
+    const admin = await superAdminService.updateAdmin(req.params.id, req.body, req.user, req);
     if (!admin) {
-        return res.status(404).json({
-            success: false,
-            message: 'Administrateur non trouvé'
-        });
+        throw new ApiError('Administrateur non trouvé', 404);
     }
-
     res.status(200).json({
         success: true,
         data: admin
@@ -218,18 +227,10 @@ exports.updateAdmin = asyncHandler(async (req, res) => {
 });
 
 exports.deleteAdmin = asyncHandler(async (req, res) => {
-    const admin = await User.findOneAndDelete({
-        _id: req.params.id,
-        role: 'admin'
-    });
-
+    const admin = await superAdminService.deleteAdmin(req.params.id, req.user, req);
     if (!admin) {
-        return res.status(404).json({
-            success: false,
-            message: 'Administrateur non trouvé'
-        });
+        throw new ApiError('Administrateur non trouvé', 404);
     }
-
     res.status(200).json({
         success: true,
         message: 'Administrateur supprimé avec succès'
@@ -266,10 +267,11 @@ exports.getPartner = asyncHandler(async (req, res) => {
 });
 
 exports.updatePartner = asyncHandler(async (req, res) => {
+    const patch = pickUserSafePatch(req.body, { allowActive: req.user && req.user.role === 'superadmin' });
     const partner = await Partner.findByIdAndUpdate(
         req.params.id,
-        req.body,
-        { new: true }
+        { $set: patch },
+        { new: true, runValidators: true }
     );
 
     if (!partner) {
@@ -614,9 +616,8 @@ exports.verifyResidence = asyncHandler(async (req, res) => {
         });
     }
 
-    residence.verified = true;
-    residence.verifiedAt = new Date();
-    residence.verifiedBy = req.user.id;
+    const publication = require('../services/residence-publication.service');
+    await publication.markPublished(residence, req.user);
 
     // Réparer un status corrompu éventuel (ex. "verified" / "rejected")
     if (!['available', 'unavailable', 'maintenance'].includes(residence.status)) {

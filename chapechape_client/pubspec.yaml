@@ -70,10 +70,10 @@ dependencies:
     path: ../packages/chapechape_maps
   uuid: ^4.5.1
   geolocator: ^10.1.0  # Version mise à jour pour compatibilité avec les derniers SDK Android
-  js: ^0.6.7
   webview_flutter: ^4.5.0
   intl_phone_number_input: ^0.7.3+1
   share_plus: ^7.1.0
+  qr_flutter: ^4.1.0
   package_info_plus: ^4.2.0
   device_info_plus: ^9.1.0
   app_settings: ^5.1.1
@@ -111,6 +111,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.3
   flutter_lints: ^2.0.3
   build_runner: ^2.4.8
   freezed: ^2.4.6

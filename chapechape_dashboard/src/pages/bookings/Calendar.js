@@ -8,6 +8,12 @@ import fr from 'date-fns/locale/fr';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { bookingService } from '../../services/bookingService';
+import { opsService } from '../../services/opsService';
+import { visibleOpsActions } from '../../ops/reservationActions';
+import {
+  FILTERABLE_RESERVATION_STATUSES,
+  reservationStatusLabel,
+} from '../../constants/reservationStatus';
 import toast from 'react-hot-toast';
 import {
   CalendarIcon, ListBulletIcon, FunnelIcon, PlusIcon,
@@ -41,25 +47,23 @@ const STATUS_COLORS = {
 // Composant Modal de réservation avec les détails spécifiques à ChapeChape
 const BookingModal = ({ isOpen, onClose, booking, onStatusChange }) => {
   if (!isOpen || !booking) return null;
+  const actions = visibleOpsActions(booking.allowedActions);
 
-  const handleStatusChange = async (newStatus, reason = '') => {
+  const runAction = async (kind) => {
     try {
+      const reason = window.prompt(
+        kind === 'cancel' ? 'Motif d\'annulation (obligatoire)' : 'Motif Ops (obligatoire)',
+        'Action Ops Dashboard'
+      );
+      if (!reason) return;
       let response;
-      switch (newStatus) {
-        case 'confirmed':
-          response = await bookingService.confirmBooking(booking.id);
-          break;
-        case 'cancelled':
-          response = await bookingService.cancelBooking(booking.id, reason);
-          break;
-        case 'completed':
-          response = await bookingService.completeBooking(booking.id);
-          break;
-      }
+      if (kind === 'cancel') response = await opsService.cancelReservation(booking._id || booking.id, reason);
+      if (kind === 'checkin') response = await opsService.checkinReservation(booking._id || booking.id, reason);
+      if (kind === 'checkout') response = await opsService.checkoutReservation(booking._id || booking.id, reason);
       onStatusChange(response);
-      toast.success('Statut mis à jour avec succès');
+      toast.success('Action Ops enregistrée');
     } catch (error) {
-      toast.error('Erreur lors de la mise à jour du statut');
+      toast.error(error.message || 'Erreur lors de la mise à jour');
     }
   };
 
@@ -106,7 +110,9 @@ const BookingModal = ({ isOpen, onClose, booking, onStatusChange }) => {
           <div className="flex items-center">
             <ClockIcon className="w-5 h-5 text-gray-500 mr-2" />
             <span className="text-gray-900 dark:text-white">
-              Visite: {format(new Date(booking.visitDate), 'dd/MM/yyyy')} à {booking.visitTime}
+              Séjour: {booking.checkIn ? format(new Date(booking.checkIn), 'dd/MM/yyyy') : '—'}
+              {' → '}
+              {booking.checkOut ? format(new Date(booking.checkOut), 'dd/MM/yyyy') : '—'}
             </span>
           </div>
 
@@ -127,28 +133,28 @@ const BookingModal = ({ isOpen, onClose, booking, onStatusChange }) => {
         </div>
 
         <div className="mt-6 flex justify-end space-x-3">
-          {['pending', 'awaiting_approval', 'payment_pending'].includes(booking.status) && (
-            <>
-              <button
-                onClick={() => handleStatusChange('confirmed')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                Confirmer
-              </button>
-              <button
-                onClick={() => handleStatusChange('cancelled')}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Annuler
-              </button>
-            </>
-          )}
-          {['confirmed', 'in_stay'].includes(booking.status) && (
+          {actions.canCancel && (
             <button
-              onClick={() => handleStatusChange('completed')}
+              onClick={() => runAction('cancel')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Annuler
+            </button>
+          )}
+          {actions.canCheckin && (
+            <button
+              onClick={() => runAction('checkin')}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Valider check-in
+            </button>
+          )}
+          {actions.canCheckout && (
+            <button
+              onClick={() => runAction('checkout')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Marquer comme terminé
+              Valider check-out
             </button>
           )}
         </div>
@@ -184,8 +190,8 @@ const BookingCalendar = () => {
       const formattedBookings = reservations.map(booking => ({
         id: booking._id,
         title: `${booking.residence?.title} - ${booking.client?.name}`,
-        start: new Date(booking.visitDate),
-        end: new Date(booking.visitDate),
+        start: new Date(booking.checkIn || booking.visitDate),
+        end: new Date(booking.checkOut || booking.checkIn || booking.visitDate),
         resource: booking,
         color: STATUS_COLORS[booking.status]
       }));
@@ -333,10 +339,11 @@ const BookingCalendar = () => {
                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                   >
                     <option value="">Tous</option>
-                    <option value="pending">En attente</option>
-                    <option value="confirmed">Confirmé</option>
-                    <option value="cancelled">Annulé</option>
-                    <option value="completed">Terminé</option>
+                    {FILTERABLE_RESERVATION_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {reservationStatusLabel(status)}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

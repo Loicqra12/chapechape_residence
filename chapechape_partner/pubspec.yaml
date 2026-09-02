@@ -51,7 +51,7 @@ dependencies:
   file_picker: ^8.1.0
   table_calendar: ^3.0.9
   permission_handler: ^11.0.1
-  camera: ^0.10.5+5
+  mobile_scanner: ^6.0.2
   mime: ^1.0.4
   connectivity_plus: ^5.0.1
   flutter_chat_ui: ^1.6.9

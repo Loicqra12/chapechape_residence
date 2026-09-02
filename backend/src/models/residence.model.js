@@ -169,6 +169,17 @@ const residenceSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  /**
+   * Cycle de publication (distinct de status available/unavailable).
+   * Absent = catalogue legacy. Création nouvelle → draft.
+   */
+  publicationStatus: {
+    type: String,
+    enum: ['draft', 'pending_review', 'published', 'rejected'],
+  },
+  publicationRequestedAt: {
+    type: Date,
+  },
   // ✅ AJOUT : Mode de réservation pour différencier les flux
   reservationMode: {
     type: String,
@@ -449,6 +460,7 @@ residenceSchema.index({ partner: 1, status: 1 });
 residenceSchema.index({ partner: 1, deleted: 1 });
 residenceSchema.index({ status: 1 });
 residenceSchema.index({ deleted: 1 });
+residenceSchema.index({ publicationStatus: 1, deleted: 1 });
 
 // Index texte pour la recherche full-text
 residenceSchema.index({ title: 'text', description: 'text' }, {

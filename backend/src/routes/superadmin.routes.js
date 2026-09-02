@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');
-const { isSuperAdmin, isAdmin } = require('../lib/roleMiddleware');
+const { isSuperAdmin } = require('../lib/roleMiddleware');
+const { staffMutationLimiter } = require('../middlewares/rate-limit.middleware');
 const superAdminController = require('../controllers/superadmin/superadmin.controller');
 
 // Routes pour la gestion des clients et partenaires
@@ -10,15 +11,15 @@ router.get('/partners', protect, isSuperAdmin, superAdminController.getAllPartne
 
 // Routes pour la gestion des administrateurs
 router.get('/admins', protect, isSuperAdmin, superAdminController.getAllAdmins);
-router.post('/admins', protect, isSuperAdmin, superAdminController.createAdmin);
+router.post('/admins', protect, isSuperAdmin, staffMutationLimiter, superAdminController.createAdmin);
 router.get('/admins/:id', protect, isSuperAdmin, superAdminController.getAdmin);
-router.put('/admins/:id', protect, isSuperAdmin, superAdminController.updateAdmin);
-router.delete('/admins/:id', protect, isSuperAdmin, superAdminController.deleteAdmin);
+router.put('/admins/:id', protect, isSuperAdmin, staffMutationLimiter, superAdminController.updateAdmin);
+router.delete('/admins/:id', protect, isSuperAdmin, staffMutationLimiter, superAdminController.deleteAdmin);
 
-// Routes pour les paramètres système
-// Les paramètres système doivent être accessibles aux admins (et superadmins).
-router.get('/settings', protect, isAdmin, superAdminController.getSystemSettings);
-router.put('/settings', protect, isAdmin, superAdminController.updateSystemSettings);
+// Routes pour les paramètres système — superadmin only (config critique)
+router.get('/settings', protect, isSuperAdmin, superAdminController.getSystemSettings);
+router.put('/settings', protect, isSuperAdmin, staffMutationLimiter, superAdminController.updateSystemSettings);
+router.post('/users/:id/role', protect, isSuperAdmin, staffMutationLimiter, superAdminController.changeUserRole);
 
 // Routes pour les journaux d'activité
 router.get('/activity-logs', protect, isSuperAdmin, superAdminController.getActivityLogs);

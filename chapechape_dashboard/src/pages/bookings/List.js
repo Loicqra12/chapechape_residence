@@ -13,68 +13,42 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import format from 'date-fns/format';
+import {
+  FILTERABLE_RESERVATION_STATUSES,
+  reservationStatusColor,
+  reservationStatusLabel,
+} from '../../constants/reservationStatus';
+import { visibleOpsActions } from '../../ops/reservationActions';
+import { opsService } from '../../services/opsService';
 
 const StatusBadge = ({ status }) => {
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'En attente';
-      case 'confirmed':
-        return 'Confirmé';
-      case 'cancelled':
-        return 'Annulé';
-      case 'completed':
-        return 'Terminé';
-      default:
-        return status;
-    }
-  };
-
   return (
-    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
-      {getStatusText(status)}
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${reservationStatusColor(status)}`}>
+      {reservationStatusLabel(status)}
     </span>
   );
 };
 
 const BookingDetails = ({ booking, onClose, onStatusChange }) => {
   if (!booking) return null;
+  const actions = visibleOpsActions(booking.allowedActions);
+  const fmt = (value) => (value ? format(new Date(value), 'dd/MM/yyyy HH:mm') : '—');
 
-  const handleStatusChange = async (newStatus) => {
+  const runAction = async (kind) => {
     try {
+      const reason = window.prompt(
+        kind === 'cancel' ? 'Motif d\'annulation (obligatoire)' : 'Motif Ops (obligatoire)',
+        kind === 'cancel' ? 'Annulation Ops Dashboard' : 'Action Ops Dashboard'
+      );
+      if (!reason) return;
       let response;
-      switch (newStatus) {
-        case 'confirmed':
-          response = await bookingService.confirmBooking(booking._id);
-          break;
-        case 'cancelled':
-          response = await bookingService.cancelBooking(booking._id);
-          break;
-        case 'completed':
-          response = await bookingService.completeBooking(booking._id);
-          break;
-        default:
-          return;
-      }
+      if (kind === 'cancel') response = await opsService.cancelReservation(booking._id, reason);
+      if (kind === 'checkin') response = await opsService.checkinReservation(booking._id, reason);
+      if (kind === 'checkout') response = await opsService.checkoutReservation(booking._id, reason);
       onStatusChange(response);
-      toast.success('Statut mis à jour avec succès');
+      toast.success('Action Ops enregistrée');
     } catch (error) {
-      toast.error('Erreur lors de la mise à jour du statut');
+      toast.error(error.message || 'Erreur lors de l\'action Ops');
     }
   };
 
@@ -85,11 +59,11 @@ const BookingDetails = ({ booking, onClose, onStatusChange }) => {
       exit={{ opacity: 0, y: 20 }}
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
     >
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Détails de la réservation
+              Réservation {booking._id}
             </h3>
             <button
               onClick={onClose}
@@ -99,65 +73,81 @@ const BookingDetails = ({ booking, onClose, onStatusChange }) => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Résidence</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Client</h4>
+              <p className="text-gray-600 dark:text-gray-300">{booking.client?.name} · {booking.client?.email}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Partenaire</h4>
+              <p className="text-gray-600 dark:text-gray-300">{booking.partner?.name || '—'}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Résidence</h4>
               <p className="text-gray-600 dark:text-gray-300">{booking.residence?.title}</p>
             </div>
-
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Client</h4>
-              <p className="text-gray-600 dark:text-gray-300">{booking.client?.name}</p>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Séjour</h4>
+              <p className="text-gray-600 dark:text-gray-300">{fmt(booking.checkIn)} → {fmt(booking.checkOut)} ({booking.bookingType})</p>
             </div>
-
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Partenaire</h4>
-              <p className="text-gray-600 dark:text-gray-300">{booking.partner?.name}</p>
-            </div>
-
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Date de visite</h4>
-              <p className="text-gray-600 dark:text-gray-300">
-                {format(new Date(booking.visitDate), 'dd/MM/yyyy')} à {booking.visitTime}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Statut</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Reservation status</h4>
               <StatusBadge status={booking.status} />
             </div>
-
-            {booking.notes && (
-              <div className="col-span-2">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Notes</h4>
-                <p className="text-gray-600 dark:text-gray-300">{booking.notes}</p>
-              </div>
-            )}
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Payment status</h4>
+              <p className="text-gray-600 dark:text-gray-300">{booking.paymentStatus || '—'}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Mode / deadlines</h4>
+              <p className="text-gray-600 dark:text-gray-300">
+                {booking.reservationMode || '—'}
+                <br />host: {fmt(booking.hostApprovalDeadline)}
+                <br />payment: {fmt(booking.paymentDeadline)}
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Payment</h4>
+              <p className="text-gray-600 dark:text-gray-300">
+                {booking.payment?.provider || '—'} · {booking.payment?.transactionId || '—'}
+                {booking.payment?.refundOpsRequired ? ' · refundOpsRequired' : ''}
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Inventaire</h4>
+              <p className="text-gray-600 dark:text-gray-300">{booking.inventoryState || '—'}</p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-1">Timestamps</h4>
+              <p className="text-gray-600 dark:text-gray-300">créé {fmt(booking.createdAt)} · maj {fmt(booking.updatedAt)}</p>
+            </div>
           </div>
 
+          {Array.isArray(booking.statusHistory) && booking.statusHistory.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">statusHistory</h4>
+              <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                {booking.statusHistory.slice(-8).map((entry, idx) => (
+                  <li key={idx}>{fmt(entry.changedAt)} · {entry.status} · {entry.reason || ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mt-8 flex justify-end space-x-3">
-            {booking.status === 'pending' && (
-              <>
-                <button
-                  onClick={() => handleStatusChange('confirmed')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Confirmer
-                </button>
-                <button
-                  onClick={() => handleStatusChange('cancelled')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Annuler
-                </button>
-              </>
+            {actions.canCancel && (
+              <button onClick={() => runAction('cancel')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                Annuler
+              </button>
             )}
-            {booking.status === 'confirmed' && (
-              <button
-                onClick={() => handleStatusChange('completed')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Marquer comme terminé
+            {actions.canCheckin && (
+              <button onClick={() => runAction('checkin')} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Valider check-in
+              </button>
+            )}
+            {actions.canCheckout && (
+              <button onClick={() => runAction('checkout')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                Valider check-out
               </button>
             )}
           </div>
@@ -269,10 +259,11 @@ const BookingList = () => {
                   className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm dark:bg-gray-700 dark:border-gray-600"
                 >
                   <option value="">Tous</option>
-                  <option value="pending">En attente</option>
-                  <option value="confirmed">Confirmé</option>
-                  <option value="cancelled">Annulé</option>
-                  <option value="completed">Terminé</option>
+                  {FILTERABLE_RESERVATION_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {reservationStatusLabel(status)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -301,7 +292,7 @@ const BookingList = () => {
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   <div className="flex items-center space-x-1 cursor-pointer" onClick={() => handleSort('visitDate')}>
-                    <span>Date de visite</span>
+                    <span>Arrivée</span>
                     <ChevronUpDownIcon className="w-4 h-4" />
                   </div>
                 </th>
@@ -326,7 +317,7 @@ const BookingList = () => {
               {bookings.map((booking) => (
                 <tr key={booking._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {format(new Date(booking.visitDate), 'dd/MM/yyyy')} à {booking.visitTime}
+                    {booking.checkIn ? format(new Date(booking.checkIn), 'dd/MM/yyyy') : '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {booking.residence?.title || <span className="text-gray-400 italic">Résidence inconnue</span>}

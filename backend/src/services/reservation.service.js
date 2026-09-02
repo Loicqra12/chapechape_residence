@@ -10,6 +10,11 @@ const availabilityService = require('./availability.service');
 const PricingService = require('./pricing.service');
 const notificationService = require('./notification.service');
 const notificationTypes = require('../utils/notification-types');
+const { guardSlot, acquire, withRetry } = require('./inventory.service');
+const {
+  computeHostApprovalDeadline,
+  scheduleHostApprovalExpiration,
+} = require('./host-approval.service');
 
 /**
  * Créer une nouvelle réservation
@@ -17,6 +22,10 @@ const notificationTypes = require('../utils/notification-types');
  * @returns {Promise<Reservation>}
  */
 const createReservation = async (reservationBody) => {
+  return withRetry(() => createReservationOnce(reservationBody));
+};
+
+const createReservationOnce = async (reservationBody) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -48,6 +57,14 @@ const createReservation = async (reservationBody) => {
     const checkInDate = new Date(reservationBody.checkIn);
     const checkOutDate = new Date(reservationBody.checkOut);
 
+    // Mutex + overlap (politique unique — voir inventory.service)
+    await guardSlot({
+      residenceId: residence._id,
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
+      session,
+    });
+
     // Vérifier la disponibilité (Availability) dans la transaction
     const isAvailable = await residence.isAvailableForDates(
       checkInDate,
@@ -58,25 +75,6 @@ const createReservation = async (reservationBody) => {
 
     if (!isAvailable) {
       throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
-    }
-
-    // Double contrôle : aucune réservation active chevauchante (checkout exclusif)
-    const ACTIVE_BLOCKING_STATUSES = [
-      'pending',
-      'awaiting_approval',
-      'payment_pending',
-      'confirmed',
-      'in_stay',
-    ];
-    const overlapping = await Reservation.findOne({
-      residence: residence._id,
-      status: { $in: ACTIVE_BLOCKING_STATUSES },
-      checkIn: { $lt: checkOutDate },
-      checkOut: { $gt: checkInDate },
-    }).session(session);
-
-    if (overlapping) {
-      throw new ApiError('Ces dates viennent d\'être réservées par un autre client', 409);
     }
 
     // ✅ AJOUT : Calcul intelligent du prix selon le type de réservation
@@ -258,18 +256,15 @@ const createReservation = async (reservationBody) => {
       initialStatus = 'payment_pending';
       paymentDeadline = new Date(Date.now() + paymentTimerMinutes * 60 * 1000);
     } else if (reservationMode === 'approval_required') {
-      // Mode approbation : attendre validation du partenaire
       initialStatus = 'awaiting_approval';
     }
 
-    // Générer les codes QR sécurisés
-    const generateSecureCode = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const qrCode = {
-      checkInCode: generateSecureCode(),
-      checkOutCode: generateSecureCode(),
-      generatedAt: new Date()
-    };
+    const createdAtForDeadline = new Date();
+    const hostApprovalDeadline = reservationMode === 'approval_required'
+      ? computeHostApprovalDeadline(createdAtForDeadline, residence.hostAcceptTTLMinutes)
+      : null;
 
+    // P2-05C2 — ne plus générer qrCode legacy (Math.random). Stay credentials on-demand.
     const reservation = await Reservation.create([{
       ...reservationBody,
       // Utiliser le partenaire déterminé par la logique ci-dessus
@@ -291,8 +286,8 @@ const createReservation = async (reservationBody) => {
       status: initialStatus,
       reservationMode,
       paymentDeadline,
+      hostApprovalDeadline,
       paymentTimerDuration: paymentTimerMinutes,
-      qrCode,
 
       // ✅ PHASE 0 : Snapshots lecture seule (immutable après création)
       reservationModeSnapshot: residence.reservationMode,
@@ -338,9 +333,19 @@ const createReservation = async (reservationBody) => {
 
     // Valider la transaction
     await session.commitTransaction();
-
-    // Fermer la session avant de poursuivre avec les opérations non transactionnelles
     session.endSession();
+
+    if (reservation[0].status === 'awaiting_approval' && reservation[0].hostApprovalDeadline) {
+      try {
+        await scheduleHostApprovalExpiration(reservation[0]._id, reservation[0].hostApprovalDeadline);
+      } catch (schedErr) {
+        console.error('HOST_APPROVAL_SCHEDULE failed', schedErr);
+      }
+    }
+
+    if (process.env.NODE_ENV === 'test') {
+      return reservation[0];
+    }
 
     // Envoyer les emails de confirmation (hors transaction)
     // Récupérer le client à partir de user ou client selon la propriété disponible
@@ -456,6 +461,10 @@ const createReservation = async (reservationBody) => {
  * @returns {Promise<Reservation>}
  */
 const cancelReservation = async (reservationId, userId, reason = '') => {
+  return withRetry(() => cancelReservationOnce(reservationId, userId, reason));
+};
+
+const cancelReservationOnce = async (reservationId, userId, reason = '') => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -464,7 +473,8 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
       .populate({
         path: 'residence',
         populate: { path: 'cancellationPolicy' }
-      });
+      })
+      .session(session);
 
     if (!reservation) {
       throw new ApiError('Réservation non trouvée', 404);
@@ -483,6 +493,11 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
     ) {
       throw new ApiError('Non autorisé', 403);
     }
+
+    await acquire(reservation.residence._id, [{
+      checkIn: reservation.checkIn,
+      checkOut: reservation.checkOut,
+    }], session);
 
     // Calculer le remboursement
     const now = new Date();
@@ -520,6 +535,10 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
 
     // Fermer la session avant de poursuivre avec les opérations non transactionnelles
     session.endSession();
+
+    if (process.env.NODE_ENV === 'test') {
+      return reservation;
+    }
 
     // Envoyer les emails de notification (hors transaction)
     const [user, partner] = await Promise.all([
@@ -564,6 +583,10 @@ const cancelReservation = async (reservationId, userId, reason = '') => {
  * @returns {Promise<Reservation>}
  */
 const modifyReservation = async (reservationId, updateBody, userId) => {
+  return withRetry(() => modifyReservationOnce(reservationId, updateBody, userId));
+};
+
+const modifyReservationOnce = async (reservationId, updateBody, userId) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -572,7 +595,8 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       .populate({
         path: 'residence',
         populate: { path: 'cancellationPolicy' }
-      });
+      })
+      .session(session);
 
     if (!reservation) {
       throw new ApiError('Réservation non trouvée', 404);
@@ -589,48 +613,40 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       throw new ApiError('Non autorisé', 403);
     }
 
-    // Vérifier la disponibilité pour les nouvelles dates
-    if (updateBody.checkIn || updateBody.checkOut) {
-      const newCheckIn = updateBody.checkIn || reservation.checkIn;
-      const newCheckOut = updateBody.checkOut || reservation.checkOut;
+    const previousCheckIn = reservation.checkIn;
+    const previousCheckOut = reservation.checkOut;
+    const datesChanged = !!(updateBody.checkIn || updateBody.checkOut);
+    const newCheckIn = updateBody.checkIn || reservation.checkIn;
+    const newCheckOut = updateBody.checkOut || reservation.checkOut;
+
+    if (datesChanged) {
+      await guardSlot({
+        residenceId: reservation.residence._id,
+        checkIn: newCheckIn,
+        checkOut: newCheckOut,
+        excludeId: reservation._id,
+        extraRanges: [{ checkIn: previousCheckIn, checkOut: previousCheckOut }],
+        session,
+      });
 
       const isAvailable = await reservation.residence.isAvailableForDates(
         newCheckIn,
         newCheckOut,
-        reservation._id, // Exclure la réservation actuelle
+        reservation._id,
         session
       );
 
       if (!isAvailable) {
         throw new ApiError('La résidence n\'est pas disponible pour ces dates', 400);
       }
-
-      const ACTIVE_BLOCKING_STATUSES = [
-        'pending',
-        'awaiting_approval',
-        'payment_pending',
-        'confirmed',
-        'in_stay',
-      ];
-      const overlapping = await Reservation.findOne({
-        _id: { $ne: reservation._id },
-        residence: reservation.residence._id,
-        status: { $in: ACTIVE_BLOCKING_STATUSES },
-        checkIn: { $lt: new Date(newCheckOut) },
-        checkOut: { $gt: new Date(newCheckIn) },
-      }).session(session);
-
-      if (overlapping) {
-        throw new ApiError('Ces dates viennent d\'être réservées par un autre client', 409);
-      }
     }
 
     // Calculer le nouveau prix total si les dates changent
     let newTotalPrice = reservation.totalPrice;
-    if (updateBody.checkIn || updateBody.checkOut) {
+    if (datesChanged) {
       newTotalPrice = await reservation.residence.calculateTotalPrice(
-        updateBody.checkIn || reservation.checkIn,
-        updateBody.checkOut || reservation.checkOut
+        newCheckIn,
+        newCheckOut
       );
     }
 
@@ -657,18 +673,12 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       }
     });
 
-    // Mettre à jour la réservation
-    const previousCheckIn = reservation.checkIn;
-    const previousCheckOut = reservation.checkOut;
-    const datesChanged = !!(updateBody.checkIn || updateBody.checkOut);
-
     reservation.modifications = [...(reservation.modifications || []), modification];
     Object.assign(reservation, updateBody);
     reservation.totalPrice = newTotalPrice + modificationFee;
 
     await reservation.save({ session });
 
-    // Mettre à jour la disponibilité si les dates ont changé (libération + re-réservation atomiques)
     if (datesChanged) {
       try {
         await availabilityService.updateAvailabilityForReservation(
@@ -697,13 +707,13 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
       }
     }
 
-    // Valider la transaction
     await session.commitTransaction();
-
-    // Fermer la session avant de poursuivre avec les opérations non transactionnelles
     session.endSession();
 
-    // Envoyer les notifications par email (hors transaction)
+    if (process.env.NODE_ENV === 'test') {
+      return reservation;
+    }
+
     const [user, partner] = await Promise.all([
       User.findById(reservation.user),
       User.findById(reservation.residence.partner)
@@ -737,12 +747,10 @@ const modifyReservation = async (reservationId, updateBody, userId) => {
 
     return reservation;
   } catch (error) {
-    // Seulement abandonner la transaction si elle est encore active
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
 
-    // S'assurer que la session est fermée dans tous les cas
     if (session) {
       session.endSession();
     }

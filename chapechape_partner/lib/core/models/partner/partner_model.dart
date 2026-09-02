@@ -12,6 +12,9 @@ class Partner extends Equatable {
   final String? profilePictureUrl;
   final List<PartnerDocument>? documents;
   final bool isVerified;
+  final bool isPhoneVerified;
+  final Map<String, dynamic>? verification;
+  final Map<String, dynamic>? capabilities;
 
   const Partner({
     required this.id,
@@ -23,6 +26,9 @@ class Partner extends Equatable {
     this.profilePictureUrl,
     this.documents,
     this.isVerified = false,
+    this.isPhoneVerified = false,
+    this.verification,
+    this.capabilities,
   });
 
   factory Partner.fromJson(Map<String, dynamic> json) {
@@ -43,6 +49,13 @@ class Partner extends Equatable {
       profilePictureUrl: json['profilePictureUrl'] ?? json['profileImage'] ?? '',
       documents: docs,
       isVerified: json['isVerified'] ?? false,
+      isPhoneVerified: json['isPhoneVerified'] ?? false,
+      verification: json['verification'] is Map
+          ? Map<String, dynamic>.from(json['verification'] as Map)
+          : null,
+      capabilities: json['capabilities'] is Map
+          ? Map<String, dynamic>.from(json['capabilities'] as Map)
+          : null,
     );
   }
 
@@ -57,6 +70,9 @@ class Partner extends Equatable {
       'profilePictureUrl': profilePictureUrl,
       'documents': documents?.map((doc) => doc.toJson()).toList(),
       'isVerified': isVerified,
+      'isPhoneVerified': isPhoneVerified,
+      'verification': verification,
+      'capabilities': capabilities,
     };
   }
 
@@ -73,6 +89,9 @@ class Partner extends Equatable {
     profilePictureUrl,
     documents,
     isVerified,
+    isPhoneVerified,
+    verification,
+    capabilities,
   ];
 
   Partner copyWith({
@@ -85,6 +104,9 @@ class Partner extends Equatable {
     String? profilePictureUrl,
     List<PartnerDocument>? documents,
     bool? isVerified,
+    bool? isPhoneVerified,
+    Map<String, dynamic>? verification,
+    Map<String, dynamic>? capabilities,
   }) {
     return Partner(
       id: id ?? this.id,
@@ -96,8 +118,13 @@ class Partner extends Equatable {
       profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
       documents: documents ?? this.documents,
       isVerified: isVerified ?? this.isVerified,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
+      verification: verification ?? this.verification,
+      capabilities: capabilities ?? this.capabilities,
     );
   }
+
+  bool get canPublishResidence => capabilities?['canPublishResidence'] == true;
 }
 
 class PartnerDocument extends Equatable {

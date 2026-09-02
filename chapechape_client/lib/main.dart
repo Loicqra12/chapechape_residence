@@ -133,6 +133,9 @@ void main() async {
         Provider<NotificationService>(
           create: (context) => notificationService,
         ),
+        Provider<BookingService>(
+          create: (context) => bookingService,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [

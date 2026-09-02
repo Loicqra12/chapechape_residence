@@ -1,11 +1,12 @@
 // Initialisation conditionnelle de Stripe
+const logger = require('../utils/logger');
 let stripe;
 try {
     if (process.env.STRIPE_SECRET_KEY) {
         stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     }
 } catch (error) {
-    console.log('Stripe non configuré');
+    logger.warn('STRIPE_NOT_CONFIGURED', { err: error.message });
 }
 
 // Import du service CinetPay
@@ -237,7 +238,7 @@ class PaymentService {
         }
 
         if (process.env.NODE_ENV !== 'production') {
-            console.warn(`[DEV] checkPaymentStatus fallback pour provider=${provider}`);
+            logger.debug('PAYMENT_STATUS_DEV_FALLBACK', { provider });
             return { status: 'pending', message: 'Vérification PSP non disponible pour ce fournisseur' };
         }
 

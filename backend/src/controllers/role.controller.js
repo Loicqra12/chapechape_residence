@@ -35,6 +35,16 @@ exports.createRole = async (req, res) => {
       target: 'role',
       description: `Création du rôle ${name}`
     });
+    const { logStaffAction } = require('../services/staff-audit.service');
+    await logStaffAction({
+      actor: req.user,
+      action: 'permissions_changed',
+      entityType: 'role',
+      entityId: savedRole._id,
+      reason: 'role_created',
+      after: { name },
+      req,
+    });
 
     res.status(201).json(savedRole);
   } catch (error) {

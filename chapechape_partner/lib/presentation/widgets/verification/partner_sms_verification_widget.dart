@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/models/phone_number.dart';
 import '../../../core/services/api/partner_verification_service.dart';
+import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'channel_selector_widget.dart';
 
 /// Widget spécialisé pour la vérification SMS des partenaires
@@ -203,6 +206,10 @@ class _PartnerSMSVerificationWidgetState extends State<PartnerSMSVerificationWid
 
       if (result.success) {
         _timer?.cancel();
+
+        try {
+          context.read<AuthBloc>().add(AuthProfileRefreshRequested());
+        } catch (_) {}
         
         // Notifier le succès avec résultat complet
         widget.onVerified(PartnerVerificationResult(

@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const { ERROR_MESSAGES } = require('../utils/constants');
 const errorCodes = require('../utils/errorCodes');
 const { sanitizeError, extractSafeErrorInfo } = require('../utils/sanitize-error');
+const { logLevelForError } = require('../observability/http-error-policy');
 
 /**
  * Middleware de gestion d'erreurs global pour l'API
@@ -14,9 +15,9 @@ const { sanitizeError, extractSafeErrorInfo } = require('../utils/sanitize-error
  * - Stack trace supprimée des réponses en production
  */
 const errorHandler = (err, req, res, next) => {
-    // ✅ Log sécurisé avec infos contextuelles
     const safeErrorInfo = extractSafeErrorInfo(err, req);
-    logger.error('Error occurred:', safeErrorInfo);
+    const level = logLevelForError(err);
+    logger[level]('Error occurred:', safeErrorInfo);
 
     // Structure de réponse d'erreur standardisée
     let error = {
@@ -122,8 +123,10 @@ const errorHandler = (err, req, res, next) => {
             success: false,
             message: err.message,
             errorCode: err.errorCode,
+            code: err.errorCode,
             errors: err.errors,
-            data: err.data
+            data: err.data,
+            details: err.data,
         });
     }
 

@@ -213,6 +213,7 @@ exports.confirmPartnerPhoneVerification = asyncHandler(async (req, res) => {
             console.error('Erreur notification vérification réussie:', notificationError);
         }
 
+        const { publicAuthView } = require('../../security/partner-capabilities');
         res.status(200).json({
             success: true,
             message: 'Numéro vérifié avec succès',
@@ -222,6 +223,7 @@ exports.confirmPartnerPhoneVerification = asyncHandler(async (req, res) => {
                 isPhoneVerified: partner.isPhoneVerified,
                 phoneVerifiedAt: partner.phoneVerifiedAt
             },
+            ...publicAuthView(partner),
             payoutChannels: payoutChannels
         });
 

@@ -1,4 +1,4 @@
-# 🛡️ Rate Limiting Multi-Niveaux - Documentation
+> **P2-02F** : politiques à jour dans [`docs/P2_02F_RATE_LIMIT_POLICY.md`](../../docs/P2_02F_RATE_LIMIT_POLICY.md) (trust proxy, clés IP vs userId, Redis, fail-open/closed). Les chiffres ci-dessous (100/5/3) sont **obsolètes**.
 
 **Date:** 9 Décembre 2025  
 **Version:** 1.0.0  

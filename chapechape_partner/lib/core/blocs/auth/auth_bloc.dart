@@ -97,6 +97,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _mediaService = mediaService ?? MediaService(Dio()),
         super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
+    on<AuthProfileRefreshRequested>(_onAuthProfileRefreshRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthRegisterRequested>(_onAuthRegisterRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
@@ -165,6 +166,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       emit(AuthUnauthenticated());
+    }
+  }
+
+  Future<void> _onAuthProfileRefreshRequested(
+    AuthProfileRefreshRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is! AuthAuthenticated) return;
+    final current = state as AuthAuthenticated;
+    try {
+      final partner = await _authService.getProfile();
+      await storage.write(key: 'userId', value: partner.id);
+      await storage.write(key: 'userRole', value: partner.role);
+      emit(AuthAuthenticated(token: current.token, partner: partner));
+    } catch (e) {
+      AppLogger.d('Refresh profil après OTP échoué: $e');
     }
   }
 

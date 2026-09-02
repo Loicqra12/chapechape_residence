@@ -7,60 +7,156 @@ const mongoose = require('mongoose');
 const Residence = require('../models/residence.model');
 const Reservation = require('../models/reservation.model');
 const Payment = require('../models/payment.model');
+const {
+    pickAdminCreateFields,
+    pickUserSafePatch,
+    pickSettingsPatch,
+    SETTINGS_WHITELIST,
+    withSuperadminMutex,
+    assertCanRevokeSuperadmin,
+    assertValidRole,
+} = require('../security/staff-guard');
+const { ROLES } = require('../security/roles');
+const { logStaffAction } = require('./staff-audit.service');
+const ApiError = require('../utils/apiError');
 
 class SuperAdminService {
-    // Gestion des administrateurs
     async getAllAdmins() {
-        return await User.find({ role: 'admin' }).select('-password');
+        return await User.find({ role: { $in: ['admin', 'superadmin'] } }).select('-password');
     }
 
-    async createAdmin(adminData) {
-        return await User.create({ ...adminData, role: 'admin' });
+    async createAdmin(adminData, actor, req) {
+        const fields = pickAdminCreateFields(adminData);
+        if (!fields.email || !fields.password || !fields.firstName || !fields.lastName) {
+            throw new ApiError('email, password, firstName et lastName requis', 400);
+        }
+        const admin = await User.create(fields);
+        await logStaffAction({
+            actor,
+            action: 'admin_created',
+            entityType: 'user',
+            entityId: admin._id,
+            reason: adminData.reason,
+            before: {},
+            after: { role: admin.role, email: admin.email },
+            req,
+        });
+        return User.findById(admin._id).select('-password');
     }
 
     async getAdminById(id) {
-        return await User.findOne({ _id: id, role: 'admin' }).select('-password');
+        return await User.findOne({ _id: id, role: { $in: ['admin', 'superadmin'] } }).select('-password');
     }
 
-    async updateAdmin(id, updateData) {
-        return await User.findOneAndUpdate(
-            { _id: id, role: 'admin' },
-            updateData,
-            { new: true }
-        ).select('-password');
+    async updateAdmin(id, updateData, actor, req) {
+        return withSuperadminMutex(async (session) => {
+            const target = await User.findOne({ _id: id, role: { $in: ['admin', 'superadmin'] } }).session(session);
+            if (!target) return null;
+            const patch = pickUserSafePatch(updateData, { allowActive: true });
+            if (patch.isActive === false) {
+                await assertCanRevokeSuperadmin(target, session);
+            }
+            const before = { isActive: target.isActive };
+            Object.assign(target, patch);
+            await target.save({ session });
+            if (patch.isActive === false) {
+                await logStaffAction({
+                    actor,
+                    action: 'admin_disabled',
+                    entityType: 'user',
+                    entityId: target._id,
+                    reason: updateData.reason,
+                    before,
+                    after: { isActive: false },
+                    req,
+                });
+            }
+            return User.findById(target._id).session(session).select('-password');
+        });
     }
 
-    async deleteAdmin(id) {
-        return await User.findOneAndDelete({ _id: id, role: 'admin' });
+    async deleteAdmin(id, actor, req) {
+        return withSuperadminMutex(async (session) => {
+            const target = await User.findById(id).session(session);
+            if (!target || !['admin', 'superadmin'].includes(target.role)) {
+                return null;
+            }
+            await assertCanRevokeSuperadmin(target, session);
+            await User.deleteOne({ _id: id }).session(session);
+            await logStaffAction({
+                actor,
+                action: 'admin_deleted',
+                entityType: 'user',
+                entityId: target._id,
+                reason: 'delete_admin',
+                before: { role: target.role, email: target.email },
+                after: {},
+                req,
+            });
+            return target;
+        });
     }
 
-    // Configuration système
-    async getSystemSettings() {
-        return await SystemSetting.find();
+    async changeUserRole(id, nextRole, reason, actor, req) {
+        assertValidRole(nextRole);
+        return withSuperadminMutex(async (session) => {
+            const target = await User.findById(id).session(session);
+            if (!target) {
+                throw new ApiError('Utilisateur introuvable', 404);
+            }
+            if (target.role === ROLES.SUPERADMIN && nextRole !== ROLES.SUPERADMIN) {
+                await assertCanRevokeSuperadmin(target, session);
+            }
+            const before = { role: target.role };
+            target.role = nextRole;
+            await target.save({ session });
+            await logStaffAction({
+                actor,
+                action: 'role_changed',
+                entityType: 'user',
+                entityId: target._id,
+                reason,
+                before,
+                after: { role: nextRole },
+                req,
+            });
+            return User.findById(target._id).session(session).select('-password');
+        });
     }
 
-    async updateSystemSetting(key, value, description, type, category) {
-        const setting = await SystemSetting.findOne({ key });
-        
-        if (!setting) {
-            // Créer un nouveau paramètre s'il n'existe pas
-            return await SystemSetting.create({
-                key,
-                value,
-                description,
-                type,
-                category,
-                isPublic: false
+    async applySettingsPatch(body, actor, req) {
+        const { allowed, rejected } = pickSettingsPatch(body);
+        if (rejected.length) {
+            throw new ApiError(`Clés settings non autorisées: ${rejected.join(', ')}`, 400);
+        }
+        const updatedSettings = [];
+        for (const [key, value] of Object.entries(allowed)) {
+            const meta = SETTINGS_WHITELIST[key];
+            const beforeDoc = await SystemSetting.findOne({ key });
+            const setting = await SystemSetting.findOneAndUpdate(
+                { key },
+                {
+                    value,
+                    description: beforeDoc?.description || key,
+                    type: meta.type,
+                    category: meta.category,
+                    updatedBy: actor._id,
+                },
+                { new: true, upsert: true, setDefaultsOnInsert: true }
+            );
+            updatedSettings.push(setting);
+            await logStaffAction({
+                actor,
+                action: 'settings_changed',
+                entityType: 'setting',
+                entityId: setting._id,
+                reason: body.reason,
+                before: { key, value: beforeDoc?.value },
+                after: { key, value },
+                req,
             });
         }
-
-        // Mettre à jour le paramètre existant
-        setting.value = value;
-        if (description) setting.description = description;
-        if (type) setting.type = type;
-        if (category) setting.category = category;
-        
-        return await setting.save();
+        return updatedSettings;
     }
 
     // Sécurité

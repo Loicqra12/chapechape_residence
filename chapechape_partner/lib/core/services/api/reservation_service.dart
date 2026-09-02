@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../models/reservation/reservation.dart';
+import '../../models/stay_credential_preview.dart';
 import '../../config/app_config.dart';
 import 'package:chapechape_partner/core/utils/app_logger.dart';
 
@@ -461,14 +462,19 @@ class ReservationService {
   }
 
   /// Effectuer le check-in d'une réservation (Partner uniquement)
-  Future<Reservation?> performCheckin(String reservationId) async {
+  Future<Reservation?> performCheckin(
+    String reservationId, {
+    String? credential,
+  }) async {
     try {
       final response = await _dio.patch(
         _ep('reservations/$reservationId/checkin'),
+        data: credential != null ? {'credential': credential} : null,
         options: Options(
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-mobile-app': 'true',
           },
           validateStatus: (status) => true,
         ),
@@ -477,21 +483,29 @@ class ReservationService {
       if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
         return Reservation.fromJson(response.data['data']);
       }
+      _throwStayActionError(response, 'check-in');
       return null;
+    } on DioException catch (e) {
+      _throwStayActionDioError(e, 'check-in');
     } catch (e) {
-      throw Exception('Erreur lors du check-in: ${e.toString()}');
+      rethrow;
     }
   }
 
   /// Effectuer le check-out d'une réservation (Partner uniquement)
-  Future<Reservation?> performCheckout(String reservationId) async {
+  Future<Reservation?> performCheckout(
+    String reservationId, {
+    String? credential,
+  }) async {
     try {
       final response = await _dio.patch(
         _ep('reservations/$reservationId/checkout'),
+        data: credential != null ? {'credential': credential} : null,
         options: Options(
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-mobile-app': 'true',
           },
           validateStatus: (status) => true,
         ),
@@ -500,51 +514,83 @@ class ReservationService {
       if (response.statusCode == 200 && response.data != null && response.data['data'] != null) {
         return Reservation.fromJson(response.data['data']);
       }
+      _throwStayActionError(response, 'check-out');
       return null;
+    } on DioException catch (e) {
+      _throwStayActionDioError(e, 'check-out');
     } catch (e) {
-      throw Exception('Erreur lors du check-out: ${e.toString()}');
+      rethrow;
     }
   }
 
-  /// Effectue un check-in ou check-out pour une réservation
-  Future<Map<String, dynamic>> performCheckInOut({
-    required String reservationId,
-    required String action, // 'checkin' ou 'checkout'
-    required DateTime timestamp,
-    String? location,
+  /// Preview non-mutating d'un credential scanné (P2-05D).
+  Future<StayCredentialPreview> resolveStayCredential({
+    required String credential,
+    required String purpose,
   }) async {
     try {
       final response = await _dio.post(
-        _ep('reservations/$reservationId/$action'),
+        _ep('reservations/stay-credentials/resolve'),
         data: {
-          'timestamp': timestamp.toIso8601String(),
-          'location': location,
+          'credential': credential,
+          'purpose': purpose,
         },
         options: Options(
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'x-mobile-app': 'true',
           },
+          validateStatus: (status) => true,
         ),
       );
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'data': response.data['data'],
-          'message': response.data['message'] ?? 'Action effectuée avec succès',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': response.data['message'] ?? 'Échec de l\'action',
-        };
+      if (response.statusCode == 200 &&
+          response.data != null &&
+          response.data['data'] != null) {
+        return StayCredentialPreview.fromJson(
+          Map<String, dynamic>.from(response.data['data'] as Map),
+        );
       }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Erreur lors de l\'action: ${e.toString()}',
-      };
+
+      final parsed = StayCredentialApiException.fromResponse(response.data);
+      if (parsed != null) throw parsed;
+      throw const StayCredentialApiException('UNKNOWN_ERROR');
+    } on DioException catch (e) {
+      final parsed = StayCredentialApiException.fromResponse(e.response?.data);
+      if (parsed != null) throw parsed;
+      throw const StayCredentialApiException('NETWORK_ERROR');
     }
+  }
+
+  /// Commit check-in/check-out avec credential QR. Retourne [alreadyApplied] si idempotent.
+  Future<({Reservation reservation, bool alreadyApplied})> commitStayCredential({
+    required String reservationId,
+    required String purpose,
+    required String credential,
+  }) async {
+    final updated = purpose == 'checkout'
+        ? await performCheckout(reservationId, credential: credential)
+        : await performCheckin(reservationId, credential: credential);
+
+    if (updated == null) {
+      throw Exception('Action refusée par le serveur');
+    }
+
+    return (reservation: updated, alreadyApplied: false);
+  }
+
+  Never _throwStayActionError(Response<dynamic> response, String action) {
+    final responseData = response.data;
+    final code = responseData?['code'] ?? responseData?['errorCode'];
+    final message = responseData?['message'] ?? 'Erreur lors du $action';
+    throw Exception(code != null ? '$code: $message' : message);
+  }
+
+  Never _throwStayActionDioError(DioException e, String action) {
+    final responseData = e.response?.data;
+    final code = responseData?['code'] ?? responseData?['errorCode'];
+    final message = responseData?['message'] ?? 'Erreur lors du $action';
+    throw Exception(code != null ? '$code: $message' : message);
   }
 }

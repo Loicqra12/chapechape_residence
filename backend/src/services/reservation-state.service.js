@@ -18,9 +18,9 @@ class ReservationStateService {
    */
   static ALLOWED_TRANSITIONS = {
     pending: ['awaiting_approval', 'payment_pending', 'confirmed', 'cancelled', 'expired'],
-    awaiting_approval: ['payment_pending', 'cancelled'],
+    awaiting_approval: ['payment_pending', 'cancelled', 'expired'],
     payment_pending: ['confirmed', 'expired', 'cancelled'],
-    confirmed: ['in_stay', 'cancelled', 'completed', 'refunded'],
+    confirmed: ['in_stay', 'cancelled', 'refunded'],
     in_stay: ['completed', 'cancelled'],
     expired: [],
     cancelled: ['refunded'],
@@ -44,12 +44,45 @@ class ReservationStateService {
    * Transition atomique avec validation du graphe d'états
    */
   static async updateStatus(reservationId, newStatus, userId, options = {}) {
-    const { reason = null } = options;
+    const { reason = null, fromStatuses = null, stayCredential = null } = options;
 
     logger.info(`Transition atomique: ${reservationId} -> ${newStatus}`, {
       userId,
       reason,
     });
+
+    // Narrow internal stay-credential precondition (P2-05C2) — no arbitrary filters
+    let staySlot = null;
+    if (stayCredential) {
+      const purpose = stayCredential.purpose;
+      const tokenHash = stayCredential.tokenHash;
+      if (
+        (purpose !== 'checkin' && purpose !== 'checkout')
+        || typeof tokenHash !== 'string'
+        || !tokenHash
+      ) {
+        throw new ApiError(
+          'Précondition credential invalide',
+          400,
+          errorCodes.STAY_CREDENTIAL.INVALID
+        );
+      }
+      if (purpose === 'checkin' && newStatus !== 'in_stay') {
+        throw new ApiError(
+          'Purpose credential incorrect',
+          400,
+          errorCodes.STAY_CREDENTIAL.PURPOSE_MISMATCH
+        );
+      }
+      if (purpose === 'checkout' && newStatus !== 'completed') {
+        throw new ApiError(
+          'Purpose credential incorrect',
+          400,
+          errorCodes.STAY_CREDENTIAL.PURPOSE_MISMATCH
+        );
+      }
+      staySlot = purpose === 'checkin' ? 'checkIn' : 'checkOut';
+    }
 
     const sourceStatuses = this.getAllowedSourceStatuses(newStatus);
     if (sourceStatuses.length === 0) {
@@ -60,13 +93,57 @@ class ReservationStateService {
       );
     }
 
+    const currentForMode = await Reservation.findById(reservationId)
+      .select('status reservationModeSnapshot paymentStatus');
+
+    if (
+      newStatus === 'confirmed'
+      && currentForMode?.reservationModeSnapshot === 'approval_required'
+      && currentForMode.status !== 'payment_pending'
+      && currentForMode.status !== 'confirmed'
+    ) {
+      throw new ApiError(
+        'Cette réservation requiert l\'approbation du partenaire avant confirmation',
+        403,
+        errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+      );
+    }
+
     const atomicFilter = {
       _id: reservationId,
       status: { $in: sourceStatuses },
     };
 
+    if (Array.isArray(fromStatuses) && fromStatuses.length > 0) {
+      for (const from of fromStatuses) {
+        if (!this.isTransitionAllowed(from, newStatus)) {
+          throw new ApiError(
+            `Transition interdite: ${from} → ${newStatus}`,
+            400,
+            errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+          );
+        }
+      }
+      atomicFilter.status = { $in: fromStatuses };
+    }
+
+    if (
+      newStatus === 'confirmed'
+      && currentForMode?.reservationModeSnapshot === 'approval_required'
+    ) {
+      atomicFilter.status = { $in: ['payment_pending'] };
+    }
+
     if (this.PAYMENT_REQUIRED_STATUSES.includes(newStatus)) {
       atomicFilter.paymentStatus = 'paid';
+    }
+
+    if (staySlot && stayCredential) {
+      const now = new Date();
+      const prefix = `stayCredentials.${staySlot}`;
+      atomicFilter[`${prefix}.tokenHash`] = stayCredential.tokenHash;
+      atomicFilter[`${prefix}.consumedAt`] = null;
+      atomicFilter[`${prefix}.expiresAt`] = { $gt: now };
     }
 
     const updateData = {
@@ -88,6 +165,10 @@ class ReservationStateService {
     } else if (newStatus === 'cancelled') {
       updateData.cancelledAt = new Date();
       updateData.cancellationReason = reason;
+    }
+
+    if (staySlot) {
+      updateData[`stayCredentials.${staySlot}.consumedAt`] = new Date();
     }
 
     const updatedReservation = await Reservation.findOneAndUpdate(

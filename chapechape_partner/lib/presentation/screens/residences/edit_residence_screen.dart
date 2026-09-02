@@ -19,7 +19,11 @@ import '../../../core/services/api/residence_video_service.dart';
 import '../../../core/config/app_config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/exceptions/api_exception.dart';
+import '../../../core/blocs/auth/auth_bloc.dart';
+import '../../../core/blocs/auth/auth_event.dart';
+import '../../../core/models/partner/partner_model.dart';
 import 'package:chapechape_maps/chapechape_maps.dart';
+import 'package:go_router/go_router.dart';
 import 'widgets/hourly_pricing_card.dart';
 import '../../widgets/residence_video_section.dart';
 
@@ -1114,6 +1118,93 @@ class _EditResidenceViewState extends State<_EditResidenceView>
         const SizedBox(height: 24),
       ],
     );
+  }
+
+  Future<void> _requestPublication() async {
+    final id = _effectiveResidenceId;
+    if (id == null) return;
+
+    final authState = context.read<AuthBloc>().state;
+    final partner = authState is AuthAuthenticated ? authState.partner : null;
+
+    if (partner != null && partner.canPublishResidence == false) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Vérification requise'),
+          content: const Text(
+            'Vérifiez votre numéro de téléphone pour publier votre résidence.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Plus tard'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                context.push('/profile/edit');
+              },
+              child: const Text('Vérifier mon numéro'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    try {
+      setState(() => _isSubmitting = true);
+      await _residenceService.requestPublication(id);
+      if (!mounted) return;
+      context.read<AuthBloc>().add(AuthProfileRefreshRequested());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Demande de publication envoyée. En attente de validation.'),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      final code = e.data['code'] ?? e.data['errorCode'];
+      if (e.statusCode == 403 && code == 'CAPABILITY_REQUIRED') {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Vérification requise'),
+            content: Text(
+              e.message.isNotEmpty
+                  ? e.message
+                  : 'Vérifiez votre numéro de téléphone pour publier votre résidence.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Plus tard'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  context.push('/profile/edit');
+                },
+                child: const Text('Vérifier mon numéro'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   // Méthode appelée lors de la soumission du formulaire
@@ -2828,6 +2919,14 @@ class _EditResidenceViewState extends State<_EditResidenceView>
                         : (_hasPersistedResidence ? 'Enregistrer' : 'Créer'),
                   ),
                 ),
+              if (_hasPersistedResidence) ...[
+                const SizedBox(width: 8),
+                FilledButton.tonalIcon(
+                  onPressed: _isSubmitting ? null : _requestPublication,
+                  icon: const Icon(Icons.publish_outlined),
+                  label: const Text('Publier'),
+                ),
+              ],
             ],
           ),
         ),

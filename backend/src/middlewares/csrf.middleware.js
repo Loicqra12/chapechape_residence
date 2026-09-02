@@ -7,8 +7,7 @@
 const csrf = require("csurf");
 const apiError = require("../utils/apiError");
 const errorCodes = require("../utils/errorCodes");
-// Commenté temporairement car il pourrait ne pas être correctement initialisé
-// const { logger } = require("../utils/logger");
+const logger = require("../utils/logger");
 
 // Configuration de base de csurf avec sécurité renforcée
 const csrfProtection = csrf({
@@ -42,14 +41,11 @@ const csrfMiddleware = (req, res, next) => {
   // Appliquer csrfProtection qui vérifiera le token
   csrfProtection(req, res, (err) => {
     if (err) {
-      // Utiliser console.warn au lieu de logger.warn pour éviter l'erreur
-      console.warn(
-        `CSRF Attack Detected: ${req.ip} - ${req.method} ${req.path}`,
-        {
-          headers: req.headers,
-          body: req.body
-        }
-      );
+      logger.warn('CSRF_ATTACK_DETECTED', {
+        ip: req.ip,
+        method: req.method,
+        path: req.path,
+      });
 
       return next(
         new apiError(
@@ -85,7 +81,7 @@ const generateCsrfToken = (req, res, next) => {
   // Appliquer csrfProtection en mode génération seulement
   csrfProtection(req, res, (err) => {
     if (err) {
-      console.error(`Impossible de générer un token CSRF: ${err.message}`);
+      logger.error('CSRF_TOKEN_GENERATE_FAILED', { err: err.message });
       if (req.path.startsWith("/api/")) {
         return res.status(500).json({
           success: false,

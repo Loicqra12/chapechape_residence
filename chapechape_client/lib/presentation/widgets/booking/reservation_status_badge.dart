@@ -160,35 +160,20 @@ class ReservationStatusBadge extends StatelessWidget {
         return Icons.schedule;
       case 'confirmed':
         return Icons.check_circle;
-      case 'in_progress':
-        return Icons.play_circle;
+      case 'in_stay':
+        return Icons.login;
       case 'completed':
         return Icons.task_alt;
       case 'cancelled':
         return Icons.cancel;
       case 'expired':
         return Icons.timer_off;
-      
-      // Nouveaux statuts - Système de Paiement Avancé
       case 'awaiting_approval':
         return Icons.pending_actions;
       case 'payment_pending':
         return Icons.payment;
-      case 'rejected':
-        return Icons.block;
-      case 'payment_expired':
-        return Icons.timer_off;
-      case 'payment_processing':
-        return Icons.sync;
-      case 'payment_failed':
-        return Icons.error;
-      case 'partially_paid':
-        return Icons.payments;
-      case 'checked_in':
-        return Icons.login;
-      case 'checked_out':
-        return Icons.logout;
-      
+      case 'refunded':
+        return Icons.currency_exchange;
       default:
         return Icons.info;
     }
@@ -208,9 +193,7 @@ class ReservationStatusBadge extends StatelessWidget {
   bool _shouldAnimate() {
     const animatedStatuses = [
       'payment_pending',
-      'payment_processing', 
       'awaiting_approval',
-      'payment_expired',
     ];
     return animatedStatuses.contains(status.toLowerCase());
   }

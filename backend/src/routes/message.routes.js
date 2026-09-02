@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');
+const { messageSendLimiter, uploadLimiter: messageUploadLimiter } = require('../middlewares/rate-limit.middleware');
 const validate = require('../middlewares/validate.middleware');
 const messageValidation = require('../validations/message.validation');
 const {
@@ -31,10 +32,10 @@ router.route('/conversations/:id')
 
 router.route('/conversations/:id/messages')
     .get(validate(messageValidation.getMessages), getMessages)
-    .post(validate(messageValidation.sendMessage), sendMessage);
+    .post(messageSendLimiter, validate(messageValidation.sendMessage), sendMessage);
 
 router.route('/conversations/:id/attachments')
-    .post(validate(messageValidation.uploadAttachment), uploadAttachment);
+    .post(messageUploadLimiter, validate(messageValidation.uploadAttachment), uploadAttachment);
 
 router.route('/conversations/:id/read')
     .patch(validate(messageValidation.markAsRead), markAsRead);

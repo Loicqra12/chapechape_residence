@@ -9,7 +9,7 @@ router.use(protect);
 
 // Routes pour l'envoi de SMS (réservées aux partenaires et administrateurs)
 router.route('/send')
-    .post(smsPartnerSendLimiter, authorize('admin', 'partner'), smsController.sendSMS);
+    .post(smsPartnerSendLimiter, authorize('admin'), smsController.sendSMS);
 
 // Route pour envoyer des notifications SMS liées aux réservations
 router.route('/booking')

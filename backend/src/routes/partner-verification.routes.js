@@ -25,7 +25,7 @@ const logPhoneRequest = (req, res, next) => {
 // @access  Private (Partner uniquement)
 router.post('/request', 
     protect, 
-    restrictTo('partner'),
+    restrictTo('partner', 'partner_pending'),
     logPhoneRequest,
     verificationController.requestPartnerPhoneVerification
 );
@@ -35,7 +35,7 @@ router.post('/request',
 // @access  Private (Partner uniquement)
 router.post('/confirm',
     protect,
-    restrictTo('partner'), 
+    restrictTo('partner', 'partner_pending'), 
     logPhoneRequest,
     verificationController.confirmPartnerPhoneVerification
 );
@@ -43,7 +43,7 @@ router.post('/confirm',
 // @desc    Obtenir l'historique des vérifications du partner
 // @route   GET /api/partners/verify-phone/history
 // @access  Private (Partner uniquement)
-router.get('/history', protect, restrictTo('partner'), async (req, res) => {
+router.get('/history', protect, restrictTo('partner', 'partner_pending'), async (req, res) => {
     try {
         const partnerId = req.user.id;
         const days = parseInt(req.query.days) || 30;

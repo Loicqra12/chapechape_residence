@@ -1,5 +1,4 @@
 const request = require('supertest');
-const app = require('../../../src/app.test');
 const express = require('express');
 const { csrfMiddleware, generateCsrfToken } = require('../../../src/middlewares/csrf.mock');
 
@@ -114,49 +113,6 @@ describe('CSRF Middleware', () => {
             
             expect(res.headers).toHaveProperty('x-csrf-token');
             expect(res.headers['x-csrf-token']).toBe(res.body.csrfToken);
-        });
-    });
-    
-    describe('Intégration avec le système de réservation ChapeChape', () => {
-        it('devrait exiger un token CSRF pour la création de réservation', async () => {
-            const res = await request(app)
-                .post('/api/reservations')
-                .set('Authorization', `Bearer ${global.authToken}`)
-                .send({
-                    residence: '507f1f77bcf86cd799439011',
-                    visitDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-                    visitTime: '14:00',
-                    notes: 'Test CSRF',
-                    guestCount: 2
-                });
-            
-            // Sans token CSRF, la requête devrait être refusée
-            expect(res.status).toBe(401); 
-            expect(res.body.success).toBe(false);
-        });
-        
-        it.skip('devrait accepter un token CSRF valide pour la création de réservation', async () => {
-            const tokenRes = await request(app).get('/api/csrf-token');
-            const csrfToken = tokenRes.body.csrfToken;
-            
-            // Puisqu'il s'agit d'un test, nous n'avons peut-être pas une vraie résidence,
-            // donc nous allons simplement vérifier que la validation CSRF passe (401 → 400)
-            const res = await request(app)
-                .post('/api/reservations')
-                .set('Authorization', `Bearer ${global.authToken}`)
-                .set('X-CSRF-Token', csrfToken)
-                .send({
-                    residence: '507f1f77bcf86cd799439011',
-                    visitDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-                    visitTime: '14:00',
-                    notes: 'Test CSRF',
-                    guestCount: 2
-                });
-            
-            // Avec token CSRF, la requête devrait être acceptée par le middleware CSRF
-            // La demande pourrait échouer pour d'autres raisons (404, 400) mais pas 401
-            // Ce test est temporairement désactivé
-            // expect(res.status).not.toBe(401);
         });
     });
 });

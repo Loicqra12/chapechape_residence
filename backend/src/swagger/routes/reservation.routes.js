@@ -367,7 +367,10 @@
  *
  * /api/reservations/{id}/checkin:
  *   patch:
- *     summary: Check-in via QR code (partenaire uniquement)
+ *     summary: Check-in séjour (partenaire uniquement)
+ *     description: |
+ *       Transition canonique confirmed → in_stay via ReservationStateService.
+ *       QR verification planned for P2-05C — not enforced in P2-05B.
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
@@ -377,33 +380,26 @@
  *         required: true
  *         schema:
  *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - qrCode
- *             properties:
- *               qrCode:
- *                 type: string
- *                 description: Code QR scanné lors du check-in
  *     responses:
  *       200:
  *         description: Check-in effectué — statut passe à in_stay
  *       400:
- *         description: QR code invalide ou réservation non confirmée
+ *         description: Trop tôt, paiement manquant ou transition invalide
  *       401:
  *         description: Non autorisé
  *       403:
- *         description: Réservé aux partenaires
+ *         description: Réservé aux partenaires / ownership
  *       404:
  *         description: Réservation non trouvée
+ *       409:
+ *         description: Modification concurrente
  *
  * /api/reservations/{id}/checkout:
  *   patch:
- *     summary: Check-out via QR code (partenaire uniquement)
+ *     summary: Check-out séjour (partenaire uniquement)
+ *     description: |
+ *       Transition canonique in_stay → completed via ReservationStateService.
+ *       QR verification planned for P2-05C — not enforced in P2-05B.
  *     tags: [Réservations]
  *     security:
  *       - bearerAuth: []
@@ -413,29 +409,19 @@
  *         required: true
  *         schema:
  *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - qrCode
- *             properties:
- *               qrCode:
- *                 type: string
- *                 description: Code QR scanné lors du check-out
  *     responses:
  *       200:
  *         description: Check-out effectué — statut passe à completed
  *       400:
- *         description: QR code invalide ou séjour non en cours
+ *         description: Check-in requis ou transition invalide
  *       401:
  *         description: Non autorisé
  *       403:
- *         description: Réservé aux partenaires
+ *         description: Réservé aux partenaires / ownership
  *       404:
  *         description: Réservation non trouvée
+ *       409:
+ *         description: Modification concurrente
  */
 
 /**

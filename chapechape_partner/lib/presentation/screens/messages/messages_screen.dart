@@ -1014,22 +1014,30 @@ class _MessagesScreenState extends State<MessagesScreen> {
   IconData _getBookingStatusIcon(String status) {
     return switch (status) {
       'pending' => Icons.schedule,
+      'awaiting_approval' => Icons.pending_actions,
+      'payment_pending' => Icons.payments,
       'confirmed' => Icons.check_circle,
+      'in_stay' => Icons.hotel,
       'cancelled' => Icons.cancel,
       'completed' => Icons.done_all,
+      'expired' => Icons.timer_off,
       'refunded' => Icons.monetization_on,
-      _ => Icons.question_mark,
+      _ => Icons.help_outline,
     };
   }
 
   String _getBookingStatusText(String status) {
     return switch (status) {
       'pending' => 'En attente',
+      'awaiting_approval' => 'En attente d\'approbation',
+      'payment_pending' => 'Paiement en attente',
       'confirmed' => 'Confirmée',
+      'in_stay' => 'Séjour en cours',
       'cancelled' => 'Annulée',
       'completed' => 'Terminée',
+      'expired' => 'Expirée',
       'refunded' => 'Remboursée',
-      _ => 'Inconnue',
+      _ => 'Statut inconnu',
     };
   }
 

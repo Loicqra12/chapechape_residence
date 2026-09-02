@@ -29,6 +29,7 @@ import 'package:chapechape_client/presentation/screens/booking/booking_status_sc
     as booking;
 import 'package:chapechape_client/presentation/screens/booking/booking_modify_screen.dart'
     as booking;
+import 'package:chapechape_client/presentation/screens/qr/qr_code_screen.dart';
 import 'package:chapechape_client/presentation/screens/payment/payment_screen.dart'
     as payment;
 import 'package:chapechape_client/presentation/screens/payment/payment_redirect_screen.dart';
@@ -548,6 +549,13 @@ class AppRouter {
         path: '/booking-details/:bookingId',
         name: 'booking_details',
         builder: (context, state) => booking.BookingDetailsScreen(
+          bookingId: state.pathParameters['bookingId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/booking-qr/:bookingId',
+        name: 'booking_qr',
+        builder: (context, state) => QRCodeScreen(
           bookingId: state.pathParameters['bookingId']!,
         ),
       ),

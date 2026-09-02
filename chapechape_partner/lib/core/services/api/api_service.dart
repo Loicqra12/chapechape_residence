@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import '../../models/stay_credential_preview.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import 'package:chapechape_partner/core/utils/app_logger.dart';
@@ -186,6 +187,7 @@ class ApiService {
           responseBody: true,
           error: true,
           compact: true,
+          logPrint: (obj) => debugPrint(redactStayCredentials(obj.toString())),
         ),
       );
     }

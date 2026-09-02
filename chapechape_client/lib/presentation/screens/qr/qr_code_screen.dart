@@ -1,430 +1,347 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:chapechape_client/core/cubits/stay_credential_cubit.dart';
 import 'package:chapechape_client/core/models/booking_model.dart';
-import 'package:chapechape_client/core/utils/booking_helpers.dart';
+import 'package:chapechape_client/core/models/reservation_status.dart';
+import 'package:chapechape_client/core/models/stay_credential.dart';
+import 'package:chapechape_client/core/services/booking_service.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_bloc.dart';
 import 'package:chapechape_client/core/blocs/booking/booking_event.dart' as booking_events;
 import 'package:chapechape_client/core/blocs/booking/booking_state.dart' as booking_states;
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
-import 'package:chapechape_client/core/theme/text_styles.dart';
-import 'package:chapechape_client/presentation/widgets/qr/qr_code_display_widget.dart';
 import 'package:chapechape_client/presentation/widgets/booking/reservation_status_badge.dart';
-import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
+import 'dart:async';
 
-/// Écran dédié à l'affichage et la gestion des QR codes
-/// Supporte check-in, check-out et gestion complète des codes QR
+/// Écran QR Client — credential backend CCSTAY1.* uniquement (P2-05D).
 class QRCodeScreen extends StatefulWidget {
   final String bookingId;
-  final QRCodeType? initialType;
 
   const QRCodeScreen({
     super.key,
     required this.bookingId,
-    this.initialType,
   });
 
   @override
   State<QRCodeScreen> createState() => _QRCodeScreenState();
 }
 
-class _QRCodeScreenState extends State<QRCodeScreen>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
+class _QRCodeScreenState extends State<QRCodeScreen> {
   Booking? _booking;
-  bool _isLoading = false;
-  QRCodeType _selectedType = QRCodeType.checkIn;
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    
-    // Initialiser le TabController pour les onglets
-    _tabController = TabController(length: 2, vsync: this);
-    
-    // Définir le type initial
-    _selectedType = widget.initialType ?? QRCodeType.checkIn;
-    _tabController.index = _selectedType == QRCodeType.checkIn ? 0 : 1;
-    
-    // Charger les détails de la réservation
-    _loadBookingDetails();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  void _loadBookingDetails() {
     context.read<BookingBloc>().add(
       booking_events.LoadBookingDetails(bookingId: widget.bookingId),
     );
   }
 
-  void _onTabChanged() {
-    setState(() {
-      _selectedType = _tabController.index == 0 
-          ? QRCodeType.checkIn 
-          : QRCodeType.checkOut;
-    });
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
-  void _regenerateQRCode() {
-    if (_booking == null) return;
-    
-    // TODO: Implémenter la régénération des QR codes via le BookingBloc
-    // Pour l'instant, afficher un message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nouveau QR Code généré avec succès'),
-        backgroundColor: Colors.green,
-      ),
-    );
+  String? _purposeForBooking(Booking booking) {
+    return ReservationStatusCanon.stayQrPurpose(booking.status);
   }
 
-  void _shareQRCode(String qrData) {
-    // Le partage est géré par le QRCodeDisplayWidget
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('QR Code prêt à partager'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  void _issueCredential(StayCredentialCubit cubit, String purpose) {
+    cubit.issue(reservationId: widget.bookingId, purpose: purpose);
   }
 
-  /// Vérifier si les QR codes peuvent être utilisés pour cette réservation
-  bool _canUseQRCodes() {
-    if (_booking == null) return false;
-    
-    // Les QR codes sont disponibles pour les réservations confirmées ou en cours
-    final allowedStatuses = ['confirmed', 'in_progress', 'payment_pending'];
-    return allowedStatuses.contains(_booking!.status.toLowerCase());
+  void _startCountdown(StayCredential credential, StayCredentialCubit cubit) {
+    _countdownTimer?.cancel();
+    void tick() {
+      if (!mounted) return;
+      final remaining = credential.expiresAt.difference(DateTime.now());
+      setState(() {
+        _remaining = remaining.isNegative ? Duration.zero : remaining;
+      });
+      if (remaining.isNegative) {
+        _countdownTimer?.cancel();
+        cubit.markExpired();
+      }
+    }
+
+    tick();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => tick());
+  }
+
+  String _errorMessage(String? code) {
+    switch (code) {
+      case 'RESERVATION_CHECKIN_TOO_EARLY':
+        return 'Check-in disponible 2 h avant votre heure d\'arrivée.';
+      case 'STAY_CREDENTIAL_NOT_ELIGIBLE':
+        return 'Cette réservation n\'est pas éligible au QR pour le moment.';
+      case 'STAY_CREDENTIAL_REGEN_LIMITED':
+        return 'Régénération temporairement limitée. Réessayez dans un instant.';
+      case 'NETWORK_ERROR':
+        return 'Connexion impossible. Vérifiez votre réseau.';
+      default:
+        return 'Impossible de générer le QR. Réessayez.';
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '${d.inHours}:$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        title: const Text('QR Codes'),
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-        actions: [
-          if (_booking != null)
-            IconButton(
-              onPressed: _regenerateQRCode,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Régénérer les QR codes',
-            ),
-        ],
-      ),
-      body: BlocConsumer<BookingBloc, booking_states.BookingState>(
-        listener: (context, state) {
-          if (state is booking_states.BookingDetailsLoaded) {
-            setState(() {
-              _booking = state.booking;
-              _isLoading = false;
-            });
-          } else if (state is booking_states.BookingError) {
-            setState(() {
-              _isLoading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppTheme.errorColor,
-              ),
-            );
-          } else if (state is booking_states.BookingLoading) {
-            setState(() {
-              _isLoading = true;
-            });
-          }
-        },
-        builder: (context, state) {
-          return LoadingOverlay(
-            isLoading: _isLoading,
-            child: _booking != null 
-                ? _buildQRCodeContent()
-                : _buildLoadingContent(),
+    return BlocProvider(
+      create: (_) => StayCredentialCubit(context.read<BookingService>()),
+      child: Builder(
+        builder: (context) {
+          return BlocConsumer<BookingBloc, booking_states.BookingState>(
+            listener: (context, state) {
+              if (state is booking_states.BookingDetailsLoaded) {
+                setState(() => _booking = state.booking);
+                final purpose = _purposeForBooking(state.booking);
+                if (purpose != null) {
+                  final cubit = context.read<StayCredentialCubit>();
+                  if (cubit.state.credential == null && !cubit.state.isIssuing) {
+                    _issueCredential(cubit, purpose);
+                  }
+                }
+              }
+            },
+            builder: (context, bookingState) {
+              return BlocConsumer<StayCredentialCubit, StayCredentialState>(
+                listener: (context, credState) {
+                  if (credState.credential != null && !credState.isExpired) {
+                    _startCountdown(credState.credential!, context.read<StayCredentialCubit>());
+                  }
+                },
+                builder: (context, credState) {
+                  final booking = _booking;
+                  final purpose = booking != null ? _purposeForBooking(booking) : null;
+                  final title = purpose == 'checkout' ? 'QR de départ' : 'QR d\'arrivée';
+
+                  return Scaffold(
+                    appBar: AppBar(
+                      title: Text(title),
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => context.pop(),
+                      ),
+                    ),
+                    body: bookingState is booking_states.BookingLoading && booking == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : _buildBody(context, booking, purpose, credState, title),
+                  );
+                },
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildLoadingContent() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          AppSpacing.verticalMd,
-          Text('Chargement des informations...'),
-        ],
-      ),
-    );
-  }
+  Widget _buildBody(
+    BuildContext context,
+    Booking? booking,
+    String? purpose,
+    StayCredentialState credState,
+    String title,
+  ) {
+    if (booking == null) {
+      return const Center(child: Text('Réservation introuvable'));
+    }
 
-  Widget _buildQRCodeContent() {
-    return Column(
-      children: [
-        // Header avec informations de réservation
-        _buildBookingHeader(),
-        
-        // Onglets pour check-in/check-out
-        _buildTabBar(),
-        
-        // Contenu des QR codes
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
+    if (purpose == null) {
+      return Center(
+        child: Padding(
+          padding: AppSpacing.pagePadding,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildQRCodeTab(QRCodeType.checkIn),
-              _buildQRCodeTab(QRCodeType.checkOut),
-            ],
-          ),
-        ),
-        
-        // Actions en bas
-        _buildBottomActions(),
-      ],
-    );
-  }
-
-  Widget _buildBookingHeader() {
-    return Container(
-      margin: AppSpacing.pagePadding,
-      padding: EdgeInsets.all(AppSpacing.lg20), // 20px
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+              Icon(Icons.qr_code_2, size: 64, color: Colors.grey.shade400),
+              AppSpacing.verticalMd,
               Text(
-                'Réservation',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                'Aucun QR actif pour cette réservation.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              _booking!.statusBadge(size: BadgeSize.medium),
+              AppSpacing.verticalSm,
+              ReservationStatusBadge(status: booking.status),
             ],
           ),
-          
-          AppSpacing.verticalMd,
-          
-          _buildInfoRow(
-            icon: Icons.home,
-            label: 'Résidence',
-            value: _booking!.residenceName,
-          ),
-          
-          AppSpacing.verticalSm,
-          
-          _buildInfoRow(
-            icon: Icons.calendar_today,
-            label: 'Check-in',
-            value: BookingHelpers.formatDate(_booking!.checkIn),
-          ),
-          
-          AppSpacing.verticalSm,
-          
-          _buildInfoRow(
-            icon: Icons.calendar_today_outlined,
-            label: 'Check-out',
-            value: BookingHelpers.formatDate(_booking!.checkOut),
-          ),
-          
-          if (_canUseQRCodes()) ...[
-            AppSpacing.verticalSmd,
-            Container(
-              padding: EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.verified, color: Colors.green[600], size: 16),
-                  SizedBox(width: AppSpacing.xs6), // 6px
-                  Text(
-                    'QR Codes actifs et prêts à utiliser',
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.green[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-        SizedBox(width: AppSpacing.sm),
-        Text(
-          '$label:',
-          style: AppTextStyles.body.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-          ),
         ),
-        SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            value,
-            style: AppTextStyles.body.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+      );
+    }
 
-  Widget _buildTabBar() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.xs),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        onTap: (_) => _onTabChanged(),
-        indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusXl + AppSpacing.xs),
-          color: Theme.of(context).primaryColor,
-        ),
-        labelColor: AppTheme.textLight,
-        unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-        dividerColor: Colors.transparent,
-        tabs: const [
-          Tab(
-            icon: Icon(Icons.login),
-            text: 'Check-in',
-          ),
-          Tab(
-            icon: Icon(Icons.logout),
-            text: 'Check-out',
-          ),
-        ],
-      ),
-    );
-  }
+    final cubit = context.read<StayCredentialCubit>();
+    final showQr = credState.credential != null &&
+        !credState.isExpired &&
+        !credState.isIssuing;
 
-  Widget _buildQRCodeTab(QRCodeType type) {
     return SingleChildScrollView(
       padding: AppSpacing.pagePadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(height: AppSpacing.lg20), // 20px
-          
-          // QR Code principal
-          QRCodeDisplayWidget(
-            booking: _booking!,
-            type: type,
-            size: 250,
-            showActions: true,
-            showInstructions: true,
-            onRegenerate: _regenerateQRCode,
-            onShare: _shareQRCode,
+          Card(
+            child: Padding(
+              padding: AppSpacing.cardPadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Réservation #${booking.id.substring(0, 8)}',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  AppSpacing.verticalSm,
+                  ReservationStatusBadge(status: booking.status),
+                ],
+              ),
+            ),
           ),
-          
           AppSpacing.verticalLg,
-          
-          // Instructions spécifiques au type
-          _buildTypeSpecificInstructions(type),
-          
+          if (credState.isIssuing)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (credState.errorCode != null)
+            _buildErrorCard(context, credState.errorCode!, cubit, purpose)
+          else if (credState.isExpired)
+            _buildExpiredCard(context, cubit, purpose)
+          else if (showQr)
+            _buildQrCard(context, credState.credential!, title)
+          else
+            const SizedBox.shrink(),
           AppSpacing.verticalLg,
-          
-          // Informations de sécurité
-          _buildSecurityInfo(),
+          Text(
+            'Présentez ce QR au partenaire à votre ${purpose == 'checkout' ? 'départ' : 'arrivée'}. '
+            'Le partenaire confirmera l\'opération après scan.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTypeSpecificInstructions(QRCodeType type) {
-    final isCheckIn = type == QRCodeType.checkIn;
-    
+  Widget _buildQrCard(BuildContext context, StayCredential credential, String title) {
     return Card(
-      elevation: 2,
       child: Padding(
         padding: AppSpacing.cardPadding,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  isCheckIn ? Icons.login : Icons.logout,
-                  color: Theme.of(context).primaryColor,
-                ),
-                SizedBox(width: AppSpacing.sm),
-                Text(
-                  'Instructions ${isCheckIn ? "Check-in" : "Check-out"}',
-                  style: AppTextStyles.subtitle,
-                ),
-              ],
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            AppSpacing.verticalMd,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: QrImageView(
+                data: credential.credential,
+                version: QrVersions.auto,
+                size: 220,
+                backgroundColor: Colors.white,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
             ),
-            
-            AppSpacing.verticalSmd,
-            
-            if (isCheckIn) ...[
-              _buildInstructionItem(
-                '1. Présentez-vous à la résidence à l\'heure prévue',
-              ),
-              _buildInstructionItem(
-                '2. Montrez ce QR code au partenaire',
-              ),
-              _buildInstructionItem(
-                '3. Le partenaire scanera le code pour confirmer votre arrivée',
-              ),
-              _buildInstructionItem(
-                '4. Récupérez les clés et profitez de votre séjour',
-              ),
-            ] else ...[
-              _buildInstructionItem(
-                '1. Préparez vos affaires avant l\'heure de départ',
-              ),
-              _buildInstructionItem(
-                '2. Montrez ce QR code au partenaire',
-              ),
-              _buildInstructionItem(
-                '3. Le partenaire vérifiera l\'état de la résidence',
-              ),
-              _buildInstructionItem(
-                '4. Remettez les clés et récupérez votre caution si applicable',
+            AppSpacing.verticalMd,
+            Text(
+              'Expire dans ${_formatDuration(_remaining)}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: _remaining.inMinutes < 2
+                        ? AppTheme.errorColor
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+            AppSpacing.verticalMd,
+            OutlinedButton.icon(
+              onPressed: context.read<StayCredentialCubit>().state.isIssuing
+                  ? null
+                  : () => _issueCredential(
+                        context.read<StayCredentialCubit>(),
+                        credential.purpose,
+                      ),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Régénérer le QR'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpiredCard(
+    BuildContext context,
+    StayCredentialCubit cubit,
+    String purpose,
+  ) {
+    return Card(
+      color: Colors.orange.shade50,
+      child: Padding(
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          children: [
+            const Icon(Icons.timer_off, size: 48, color: Colors.orange),
+            AppSpacing.verticalMd,
+            Text(
+              'QR expiré',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            AppSpacing.verticalSm,
+            FilledButton.icon(
+              onPressed: cubit.state.isIssuing
+                  ? null
+                  : () => _issueCredential(cubit, purpose),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Régénérer le QR'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(
+    BuildContext context,
+    String code,
+    StayCredentialCubit cubit,
+    String purpose,
+  ) {
+    return Card(
+      color: Colors.red.shade50,
+      child: Padding(
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 48, color: AppTheme.errorColor),
+            AppSpacing.verticalMd,
+            Text(
+              _errorMessage(code),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            if (code != 'RESERVATION_CHECKIN_TOO_EARLY') ...[
+              AppSpacing.verticalMd,
+              FilledButton(
+                onPressed: cubit.state.isIssuing
+                    ? null
+                    : () => _issueCredential(cubit, purpose),
+                child: const Text('Réessayer'),
               ),
             ],
           ],
@@ -432,133 +349,4 @@ class _QRCodeScreenState extends State<QRCodeScreen>
       ),
     );
   }
-
-  Widget _buildInstructionItem(String text) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            margin: EdgeInsets.only(top: AppSpacing.xs6, right: AppSpacing.sm), // top: 6px
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTextStyles.body,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityInfo() {
-    return Card(
-      elevation: 2,
-      color: Colors.amber[50],
-      child: Padding(
-        padding: AppSpacing.cardPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.security, color: Colors.amber[700]),
-                SizedBox(width: AppSpacing.sm),
-                Text(
-                  'Informations de Sécurité',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber[700],
-                  ),
-                ),
-              ],
-            ),
-            
-            AppSpacing.verticalSmd,
-            
-            Text(
-              '• Ne partagez jamais vos QR codes avec des personnes non autorisées\n'
-              '• Ces codes sont uniques à votre réservation\n'
-              '• En cas de problème, contactez immédiatement le support\n'
-              '• Les codes peuvent être régénérés si nécessaire',
-              style: AppTextStyles.body.copyWith(
-                color: Colors.amber[800],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomActions() {
-    return Container(
-      padding: AppSpacing.cardPadding,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => context.push('/support'),
-              icon: const Icon(Icons.help_outline),
-              label: const Text('Aide'),
-            ),
-          ),
-          
-          SizedBox(width: AppSpacing.smd),
-          
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => context.go('/bookings'),
-              icon: const Icon(Icons.list),
-              label: const Text('Mes Réservations'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: AppTheme.textLight,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Helper functions pour les QR codes
-bool _canUseQRCodesForBooking(Booking booking) {
-  // Les QR codes sont disponibles pour les réservations confirmées ou en cours
-  final allowedStatuses = ['confirmed', 'in_progress', 'payment_pending'];
-  return allowedStatuses.contains(booking.status.toLowerCase());
-}
-
-bool _hasQRCodesForBooking(Booking booking) {
-  // Vérifier si la réservation a des QR codes générés
-  // Pour l'instant, on assume que toutes les réservations confirmées ont des QR codes
-  return _canUseQRCodesForBooking(booking);
-}
-
-/// Extension pour faciliter l'utilisation
-extension BookingQRExtension on Booking {
-  /// Vérifier si les QR codes peuvent être utilisés
-  bool get canUseQRCodes => _canUseQRCodesForBooking(this);
-  
-  /// Vérifier si les QR codes sont disponibles
-  bool get hasQRCodes => _hasQRCodesForBooking(this);
 }

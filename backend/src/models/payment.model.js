@@ -70,6 +70,48 @@ const paymentSchema = new mongoose.Schema({
     refundReason: {
         type: String
     },
+    /**
+     * Orchestration remboursement (P0-05).
+     * Distinct de status=refunded (résultat financier final).
+     */
+    refundStatus: {
+        type: String,
+        enum: ['not_required', 'required', 'pending', 'succeeded', 'failed'],
+        default: 'not_required',
+        index: true,
+    },
+    refundAttempts: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
+    refundLastError: {
+        type: String,
+    },
+    refundProviderRef: {
+        type: String,
+    },
+    refundOpsRequired: {
+        type: Boolean,
+        default: false,
+        index: true,
+    },
+    refundLastAttemptAt: {
+        type: Date,
+    },
+    refundOpsConfirmedAt: {
+        type: Date,
+    },
+    refundOpsConfirmedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    refundOpsNote: {
+        type: String,
+    },
+    refundOpsExternalRef: {
+        type: String,
+    },
     metadata: {
         type: Map,
         of: String

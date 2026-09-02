@@ -51,6 +51,15 @@ const availabilitySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Reservation'
   },
+  sourceType: {
+    type: String,
+    enum: ['reservation', 'manual_block', 'external_reservation'],
+    default: null,
+  },
+  sourceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
   // Notes pour cette disponibilité (visible uniquement par le propriétaire)
   notes: {
     type: String,
@@ -154,20 +163,27 @@ availabilitySchema.statics.isPeriodAvailable = async function(residenceId, start
  * - upsert crée le doc si absent ; conflit unique → erreur Mongo (course concurrente)
  */
 availabilitySchema.statics.upsertBulk = async function(records, options = {}) {
-  const { session = null, failIfReservedByOther = false } = options;
+  const { session = null, failIfOccupied = false } = options;
+  const strict = failIfOccupied || options.failIfReservedByOther === true;
 
   const operations = records.map((record) => {
-    if (failIfReservedByOther && record.status === 'reserved') {
+    if (strict && (record.status === 'reserved' || record.status === 'blocked')) {
+      const sameOwner = [];
+      if (record.reservationId) {
+        sameOwner.push({ status: 'reserved', reservationId: record.reservationId });
+      }
+      if (record.sourceId) {
+        sameOwner.push({ status: record.status, sourceId: record.sourceId });
+      }
       return {
         updateOne: {
           filter: {
             residenceId: record.residenceId,
             date: record.date,
             $or: [
-              { status: { $ne: 'reserved' } },
-              { reservationId: null },
-              { reservationId: { $exists: false } },
-              { reservationId: record.reservationId },
+              { status: 'available' },
+              { status: { $exists: false } },
+              ...sameOwner,
             ],
           },
           update: { $set: record },

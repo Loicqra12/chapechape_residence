@@ -1,6 +1,7 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const logger = require('../utils/logger');
 
 // Configuration Cloudinary avec les variables d'environnement
 cloudinary.config({
@@ -56,7 +57,7 @@ const CloudinaryService = {
       const result = await cloudinary.uploader.destroy(publicId);
       return result;
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'image:', error);
+      logger.error('CLOUDINARY_DELETE_IMAGE_FAILED', { err: error.message, publicId });
       throw error;
     }
   },
@@ -70,7 +71,7 @@ const CloudinaryService = {
       });
       return result;
     } catch (error) {
-      console.error('Erreur lors de la suppression de la vidéo:', error);
+      logger.error('CLOUDINARY_DELETE_VIDEO_FAILED', { err: error.message, publicId });
       throw error;
     }
   },
@@ -96,7 +97,7 @@ const CloudinaryService = {
       const match = url.match(regex);
       return match ? match[1] : null;
     } catch (error) {
-      console.error('Erreur extraction publicId:', error);
+      logger.warn('CLOUDINARY_PUBLIC_ID_EXTRACT_FAILED', { err: error.message });
       return null;
     }
   }

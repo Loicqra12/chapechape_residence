@@ -39,20 +39,19 @@ exports.getNearbyResidences = asyncHandler(async (req, res) => {
     try {
         // Recherche des résidences à proximité en utilisant les coordonnées standards (latitude, longitude)
         // Compatible avec l'ancienne structure et la nouvelle (locationData)
-        const residences = await Residence.find({
+        const publication = require('../../services/residence-publication.service');
+        const residences = await Residence.find(publication.applyPublicCatalogFilter({
             $or: [
-                // Recherche dans anciens champs pour compatibilité
                 {
                     latitude: { $gte: latitude - 0.05, $lte: latitude + 0.05 },
                     longitude: { $gte: longitude - 0.05, $lte: longitude + 0.05 }
                 },
-                // Recherche dans nouvelle structure locationData
                 {
                     'locationData.coordinates.latitude': { $gte: latitude - 0.05, $lte: latitude + 0.05 },
                     'locationData.coordinates.longitude': { $gte: longitude - 0.05, $lte: longitude + 0.05 }
                 }
             ]
-        })
+        }))
         .limit(limitNumber)
         .sort({ createdAt: -1 })
         .populate('partner', 'firstName lastName email phoneNumber')

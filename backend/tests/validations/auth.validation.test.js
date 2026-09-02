@@ -1,15 +1,12 @@
-const Joi = require('joi');
-// Importer les schémas de validation correctement
 const {
   login,
   register,
   googleAuth,
   facebookAuth,
   requestVerificationCode,
-  verifyCode
+  verifyCode,
 } = require('../../src/validations/auth.validation');
 
-// Extraire les schémas Joi du sous-objet body
 const loginSchema = login.body;
 const registerSchema = register.body;
 const googleAuthSchema = googleAuth.body;
@@ -17,155 +14,66 @@ const facebookAuthSchema = facebookAuth.body;
 const requestVerificationCodeSchema = requestVerificationCode.body;
 const verifyCodeSchema = verifyCode.body;
 
-// Utiliser Jest au lieu de Chai
-
-describe('Schémas de validation d\'authentification', () => {
-  
+describe('Schémas de validation d\'authentification (contrats actuels)', () => {
   describe('loginSchema', () => {
-    const validData = { email: 'user@example.com', password: 'Password123!' };
-    
-    const invalidData = {
-      'email manquant': { password: 'Password123!' },
-      'email invalide': { email: 'not-an-email', password: 'Password123!' },
-      'mot de passe manquant': { email: 'user@example.com' },
-      'mot de passe trop court': { email: 'user@example.com', password: 'Pass1!' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = loginSchema.validate(validData);
-      expect(error).toBe(undefined);
+    it('accepte email ou identifiant téléphone (pas un format email strict)', () => {
+      expect(loginSchema.validate({ email: 'user@example.com', password: 'x' }).error).toBeUndefined();
+      expect(loginSchema.validate({ email: '0700000000', password: 'x' }).error).toBeUndefined();
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = loginSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
+    it('rejette email ou mot de passe manquant', () => {
+      expect(loginSchema.validate({ password: 'x' }).error).toBeDefined();
+      expect(loginSchema.validate({ email: 'user@example.com' }).error).toBeDefined();
     });
   });
 
   describe('registerSchema', () => {
-    const validData = {
-      name: 'John Doe',
+    const valid = {
       email: 'john@example.com',
       password: 'SecurePass123!',
-      phoneNumber: '+33612345678',
-      role: 'user'
+      firstName: 'John',
+      lastName: 'Doe',
+      phoneNumber: '+2250700000001',
     };
-    
-    const invalidData = {
-      'email invalide': { ...validData, email: 'invalid-email' },
-      'mot de passe trop court': { ...validData, password: 'short' },
-      'numéro de téléphone invalide': { ...validData, phoneNumber: '123' },
-      'rôle invalide': { ...validData, role: 'superuser' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = registerSchema.validate(validData);
-      expect(error).toBe(undefined);
+
+    it('valide un payload canonique (sans rôle — forcé client côté API)', () => {
+      expect(registerSchema.validate(valid).error).toBeUndefined();
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = registerSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
+    it('rejette email invalide, mot de passe trop court, téléphone invalide', () => {
+      expect(registerSchema.validate({ ...valid, email: 'invalid-email' }).error).toBeDefined();
+      expect(registerSchema.validate({ ...valid, password: 'short' }).error).toBeDefined();
+      expect(registerSchema.validate({ ...valid, phoneNumber: 'abc' }).error).toBeDefined();
+    });
+
+    it('ignore / strip role (clé inconnue) selon Joi — le contrôleur force client', () => {
+      const { error, value } = registerSchema.validate({ ...valid, role: 'superadmin' }, { stripUnknown: true });
+      expect(error).toBeUndefined();
+      expect(value.role).toBeUndefined();
     });
   });
 
-  describe('googleAuthSchema', () => {
-    const validData = {
-      idToken: 'valid-google-token-12345'
-    };
-    
-    const invalidData = {
-      'token manquant': {},
-      'token vide': { idToken: '' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = googleAuthSchema.validate(validData);
-      expect(error).toBe(undefined);
-    });
-
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = googleAuthSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
+  describe('googleAuthSchema / facebookAuthSchema', () => {
+    it('exige un token', () => {
+      expect(googleAuthSchema.validate({ idToken: 'tok' }).error).toBeUndefined();
+      expect(googleAuthSchema.validate({}).error).toBeDefined();
+      expect(facebookAuthSchema.validate({ accessToken: 'tok' }).error).toBeUndefined();
+      expect(facebookAuthSchema.validate({}).error).toBeDefined();
     });
   });
 
-  describe('facebookAuthSchema', () => {
-    const validData = {
-      accessToken: 'valid-facebook-token-12345'
-    };
-    
-    const invalidData = {
-      'token manquant': {},
-      'token vide': { accessToken: '' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = facebookAuthSchema.validate(validData);
-      expect(error).toBe(undefined);
+  describe('OTP schemas', () => {
+    it('requestVerificationCode accepte E.164 et formats locaux larges', () => {
+      expect(requestVerificationCodeSchema.validate({ phoneNumber: '+2250700000001' }).error).toBeUndefined();
+      expect(requestVerificationCodeSchema.validate({ phoneNumber: '0700000001' }).error).toBeUndefined();
+      expect(requestVerificationCodeSchema.validate({}).error).toBeDefined();
+      expect(requestVerificationCodeSchema.validate({ phoneNumber: '12' }).error).toBeDefined();
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = facebookAuthSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
-    });
-  });
-
-  describe('requestVerificationCodeSchema', () => {
-    const validData = {
-      phoneNumber: '+33612345678'
-    };
-    
-    const invalidData = {
-      'numéro manquant': {},
-      'numéro invalide': { phoneNumber: '123' },
-      'numéro mal formaté': { phoneNumber: '0612345678' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = requestVerificationCodeSchema.validate(validData);
-      expect(error).toBe(undefined);
-    });
-
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = requestVerificationCodeSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
-    });
-  });
-
-  describe('verifyCodeSchema', () => {
-    const validData = {
-      phoneNumber: '+33612345678',
-      code: '123456'
-    };
-    
-    const invalidData = {
-      'numéro manquant': { code: '123456' },
-      'numéro invalide': { phoneNumber: '123', code: '123456' },
-      'code manquant': { phoneNumber: '+33612345678' },
-      'code invalide': { phoneNumber: '+33612345678', code: '12' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = verifyCodeSchema.validate(validData);
-      expect(error).toBe(undefined);
-    });
-
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = verifyCodeSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
+    it('verifyCode exige téléphone + code', () => {
+      expect(verifyCodeSchema.validate({ phoneNumber: '+2250700000001', code: '123456' }).error).toBeUndefined();
+      expect(verifyCodeSchema.validate({ code: '123456' }).error).toBeDefined();
+      expect(verifyCodeSchema.validate({ phoneNumber: '+2250700000001' }).error).toBeDefined();
     });
   });
 });

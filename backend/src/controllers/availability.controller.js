@@ -1,8 +1,12 @@
 const availabilityService = require('../services/availability.service');
+const partnerBlockService = require('../services/partner-block.service');
+const externalReservationService = require('../services/external-reservation.service');
+const calendarProjection = require('../services/calendar-projection.service');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../middlewares/async.middleware');
-const Availability = require('../models/availability.model');
 const Residence = require('../models/residence.model');
+const Availability = require('../models/availability.model');
+const { canManageResidence } = require('../security/resource-access');
 
 /**
  * Vérifier la disponibilité d'une résidence pour des dates données
@@ -23,7 +27,10 @@ exports.checkAvailability = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: { isAvailable }
+    data: {
+      isAvailable: typeof isAvailable?.available === 'boolean' ? isAvailable.available : isAvailable,
+      conflictDates: isAvailable?.unavailableDates || isAvailable?.blockedDates || [],
+    }
   });
 });
 
@@ -33,12 +40,12 @@ exports.checkAvailability = asyncHandler(async (req, res) => {
  */
 exports.getAvailabilityCalendar = asyncHandler(async (req, res) => {
   const { residenceId, startDate, endDate } = req.query;
-  
+
   if (!residenceId || !startDate || !endDate) {
     throw new ApiError('Veuillez fournir residenceId, startDate et endDate', 400);
   }
 
-  const calendar = await availabilityService.getAvailabilityCalendar(
+  const calendar = await calendarProjection.getPublicCalendar(
     residenceId,
     startDate,
     endDate
@@ -50,23 +57,42 @@ exports.getAvailabilityCalendar = asyncHandler(async (req, res) => {
   });
 });
 
+exports.getPartnerCalendar = asyncHandler(async (req, res) => {
+  const { residenceId, startDate, endDate } = req.query;
+  if (!residenceId || !startDate || !endDate) {
+    throw new ApiError('Veuillez fournir residenceId, startDate et endDate', 400);
+  }
+  const calendar = await calendarProjection.getPartnerCalendar(
+    req.user,
+    residenceId,
+    startDate,
+    endDate
+  );
+  res.status(200).json({
+    success: true,
+    data: calendar
+  });
+});
+
 /**
  * Bloquer une plage de dates pour une résidence
  * @route PUT /residences/:residenceId/availability/block
  */
 exports.blockDates = asyncHandler(async (req, res) => {
-  const { residenceId, startDate, endDate, reason } = req.body;
-  
+  const { residenceId, startDate, endDate, reason, bookingType, type } = req.body;
+
   if (!residenceId || !startDate || !endDate) {
     throw new ApiError('Veuillez fournir residenceId, startDate et endDate', 400);
   }
 
-  const blocked = await availabilityService.blockDates(
+  const blocked = await partnerBlockService.createBlock(req.user, {
     residenceId,
     startDate,
     endDate,
-    reason
-  );
+    reason,
+    bookingType,
+    type,
+  });
 
   res.status(200).json({
     success: true,
@@ -74,26 +100,102 @@ exports.blockDates = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * Débloquer une plage de dates pour une résidence
- * @route PUT /residences/:residenceId/availability/unblock
- */
 exports.unblockDates = asyncHandler(async (req, res) => {
-  const { residenceId, startDate, endDate } = req.body;
-  
-  if (!residenceId || !startDate || !endDate) {
-    throw new ApiError('Veuillez fournir residenceId, startDate et endDate', 400);
+  const { residenceId, startDate, endDate, blockId } = req.body;
+
+  if (blockId) {
+    const released = await partnerBlockService.releaseBlock(req.user, blockId);
+    return res.status(200).json({ success: true, data: released });
   }
 
-  const unblocked = await availabilityService.unblockDates(
+  if (!residenceId || !startDate || !endDate) {
+    throw new ApiError('Veuillez fournir residenceId, startDate et endDate, ou blockId', 400);
+  }
+
+  const unblocked = await partnerBlockService.unblockRange(req.user, {
     residenceId,
     startDate,
-    endDate
-  );
+    endDate,
+  });
 
   res.status(200).json({
     success: true,
     data: unblocked
+  });
+});
+
+exports.createBlock = asyncHandler(async (req, res) => {
+  const block = await partnerBlockService.createBlock(req.user, req.body);
+  res.status(201).json({ success: true, data: block });
+});
+
+exports.listBlocks = asyncHandler(async (req, res) => {
+  const { residenceId, status } = req.query;
+  if (!residenceId) {
+    throw new ApiError('residenceId requis', 400);
+  }
+  const blocks = await partnerBlockService.listBlocks(req.user, { residenceId, status });
+  res.status(200).json({ success: true, data: blocks });
+});
+
+exports.deleteBlock = asyncHandler(async (req, res) => {
+  const released = await partnerBlockService.releaseBlock(req.user, req.params.id);
+  res.status(200).json({ success: true, data: released });
+});
+
+exports.createExternal = asyncHandler(async (req, res) => {
+  const external = await externalReservationService.createExternalReservation(req.user, req.body);
+  res.status(201).json({
+    success: true,
+    data: externalReservationService.toPartnerView(external),
+  });
+});
+
+exports.listExternal = asyncHandler(async (req, res) => {
+  const { residenceId, status } = req.query;
+  if (!residenceId) {
+    throw new ApiError('residenceId requis', 400);
+  }
+  const items = await externalReservationService.listExternalReservations(req.user, { residenceId, status });
+  res.status(200).json({
+    success: true,
+    data: items.map((item) => externalReservationService.toPartnerView(item)),
+  });
+});
+
+exports.getExternal = asyncHandler(async (req, res) => {
+  const external = await externalReservationService.getExternalReservation(req.user, req.params.id);
+  res.status(200).json({
+    success: true,
+    data: externalReservationService.toPartnerView(external),
+  });
+});
+
+exports.updateExternal = asyncHandler(async (req, res) => {
+  const external = await externalReservationService.modifyExternalReservation(
+    req.user,
+    req.params.id,
+    req.body
+  );
+  res.status(200).json({
+    success: true,
+    data: externalReservationService.toPartnerView(external),
+  });
+});
+
+exports.deleteExternal = asyncHandler(async (req, res) => {
+  const cancelled = await externalReservationService.cancelExternalReservation(req.user, req.params.id);
+  res.status(200).json({
+    success: true,
+    data: externalReservationService.toPartnerView(cancelled),
+  });
+});
+
+exports.completeExternal = asyncHandler(async (req, res) => {
+  const completed = await externalReservationService.completeExternalReservation(req.user, req.params.id);
+  res.status(200).json({
+    success: true,
+    data: externalReservationService.toPartnerView(completed),
   });
 });
 
@@ -103,16 +205,38 @@ exports.unblockDates = asyncHandler(async (req, res) => {
  */
 exports.updatePricing = asyncHandler(async (req, res) => {
   const { residenceId, date, price } = req.body;
-  
+  const numericPrice = Number(price);
+
   if (!residenceId || !date || price === undefined) {
     throw new ApiError('Veuillez fournir residenceId, date et price', 400);
   }
+  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+    throw new ApiError('Prix invalide', 400);
+  }
 
-  const updated = await availabilityService.updatePricing(
-    residenceId,
-    date,
-    price
+  const residence = await Residence.findById(residenceId).select('partner');
+  if (!residence) {
+    throw new ApiError('Résidence introuvable', 404);
+  }
+  if (!canManageResidence(residence, req.user)) {
+    throw new ApiError('Non autorisé à modifier le tarif de cette résidence', 403);
+  }
+
+  const day = new Date(date);
+  if (Number.isNaN(day.getTime())) {
+    throw new ApiError('Date invalide', 400);
+  }
+  day.setUTCHours(0, 0, 0, 0);
+
+  const updated = await Availability.findOneAndUpdate(
+    { residenceId, date: day },
+    { $set: { price: numericPrice } },
+    { new: true, projection: { price: 1, date: 1, residenceId: 1, status: 1 } }
   );
+
+  if (!updated) {
+    throw new ApiError('Aucune disponibilité pour cette date', 404);
+  }
 
   res.status(200).json({
     success: true,
@@ -127,70 +251,45 @@ exports.updatePricing = asyncHandler(async (req, res) => {
  */
 exports.checkAvailabilityForFlutterApp = asyncHandler(async (req, res) => {
   const { residenceId, checkIn, checkOut } = req.query;
-  
-  // Validation des paramètres
+
   if (!residenceId || !checkIn || !checkOut) {
     throw new ApiError('Veuillez fournir residenceId, checkIn et checkOut', 400);
   }
 
-  console.log(`[Availability] Vérification pour résidence: ${residenceId}, dates: ${checkIn} -> ${checkOut}`);
-  
-  try {
-    // Convertir les dates en objets Date
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
-    
-    // Vérifier si les dates sont valides
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      throw new ApiError('Dates invalides', 400);
-    }
-    
-    if (startDate >= endDate) {
-      throw new ApiError('La date de départ doit être ultérieure à la date d\'arrivée', 400);
-    }
-
-    // Récupérer la résidence
-    const residence = await Residence.findById(residenceId);
-    if (!residence) {
-      throw new ApiError('Résidence introuvable', 404);
-    }
-    
-    // IMPORTANT: Utiliser la méthode isPeriodAvailable du modèle Availability
-    // C'est la même méthode que celle utilisée lors de la création de réservation
-    // Note: isPeriodAvailable retourne directement un booléen, pas un objet
-    const isAvailable = await Availability.isPeriodAvailable(residenceId, startDate, endDate);
-    
-    console.log(`[Availability] Résultat: ${isAvailable ? 'Disponible' : 'Non disponible'}`);
-    
-    // Si la période n'est pas disponible, nous pourrions récupérer les dates en conflit
-    // Mais puisque isPeriodAvailable ne retourne pas cette information, nous laissons un tableau vide
-    let conflictDates = [];
-    
-    // Si nécessaire, on pourrait faire une requête supplémentaire pour obtenir les dates bloquées
-    if (!isAvailable) {
-      // Note: Cette partie pourrait être améliorée en faisant une requête supplémentaire
-      // pour obtenir les dates exactes qui sont en conflit
-    }
-    
-    // Calculer le prix pour cette période
-    const price = await residence.calculateTotalPrice(startDate, endDate);
-    
-    // Renvoyer la réponse au format attendu par le client Flutter
-    res.status(200).json({
-      success: true,
-      data: {
-        isAvailable: isAvailable,
-        price: price,
-        conflictDates: conflictDates,
-        residenceId: residenceId,
-        message: isAvailable 
-          ? 'La résidence est disponible pour ces dates' 
-          : 'La résidence n\'est pas disponible pour ces dates'
-      }
-    });
-  } catch (error) {
-    console.error(`[Availability] Erreur: ${error.message}`);
-    if (error instanceof ApiError) throw error;
-    throw new ApiError(`Erreur lors de la vérification de disponibilité: ${error.message}`, 500);
+  const startDate = new Date(checkIn);
+  const endDate = new Date(checkOut);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    throw new ApiError('Dates invalides', 400);
   }
+  if (startDate >= endDate) {
+    throw new ApiError('La date de départ doit être ultérieure à la date d\'arrivée', 400);
+  }
+
+  const residence = await Residence.findById(residenceId);
+  if (!residence) {
+    throw new ApiError('Résidence introuvable', 404);
+  }
+
+  const occupancy = await calendarProjection.checkPublicAvailability(
+    residenceId,
+    startDate,
+    endDate
+  );
+  const price = await residence.calculateTotalPrice(startDate, endDate);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      isAvailable: occupancy.available,
+      price,
+      conflictDates: occupancy.occupations.map((occ) => ({
+        start: occ.start,
+        end: occ.end,
+      })),
+      residenceId,
+      message: occupancy.available
+        ? 'La résidence est disponible pour ces dates'
+        : 'La résidence n\'est pas disponible pour ces dates',
+    },
+  });
 });

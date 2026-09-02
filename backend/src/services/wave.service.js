@@ -25,12 +25,12 @@ class WaveService {
 
         // Validation des paramètres obligatoires (sans throw pour ne pas tuer le serveur)
         if (!this.apiKey) {
-            logger.error('Wave mal configuré : WAVE_API_KEY manquante');
+            logger.warn('WAVE_CONFIG_MISSING', { reason: 'WAVE_API_KEY' });
             this.enabled = false;
         }
 
         if (!this.baseUrl) {
-            logger.error('Wave mal configuré : WAVE_BASE_URL manquante');
+            logger.warn('WAVE_CONFIG_MISSING', { reason: 'WAVE_BASE_URL' });
             this.baseUrl = 'https://api.wave.com';
         }
 
@@ -95,7 +95,7 @@ class WaveService {
         try {
             // Vérifier que le service est correctement configuré
             if (!this.enabled) {
-                logger.error('Initiation Wave impossible: service désactivé (configuration manquante)');
+                logger.warn('WAVE_INIT_SKIPPED', { reason: 'service_disabled' });
                 return {
                     success: false,
                     error: 'Service Wave désactivé: configuration manquante',
@@ -106,7 +106,7 @@ class WaveService {
             // Validation des données d'entrée
             const validation = this.validatePaymentData(paymentData, user, reservation);
             if (!validation.valid) {
-                logger.error('Validation Wave échouée:', validation.error);
+                logger.warn('WAVE_VALIDATION_FAILED', { err: validation.error });
                 return {
                     success: false,
                     error: validation.error
@@ -211,7 +211,7 @@ class WaveService {
     // Vérifier la signature du webhook
     verifySignature(payloadBuffer, signature) {
         if (!this.signingSecret) {
-            console.warn('WAVE_SIGNING_SECRET/WAVE_WEBHOOK_SECRET non configuré');
+            logger.warn('WAVE_WEBHOOK_SECRET_MISSING');
             return false;
         }
         return verifyWaveWebhookHmac(payloadBuffer, signature, this.signingSecret);
@@ -225,7 +225,11 @@ class WaveService {
      */
     async processWebhook(webhookData) {
         try {
-            logger.info('Traitement webhook Wave:', webhookData);
+            logger.info('WAVE_WEBHOOK_RECEIVED', {
+                event: webhookData?.event,
+                transactionId: webhookData?.data?.id || webhookData?.id,
+                paymentStatus: webhookData?.data?.payment_status,
+            });
 
             // Récupérer l'ID de transaction selon la structure Wave
             const transactionId = webhookData.data?.id || webhookData.id;

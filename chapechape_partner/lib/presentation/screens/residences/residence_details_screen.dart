@@ -12,6 +12,7 @@ import '../../../core/blocs/favorite/favorite_event.dart';
 import '../../../core/blocs/promotion/promotion_bloc.dart';
 import '../../../core/blocs/promotion/promotion_event.dart';
 import '../../../core/models/residence/residence.dart';
+import '../calendar/partner_calendar_screen.dart';
 import '../../../core/models/residence/residence_extensions.dart';
 import '../../../core/models/residence/nearby_place.dart';
 import '../../../core/models/residence/faq.dart';
@@ -1901,44 +1902,9 @@ class _EnhancedAvailabilityTab extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  height: 300,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Text('Le calendrier sera disponible bientôt'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      // Ouvrir le gestionnaire de calendrier
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Calendrier de disponibilité'),
-                          content: const SizedBox(
-                            width: 300,
-                            height: 300,
-                            child: Center(
-                              child: Text('Fonctionnalité à venir dans la prochaine mise à jour'),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Fermer'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.calendar_month),
-                    label: const Text('Gérer les disponibilités'),
-                  ),
+                SizedBox(
+                  height: 720,
+                  child: PartnerCalendarView(residence: residence),
                 ),
               ],
             ),

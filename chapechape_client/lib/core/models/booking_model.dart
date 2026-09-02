@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart'; // Import pour debugPrint
+import 'reservation_status.dart';
 
 class Booking {
   final String id;
@@ -172,7 +173,7 @@ class Booking {
     final String userIdValue = data['user']?.toString() ?? data['userId']?.toString() ?? '';
     final String residenceIdValue = data['residence']?.toString() ?? '';
     final String residenceNameValue = data['residenceName']?.toString() ?? 'Résidence';
-    final String statusValue = data['status']?.toString() ?? 'pending';
+    final String statusValue = ReservationStatusCanon.fromApi(data['status']?.toString());
     final String? paymentIdValue = data['paymentId']?.toString();
     final String? paymentStatusValue = data['paymentStatus']?.toString() ?? 'pending';
     final String? paymentMethodValue = data['paymentMethod']?.toString();

@@ -134,8 +134,10 @@ function extractSafeErrorInfo(error, req = null) {
       method: req.method,
       path: req.path,
       ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      userId: req.user?._id?.toString()
+      userAgent: req.get && req.get('User-Agent'),
+      userId: req.user?._id?.toString(),
+      requestId: req.id || req.requestId,
+      correlationId: req.correlationId,
     };
   }
 

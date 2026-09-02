@@ -2,9 +2,8 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
 const morgan = require('morgan');
+const { getRequestContext } = require('../observability/request-context');
 
-// 🔒 SÉCURITÉ : Système de sanitization des logs
-// Liste des champs sensibles à masquer dans les logs
 const SENSITIVE_FIELDS = [
     'password', 'token', 'auth', 'secret', 'key', 'private', 'credential',
     'api_key', 'apikey', 'authorization', 'bearer', 'jwt', 'session',
@@ -16,74 +15,101 @@ const SENSITIVE_FIELDS = [
     'onesignal_key', 'google_api_key', 'firebase_private_key'
 ];
 
-/**
- * Sanitise récursivement un objet en masquant les champs sensibles
- * @param {any} obj - L'objet à sanitiser
- * @param {number} depth - Profondeur de récursion (protection contre les références circulaires)
- * @returns {any} - L'objet sanitisé
- */
-function sanitizeObject(obj, depth = 0) {
-    if (depth > 10) return '[CIRCULAR]'; // Protection contre la récursion infinie
-    
-    if (obj === null || obj === undefined) return obj;
-    
-    if (typeof obj === 'string') {
-        // Masquer les patterns sensibles dans les chaînes
-        return obj.replace(/(password|token|secret|key|auth)\s*[=:]\s*[^\s&,]+/gi, '$1=***MASKED***');
+const EMAIL_KEY_RE = /(^|_)(email|e-mail)$|^email$|emailaddress|useremail/;
+const PHONE_KEY_RE = /(phone|telephone|mobile|whatsapp|msisdn)/;
+const EMAIL_IN_TEXT_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+
+function maskEmail(value) {
+    if (typeof value !== 'string' || !value.includes('@')) return value;
+    const [local, domain] = value.split('@');
+    if (!domain) return value;
+    const keep = local.slice(0, Math.min(2, local.length));
+    return `${keep}***@${domain}`;
+}
+
+function maskPhone(value) {
+    if (typeof value !== 'string') return value;
+    const prefix = value.trim().startsWith('+') ? '+' : '';
+    const digits = value.replace(/\D/g, '');
+    if (digits.length < 8) {
+        return `${prefix}${digits.slice(0, 2)}****`;
     }
-    
+    const head = digits.slice(0, 5);
+    const tail = digits.slice(-2);
+    return `${prefix}${head}******${tail}`;
+}
+
+function maskEmailsInString(str) {
+    return str.replace(EMAIL_IN_TEXT_RE, (match) => maskEmail(match));
+}
+
+function isEmailKey(lowerKey) {
+    return EMAIL_KEY_RE.test(lowerKey);
+}
+
+function isPhoneKey(lowerKey) {
+    return PHONE_KEY_RE.test(lowerKey);
+}
+
+function sanitizeObject(obj, depth = 0) {
+    if (depth > 10) return '[CIRCULAR]';
+
+    if (obj === null || obj === undefined) return obj;
+
+    if (typeof obj === 'string') {
+        const maskedSecrets = obj.replace(/(password|token|secret|key|auth)\s*[=:]\s*[^\s&,]+/gi, '$1=***MASKED***');
+        return maskEmailsInString(maskedSecrets);
+    }
+
     if (typeof obj !== 'object') return obj;
-    
+
     if (Array.isArray(obj)) {
         return obj.map(item => sanitizeObject(item, depth + 1));
     }
-    
+
     const sanitized = {};
     for (const [key, value] of Object.entries(obj)) {
         const lowerKey = key.toLowerCase();
         const isSensitive = SENSITIVE_FIELDS.some(field => lowerKey.includes(field));
-        
+
         if (isSensitive) {
             sanitized[key] = '***MASKED***';
+        } else if (isEmailKey(lowerKey) && typeof value === 'string') {
+            sanitized[key] = maskEmail(value);
+        } else if (isPhoneKey(lowerKey) && typeof value === 'string') {
+            sanitized[key] = maskPhone(value);
         } else {
             sanitized[key] = sanitizeObject(value, depth + 1);
         }
     }
-    
+
     return sanitized;
 }
 
-/**
- * Format Winston personnalisé avec sanitization automatique
- */
 const sanitizeFormat = winston.format((info) => {
-    // Sanitiser le message principal
     if (typeof info.message === 'object') {
         info.message = sanitizeObject(info.message);
     } else if (typeof info.message === 'string') {
         info.message = sanitizeObject(info.message);
     }
-    
-    // Sanitiser tous les autres champs
+
     Object.keys(info).forEach(key => {
         if (key !== 'level' && key !== 'timestamp') {
             info[key] = sanitizeObject(info[key]);
         }
     });
-    
+
     return info;
 });
 
 const logDir = path.join(__dirname, '../../logs');
 
-// 🔒 Formats personnalisés avec sanitization de sécurité
 const formats = [
     winston.format.timestamp(),
-    sanitizeFormat(), // Application de la sanitization AVANT la sérialisation JSON
+    sanitizeFormat(),
     winston.format.json()
 ];
 
-// Configuration de Winston
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: winston.format.combine(...formats),
@@ -106,7 +132,6 @@ const logger = winston.createLogger({
     ]
 });
 
-// Ajouter la sortie console en développement
 if (process.env.NODE_ENV !== 'production') {
     logger.add(new winston.transports.Console({
         format: winston.format.combine(
@@ -116,22 +141,54 @@ if (process.env.NODE_ENV !== 'production') {
     }));
 }
 
-// Créer un stream pour Morgan
+function mergeContext(meta) {
+    const ctx = getRequestContext();
+    if (!ctx) return meta;
+    if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+        return { ...ctx, ...meta };
+    }
+    return { ...ctx };
+}
+
+function wrapLevel(level) {
+    return (message, meta, ...rest) => {
+        const ctx = getRequestContext();
+        if (!ctx) {
+            return logger[level](message, meta, ...rest);
+        }
+        if (rest.length > 0) {
+            return logger[level](message, meta, ...rest);
+        }
+        if (meta === undefined) {
+            return logger[level](message, mergeContext({}));
+        }
+        if (typeof meta === 'object' && meta !== null && !Array.isArray(meta)) {
+            return logger[level](message, mergeContext(meta));
+        }
+        return logger[level](message, meta);
+    };
+}
+
+/** API unique — http stream + helpers passent par les mêmes méthodes (spy / ALS). */
+const api = {
+    error: wrapLevel('error'),
+    warn: wrapLevel('warn'),
+    info: wrapLevel('info'),
+    debug: wrapLevel('debug'),
+};
+
 const stream = {
     write: (message) => {
-        logger.info(message.trim());
+        api.info(message.trim());
     }
 };
 
-// Middleware HTTP avec Morgan
 const httpLogger = morgan('combined', { stream });
-
-// Logging des requêtes HTTP
 logger.http = httpLogger;
+api.http = httpLogger;
 
-// Fonctions de logging spécialisées
-const logPerformance = (operation, duration, details = {}) => {
-    logger.info('Performance Metric', {
+api.logPerformance = (operation, duration, details = {}) => {
+    api.info('Performance Metric', {
         type: 'performance',
         operation,
         duration,
@@ -139,8 +196,8 @@ const logPerformance = (operation, duration, details = {}) => {
     });
 };
 
-const logUserAction = (userId, action, details = {}) => {
-    logger.info('User Action', {
+api.logUserAction = (userId, action, details = {}) => {
+    api.info('User Action', {
         type: 'user_action',
         userId,
         action,
@@ -148,30 +205,25 @@ const logUserAction = (userId, action, details = {}) => {
     });
 };
 
-const logSecurityEvent = (type, details = {}) => {
-    logger.warn('Security Event', {
+api.logSecurityEvent = (type, details = {}) => {
+    api.warn('Security Event', {
         type: 'security',
         securityType: type,
         ...details
     });
 };
 
-const logSystemEvent = (type, details = {}) => {
-    logger.info('System Event', {
+api.logSystemEvent = (type, details = {}) => {
+    api.info('System Event', {
         type: 'system',
         systemType: type,
         ...details
     });
 };
 
-module.exports = {
-    error: logger.error.bind(logger),
-    warn: logger.warn.bind(logger),
-    info: logger.info.bind(logger),
-    debug: logger.debug.bind(logger),
-    http: httpLogger,
-    logPerformance,
-    logUserAction,
-    logSecurityEvent,
-    logSystemEvent
-};
+api.sanitizeObject = sanitizeObject;
+api.maskEmail = maskEmail;
+api.maskPhone = maskPhone;
+api.attachRequestContext = (meta) => mergeContext(meta && typeof meta === 'object' ? meta : {});
+
+module.exports = api;

@@ -13,6 +13,9 @@ abstract class AuthEvent extends Equatable {
 // Événement de vérification de l'authentification
 class AuthCheckRequested extends AuthEvent {}
 
+/// Rafraîchit /auth/me sans écran de chargement (après OTP).
+class AuthProfileRefreshRequested extends AuthEvent {}
+
 // Événement de connexion
 class AuthLoginRequested extends AuthEvent {
   final String email;

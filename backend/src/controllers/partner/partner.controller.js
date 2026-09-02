@@ -33,9 +33,13 @@ exports.getPartnerProfile = asyncHandler(async (req, res) => {
     } else {
         userObj.documents = userObj.documents || [];
     }
+    const { publicAuthView } = require('../../security/partner-capabilities');
     res.status(200).json({
         success: true,
-        data: userObj
+        data: {
+            ...userObj,
+            ...publicAuthView(user),
+        }
     });
 });
 
@@ -118,7 +122,10 @@ exports.updatePartnerProfile = asyncHandler(async (req, res) => {
         if (updateData.firstName) user.firstName = updateData.firstName;
         if (updateData.lastName) user.lastName = updateData.lastName;
         if (updateData.email) user.email = updateData.email;
-        if (updateData.phone) user.phoneNumber = updateData.phone;
+        if (updateData.phone && updateData.phone !== user.phoneNumber) {
+            user.phoneNumber = updateData.phone;
+            user.isPhoneVerified = false;
+        }
         if (updateData.address) user.address = updateData.address;
         if (updateData.profileImage) user.profileImage = updateData.profileImage;
 
@@ -142,7 +149,10 @@ exports.updatePartnerProfile = asyncHandler(async (req, res) => {
         
         res.status(200).json({
             success: true,
-            data: user
+            data: {
+                ...(user.toObject ? user.toObject() : user),
+                ...require('../../security/partner-capabilities').publicAuthView(user),
+            }
         });
     } catch (error) {
         console.error('Erreur lors de la mise à jour du profil:', error);

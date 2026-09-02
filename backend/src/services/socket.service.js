@@ -6,6 +6,7 @@ const logger = require('../utils/logger');
 const jwt = require('../utils/jwt');
 
 let io;
+let socketAdapterEnabled = false;
 const userSockets = new Map(); // userId -> Set<socketId>
 
 /**
@@ -69,6 +70,25 @@ class SocketService {
                 credentials: true,
             },
         });
+
+        socketAdapterEnabled = false;
+        if (process.env.NODE_ENV === 'production') {
+            try {
+                const { createAdapter } = require('@socket.io/redis-adapter');
+                const redis = require('../config/redis');
+                const pubClient = redis.getClient();
+                if (pubClient && typeof pubClient.duplicate === 'function' && !pubClient.isMock) {
+                    const subClient = pubClient.duplicate();
+                    io.adapter(createAdapter(pubClient, subClient));
+                    socketAdapterEnabled = true;
+                    logger.info('Socket.IO Redis adapter activé (cross-worker)');
+                } else {
+                    logger.warn('SOCKET_CROSS_WORKER_UNAVAILABLE: Redis adapter non attaché (mock ou client incompatible)');
+                }
+            } catch (err) {
+                logger.warn(`SOCKET_CROSS_WORKER_UNAVAILABLE: ${err.message}`);
+            }
+        }
 
         // Authentification JWT au handshake — obligatoire
         io.use((socket, next) => {
@@ -260,12 +280,23 @@ class SocketService {
         }
     }
 
+    /**
+     * Nouvelle réservation — chemin canonique Partner : emitNewReservation (new_reservation_received).
+     * LEGACY : new_reservation (room résidence) conservé sans consumer LIVE Flutter Partner.
+     */
     static async notifyNewReservation(reservation) {
-        if (!io) return;
+        if (!io || !reservation) return;
 
-        io.to(`residence_${reservation.residence}`).emit('new_reservation', {
-            reservation: reservation.toObject ? reservation.toObject() : reservation,
-        });
+        SocketService.emitNewReservation(reservation);
+
+        const residenceId = reservation.residence?._id || reservation.residence;
+        if (residenceId) {
+            io.to(`residence_${residenceId}`).emit('new_reservation', {
+                reservationId: reservation._id,
+                status: reservation.status,
+                timestamp: new Date().toISOString(),
+            });
+        }
     }
 
     static async notifyReservationCancellation(reservation) {
@@ -306,8 +337,35 @@ class SocketService {
         }
     }
 
-    static isUserOnline(userId) {
-        return userSockets.has(userId) && userSockets.get(userId).size > 0;
+    /**
+     * Présence utilisateur — source de vérité : room Socket.IO `user_{id}`.
+     * Avec Redis adapter (prod), fetchSockets interroge tous les workers PM2.
+     * En échec/timeout : retourne false (offline) pour autoriser le fallback push.
+     */
+    static async isUserOnline(userId) {
+        if (!userId) return false;
+
+        const uid = String(userId);
+        if (!io) return false;
+
+        const room = `user_${uid}`;
+        const timeoutMs = Number(process.env.SOCKET_PRESENCE_TIMEOUT_MS) || 2000;
+
+        try {
+            const sockets = await Promise.race([
+                io.in(room).fetchSockets(),
+                new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('PRESENCE_TIMEOUT')), timeoutMs);
+                }),
+            ]);
+            return Array.isArray(sockets) && sockets.length > 0;
+        } catch (err) {
+            logger.warn('Presence lookup failed — treating as offline for push', {
+                code: err.message === 'PRESENCE_TIMEOUT' ? 'PRESENCE_TIMEOUT' : 'PRESENCE_LOOKUP_FAILED',
+                crossWorker: socketAdapterEnabled,
+            });
+            return false;
+        }
     }
 
     /**
@@ -321,6 +379,7 @@ class SocketService {
                 reservationId: reservation._id,
                 bookingId: reservation._id,
                 oldStatus,
+                previousStatus: oldStatus,
                 newStatus,
                 status: newStatus,
                 timestamp: new Date().toISOString(),
@@ -328,6 +387,7 @@ class SocketService {
                 partnerId: reservation.partner?._id || reservation.partner,
                 residenceId: reservation.residence?._id || reservation.residence,
                 residenceTitle: reservation.residence?.title,
+                expirationReason: reservation.expirationReason || null,
             };
 
             const userId = reservation.user?._id || reservation.user;
@@ -341,6 +401,10 @@ class SocketService {
                 }
                 if (newStatus === 'cancelled' || newStatus === 'rejected') {
                     io.to(room).emit('booking_rejected', eventData);
+                }
+                if (newStatus === 'expired') {
+                    io.to(room).emit('reservation_expired', eventData);
+                    io.to(room).emit('booking_expired', eventData);
                 }
             }
 
@@ -397,52 +461,18 @@ class SocketService {
         }
     }
 
-    static emitPaymentDeadlineNotification(reservation, deadline) {
-        try {
-            if (!io || !reservation || !reservation.user) return;
-
-            const timeLeft = Math.max(0, Math.ceil((deadline - new Date()) / (1000 * 60)));
-            const eventData = {
-                reservationId: reservation._id,
-                deadline: deadline.toISOString(),
-                timeLeftMinutes: timeLeft,
-                amount: reservation.totalPrice,
-                residenceTitle: reservation.residence?.title,
-                timestamp: new Date().toISOString(),
-            };
-
-            const userId = reservation.user._id || reservation.user;
-            io.to(`user_${userId}`).emit('payment_deadline_warning', eventData);
-        } catch (error) {
-            logger.error('Erreur notification délai paiement:', error);
-        }
+    static isCrossWorkerEnabled() {
+        return socketAdapterEnabled;
     }
 
-    static emitReservationExpired(reservation) {
-        try {
-            if (!io || !reservation) return;
-
-            const eventData = {
-                reservationId: reservation._id,
-                bookingId: reservation._id,
-                expiredAt: new Date().toISOString(),
-                residenceTitle: reservation.residence?.title,
-                amount: reservation.totalPrice,
-            };
-
-            if (reservation.user) {
-                const userId = reservation.user._id || reservation.user;
-                io.to(`user_${userId}`).emit('reservation_expired', eventData);
-                io.to(`user_${userId}`).emit('booking_expired', eventData);
-            }
-
-            if (reservation.partner) {
-                const partnerId = reservation.partner._id || reservation.partner;
-                io.to(`user_${partnerId}`).emit('partner_reservation_expired', eventData);
-            }
-        } catch (error) {
-            logger.error('Erreur émission expiration réservation:', error);
-        }
+    static async close() {
+        socketAdapterEnabled = false;
+        if (!io) return;
+        await new Promise((resolve) => {
+            io.close(() => resolve());
+        });
+        io = null;
+        userSockets.clear();
     }
 }
 

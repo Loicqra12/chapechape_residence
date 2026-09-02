@@ -8,7 +8,7 @@ class IpDetectionService {
   static const String _serverIpKey = 'server_ip_address';
   static const String _serverPortKey = 'server_port';
   static const int _defaultPort = 4000;
-  static const String _defaultIp = '192.168.1.66'; // IP par défaut mise à jour
+  static const String _defaultIp = '192.168.1.70'; // IP par défaut mise à jour
 
   static IpDetectionService? _instance;
   late final SharedPreferences _prefs;
@@ -36,7 +36,14 @@ class IpDetectionService {
     } else {
       // Migration douce: anciennes IP par défaut → IP actuelle
       final savedIp = _prefs.getString(_serverIpKey);
-      const legacyDefaults = {'192.168.1.77', '192.168.1.78', '192.168.1.73', '192.168.1.64'};
+      const legacyDefaults = {
+        '192.168.1.66',
+        '192.168.1.68',
+        '192.168.1.77',
+        '192.168.1.78',
+        '192.168.1.73',
+        '192.168.1.64',
+      };
       if (savedIp != null &&
           savedIp != _defaultIp &&
           legacyDefaults.contains(savedIp)) {

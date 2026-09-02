@@ -9,6 +9,9 @@ const socketService = require('../services/socket.service');
 const User = require('../models/user.model');
 const { COMMON } = require('../utils/notification-types');
 const { scheduleUnreadMessageReminder } = require('../services/agenda.service');
+const { canAccessConversation, idOf } = require('../security/resource-access');
+const { isStaff } = require('../security/roles');
+const Residence = require('../models/residence.model');
 
 // Création du dossier uploads/messages s'il n'existe pas
 const ensureUploadDirExists = async () => {
@@ -131,7 +134,7 @@ exports.getConversation = asyncHandler(async (req, res) => {
         return res.status(404).json({ success: false, error: 'Conversation non trouvée' });
     }
 
-    if (!conversation.participants.some(p => p._id.toString() === req.user.id)) {
+    if (!canAccessConversation(conversation, req.user)) {
         return res.status(403).json({ success: false, error: 'Accès non autorisé à cette conversation' });
     }
 
@@ -144,6 +147,14 @@ exports.getConversation = asyncHandler(async (req, res) => {
 exports.getMessages = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
+
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+        return res.status(404).json({ success: false, error: 'Conversation non trouvée' });
+    }
+    if (!canAccessConversation(conversation, req.user)) {
+        return res.status(403).json({ success: false, error: 'Accès non autorisé à cette conversation' });
+    }
 
     const messages = await Message.find({ conversation: req.params.id })
         .populate('sender', 'name avatar')
@@ -178,7 +189,7 @@ exports.sendMessage = asyncHandler(async (req, res) => {
         return res.status(404).json({ success: false, error: 'Conversation non trouvée' });
     }
 
-    if (!conversation.participants.some(p => p.toString() === req.user.id)) {
+    if (!canAccessConversation(conversation, req.user)) {
         return res.status(403).json({ success: false, error: 'Non autorisé à envoyer des messages dans cette conversation' });
     }
 
@@ -248,7 +259,7 @@ exports.sendMessage = asyncHandler(async (req, res) => {
             const participantIdStr = participantId.toString();
             if (participantIdStr !== req.user.id) {
                 // Vérifier si l'utilisateur est en ligne avant d'envoyer une notification push
-                const isOnline = socketService.isUserOnline(participantIdStr);
+                const isOnline = await socketService.isUserOnline(participantIdStr);
                 if (!isOnline) {
                     // Envoyer notification push via le service de notification
                     // COMMON.NEW_MESSAGE = 'new_message' — type valide défini dans notification-types.js
@@ -300,7 +311,7 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
         });
     }
 
-    if (!conversation.participants.includes(req.user.id)) {
+    if (!canAccessConversation(conversation, req.user)) {
         return res.status(403).json({
             success: false,
             error: 'Vous n\'êtes pas autorisé à envoyer des fichiers dans cette conversation'
@@ -445,24 +456,43 @@ exports.uploadAttachment = asyncHandler(async (req, res) => {
 exports.createConversation = asyncHandler(async (req, res) => {
     const { title, participants, reservationId, residenceId, initialMessage } = req.body;
 
-    // Vérifier si la conversation est liée à une réservation
-    // Note: On permet la création de conversation même sans paiement
-    // La limite de messages sera appliquée lors de l'envoi
+    let allParticipants = [req.user.id];
+
     if (reservationId) {
-        const reservation = await Reservation.findById(reservationId);
+        const reservation = await Reservation.findById(reservationId).select('user partner residence');
         if (!reservation) {
             return res.status(404).json({
                 success: false,
                 error: 'Réservation non trouvée'
             });
         }
-        // Pas de vérification messagingEnabled ici - on permet la création
+        const { canAccessReservation } = require('../security/resource-access');
+        if (!canAccessReservation(reservation, req.user)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Non autorisé à ouvrir une conversation sur cette réservation'
+            });
+        }
+        allParticipants = [idOf(reservation.user), idOf(reservation.partner)].filter(Boolean);
+    } else if (residenceId) {
+        const residence = await Residence.findById(residenceId).select('partner');
+        if (!residence) {
+            return res.status(404).json({ success: false, error: 'Résidence non trouvée' });
+        }
+        const partnerId = idOf(residence.partner);
+        if (idOf(req.user) === partnerId || isStaff(req.user.role)) {
+            const extra = Array.isArray(participants) ? participants.map(idOf) : [];
+            allParticipants = [...new Set([req.user.id, partnerId, ...extra])];
+            if (!isStaff(req.user.role)) {
+                allParticipants = [req.user.id];
+            }
+        } else {
+            allParticipants = [req.user.id, partnerId];
+        }
+    } else {
+        allParticipants = [req.user.id];
     }
 
-    // Vérifier si les participants existent et incluent l'utilisateur actuel
-    let allParticipants = [...new Set([...participants, req.user.id])];
-
-    // Créer la conversation
     const conversation = await Conversation.create({
         title,
         participants: allParticipants,
@@ -508,6 +538,10 @@ exports.markAsRead = asyncHandler(async (req, res) => {
         return res.status(404).json({ success: false, error: 'Conversation non trouvée' });
     }
 
+    if (!canAccessConversation(conversation, req.user)) {
+        return res.status(403).json({ success: false, error: 'Accès non autorisé à cette conversation' });
+    }
+
     await Message.updateMany(
         {
             conversation: req.params.id,
@@ -529,6 +563,12 @@ exports.markAsRead = asyncHandler(async (req, res) => {
 // @route   POST /api/messages/whatsapp/test
 // @access  Private
 exports.testWhatsAppSend = asyncHandler(async (req, res) => {
+    if (!isStaff(req.user.role) || process.env.NODE_ENV === 'production') {
+        return res.status(403).json({
+            success: false,
+            error: 'Endpoint de test WhatsApp non autorisé'
+        });
+    }
     const { phoneNumber, message } = req.body;
 
     if (!phoneNumber || !message) {
@@ -563,7 +603,7 @@ exports.testWhatsAppSend = asyncHandler(async (req, res) => {
 // @route   POST /api/messages/conversations/:id/whatsapp
 // @access  Private
 exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
-    const { content, phoneNumber } = req.body;
+    const { content } = req.body;
     const conversationId = req.params.id;
 
     if (!content) {
@@ -583,7 +623,7 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
     }
 
     // Vérifier que l'utilisateur est participant à cette conversation
-    if (!conversation.participants.some(p => p.toString() === req.user.id)) {
+    if (!canAccessConversation(conversation, req.user)) {
         return res.status(403).json({
             success: false,
             error: 'Non autorisé à envoyer des messages dans cette conversation'
@@ -593,26 +633,19 @@ exports.sendWhatsAppMessage = asyncHandler(async (req, res) => {
     try {
         // 1. Envoyer le WhatsApp via Twilio
         const twilioService = require('../services/twilio.service');
-        let targetPhoneNumber = phoneNumber;
+        await conversation.populate('participants', 'phoneNumber name');
+        const otherParticipant = conversation.participants.find(
+            (p) => idOf(p) !== idOf(req.user)
+        );
+        const targetPhoneNumber = otherParticipant && otherParticipant.phoneNumber
+            ? otherParticipant.phoneNumber
+            : null;
 
-        // Si pas de numéro fourni, essayer de le récupérer depuis la conversation
         if (!targetPhoneNumber) {
-            // Récupérer les participants avec leurs infos complètes
-            await conversation.populate('participants', 'phoneNumber name');
-
-            // Trouver le participant qui n'est pas l'expéditeur
-            const otherParticipant = conversation.participants.find(
-                p => p._id.toString() !== req.user.id
-            );
-
-            if (otherParticipant && otherParticipant.phoneNumber) {
-                targetPhoneNumber = otherParticipant.phoneNumber;
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Numéro de téléphone non trouvé pour cette conversation'
-                });
-            }
+            return res.status(400).json({
+                success: false,
+                error: 'Numéro de téléphone non trouvé pour cette conversation'
+            });
         }
 
         const twilioResult = await twilioService.sendWhatsAppMessage(

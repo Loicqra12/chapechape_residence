@@ -51,6 +51,9 @@ router.post(
 // ===============================
 router.use(authMiddleware.protect);
 router.use(authMiddleware.authorize('partner', 'admin', 'superadmin'));
+const adminOnly = authMiddleware.authorize('admin');
+const { requireCapability } = require('../security/partner-capabilities');
+const payoutVerified = requireCapability('canReceivePayout');
 
 // ===============================
 // VALIDATION SCHEMAS
@@ -164,6 +167,7 @@ const statsValidation = [
  * Body: { reservationIds: string[], scheduleDelayHours?: number }
  */
 router.post('/create/batch',
+    adminOnly,
     batchCreateValidation,
     payoutController.createBatchPayouts
 );
@@ -176,6 +180,7 @@ router.post('/create/batch',
  * Body: { scheduleDelayHours?: number }
  */
 router.post('/create/:reservationId',
+    payoutVerified,
     createPayoutValidation,
     payoutController.createPayoutForReservation
 );
@@ -219,6 +224,7 @@ router.get('/:payoutId',
  * Body: { force?: boolean }
  */
 router.post('/execute/:payoutId',
+    adminOnly,
     executePayoutValidation,
     payoutController.executePayoutManually
 );
@@ -230,6 +236,7 @@ router.post('/execute/:payoutId',
  * Permissions: Admin, SuperAdmin uniquement
  */
 router.post('/process/scheduled',
+    adminOnly,
     payoutController.processScheduledPayouts
 );
 
@@ -244,6 +251,7 @@ router.post('/process/scheduled',
  * Permissions: Admin, SuperAdmin uniquement
  */
 router.post('/sync/pending',
+    adminOnly,
     payoutController.syncPendingPayouts
 );
 
@@ -274,12 +282,9 @@ router.get('/stats/:partnerId',
  * Permissions: Partner, Admin, SuperAdmin
  */
 router.post('/wave/transfer',
+    payoutVerified,
     [
-        body('amount').isFloat({ min: 100 }).withMessage('Montant minimum 100 FCFA'),
-        body('mobile').matches(/^\+[1-9]\d{1,14}$/).withMessage('Numéro de téléphone invalide (format: +XXXXXXXXXXX)'),
-        body('name').isLength({ min: 2, max: 255 }).withMessage('Nom requis (2-255 caractères)'),
-        body('payment_reason').optional().isLength({ max: 40 }).withMessage('Motif max 40 caractères'),
-        body('national_id').optional().isLength({ max: 255 }).withMessage('ID national max 255 caractères'),
+        body('payout_id').notEmpty().withMessage('payout_id requis'),
         validate
     ],
     payoutController.initiateWaveTransfer
@@ -320,11 +325,10 @@ router.get('/wave/search',
  * Permissions: Admin, SuperAdmin uniquement
  */
 router.post('/wave/batch',
+    adminOnly,
     [
-        body('transfers').isArray({ min: 1, max: 100 }).withMessage('Liste de transferts requise (1-100)'),
-        body('transfers.*.amount').isFloat({ min: 100 }).withMessage('Montant minimum 100 FCFA'),
-        body('transfers.*.mobile').matches(/^\+[1-9]\d{1,14}$/).withMessage('Numéro invalide'),
-        body('transfers.*.name').isLength({ min: 2, max: 255 }).withMessage('Nom requis'),
+        body('payout_ids').isArray({ min: 1, max: 100 }).withMessage('payout_ids requis (1-100)'),
+        body('payout_ids.*').isString().withMessage('payout_id invalide'),
         validate
     ],
     payoutController.createWaveBatch
@@ -337,6 +341,7 @@ router.post('/wave/batch',
  * Permissions: Admin, SuperAdmin
  */
 router.get('/wave/batch/:batchId/status',
+    adminOnly,
     [
         param('batchId').matches(/^pb-/).withMessage('ID batch invalide (format: pb-xxx)'),
         validate
@@ -351,6 +356,7 @@ router.get('/wave/batch/:batchId/status',
  * Permissions: Admin, SuperAdmin uniquement
  */
 router.post('/wave/transfer/:waveId/reverse',
+    adminOnly,
     [
         param('waveId').matches(/^pt-/).withMessage('ID Wave invalide'),
         validate
@@ -379,14 +385,9 @@ router.get('/cinetpay/balance',
  * Permissions: Partner, Admin, SuperAdmin
  */
 router.post('/cinetpay/transfer',
+    payoutVerified,
     [
         body('payout_id').notEmpty().withMessage('ID payout requis'),
-        body('amount').isFloat({ min: 100 }).withMessage('Montant minimum 100 FCFA'),
-        body('phone_number').matches(/^\+[1-9]\d{1,14}$/).withMessage('Numéro de téléphone invalide (format: +XXXXXXXXXXX)'),
-        body('first_name').optional().isString().withMessage('Prénom invalide'),
-        body('last_name').optional().isString().withMessage('Nom invalide'),
-        body('email').optional().isEmail().withMessage('Email invalide'),
-        body('channel').optional().isIn(['orange_money', 'mtn_money', 'moov_money']).withMessage('Canal invalide'),
         validate
     ],
     payoutController.initiateCinetPayTransfer
@@ -462,6 +463,7 @@ router.get('/cinetpay/transfer/stats',
  * Permissions: Admin, SuperAdmin uniquement
  */
 router.post('/reset/:payoutId',
+    adminOnly,
     payoutIdValidation,
     payoutController.resetFailedPayout
 );

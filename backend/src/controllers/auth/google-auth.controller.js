@@ -1,6 +1,8 @@
 const asyncHandler = require('../../middlewares/async.middleware');
 const apiError = require('../../utils/apiError');
 const googleAuthService = require('../../services/google-auth.service');
+const logger = require('../../utils/logger');
+const { logLevelForError } = require('../../observability/http-error-policy');
 
 /**
  * @desc    Authentification avec Google
@@ -25,7 +27,11 @@ exports.googleAuth = asyncHandler(async (req, res) => {
       user: authResult.user
     });
   } catch (error) {
-    console.error('Erreur Google Auth:', error);
+    const level = logLevelForError(error);
+    logger[level]('GOOGLE_AUTH_CONTROLLER_FAILED', {
+      err: error.message,
+      statusCode: error.statusCode || error.status,
+    });
     throw new apiError(error.message || 'Erreur lors de l\'authentification Google', error.statusCode || 500);
   }
 });

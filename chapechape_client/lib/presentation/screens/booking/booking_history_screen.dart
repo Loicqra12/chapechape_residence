@@ -9,6 +9,7 @@ import 'package:chapechape_client/core/models/booking_model.dart';
 import 'package:chapechape_client/presentation/widgets/loading_overlay.dart';
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
+import 'package:chapechape_client/core/models/reservation_status.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:chapechape_client/presentation/widgets/common/empty_state_widget.dart';
@@ -333,7 +334,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
                       },
                       child: const Text('Détails'),
                     ),
-                    if (!booking.isPaid)
+                    if (booking.status == ReservationStatusCanon.paymentPending)
                       ElevatedButton(
                         onPressed: () {
                           context.go('/payment/${booking.id}');
@@ -422,13 +423,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
     final now = DateTime.now();
     
     if (filter == 'upcoming') {
-      return bookings.where((b) => b.checkIn.isAfter(now) || 
-                                 b.status == 'pending' || 
-                                 b.status == 'confirmed').toList();
+      return bookings.where((b) => ReservationStatusCanon.isUpcoming(
+            b.status,
+            b.checkIn,
+            now,
+          )).toList();
     } else if (filter == 'past') {
-      return bookings.where((b) => b.checkOut.isBefore(now) || 
-                                 b.status == 'completed' || 
-                                 b.status == 'cancelled').toList();
+      return bookings.where((b) => ReservationStatusCanon.isPast(
+            b.status,
+            b.checkOut,
+            now,
+          )).toList();
     }
     
     return bookings;
@@ -437,33 +442,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> with Single
 
 
   String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'En attente';
-      case 'confirmed':
-        return 'Confirmée';
-      case 'cancelled':
-        return 'Annulée';
-      case 'completed':
-        return 'Terminée';
-      default:
-        return 'Inconnu';
-    }
+    return BookingHelpers.getStatusLabel(status);
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'confirmed':
-        return AppTheme.primaryColor;
-      case 'cancelled':
-        return Colors.red;
-      case 'completed':
-        return AppTheme.successColor;
-      default:
-        return Colors.grey;
-    }
+    return BookingHelpers.getStatusColor(status);
   }
 
 

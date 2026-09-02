@@ -47,7 +47,7 @@ class BookingAdapter {
     );
 
     // Convertir l'enum ReservationStatus en chaîne de caractères pour Booking
-    final bookingStatus = reservation.status.name;
+    final bookingStatus = reservation.status.toBackendFormat();
 
     // Extraire l'heure de visite de la date checkIn
     final visitTime = '${reservation.checkIn.hour.toString().padLeft(2, '0')}:${reservation.checkIn.minute.toString().padLeft(2, '0')}';

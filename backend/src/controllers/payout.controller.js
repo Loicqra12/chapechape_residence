@@ -8,7 +8,17 @@ const {
     getWavePayoutWebhookSecret,
     verifyWaveWebhookHmac,
 } = require('../utils/wave-webhook-signature.util');
+const { isPartnerAccount } = require('../security/roles');
 const logger = require('../utils/logger');
+const User = require('../models/user.model');
+
+const TRANSFERABLE_PAYOUT_STATUSES = new Set([
+    'pending',
+    'PENDING',
+    'scheduled',
+    'PAYOUT_SCHEDULED',
+    'PAYOUT_PENDING',
+]);
 
 /**
  * Contrôleur Payout - Gestion des reversements aux partners
@@ -27,7 +37,7 @@ function isAdminUser(user) {
 }
 
 function isPartnerUser(user) {
-    return user?.role === 'partner';
+    return isPartnerAccount(user?.role);
 }
 
 /**
@@ -51,6 +61,50 @@ function assertPartnerOwnership(req, resourcePartnerId) {
 
 function forbidden(res, message = 'Accès non autorisé') {
     return res.status(403).json({ success: false, message });
+}
+
+async function loadTransferablePayout(req, payoutId) {
+    if (!payoutId) {
+        return { error: { status: 400, message: 'payout_id requis' } };
+    }
+    const payout = await Payout.findOne({ payout_id: payoutId }).populate('partner');
+    if (!payout) {
+        return { error: { status: 404, message: 'Payout non trouvé' } };
+    }
+    const access = assertPartnerOwnership(req, payout.partner);
+    if (!access.ok) {
+        return { error: { status: 403, message: 'Vous ne pouvez initier un transfert que sur vos propres payouts' } };
+    }
+    if (!TRANSFERABLE_PAYOUT_STATUSES.has(payout.status)) {
+        return { error: { status: 400, message: `Payout non transférable (statut: ${payout.status})` } };
+    }
+    return { payout };
+}
+
+function e164FromPayout(payout) {
+    const info = payout.recipient_info || {};
+    const prefix = String(info.phone_prefix || '225').replace(/\D/g, '') || '225';
+    let national = String(info.phone_number || '').replace(/\D/g, '');
+    if (!national && payout.partner) {
+        const raw = payout.partner.payoutPreferences?.phoneNumber
+            || payout.partner.phoneNumber
+            || payout.partner.phone;
+        const digits = String(raw || '').replace(/\D/g, '');
+        if (digits.startsWith(prefix) && digits.length > prefix.length) {
+            national = digits.slice(prefix.length);
+        } else if (digits.startsWith('0')) {
+            national = digits.slice(1);
+        } else {
+            national = digits;
+        }
+    }
+    if (national.startsWith(prefix) && national.length > prefix.length) {
+        national = national.slice(prefix.length);
+    }
+    if (!national) {
+        return null;
+    }
+    return `+${prefix}${national}`;
 }
 
 // ===============================
@@ -695,66 +749,46 @@ exports.initiateCinetPayTransfer = async (req, res) => {
         
         const {
             payout_id,
-            amount,
-            phone_number,
-            phone_prefix = '225',
-            first_name,
-            last_name,
-            email,
-            channel = 'cinetpay_transfer'
         } = req.body;
 
-        // Validation des champs requis
-        if (!payout_id || !amount || !phone_number) {
-            return res.status(400).json({
+        const loaded = await loadTransferablePayout(req, payout_id);
+        if (loaded.error) {
+            return res.status(loaded.error.status).json({
                 success: false,
-                message: "Champs requis: payout_id, amount, phone_number"
+                message: loaded.error.message,
             });
         }
+        const payout = loaded.payout;
 
-        // Rechercher le payout existant
-        const payout = await Payout.findOne({ payout_id });
-        if (!payout) {
-            return res.status(404).json({
-                success: false,
-                message: "Payout non trouvé"
-            });
+        const destPartner = payout.partner && payout.partner.phoneNumber
+            ? payout.partner
+            : await User.findById(payout.partner._id || payout.partner);
+
+        if (!payout.recipient_info?.phone_number) {
+            try {
+                const dest = await payoutService.getPartnerPayoutInfo(destPartner);
+                payout.recipient_info = {
+                    phone_number: dest.recipient_info.phone_number,
+                    phone_prefix: dest.recipient_info.phone_prefix,
+                    first_name: dest.recipient_info.full_name?.split(' ')[0] || 'Partner',
+                    last_name: dest.recipient_info.full_name?.split(' ').slice(1).join(' ') || 'ChapeChape',
+                    email: dest.recipient_info.email,
+                    full_name: dest.recipient_info.full_name,
+                };
+            } catch (err) {
+                return res.status(400).json({ success: false, message: err.message });
+            }
         }
 
-        const transferAccess = assertPartnerOwnership(req, payout.partner);
-        if (!transferAccess.ok) {
-            return forbidden(res, 'Vous ne pouvez initier un transfert que sur vos propres payouts');
-        }
+        payout.cinetpay_info = payout.cinetpay_info || {};
+        payout.cinetpay_info.client_transaction_id = `CP_${payout.payout_id}_${Date.now()}`;
 
-        // Vérifier que le payout peut être traité
-        if (payout.status !== 'PENDING') {
-            return res.status(400).json({
-                success: false,
-                message: `Payout déjà traité (statut: ${payout.status})`
-            });
-        }
-
-        // Préparer les informations du destinataire
-        payout.recipient_info = {
-            phone_number,
-            phone_prefix,
-            first_name: first_name || 'Partner',
-            last_name: last_name || 'ChapeChape',
-            email: email || `partner_${payout_id}@chapechape.com`
-        };
-
-        // Générer un ID de transaction client unique
-        payout.cinetpay_info.client_transaction_id = `CP_${payout_id}_${Date.now()}`;
-        payout.channel = channel;
-        payout.net_amount = amount;
-
-        // Effectuer le transfert via CinetPay
         const result = await cinetPayTransferService.sendMoney(payout);
 
         if (result.success) {
             await payout.save();
             
-            logger.info(`Transfert CinetPay initié: ${result.transaction_id} (${amount} XOF)`);
+            logger.info(`Transfert CinetPay initié: ${result.transaction_id} (${payout.net_amount} XOF)`);
             
             res.status(201).json({
                 success: true,
@@ -1347,38 +1381,52 @@ exports.initiateWaveTransfer = async (req, res) => {
             apiKeyPrefix: process.env.WAVE_PAYOUT_API_KEY?.substring(0, 10) + '...'
         });
         
-        const { amount, mobile, name, payment_reason, national_id } = req.body;
-        
-        // Vérifier permissions
+        const { payout_id } = req.body;
+
+        const loaded = await loadTransferablePayout(req, payout_id);
+        if (loaded.error) {
+            return res.status(loaded.error.status).json({
+                success: false,
+                message: loaded.error.message,
+            });
+        }
+        const payout = loaded.payout;
+
         if (!req.user) {
-            logger.error('Utilisateur non authentifié');
             return res.status(401).json({
                 success: false,
                 message: "Authentification requise"
             });
         }
-        
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin' && req.user.role !== 'partner') {
-            logger.error('Permissions insuffisantes', { userRole: req.user.role });
-            return res.status(403).json({
+
+        const mobile = e164FromPayout(payout);
+        if (!mobile) {
+            return res.status(400).json({
                 success: false,
-                message: "Accès non autorisé"
+                message: 'Numéro de reversement manquant sur le payout / partenaire',
             });
         }
 
-        // Générer une référence client unique
-        const client_reference = `PAYOUT_${Date.now()}_${req.user._id.toString().slice(-6)}`;
-        
+        const name = payout.recipient_info?.full_name
+            || payout.partner?.firstName
+            || 'Partner';
+        const amount = payout.net_amount;
+        const client_reference = `PAYOUT_${payout.payout_id}`;
+
         const transferData = {
             amount,
             mobile,
             name,
             client_reference,
-            payment_reason: payment_reason || 'Reversement ChapeChape',
-            national_id
+            payment_reason: 'Reversement ChapeChape',
         };
 
-        logger.info('Tentative initiation transfert Wave', { client_reference, amount, mobile: mobile.substring(0, 8) + '***' });
+        logger.info('Tentative initiation transfert Wave', {
+            client_reference,
+            amount,
+            payout_id: payout.payout_id,
+            mobile: `${mobile.substring(0, 6)}***`,
+        });
 
         const wavePayoutService = getWavePayoutService();
         const result = await wavePayoutService.createPayout(transferData);
@@ -1482,14 +1530,19 @@ exports.searchWaveTransfers = async (req, res) => {
             });
         }
 
-        // Partner : la référence doit contenir son suffixe userId (format initiateWaveTransfer)
-        if (isPartnerUser(req.user)) {
-            const suffix = req.user._id.toString().slice(-6);
-            if (!String(client_reference).includes(suffix)) {
-                return forbidden(res, 'Référence Wave non accessible');
-            }
-        } else if (!isAdminUser(req.user)) {
-            return forbidden(res);
+        const local = await Payout.findOne({
+            $or: [
+                { payout_id: client_reference },
+                { 'wave_info.client_reference': client_reference },
+                { 'provider_info.client_reference': client_reference },
+            ],
+        });
+        if (!local) {
+            return res.status(404).json({ success: false, message: 'Payout non trouvé' });
+        }
+        const access = assertPartnerOwnership(req, local.partner);
+        if (!access.ok) {
+            return forbidden(res, 'Référence Wave non accessible');
         }
 
         const wavePayoutService = getWavePayoutService();
@@ -1522,22 +1575,44 @@ exports.searchWaveTransfers = async (req, res) => {
  */
 exports.createWaveBatch = async (req, res) => {
     try {
-        const { transfers } = req.body;
-        
-        // Seuls les admins peuvent créer des batches
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+        const { payout_ids } = req.body;
+
+        if (!isAdminUser(req.user)) {
             return res.status(403).json({
                 success: false,
                 message: "Seuls les admins peuvent créer des batches"
             });
         }
+
+        if (!Array.isArray(payout_ids) || payout_ids.length < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'payout_ids requis (liste de payouts canoniques)',
+            });
+        }
+
+        const payoutsWithRefs = [];
+        for (const payoutId of payout_ids) {
+            const payout = await Payout.findOne({ payout_id: payoutId }).populate('partner');
+            if (!payout) {
+                return res.status(404).json({ success: false, message: `Payout introuvable: ${payoutId}` });
+            }
+            if (!TRANSFERABLE_PAYOUT_STATUSES.has(payout.status)) {
+                return res.status(400).json({ success: false, message: `Payout non transférable: ${payoutId}` });
+            }
+            const mobile = e164FromPayout(payout);
+            if (!mobile) {
+                return res.status(400).json({ success: false, message: `Téléphone manquant pour ${payoutId}` });
+            }
+            payoutsWithRefs.push({
+                amount: payout.net_amount,
+                mobile,
+                name: payout.recipient_info?.full_name || 'Partner',
+                client_reference: `PAYOUT_${payout.payout_id}`,
+            });
+        }
         
-        // Ajouter des références client uniques
-        const payoutsWithRefs = transfers.map((transfer, index) => ({
-            ...transfer,
-            client_reference: `BATCH_${Date.now()}_${index + 1}`
-        }));
-        
+        const wavePayoutService = getWavePayoutService();
         const result = await wavePayoutService.createPayoutBatch(payoutsWithRefs);
         
         if (result.success) {

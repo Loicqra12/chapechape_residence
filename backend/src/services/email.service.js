@@ -1,5 +1,6 @@
 const SibApiV3Sdk = require('sib-api-v3-sdk');
 const nodemailer = require('nodemailer');
+const logger = require('../utils/logger');
 
 const DEFAULT_SENDER_NAME = 'ChapeChape Residences';
 const DEFAULT_SENDER_EMAIL = 'noreply@chapechaperesidence.com';
@@ -67,7 +68,7 @@ class EmailService {
         // Création de l'instance API pour les emails transactionnels
         this.apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
         
-        console.log('Service email initialisé avec Brevo/Sendinblue SDK');
+        logger.debug('Service email initialisé avec Brevo/Sendinblue SDK');
         
         // Garder le transporteur Nodemailer en backup
         this.transporter = nodemailer.createTransport({
@@ -111,13 +112,13 @@ class EmailService {
                 };
             }
             
-            console.log('Envoi d\'email via API Brevo à:', recipientEmail);
+            logger.debug('Envoi d\'email via API Brevo à:', recipientEmail);
             const data = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
-            console.log('Email envoyé avec succès. ID:', data.messageId);
+            logger.debug('Email envoyé avec succès. ID:', data.messageId);
             return data;
         } catch (error) {
-            console.error('Erreur lors de l\'envoi via API Brevo:', error);
-            console.log('Tentative d\'envoi via SMTP en fallback...');
+            logger.error('Erreur lors de l\'envoi via API Brevo:', error);
+            logger.debug('Tentative d\'envoi via SMTP en fallback...');
             
             // Fallback à nodemailer en cas d'erreur avec l'API
             return this.sendEmailWithNodemailer(options);
@@ -136,10 +137,10 @@ class EmailService {
 
         try {
             const info = await this.transporter.sendMail(mailOptions);
-            console.log('Email de fallback envoyé avec succès. ID:', info.messageId);
+            logger.debug('Email de fallback envoyé avec succès. ID:', info.messageId);
             return info;
         } catch (error) {
-            console.error('Erreur critique lors de l\'envoi d\'email:', error);
+            logger.error('Erreur critique lors de l\'envoi d\'email:', error);
             throw error;
         }
     }
@@ -172,12 +173,12 @@ class EmailService {
                 sendSmtpEmail.params = options.params;
             }
             
-            console.log(`Envoi d'email avec template ${options.templateId} via API Brevo à:`, options.email);
+            logger.debug(`Envoi d'email avec template ${options.templateId} via API Brevo à:`, options.email);
             const data = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
-            console.log('Email avec template envoyé avec succès. ID:', data.messageId);
+            logger.debug('Email avec template envoyé avec succès. ID:', data.messageId);
             return data;
         } catch (error) {
-            console.error('Erreur lors de l\'envoi d\'email avec template via API Brevo:', error);
+            logger.error('Erreur lors de l\'envoi d\'email avec template via API Brevo:', error);
             throw error;
         }
     }
@@ -220,7 +221,7 @@ class EmailService {
                 }
             });
             } catch (error) {
-                console.error("Échec du template Brevo (Notification), passage au HTML standard...", error.message);
+                logger.error("Échec du template Brevo (Notification), passage au HTML standard...", error.message);
             }
         }
 
@@ -257,7 +258,7 @@ class EmailService {
                 }
             });
             } catch (error) {
-                console.error("Échec du template Brevo (Welcome), passage au HTML standard...", error.message);
+                logger.error("Échec du template Brevo (Welcome), passage au HTML standard...", error.message);
             }
         }
         
@@ -306,7 +307,7 @@ class EmailService {
                  location = `${booking.residence.city || ''} ${booking.residence.address || ''}`.trim();
             }
         } catch (e) {
-            console.error('Erreur enrichissement email Booking:', e.message);
+            logger.error('Erreur enrichissement email Booking:', e.message);
         }
 
         // Formater les dates
@@ -335,7 +336,7 @@ class EmailService {
                 }
             });
             } catch (error) {
-                console.error("Échec du template Brevo (Booking), passage au HTML standard...", error.message);
+                logger.error("Échec du template Brevo (Booking), passage au HTML standard...", error.message);
             }
         }
         
@@ -365,7 +366,7 @@ class EmailService {
             const user = await User.findOne({ email });
             if (user) firstName = user.firstName;
         } catch (e) {
-            console.error('Erreur récupération user pour PasswordReset:', e.message);
+            logger.error('Erreur récupération user pour PasswordReset:', e.message);
         }
 
         const resetLink = `${process.env.FRONTEND_URL || 'https://presentation.chapechaperesidence.com'}/reset-password/${resetToken}`;
@@ -384,7 +385,7 @@ class EmailService {
                 }
             });
             } catch (error) {
-                console.error("Échec du template Brevo (Reset Password), passage au HTML standard...", error.message);
+                logger.error("Échec du template Brevo (Reset Password), passage au HTML standard...", error.message);
             }
         }
 
@@ -438,7 +439,7 @@ class EmailService {
                  location = `${booking.residence.city || ''} ${booking.residence.address || ''}`.trim();
             }
         } catch (e) {
-            console.error('Erreur enrichissement email Cancellation:', e.message);
+            logger.error('Erreur enrichissement email Cancellation:', e.message);
         }
 
         const strCheckIn = new Date(booking.checkIn).toLocaleDateString();
@@ -464,7 +465,7 @@ class EmailService {
                 }
             });
             } catch (error) {
-                console.error("Échec du template Brevo (Cancellation), passage au HTML standard...", error.message);
+                logger.error("Échec du template Brevo (Cancellation), passage au HTML standard...", error.message);
             }
         }
 
@@ -497,7 +498,7 @@ class EmailService {
                     }
                 });
             } catch (error) {
-                console.error("Échec du template Brevo (Notification générique)...", error.message);
+                logger.error("Échec du template Brevo (Notification générique)...", error.message);
             }
         }
     }
@@ -525,7 +526,7 @@ class EmailService {
                     }
                 });
             } catch (error) {
-                console.error("Échec template Brevo (Booking Update), passage au HTML standard...", error.message);
+                logger.error("Échec template Brevo (Booking Update), passage au HTML standard...", error.message);
             }
         }
         await this.sendEmail({
@@ -563,7 +564,7 @@ class EmailService {
                     }
                 });
             } catch (error) {
-                console.error("Échec template Brevo (Booking Status), passage au HTML standard...", error.message);
+                logger.error("Échec template Brevo (Booking Status), passage au HTML standard...", error.message);
             }
         }
         await this.sendEmail({
@@ -595,7 +596,7 @@ class EmailService {
                 message: data.message || ''
             });
         } catch (error) {
-            console.error('Erreur sendClientNotification:', error.message);
+            logger.error('Erreur sendClientNotification:', error.message);
         }
     }
 
@@ -675,7 +676,7 @@ class EmailService {
                     }
                 });
             } catch (error) {
-                console.error("Échec template Brevo (Payment Confirmation), passage au HTML standard...", error.message);
+                logger.error("Échec template Brevo (Payment Confirmation), passage au HTML standard...", error.message);
             }
         }
 
@@ -785,7 +786,7 @@ class EmailService {
                 }
             });
             } catch (error) {
-                console.error("Échec du template Brevo (Partner), passage au HTML standard...", error.message);
+                logger.error("Échec du template Brevo (Partner), passage au HTML standard...", error.message);
             }
         }
 

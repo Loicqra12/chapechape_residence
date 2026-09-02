@@ -34,6 +34,8 @@ const healthController = require('../controllers/health.controller');
  *                   example: development
  */
 router.get('/', healthController.getGeneralHealth);
+router.get('/ready', healthController.getReadiness);
+router.get('/live', healthController.getLiveness);
 
 /**
  * @swagger

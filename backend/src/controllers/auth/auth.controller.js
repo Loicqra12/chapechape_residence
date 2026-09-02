@@ -11,6 +11,7 @@ const emailService = require('../../services/email.service');
 const LoginAttempt = require('../../models/loginAttempt.model');
 const logger = require('../../utils/logger');
 const { normalizePhoneToE164: normalizePhone } = require('../../utils/phone.util');
+const { publicAuthView } = require('../../security/partner-capabilities');
 
 // Hash bcrypt valide pour utilisateur inexistant (évite que bcrypt.compare lance → 500 au lieu de 401)
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy', 10);
@@ -46,7 +47,7 @@ exports.register = asyncHandler(async (req, res) => {
         const refreshToken = jwt.generateRefreshToken(user._id);
 
         // Envoyer l'email de bienvenue de façon non-bloquante
-        emailService.sendWelcome(user).catch(e => console.error("Erreur envoi email bienvenue:", e?.message));
+        emailService.sendWelcome(user).catch(e => logger.error('WELCOME_EMAIL_FAILED', { err: e?.message }));
 
         res.status(201).json({
             success: true,
@@ -92,15 +93,15 @@ exports.registerPartner = asyncHandler(async (req, res) => {
             throw new apiError('Un utilisateur avec cet email existe déjà', 400);
         }
 
-        // Créer l'utilisateur avec le rôle partner
+        // Rôle produit immédiat. Téléphone non auto-vérifié : OTP plus tard pour publier / payout.
         const user = await User.create({
             email,
             password,
             firstName,
             lastName,
             phoneNumber: normalizedPhone,
-            role: 'partner', // Activation immédiate - pas besoin de vérification séparée
-            isPhoneVerified: true // Auto-approuver le téléphone
+            role: 'partner',
+            isPhoneVerified: false
         });
 
         // Générer le token d'accès avec la nouvelle fonction
@@ -110,7 +111,7 @@ exports.registerPartner = asyncHandler(async (req, res) => {
         const refreshToken = jwt.generateRefreshToken(user._id);
 
         // Envoyer l'email de bienvenue de façon non-bloquante
-        emailService.sendWelcome(user).catch(e => console.error("Erreur envoi email bienvenue (partenaire):", e?.message));
+        emailService.sendWelcome(user).catch(e => logger.error('WELCOME_EMAIL_PARTNER_FAILED', { err: e?.message }));
 
         res.status(201).json({
             success: true,
@@ -123,9 +124,10 @@ exports.registerPartner = asyncHandler(async (req, res) => {
                 lastName: user.lastName,
                 role: user.role,
                 isPhoneVerified: user.isPhoneVerified || false,
-                phoneNumber: user.phoneNumber
+                phoneNumber: user.phoneNumber,
+                ...publicAuthView(user),
             },
-            message: 'Compte partenaire créé. Veuillez vérifier votre numéro de téléphone pour activer votre compte.'
+            message: 'Compte partenaire créé. Vous pouvez préparer vos annonces immédiatement. Vérifiez votre téléphone pour publier et recevoir des reversements.'
         });
     } catch (error) {
         // Si c'est déjà une ApiError (par ex. email déjà utilisé, téléphone invalide),
@@ -135,7 +137,7 @@ exports.registerPartner = asyncHandler(async (req, res) => {
         }
 
         // Sinon, on journalise l'erreur technique et on renvoie une 500 générique.
-        console.error('Erreur inattendue lors de l\'inscription partenaire:', error);
+        logger.error('PARTNER_REGISTER_UNEXPECTED', { err: error.message });
         throw apiError.internal('Erreur lors de l\'inscription du partenaire');
     }
 });
@@ -249,7 +251,7 @@ exports.login = asyncHandler(async (req, res) => {
         }).catch((e) => logger.warn('LoginAttempt create (succès) ignoré:', e?.message));
 
         notificationService.notifyNewLogin(user._id, req.ip, req.get('User-Agent'))
-            .catch((e) => console.error('Erreur notification nouvelle connexion:', e?.message));
+            .catch((e) => logger.error('LOGIN_NOTIFICATION_FAILED', { err: e?.message }));
 
         // Rôle normalisé (anciens comptes peuvent avoir rôle invalide ou manquant)
         const safeRole = ['client', 'partner_pending', 'partner', 'admin', 'superadmin', 'owner'].includes(user.role) ? user.role : 'client';
@@ -266,7 +268,9 @@ exports.login = asyncHandler(async (req, res) => {
                 firstName: user.firstName || '',
                 lastName: user.lastName || '',
                 role: safeRole,
-                phoneNumber: user.phoneNumber || ''
+                phoneNumber: user.phoneNumber || '',
+                isPhoneVerified: user.isPhoneVerified || false,
+                ...publicAuthView({ ...user.toObject(), role: safeRole }),
             }
         });
     } catch (error) {
@@ -278,7 +282,7 @@ exports.login = asyncHandler(async (req, res) => {
             stack: error?.stack,
             name: error?.name
         });
-        console.error('POST /api/auth/login - erreur réelle:', error?.message, error?.stack);
+        logger.error('AUTH_LOGIN_FAILED', { err: error?.message });
         throw new apiError('Erreur lors de la connexion', 500);
     }
 });
@@ -307,7 +311,8 @@ exports.getMe = asyncHandler(async (req, res) => {
                 profilePicture: user.profilePicture || user.profileImage,
                 profileImage: user.profilePicture || user.profileImage, // Compatibilité partner app
                 profilePictureUrl: user.profilePicture || user.profileImage, // Compatibilité client app
-                createdAt: user.createdAt
+                createdAt: user.createdAt,
+                ...publicAuthView(user),
             }
         });
     } catch (error) {
@@ -527,7 +532,7 @@ exports.uploadProfilePicture = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erreur upload profile picture:', error);
+        logger.error('PROFILE_PICTURE_UPLOAD_FAILED', { err: error.message });
         throw new apiError(error.message || 'Erreur lors de l\'upload de la photo de profil', error.statusCode || 500);
     }
 });
@@ -547,17 +552,19 @@ const generateToken = (userId) => {
 exports.updateProfile = asyncHandler(async (req, res) => {
     try {
         const userId = req.user.id;
-        const { firstName, lastName, phoneNumber, isPhoneVerified } = req.body;
+        const { pickUserSafePatch } = require('../../security/roles');
+        const safeBody = pickUserSafePatch(req.body);
+        const { firstName, lastName, phoneNumber } = safeBody;
 
-        // Construire l'objet de mise à jour
+        // Construire l'objet de mise à jour (isPhoneVerified / capabilities / role ignorés)
         const updateData = {};
         if (firstName !== undefined) updateData.firstName = firstName;
         if (lastName !== undefined) updateData.lastName = lastName;
         if (phoneNumber !== undefined) {
             // Normaliser le numéro de téléphone au format E.164
             updateData.phoneNumber = normalizePhone(phoneNumber);
+            updateData.isPhoneVerified = false;
         }
-        if (isPhoneVerified !== undefined) updateData.isPhoneVerified = isPhoneVerified;
 
         // Mettre à jour l'utilisateur
         const user = await User.findByIdAndUpdate(
@@ -572,11 +579,20 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 
         res.status(200).json({
             success: true,
-            user: user
+            user: {
+                id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                phoneNumber: user.phoneNumber,
+                isPhoneVerified: user.isPhoneVerified || false,
+                ...publicAuthView(user),
+            }
         });
 
     } catch (error) {
-        console.error('Erreur updateProfile:', error);
+        logger.error('UPDATE_PROFILE_FAILED', { err: error.message });
         throw new apiError('Erreur lors de la mise à jour du profil', 500);
     }
 });

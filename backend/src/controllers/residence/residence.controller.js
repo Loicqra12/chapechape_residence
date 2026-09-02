@@ -7,6 +7,7 @@ const path = require('path');
 const { CloudinaryService } = require('../../config/cloudinary');
 const Favorite = require('../../models/favorite.model');
 const Review = require('../../models/review.model');
+const logger = require('../../utils/logger');
 
 // @desc    Créer une nouvelle résidence
 // @route   POST /api/residences
@@ -14,35 +15,35 @@ const Review = require('../../models/review.model');
 exports.createResidence = asyncHandler(async (req, res) => {
     let residenceData;
 
-    console.log('==== CRÉATION DE RÉSIDENCE ====');
-    console.log('Headers:', req.headers);
-    console.log('Request body keys:', Object.keys(req.body));
-    console.log('Request body raw:', req.body);
-    console.log('Files:', req.files?.length || 'None');
+    logger.debug('RESIDENCE_CREATE_START', {
+        userId: req.user?.id,
+        bodyKeys: Object.keys(req.body || {}),
+        filesCount: req.files?.length || 0,
+    });
 
     // Vérifier si les données sont envoyées via le champ residenceData (approche JSON)
     if (req.body.residenceData) {
         try {
-            console.log('Données reçues (format JSON):');
-            console.log('residenceData (raw):', req.body.residenceData);
+            logger.debug('Données reçues (format JSON):');
+            logger.debug('residenceData (raw):', req.body.residenceData);
 
             residenceData = JSON.parse(req.body.residenceData);
-            console.log('Données JSON parsées:', Object.keys(residenceData));
-            console.log('Contenu complet:', residenceData);
+            logger.debug('Données JSON parsées:', Object.keys(residenceData));
+            logger.debug('Contenu complet:', residenceData);
 
             // Assigner l'id du partenaire
             residenceData.partner = req.user.id;
-            console.log(`Partenaire assigné: ${req.user.id}`);
+            logger.debug(`Partenaire assigné: ${req.user.id}`);
         } catch (error) {
-            console.error('Erreur de parsing JSON:', error);
+            logger.error('Erreur de parsing JSON:', error);
             throw new apiError('Format de données invalide: ' + error.message, 400);
         }
     } else {
         // Approche traditionnelle (champs individuels)
         residenceData = req.body;
         residenceData.partner = req.user.id;
-        console.log('Données reçues (format direct):', Object.keys(residenceData));
-        console.log('Contenu complet:', residenceData);
+        logger.debug('Données reçues (format direct):', Object.keys(residenceData));
+        logger.debug('Contenu complet:', residenceData);
     }
 
     // Validation manuelle des champs requis (NOUVEAU SCHÉMA)
@@ -59,7 +60,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
     });
 
     if (missingFields.length > 0) {
-        console.error('Champs manquants (nouveau schéma):', missingFields);
+        logger.error('Champs manquants (nouveau schéma):', missingFields);
         throw new apiError(`Champs requis manquants: ${missingFields.join(', ')}`, 400);
     }
 
@@ -67,7 +68,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
     if (residenceData.location && !residenceData.address) {
         residenceData.address = residenceData.location.address || '';
         residenceData.city = residenceData.location.city || '';
-        console.log('Migration automatique: address/city extraits de location');
+        logger.debug('Migration automatique: address/city extraits de location');
     }
 
     // Gérer area vs surface : mapping automatique depuis les nouvelles données
@@ -75,19 +76,19 @@ exports.createResidence = asyncHandler(async (req, res) => {
         // Chercher dans les anciennes données ou utiliser une valeur par défaut
         if (residenceData.surface) {
             residenceData.area = residenceData.surface;
-            console.log('Migration automatique: surface -> area');
+            logger.debug('Migration automatique: surface -> area');
         } else {
             // Valeur par défaut basée sur le nombre de chambres (estimation)
             const estimatedArea = (residenceData.bedrooms || 1) * 25; // 25m² par chambre
             residenceData.area = estimatedArea;
-            console.log(`Migration automatique: area estimée à ${estimatedArea}m² (${residenceData.bedrooms || 1} chambres)`);
+            logger.debug(`Migration automatique: area estimée à ${estimatedArea}m² (${residenceData.bedrooms || 1} chambres)`);
         }
     }
 
     try {
         // Préparer la structure de géolocalisation (NOUVEAU SCHÉMA)
         if (residenceData.location && residenceData.location.coordinates) {
-            console.log('Nouvelle structure de géolocalisation détectée:', residenceData.location);
+            logger.debug('Nouvelle structure de géolocalisation détectée:', residenceData.location);
 
             // Construire la structure locationData pour MongoDB
             residenceData.locationData = {
@@ -108,10 +109,10 @@ exports.createResidence = asyncHandler(async (req, res) => {
             residenceData.latitude = parseFloat(residenceData.location.coordinates.latitude);
             residenceData.longitude = parseFloat(residenceData.location.coordinates.longitude);
 
-            console.log('Structure locationData construite depuis location:', residenceData.locationData);
+            logger.debug('Structure locationData construite depuis location:', residenceData.locationData);
         } else if (residenceData.latitude !== undefined && residenceData.longitude !== undefined) {
             // Fallback pour l'ancien format (rétrocompatibilité)
-            console.log('Ancien format de géolocalisation détecté (rétrocompatibilité)');
+            logger.debug('Ancien format de géolocalisation détecté (rétrocompatibilité)');
             residenceData.locationData = {
                 coordinates: {
                     latitude: parseFloat(residenceData.latitude),
@@ -127,26 +128,32 @@ exports.createResidence = asyncHandler(async (req, res) => {
             };
         }
 
+        // Création = brouillon. Jamais publiée par mass assignment.
+        const publication = require('../../services/residence-publication.service');
+        residenceData = publication.stripPublicationFields(residenceData);
+        residenceData.publicationStatus = publication.PUBLICATION.DRAFT;
+        residenceData.verified = false;
+
         // Créer la résidence de base
-        console.log('Création de la résidence avec les données:', residenceData);
+        logger.debug('Création de la résidence avec les données:', residenceData);
         const residence = await Residence.create(residenceData);
-        console.log(`Résidence créée avec succès: ${residence._id}`);
+        logger.debug(`Résidence créée avec succès: ${residence._id}`);
 
         // Si des fichiers sont présents, traiter les images
         if (req.files && req.files.length > 0) {
-            console.log(`Traitement de ${req.files.length} images`);
+            logger.debug(`Traitement de ${req.files.length} images`);
 
             const images = req.files.map(file => `/uploads/residences/${file.filename}`);
 
-            console.log('Images avant sauvegarde:', images);
-            console.log('Images existantes:', residence.images);
+            logger.debug('Images avant sauvegarde:', images);
+            logger.debug('Images existantes:', residence.images);
 
             residence.images = [...residence.images, ...images];
             await residence.save();
 
-            console.log('Images après sauvegarde:', residence.images);
+            logger.debug('Images après sauvegarde:', residence.images);
         } else {
-            console.log('Aucune image reçue avec la requête');
+            logger.debug('Aucune image reçue avec la requête');
         }
 
         res.status(201).json({
@@ -154,7 +161,7 @@ exports.createResidence = asyncHandler(async (req, res) => {
             data: residence.toObject()
         });
     } catch (error) {
-        console.error('Erreur lors de la création de la résidence:', error);
+        logger.error('Erreur lors de la création de la résidence:', error);
         throw new apiError(`Échec de la création de la résidence: ${error.message}`, 500);
     }
 });
@@ -169,8 +176,8 @@ exports.getResidences = asyncHandler(async (req, res) => {
     const sortBy = req.query.sortBy || 'createdAt';
     const order = req.query.order || 'desc';
 
-    // Aligné avec search/popular : ne pas exposer les soft-deleted
-    const filter = { deleted: { $ne: true } };
+    const publication = require('../../services/residence-publication.service');
+    const filter = publication.applyPublicCatalogFilter({});
 
     const query = Residence.find(filter)
         .populate('partner', 'firstName lastName email phoneNumber')
@@ -202,7 +209,7 @@ exports.getResidences = asyncHandler(async (req, res) => {
 // @access  Public
 exports.getResidenceCountByType = asyncHandler(async (req, res) => {
     const counts = await Residence.aggregate([
-        { $match: { deleted: { $ne: true } } },
+        { $match: require('../../services/residence-publication.service').applyPublicCatalogFilter({}) },
         { $group: { _id: '$type', count: { $sum: 1 } } }
     ]);
     const byType = {};
@@ -239,7 +246,13 @@ exports.getTrendingResidences = asyncHandler(async (req, res) => {
             }
         },
         { $unwind: '$residenceDoc' },
-        { $match: { 'residenceDoc.deleted': { $ne: true } } }
+        { $match: {
+            'residenceDoc.deleted': { $ne: true },
+            $or: [
+                { 'residenceDoc.publicationStatus': 'published' },
+                { 'residenceDoc.publicationStatus': { $exists: false } },
+            ],
+        } }
     ];
 
     if (city) {
@@ -277,20 +290,21 @@ exports.getTrendingResidences = asyncHandler(async (req, res) => {
 // @access  Public
 exports.getAllResidences = asyncHandler(async (req, res) => {
     try {
-        console.log('Récupération de toutes les résidences (format liste sans wrapper)');
+        logger.debug('Récupération de toutes les résidences (format liste sans wrapper)');
 
         // Utiliser lean() pour des performances optimales
-        const residences = await Residence.find()
+        const publication = require('../../services/residence-publication.service');
+        const residences = await Residence.find(publication.applyPublicCatalogFilter({}))
             .populate('partner', 'firstName lastName email phoneNumber')
             .lean();
 
-        console.log(`${residences.length} résidences trouvées au total`);
+        logger.debug(`${residences.length} résidences trouvées au total`);
 
         // Renvoyer directement la liste sans wrapper success/data
         // Compatible avec les attentes du client mobile
         res.json(residences);
     } catch (error) {
-        console.error('Erreur lors de la récupération des résidences (format liste):', error);
+        logger.error('Erreur lors de la récupération des résidences (format liste):', error);
         throw new Error(`Erreur serveur: ${error.message}`);
     }
 });
@@ -307,12 +321,18 @@ exports.getResidence = asyncHandler(async (req, res) => {
         throw new apiError('Résidence non trouvée', 404);
     }
 
+    const publication = require('../../services/residence-publication.service');
+    if (!publication.isPubliclyListed(residence)
+        && !publication.canViewUnlistedResidence(residence, req.user)) {
+        throw new apiError('Résidence non trouvée', 404);
+    }
+
     // Phase 3 — tracking vue authentifiée (recherche abandonnée)
     if (req.user && req.user.role === 'client') {
         try {
             const { trackResidenceViewForEngagement } = require('../../services/agenda.service');
             trackResidenceViewForEngagement(req.user._id, residence._id).catch((err) => {
-                console.warn('Track vue résidence échoué:', err?.message);
+                logger.warn('Track vue résidence échoué:', err?.message);
             });
         } catch (_) {
             // non bloquant
@@ -350,10 +370,11 @@ exports.updateResidence = asyncHandler(async (req, res) => {
     }
 
     // Préparer les données de mise à jour
-    const updateData = { ...req.body };
+    const publication = require('../../services/residence-publication.service');
+    const updateData = publication.stripPublicationFields({ ...req.body });
 
     // Gérer la structure de géolocalisation
-    console.log('Données de géolocalisation reçues:', {
+    logger.debug('Données de géolocalisation reçues:', {
         latitude: updateData.latitude,
         longitude: updateData.longitude,
         formattedAddress: updateData.formattedAddress,
@@ -363,7 +384,7 @@ exports.updateResidence = asyncHandler(async (req, res) => {
 
     // NOUVEAU : Support de la structure location moderne (comme dans createResidence)
     if (updateData.location && updateData.location.coordinates) {
-        console.log('Nouvelle structure location détectée pour mise à jour:', updateData.location);
+        logger.debug('Nouvelle structure location détectée pour mise à jour:', updateData.location);
 
         // Construire la structure locationData pour MongoDB
         updateData.locationData = {
@@ -386,11 +407,11 @@ exports.updateResidence = asyncHandler(async (req, res) => {
         updateData.address = updateData.location.address || '';
         updateData.city = updateData.location.city || '';
 
-        console.log('Structure locationData construite depuis location pour mise à jour:', updateData.locationData);
+        logger.debug('Structure locationData construite depuis location pour mise à jour:', updateData.locationData);
     }
     // LEGACY : Si nous avons reçu des coordonnées GPS au format ancien, mettre à jour la structure locationData
     else if (updateData.latitude !== undefined && updateData.longitude !== undefined) {
-        console.log('Format legacy de géolocalisation détecté pour mise à jour (rétrocompatibilité)');
+        logger.debug('Format legacy de géolocalisation détecté pour mise à jour (rétrocompatibilité)');
 
         // Créer/mettre à jour la structure locationData complète
         updateData.locationData = {
@@ -407,7 +428,7 @@ exports.updateResidence = asyncHandler(async (req, res) => {
             sousZone: updateData.sousZone ?? residence.locationData?.sousZone ?? ''
         };
 
-        console.log('Structure locationData mise à jour (legacy):', updateData.locationData);
+        logger.debug('Structure locationData mise à jour (legacy):', updateData.locationData);
     }
 
     residence = await Residence.findByIdAndUpdate(
@@ -446,7 +467,7 @@ exports.deleteResidence = asyncHandler(async (req, res) => {
     residence.deletedAt = new Date();
     await residence.save();
 
-    console.log(`Résidence ${req.params.id} marquée comme supprimée (soft delete)`);
+    logger.debug(`Résidence ${req.params.id} marquée comme supprimée (soft delete)`);
 
     res.status(200).json({
         success: true,
@@ -541,6 +562,13 @@ exports.searchResidences = asyncHandler(async (req, res) => {
         });
     }
 
+    andClauses.push({
+        $or: [
+            { publicationStatus: 'published' },
+            { publicationStatus: { $exists: false } },
+        ],
+    });
+
     if (andClauses.length) {
         searchQuery.$and = andClauses;
     }
@@ -608,10 +636,10 @@ exports.searchResidences = asyncHandler(async (req, res) => {
             durationData = typeof duration === 'string' ? JSON.parse(duration) : duration;
             if (durationData.periods && Array.isArray(durationData.periods)) {
                 searchQuery.pricePeriod = { $in: durationData.periods };
-                console.log(`[Search] Filtrage par durée: ${durationData.label}, périodes compatibles: ${durationData.periods.join(', ')}`);
+                logger.debug(`[Search] Filtrage par durée: ${durationData.label}, périodes compatibles: ${durationData.periods.join(', ')}`);
             }
         } catch (error) {
-            console.error('[Search] Erreur parsing duration:', error);
+            logger.error('[Search] Erreur parsing duration:', error);
         }
     }
 
@@ -631,7 +659,7 @@ exports.searchResidences = asyncHandler(async (req, res) => {
     let resultsWithPricing = residences;
 
     if (durationData) {
-        console.log(`[Search] Calcul des prix pour ${residences.length} résidences`);
+        logger.debug(`[Search] Calcul des prix pour ${residences.length} résidences`);
 
         resultsWithPricing = await Promise.all(
             residences.map(async (residence) => {
@@ -662,7 +690,7 @@ exports.searchResidences = asyncHandler(async (req, res) => {
                         }
                     };
                 } catch (error) {
-                    console.error(`[Search] Erreur calcul prix pour résidence ${residence._id}:`, error);
+                    logger.error(`[Search] Erreur calcul prix pour résidence ${residence._id}:`, error);
                     // Retourner résidence sans estimatedPrice en cas d'erreur
                     return residence;
                 }
@@ -689,10 +717,10 @@ exports.searchResidences = asyncHandler(async (req, res) => {
 // @route   POST /api/residences/:id/images
 // @access  Private (Partner only)
 exports.uploadImages = asyncHandler(async (req, res) => {
-    console.log('==== UPLOAD IMAGES ====');
-    console.log('Content-Type:', req.headers['content-type']);
-    console.log('Body:', req.body);
-    console.log('Files:', req.files ? req.files.length : 'Aucun');
+    logger.debug('==== UPLOAD IMAGES ====');
+    logger.debug('Content-Type:', req.headers['content-type']);
+    logger.debug('Body:', req.body);
+    logger.debug('Files:', req.files ? req.files.length : 'Aucun');
 
     const residence = await Residence.findById(req.params.id);
 
@@ -728,24 +756,24 @@ exports.uploadImages = asyncHandler(async (req, res) => {
 
     // Mode 1: Upload de fichiers (multipart/form-data)
     if (req.files && req.files.length > 0) {
-        console.log(`Traitement de ${req.files.length} fichiers uploadés`);
+        logger.debug(`Traitement de ${req.files.length} fichiers uploadés`);
 
         // Si nous utilisons le stockage Cloudinary via multer, les fichiers ont déjà une URL Cloudinary
         if (req.files[0].path && req.files[0].path.startsWith('http')) {
             // Images déjà sur Cloudinary via multer-storage-cloudinary
             newImages = req.files.map(file => file.path);
-            console.log('Images Cloudinary via multer:', newImages);
+            logger.debug('Images Cloudinary via multer:', newImages);
         } else {
             // Stockage local classique
             newImages = req.files.map(file => `/uploads/residences/${file.filename}`);
-            console.log('Images locales:', newImages);
+            logger.debug('Images locales:', newImages);
         }
     }
     // Mode 2: Envoi d'URLs (application/json)
     else if (req.body.images && Array.isArray(req.body.images)) {
-        console.log(`Traitement de ${req.body.images.length} URLs d'images`);
+        logger.debug(`Traitement de ${req.body.images.length} URLs d'images`);
         newImages = req.body.images;
-        console.log('URLs reçues:', newImages);
+        logger.debug('URLs reçues:', newImages);
     }
     // Aucune image reçue
     else {
@@ -760,8 +788,8 @@ exports.uploadImages = asyncHandler(async (req, res) => {
     residence.images = [...residence.images, ...newImages];
     await residence.save();
 
-    console.log(`${newImages.length} images ajoutées à la résidence ${residence._id}`);
-    console.log('Total images dans la résidence:', residence.images.length);
+    logger.debug(`${newImages.length} images ajoutées à la résidence ${residence._id}`);
+    logger.debug('Total images dans la résidence:', residence.images.length);
 
     res.status(200).json({
         success: true,
@@ -804,23 +832,23 @@ exports.deleteImage = asyncHandler(async (req, res) => {
     try {
         // Si c'est une URL Cloudinary, supprimer l'image du cloud
         if (imageUrl.includes('cloudinary.com')) {
-            console.log(`Suppression de l'image Cloudinary: ${imageUrl}`);
+            logger.debug(`Suppression de l'image Cloudinary: ${imageUrl}`);
             const publicId = CloudinaryService.getPublicIdFromUrl(imageUrl);
 
             if (publicId) {
-                console.log(`PublicId extrait: ${publicId}`);
+                logger.debug(`PublicId extrait: ${publicId}`);
                 await CloudinaryService.deleteImage(publicId);
-                console.log('Image supprimée de Cloudinary avec succès');
+                logger.debug('Image supprimée de Cloudinary avec succès');
             }
         }
         // Si c'est un fichier local, supprimer le fichier du serveur
         else if (imageUrl.startsWith('/uploads/')) {
             const filePath = path.join(__dirname, '../../../', imageUrl);
-            console.log(`Suppression du fichier local: ${filePath}`);
+            logger.debug(`Suppression du fichier local: ${filePath}`);
 
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
-                console.log('Fichier local supprimé avec succès');
+                logger.debug('Fichier local supprimé avec succès');
             }
         }
 
@@ -834,7 +862,7 @@ exports.deleteImage = asyncHandler(async (req, res) => {
             data: residence.images
         });
     } catch (error) {
-        console.error('Erreur lors de la suppression de l\'image:', error);
+        logger.error('Erreur lors de la suppression de l\'image:', error);
         throw new apiError(`Erreur lors de la suppression de l'image: ${error.message}`, 500);
     }
 });
@@ -1096,68 +1124,61 @@ exports.updateStars = asyncHandler(async (req, res) => {
 // @access  Private (Les clients authentifiés avec une réservation confirmée)
 exports.updateRatings = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { overall, cleanliness, comfort, facilities } = req.body;
+    const { overall, cleanliness, comfort, facilities, reservationId } = req.body;
 
-    // Validation des données
     if (overall === undefined || overall < 0 || overall > 5) {
         throw new apiError('Veuillez fournir une note globale valide (entre 0 et 5)', 400);
     }
 
-    // Validation des notes optionnelles
-    if ((cleanliness !== undefined && (cleanliness < 0 || cleanliness > 5)) ||
-        (comfort !== undefined && (comfort < 0 || comfort > 5)) ||
-        (facilities !== undefined && (facilities < 0 || facilities > 5))) {
-        throw new apiError('Toutes les notes doivent être comprises entre 0 et 5', 400);
-    }
+    const Review = require('../../models/review.model');
+    const Reservation = require('../../models/reservation.model');
 
-    // Récupérer la résidence
     const residence = await Residence.findById(id);
     if (!residence) {
         throw new apiError('Résidence non trouvée', 404);
     }
 
-    // TODO: Vérifier que l'utilisateur a bien une réservation confirmée pour cette résidence
-    // Cette vérification nécessiterait un accès au modèle Reservation
-    // Pour le moment, nous autorisons tous les utilisateurs authentifiés
-
-    // Initialiser le champ rating s'il n'existe pas
-    if (!residence.rating) {
-        residence.rating = {
-            overall: 0,
-            cleanliness: 0,
-            comfort: 0,
-            facilities: 0,
-            reviewCount: 0
-        };
+    if (!reservationId) {
+        throw new apiError('reservationId requis', 400);
+    }
+    const reservation = await Reservation.findById(reservationId).select('user partner residence status');
+    if (!reservation) {
+        throw new apiError('Réservation introuvable', 404);
+    }
+    if (String(reservation.user) !== String(req.user.id)) {
+        throw new apiError('Cette réservation ne vous appartient pas', 403);
+    }
+    if (String(reservation.residence) !== String(id)) {
+        throw new apiError('La réservation ne correspond pas à cette résidence', 403);
+    }
+    if (reservation.status !== 'completed') {
+        throw new apiError('Vous ne pouvez noter qu’un séjour terminé', 403);
+    }
+    if (String(residence.partner) === String(req.user.id)) {
+        throw new apiError('Un partenaire ne peut pas noter sa propre résidence', 403);
     }
 
-    // Calculer les nouvelles moyennes
-    const currentCount = residence.rating.reviewCount || 0;
-    const newCount = currentCount + 1;
-
-    // Mettre à jour chaque note
-    residence.rating.overall = ((residence.rating.overall * currentCount) + overall) / newCount;
-
-    if (cleanliness !== undefined) {
-        residence.rating.cleanliness = ((residence.rating.cleanliness * currentCount) + cleanliness) / newCount;
+    const already = await Review.findOne({ user: req.user.id, residence: id });
+    if (already) {
+        throw new apiError('Un avis existe déjà pour cette résidence', 409);
     }
 
-    if (comfort !== undefined) {
-        residence.rating.comfort = ((residence.rating.comfort * currentCount) + comfort) / newCount;
-    }
-
-    if (facilities !== undefined) {
-        residence.rating.facilities = ((residence.rating.facilities * currentCount) + facilities) / newCount;
-    }
-
-    // Incrémenter le nombre d'avis
-    residence.rating.reviewCount = newCount;
-
-    await residence.save();
+    await Review.create({
+        user: req.user.id,
+        residence: id,
+        reservation: reservationId,
+        rating: {
+            overall,
+            cleanliness: cleanliness ?? overall,
+            comfort: comfort ?? overall,
+            facilities: facilities ?? overall,
+        },
+        comment: 'Note séjour',
+    });
 
     res.status(200).json({
         success: true,
-        data: residence.rating
+        message: 'Note enregistrée',
     });
 });
 
@@ -1210,7 +1231,7 @@ exports.getPopularResidences = asyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
 
     try {
-        console.log('Récupération des résidences populaires...');
+        logger.debug('Récupération des résidences populaires...');
 
         // Critères pour les résidences populaires : 
         // - Bien notées (rating > 3)
@@ -1224,10 +1245,20 @@ exports.getPopularResidences = asyncHandler(async (req, res) => {
             deleted: { $ne: true },
             status: 'available',
             images: { $exists: true, $not: { $size: 0 } },
-            $or: [
-                { 'rating.overall': { $gte: 3 } },
-                { createdAt: { $gte: threeMonthsAgo } },
-                { isFeatured: true }
+            $and: [
+                {
+                    $or: [
+                        { publicationStatus: 'published' },
+                        { publicationStatus: { $exists: false } },
+                    ],
+                },
+                {
+                    $or: [
+                        { 'rating.overall': { $gte: 3 } },
+                        { createdAt: { $gte: threeMonthsAgo } },
+                        { isFeatured: true }
+                    ]
+                }
             ]
         })
             .populate('partner', 'firstName lastName email phoneNumber')
@@ -1244,14 +1275,24 @@ exports.getPopularResidences = asyncHandler(async (req, res) => {
             deleted: { $ne: true },
             status: 'available',
             images: { $exists: true, $not: { $size: 0 } },
-            $or: [
-                { 'rating.overall': { $gte: 3 } },
-                { createdAt: { $gte: threeMonthsAgo } },
-                { isFeatured: true }
+            $and: [
+                {
+                    $or: [
+                        { publicationStatus: 'published' },
+                        { publicationStatus: { $exists: false } },
+                    ],
+                },
+                {
+                    $or: [
+                        { 'rating.overall': { $gte: 3 } },
+                        { createdAt: { $gte: threeMonthsAgo } },
+                        { isFeatured: true }
+                    ]
+                }
             ]
         });
 
-        console.log(`${residences.length} résidences populaires trouvées`);
+        logger.debug(`${residences.length} résidences populaires trouvées`);
 
         res.json({
             success: true,
@@ -1265,7 +1306,7 @@ exports.getPopularResidences = asyncHandler(async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération des résidences populaires:', error);
+        logger.error('Erreur lors de la récupération des résidences populaires:', error);
         throw new apiError(`Erreur serveur: ${error.message}`, 500);
     }
 });
@@ -1310,7 +1351,7 @@ exports.checkResidenceAvailability = asyncHandler(async (req, res) => {
             checkOut: endDate.toISOString()
         });
     } catch (error) {
-        console.error('Erreur lors de la vérification de disponibilité:', error);
+        logger.error('Erreur lors de la vérification de disponibilité:', error);
         throw new apiError(`Erreur serveur: ${error.message}`, 500);
     }
 });
@@ -1320,7 +1361,7 @@ exports.checkResidenceAvailability = asyncHandler(async (req, res) => {
 // @access  Private (Client only)
 exports.getFavoriteResidences = asyncHandler(async (req, res) => {
     try {
-        console.log('Récupération des favoris pour l\'utilisateur:', req.user.id);
+        logger.debug('Récupération des favoris pour l\'utilisateur:', req.user.id);
 
         const favorites = await Favorite.find({ user: req.user.id })
             .populate({
@@ -1339,7 +1380,7 @@ exports.getFavoriteResidences = asyncHandler(async (req, res) => {
             data: residences
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération des favoris:', error);
+        logger.error('Erreur lors de la récupération des favoris:', error);
         throw new apiError(`Erreur serveur: ${error.message}`, 500);
     }
 });
@@ -1382,7 +1423,7 @@ exports.addToFavorites = asyncHandler(async (req, res) => {
             data: favorite
         });
     } catch (error) {
-        console.error('Erreur lors de l\'ajout aux favoris:', error);
+        logger.error('Erreur lors de l\'ajout aux favoris:', error);
         throw new apiError(`Erreur serveur: ${error.message}`, 500);
     }
 });
@@ -1408,7 +1449,21 @@ exports.removeFromFavorites = asyncHandler(async (req, res) => {
             message: 'Résidence retirée des favoris'
         });
     } catch (error) {
-        console.error('Erreur lors de la suppression du favori:', error);
+        logger.error('Erreur lors de la suppression du favori:', error);
         throw new apiError(`Erreur serveur: ${error.message}`, 500);
     }
+});
+
+exports.requestPublication = asyncHandler(async (req, res) => {
+    const publication = require('../../services/residence-publication.service');
+    const result = await publication.requestPublication({
+        residenceId: req.params.id,
+        user: req.user,
+    });
+    res.status(200).json({
+        success: true,
+        data: result.residence,
+        alreadyPending: result.alreadyPending || false,
+        alreadyPublished: result.alreadyPublished || false,
+    });
 });

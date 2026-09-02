@@ -252,16 +252,45 @@ const reservationSchema = new mongoose.Schema({
         type: Date,
         index: true // Pour les requêtes d'expiration
     },
+    hostApprovalDeadline: {
+        type: Date,
+        index: true
+    },
+    expirationReason: {
+        type: String,
+        enum: ['payment_timeout', 'host_approval_timeout'],
+    },
     paymentTimerDuration: {
         type: Number,
         default: 30 // minutes par défaut
     },
     
-    // QR Code pour check-in/check-out
+    // QR Code LEGACY (Math.random) — ne plus générer ; ignoré par stay credentials P2-05C2
     qrCode: {
         checkInCode: String,
         checkOutCode: String,
         generatedAt: Date
+    },
+
+    // P2-05C2 — credentials stay internes (select:false — jamais dans GET ordinaires)
+    stayCredentials: {
+        type: {
+            checkIn: {
+                tokenHash: { type: String },
+                issuedAt: Date,
+                expiresAt: Date,
+                consumedAt: { type: Date },
+                version: { type: Number },
+            },
+            checkOut: {
+                tokenHash: { type: String },
+                issuedAt: Date,
+                expiresAt: Date,
+                consumedAt: { type: Date },
+                version: { type: Number },
+            },
+        },
+        select: false,
     },
     
     // Notifications envoyées
@@ -398,5 +427,40 @@ function enforcePaidOnStatusUpdate(next) {
 
 reservationSchema.pre('findOneAndUpdate', enforcePaidOnStatusUpdate);
 reservationSchema.pre('updateOne', enforcePaidOnStatusUpdate);
+
+reservationSchema.index({ status: 1, hostApprovalDeadline: 1 });
+
+// P2-05C2 — unique only when tokenHash is a real string (legacy/absent docs excluded).
+// partialFilterExpression préféré à sparse: évite collision unique sur null.
+reservationSchema.index(
+  { 'stayCredentials.checkIn.tokenHash': 1 },
+  {
+    unique: true,
+    name: 'stay_cred_checkin_hash_unique',
+    partialFilterExpression: {
+      'stayCredentials.checkIn.tokenHash': { $exists: true, $type: 'string' },
+    },
+  }
+);
+reservationSchema.index(
+  { 'stayCredentials.checkOut.tokenHash': 1 },
+  {
+    unique: true,
+    name: 'stay_cred_checkout_hash_unique',
+    partialFilterExpression: {
+      'stayCredentials.checkOut.tokenHash': { $exists: true, $type: 'string' },
+    },
+  }
+);
+
+function stripStayCredentials(_doc, ret) {
+  if (ret && Object.prototype.hasOwnProperty.call(ret, 'stayCredentials')) {
+    delete ret.stayCredentials;
+  }
+  return ret;
+}
+
+reservationSchema.set('toJSON', { transform: stripStayCredentials });
+reservationSchema.set('toObject', { transform: stripStayCredentials });
 
 module.exports = mongoose.model('Reservation', reservationSchema);

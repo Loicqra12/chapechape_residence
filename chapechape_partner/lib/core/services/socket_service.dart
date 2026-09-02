@@ -1,6 +1,5 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:chapechape_partner/core/utils/secure_storage.dart';
 import '../config/app_config_manager.dart';
 
@@ -18,6 +17,7 @@ class SocketService {
   Function(Map<String, dynamic>)? onReservationStatusChanged;
   Function(Map<String, dynamic>)? onNewReservationReceived;
   Function(Map<String, dynamic>)? onReservationExpired;
+  Function(Map<String, dynamic>)? onResidenceReservationUpdate;
 
   Future<void> initialize() async {
     if (_socket != null) {
@@ -100,6 +100,17 @@ class SocketService {
 
     _socket!.on('partner_reservation_expired', (data) {
       onReservationExpired?.call(_asMap(data));
+    });
+
+    // Room résidence — le calendrier rafraîchit l'API, le Socket n'est pas source de vérité.
+    _socket!.on('residence_reservation_update', (data) {
+      onResidenceReservationUpdate?.call(_asMap(data));
+    });
+    _socket!.on('booking_approved', (data) {
+      onResidenceReservationUpdate?.call(_asMap(data));
+    });
+    _socket!.on('booking_rejected', (data) {
+      onResidenceReservationUpdate?.call(_asMap(data));
     });
   }
 

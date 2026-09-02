@@ -509,14 +509,24 @@ class AnalyticsTab extends StatelessWidget {
     switch (status) {
       case 'pending':
         return 'En attente';
+      case 'awaiting_approval':
+        return 'En attente d\'approbation';
+      case 'payment_pending':
+        return 'Paiement en attente';
       case 'confirmed':
         return 'Confirmées';
+      case 'in_stay':
+        return 'Séjour en cours';
       case 'completed':
         return 'Terminées';
       case 'cancelled':
         return 'Annulées';
+      case 'expired':
+        return 'Expirées';
+      case 'refunded':
+        return 'Remboursées';
       default:
-        return status;
+        return 'Statut inconnu';
     }
   }
 

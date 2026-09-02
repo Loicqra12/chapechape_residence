@@ -4,6 +4,7 @@
 
 Ce document décrit **tout ce qu’il faut mettre en place** pour intégrer la vente de terrains et de biens immobiliers (location/vente/location_vente) dans l’écosystème ChapeChape Résidence, **sans code**, uniquement en termes de fonctionnalités, d’architecture, de parcours et d’adaptations à l’existant.
 
+
 ---
 
 # Partie 1 — Écosystème actuel (résumé)
@@ -18,6 +19,7 @@ Ce document décrit **tout ce qu’il faut mettre en place** pour intégrer la v
 - **Résidences** : `residence.routes.js` (GET/POST/PUT/DELETE, search, my-residences, favorites, images, FAQs, payment-methods, enhanced-amenities). Pas de notion de vente ni de terrains.
 - **Favoris** : Un seul type (résidence). Pas de catégorie (location / achat / terrain).
 - **Admin** : `admin.routes.js` (partenaires, résidences, validate/reject/verify, etc.). Pas de validation de documents légaux ni de stats ventes.
+
 
 ## 1.2 App Partenaire (Flutter)
 

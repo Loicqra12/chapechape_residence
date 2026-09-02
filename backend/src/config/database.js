@@ -15,11 +15,24 @@ const connectDB = async () => {
             serverSelectionTimeoutMS: 30000,
             socketTimeoutMS: 45000,
             retryWrites: true,
-            w: 'majority'
+            w: 'majority',
+            autoIndex: false,
         };
         
         const conn = await mongoose.connect(process.env.MONGODB_URI, options);
         logger.info(`MongoDB Connected: ${conn.connection.host}`);
+
+        if (process.env.SYNC_INVENTORY_LOCK_INDEXES === 'true') {
+            try {
+                const InventoryLock = require('../models/inventory-lock.model');
+                await InventoryLock.syncIndexes();
+                logger.info('InventoryLock indexes synchronisés (SYNC_INVENTORY_LOCK_INDEXES=true)');
+            } catch (indexErr) {
+                logger.error('Échec syncIndexes InventoryLock', { err: indexErr.message });
+            }
+        } else {
+            logger.info('InventoryLock syncIndexes ignoré — vérifier fingerprint prod avant SYNC_INVENTORY_LOCK_INDEXES=true');
+        }
 
         mongoose.connection.on('disconnected', () => {
             logger.error('MongoDB disconnected');

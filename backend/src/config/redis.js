@@ -19,6 +19,7 @@ const createRedisClient = () => {
     if (useRedisMock) {
         logger.info('Using Redis Mock');
         client = new RedisMock();
+        client.isMock = true;
     } else {
         client = new Redis(redisUrl, {
             retryStrategy(times) {

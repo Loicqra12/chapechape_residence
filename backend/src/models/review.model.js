@@ -57,6 +57,7 @@ const reviewSchema = new mongoose.Schema({
 // Index pour améliorer les performances des requêtes
 reviewSchema.index({ residence: 1, createdAt: -1 });
 reviewSchema.index({ user: 1, residence: 1 }, { unique: true });
+reviewSchema.index({ reservation: 1 }, { unique: true, sparse: true });
 
 // Middleware pour vérifier que l'utilisateur a bien séjourné dans la résidence (optionnel)
 reviewSchema.pre('save', async function(next) {

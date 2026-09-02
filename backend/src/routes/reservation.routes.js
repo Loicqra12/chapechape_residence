@@ -11,8 +11,14 @@ const {
     checkAvailabilitySchema,
     calculatePriceSchema,
     addNoteSchema,
+    issueStayCredentialSchema,
+    resolveStayCredentialSchema,
+    stayActionCredentialSchema,
 } = require('../validations/reservation.validation');
-const ApiError = require('../utils/apiError');
+const {
+    stayCredentialIssueLimiter,
+    stayCredentialResolveLimiter,
+} = require('../middlewares/rate-limit.middleware');
 
 // Routes nécessitant une authentification
 router.use(protect);
@@ -37,6 +43,15 @@ router.post(
   reservationController.calculatePrice
 );
 
+// P2-05C2 — resolve avant /:id
+router.post(
+  '/stay-credentials/resolve',
+  authorize('partner'),
+  stayCredentialResolveLimiter,
+  validate(resolveStayCredentialSchema),
+  reservationController.resolveStayCredential
+);
+
 router.route('/:id')
     .get(reservationController.getReservationById)
     .patch(validate(modifyReservationSchema), reservationController.modifyReservation);
@@ -56,22 +71,36 @@ router.route('/:id/check-availability')
 router.route('/:id/modification-fees')
     .post(validate(calculateModificationFeesSchema), reservationController.calculateModificationFees);
 
-// ✅ NOUVELLES ROUTES - INTEGRATION RESERVATIONMODE
-// Routes d'approbation (Partner seulement)
 router.route('/:id/approve')
     .patch(authorize('partner'), reservationController.approveReservation);
 
 router.route('/:id/reject')
     .patch(authorize('partner'), reservationController.rejectReservation);
 
-// Confirmation paiement (client / admin) — chemin canonique aussi via POST /payments/:id/confirm
 router.patch('/:id/confirm-payment', reservationController.confirmPayment);
 
-// Routes de check-in/out (Partner seulement)
+// P2-05C2 — Client issue stay credential
+router.post(
+  '/:id/stay-credentials',
+  authorize('client'),
+  stayCredentialIssueLimiter,
+  validate(issueStayCredentialSchema),
+  reservationController.issueStayCredential
+);
+
+// Routes de check-in/out (Partner seulement) — credential optionnel
 router.route('/:id/checkin')
-    .patch(authorize('partner'), reservationController.performCheckin);
+    .patch(
+      authorize('partner'),
+      validate(stayActionCredentialSchema),
+      reservationController.performCheckin
+    );
 
 router.route('/:id/checkout')
-    .patch(authorize('partner'), reservationController.performCheckout);
+    .patch(
+      authorize('partner'),
+      validate(stayActionCredentialSchema),
+      reservationController.performCheckout
+    );
 
 module.exports = router;

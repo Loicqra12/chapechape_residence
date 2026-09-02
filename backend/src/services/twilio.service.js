@@ -124,42 +124,6 @@ class TwilioService {
     }
   }
 
-  // Méthode spécifique pour les notifications de réservation WhatsApp
-  async sendWhatsAppBookingNotification(booking, type) {
-    if (!booking) {
-      throw new Error('Booking object is required');
-    }
-
-    const guest = guestFromBooking(booking);
-    if (!guest?.phoneNumber) {
-      logger.warn(`Impossible d'envoyer un WhatsApp pour la réservation ${booking._id}: Numéro de téléphone manquant`);
-      return null;
-    }
-
-    let message;
-    const residenceName = booking.residence?.title || 'votre résidence';
-    const formattedDate = new Date(booking.visitDate).toLocaleDateString('fr-FR');
-
-    switch (type) {
-      case 'confirmation':
-        message = `🏠 *ChapeChape Résidence*\n\n✅ *Réservation confirmée !*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n⏰ Heure: *${booking.visitTime}*\n\n🙏 Merci de votre confiance !\n\n📱 Vous pouvez nous répondre directement ici pour toute question.`;
-        break;
-      case 'reminder':
-        message = `🏠 *ChapeChape Résidence*\n\n⏰ *Rappel de visite*\n\n🏡 Résidence: *${residenceName}*\n📅 Demain: *${formattedDate}*\n⏰ Heure: *${booking.visitTime}*\n\n👋 À très bientôt !`;
-        break;
-      case 'cancellation':
-        message = `🏠 *ChapeChape Résidence*\n\n❌ *Réservation annulée*\n\n😔 Nous sommes désolés, votre réservation pour *${residenceName}* a été annulée.\n\n📞 Contactez-nous pour plus d'informations.`;
-        break;
-      case 'payment':
-        message = `🏠 *ChapeChape Résidence*\n\n💳 *Paiement requis*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n\n💰 Méthodes de paiement disponibles:\n• 🟠 Orange Money\n• 🔵 Wave\n• 🟡 MTN Money\n• 💵 Espèces lors de la visite\n\n💬 Répondez ici pour choisir votre méthode !`;
-        break;
-      default:
-        message = `🏠 *ChapeChape Résidence*\n\n📋 *Mise à jour de réservation*\n\n🏡 Résidence: *${residenceName}*\n📅 Date: *${formattedDate}*\n\n📱 Consultez l'application pour plus de détails.`;
-    }
-
-    return this.sendWhatsAppMessage(guest.phoneNumber, message);
-  }
-
   // Méthode spécifique pour envoyer des instructions de paiement WhatsApp (version riche)
   async sendWhatsAppPaymentInstructions(booking, paymentMethod) {
     const guest = guestFromBooking(booking);
@@ -248,43 +212,6 @@ class TwilioService {
     }
 
     return this.sendSMS(reservation.user.phoneNumber, message);
-  }
-
-  // Méthode spécifique pour les notifications de réservation (LEGACY - Booking)
-  async sendBookingNotification(booking, type) {
-    if (!booking) {
-      throw new Error('Booking object is required');
-    }
-
-    const guest = guestFromBooking(booking);
-    if (!guest?.phoneNumber) {
-      logger.warn(`Impossible d'envoyer un SMS pour la réservation ${booking._id}: Numéro de téléphone manquant`);
-      return null;
-    }
-
-    let message;
-    const residenceName = booking.residence?.title || 'votre résidence';
-    const formattedDate = new Date(booking.visitDate).toLocaleDateString('fr-FR');
-
-    switch (type) {
-      case 'confirmation':
-        message = `ChapeChape: Votre réservation pour "${residenceName}" est confirmée pour le ${formattedDate} à ${booking.visitTime}. Merci de votre confiance!`;
-        break;
-      case 'reminder':
-        message = `ChapeChape: Rappel de votre visite à "${residenceName}" prévue pour demain ${formattedDate} à ${booking.visitTime}. A bientôt!`;
-        break;
-      case 'cancellation':
-        message = `ChapeChape: Nous sommes désolés, votre réservation pour "${residenceName}" a été annulée. Contactez-nous pour plus d'informations.`;
-        break;
-      case 'payment':
-        // Adapté aux méthodes de paiement africaines
-        message = `ChapeChape: Paiement requis pour votre réservation à "${residenceName}". Vous pouvez payer via Orange Money, Wave, MTN Money ou en espèces lors de votre visite.`;
-        break;
-      default:
-        message = `ChapeChape: Mise à jour de votre réservation pour "${residenceName}" prévue le ${formattedDate}. Veuillez consulter l'application pour plus de détails.`;
-    }
-
-    return this.sendSMS(guest.phoneNumber, message);
   }
 
   // Méthode spécifique pour envoyer des instructions de paiement Reservation

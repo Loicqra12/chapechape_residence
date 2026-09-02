@@ -1,15 +1,29 @@
+function deployedCommit() {
+  try {
+    return require('child_process').execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch (err) {
+    return undefined;
+  }
+}
+
+const GIT_COMMIT = deployedCommit();
+
 module.exports = {
   apps: [{
     name: 'chapechape-residences-api',
     script: 'src/server.js',
-    instances: 'max', // Utilise le nombre maximum de CPU disponibles
-    exec_mode: 'cluster', // Mode cluster pour la mise à l'échelle
-    autorestart: true, // Redémarrage automatique en cas de crash
-    watch: false, // Désactivé en production
-    max_memory_restart: '1G', // Redémarrage si la mémoire dépasse 1GB
+    instances: 'max',
+    exec_mode: 'cluster',
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    kill_timeout: 25000,
+    wait_ready: true,
+    listen_timeout: 15000,
     env: {
       NODE_ENV: 'production',
-      PORT: 4000
+      PORT: 4000,
+      ...(GIT_COMMIT ? { GIT_COMMIT } : {}),
     },
     env_development: {
       NODE_ENV: 'development',
@@ -43,7 +57,8 @@ module.exports = {
     // Variables d'environnement spécifiques
     env_production: {
       NODE_ENV: 'production',
-      PORT: 4000
+      PORT: 4000,
+      ...(GIT_COMMIT ? { GIT_COMMIT } : {}),
     }
   }],
 

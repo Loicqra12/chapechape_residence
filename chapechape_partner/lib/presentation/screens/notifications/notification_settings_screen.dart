@@ -1,396 +1,234 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:chapechape_partner/core/utils/secure_storage.dart';
+import 'package:chapechape_partner/core/services/onesignal_service.dart';
 import '../../../core/repositories/notification_repository.dart';
 import '../../../core/models/notification/notification_preference.dart';
 import '../../../core/config/twilio_config.dart';
 
+/// Préférences Partner — push distant via backend (source de vérité),
+/// SMS / heures de silence en local (NotificationRepository).
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({Key? key}) : super(key: key);
 
   @override
-  _NotificationSettingsScreenState createState() => _NotificationSettingsScreenState();
+  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
 }
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
-  late NotificationPreference _preferences;
+  final OneSignalService _oneSignalService = OneSignalService();
   bool _isLoading = true;
   String? _userId;
+
+  bool _pushEnabled = true;
+  bool _emailEnabled = true;
+  bool _bookings = true;
+  bool _messages = true;
+  bool _payments = true;
+  bool _promotions = true;
+  bool _system = true;
+
+  NotificationPreference _localPrefs = NotificationPreference.defaultForUser('unknown');
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
     _loadPreferences();
   }
-  
+
   @override
   void dispose() {
     _phoneController.dispose();
     _emailController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadPreferences() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+    setState(() => _isLoading = true);
     try {
-      // Récupérer l'ID de l'utilisateur depuis le stockage sécurisé
-      final storage = AppSecureStorage.instance;
-      _userId = await storage.read(key: 'userId');
-      
-      // Si l'ID utilisateur n'est pas trouvé, afficher une erreur
-      if (_userId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Utilisateur non connecté. Veuillez vous connecter.')),
-        );
-        setState(() {
-          _isLoading = false;
-          _preferences = NotificationPreference.defaultForUser('unknown');
-        });
-        return;
-      }
-      
+      final remote = await _oneSignalService.getNotificationPreferences();
+      final settings = remote['notificationSettings'] as Map<String, dynamic>? ?? {};
+      final categories = settings['categories'] as Map<String, dynamic>? ?? {};
+
+      _pushEnabled = settings['pushEnabled'] as bool? ?? true;
+      _emailEnabled = settings['emailEnabled'] as bool? ?? true;
+      _bookings = categories['bookings'] as bool? ?? true;
+      _messages = categories['messages'] as bool? ?? true;
+      _payments = categories['payments'] as bool? ?? true;
+      _promotions = categories['promotions'] as bool? ?? true;
+      _system = categories['system'] as bool? ?? true;
+
       final repository = Provider.of<NotificationRepository>(context, listen: false);
-      _preferences = await repository.getUserPreferences(_userId!);
-      
-      _phoneController.text = _preferences.phoneNumber ?? '';
-      _emailController.text = _preferences.email ?? '';
-      
-      setState(() {
-        _isLoading = false;
-      });
+      _userId = null;
+      _localPrefs = await repository.getUserPreferences('partner');
+      _phoneController.text = _localPrefs.phoneNumber ?? '';
+      _emailController.text = _localPrefs.email ?? '';
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du chargement des préférences: $e')),
-      );
-      setState(() {
-        _isLoading = false;
-        _preferences = NotificationPreference.defaultForUser(_userId ?? 'unknown');
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur chargement préférences: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _savePreferences() async {
     if (!_formKey.currentState!.validate()) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
+    setState(() => _isLoading = true);
     try {
+      await _oneSignalService.updateNotificationPreferences(
+        pushEnabled: _pushEnabled,
+        emailEnabled: _emailEnabled,
+        categories: {
+          'bookings': _bookings,
+          'messages': _messages,
+          'payments': _payments,
+          'promotions': _promotions,
+          'system': _system,
+        },
+      );
+
       final repository = Provider.of<NotificationRepository>(context, listen: false);
-      
-      // Créer une nouvelle instance avec les valeurs mises à jour
-      final updatedPreferences = _preferences.copyWith(
+      final updatedLocal = _localPrefs.copyWith(
         phoneNumber: _phoneController.text.isEmpty ? null : _phoneController.text,
         email: _emailController.text.isEmpty ? null : _emailController.text,
         updatedAt: DateTime.now(),
       );
-      
-      final success = await repository.updatePreferences(updatedPreferences);
-      
-      if (success) {
+      await repository.updatePreferences(updatedLocal);
+      _localPrefs = updatedLocal;
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Préférences enregistrées avec succès')),
         );
-        setState(() {
-          _preferences = updatedPreferences;
-          _isLoading = false;
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible d\'enregistrer les préférences')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'enregistrement: $e')),
-      );
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur enregistrement: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-  
+
+  Widget _remoteSwitch(String title, String subtitle, bool value, ValueChanged<bool> onChanged, {bool enabled = true}) {
+    return SwitchListTile(
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      onChanged: enabled ? onChanged : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Préférences de notification'),
-      ),
+      appBar: AppBar(title: const Text('Préférences de notification')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 children: [
                   const Text(
-                    'Canaux de notification',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    'Notifications push distantes',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Card(
+                    child: Column(
+                      children: [
+                        _remoteSwitch(
+                          'Notifications push',
+                          'Push OneSignal contrôlé par le serveur',
+                          _pushEnabled,
+                          (v) => setState(() => _pushEnabled = v),
+                        ),
+                        _remoteSwitch(
+                          'Notifications email',
+                          'Emails transactionnels et inbox',
+                          _emailEnabled,
+                          (v) => setState(() => _emailEnabled = v),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Catégories push',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Card(
+                    child: Column(
+                      children: [
+                        _remoteSwitch('Réservations', 'bookings', _bookings, (v) => setState(() => _bookings = v), enabled: _pushEnabled),
+                        _remoteSwitch('Messages', 'messages', _messages, (v) => setState(() => _messages = v), enabled: _pushEnabled),
+                        _remoteSwitch('Paiements', 'payments', _payments, (v) => setState(() => _payments = v), enabled: _pushEnabled),
+                        _remoteSwitch('Promotions', 'promotions', _promotions, (v) => setState(() => _promotions = v), enabled: _pushEnabled),
+                        _remoteSwitch('Système', 'system', _system, (v) => setState(() => _system = v), enabled: _pushEnabled),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Préférences locales (SMS)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const Text(
+                    'Canaux SMS et heures de silence — stockés sur l\'appareil uniquement',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
-                        children: TwilioConfig.availableChannels.map((channel) {
-                          final title = channel == 'push'
-                              ? 'Notifications push'
-                              : channel == 'sms'
-                                  ? 'SMS'
-                                  : 'Email';
-                          final subtitle = channel == 'sms'
-                              ? 'Des frais peuvent s\'appliquer'
-                              : channel == 'email'
-                                  ? 'Notifications par email'
-                                  : 'Notifications sur l\'appareil';
-                          
-                          return SwitchListTile(
-                            title: Text(title),
-                            subtitle: Text(subtitle),
-                            value: _preferences.channels[channel] ?? false,
-                            onChanged: (value) {
-                              setState(() {
-                                final updatedChannels = Map<String, bool>.from(_preferences.channels);
-                                updatedChannels[channel] = value;
-                                _preferences = _preferences.copyWith(
-                                  channels: updatedChannels,
-                                );
-                              });
-                            },
-                          );
-                        }).toList(),
+                        children: TwilioConfig.availableChannels
+                            .where((c) => c == 'sms')
+                            .map((channel) => SwitchListTile(
+                                  title: const Text('SMS'),
+                                  subtitle: const Text('Des frais peuvent s\'appliquer'),
+                                  value: _localPrefs.channels[channel] ?? false,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      final updated = Map<String, bool>.from(_localPrefs.channels);
+                                      updated[channel] = value;
+                                      _localPrefs = _localPrefs.copyWith(channels: updated);
+                                    });
+                                  },
+                                ))
+                            .toList(),
                       ),
                     ),
                   ),
-                  
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Types de notifications',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              'Résidences',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          _buildNotificationTypeTile(
-                            'residence_created',
-                            'Création de résidence',
-                            'Lorsqu\'une nouvelle résidence est créée',
-                          ),
-                          _buildNotificationTypeTile(
-                            'residence_updated',
-                            'Mise à jour de résidence',
-                            'Lorsqu\'une résidence est modifiée',
-                          ),
-                          _buildNotificationTypeTile(
-                            'residence_deleted',
-                            'Suppression de résidence',
-                            'Lorsqu\'une résidence est supprimée',
-                          ),
-                          
-                          const Divider(),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              'Réservations',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          _buildNotificationTypeTile(
-                            'booking_created',
-                            'Nouvelle réservation',
-                            'Lorsqu\'une nouvelle réservation est effectuée',
-                          ),
-                          _buildNotificationTypeTile(
-                            'booking_confirmed',
-                            'Réservation confirmée',
-                            'Lorsqu\'une réservation est confirmée',
-                          ),
-                          _buildNotificationTypeTile(
-                            'booking_canceled',
-                            'Réservation annulée',
-                            'Lorsqu\'une réservation est annulée',
-                          ),
-                          
-                          const Divider(),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              'Communications',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          _buildNotificationTypeTile(
-                            'message_received',
-                            'Nouveau message',
-                            'Lorsqu\'un nouveau message est reçu',
-                          ),
-                          _buildNotificationTypeTile(
-                            'review_received',
-                            'Nouvel avis',
-                            'Lorsqu\'un nouvel avis est publié',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Coordonnées pour les notifications',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
                           TextFormField(
                             controller: _phoneController,
-                            decoration: const InputDecoration(
-                              labelText: 'Numéro de téléphone (pour SMS)',
-                              hintText: 'Ex: +22501234567',
-                            ),
+                            decoration: const InputDecoration(labelText: 'Téléphone (SMS)'),
                             keyboardType: TextInputType.phone,
-                            validator: (value) {
-                              if (value != null && value.isNotEmpty && !value.startsWith('+')) {
-                                return 'Le numéro doit commencer par + et le code pays';
-                              }
-                              return null;
-                            },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           TextFormField(
                             controller: _emailController,
-                            decoration: const InputDecoration(
-                              labelText: 'Email (pour notifications par email)',
-                              hintText: 'Ex: exemple@chapechape.com',
-                            ),
+                            decoration: const InputDecoration(labelText: 'Email contact local'),
                             keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value != null && value.isNotEmpty && !value.contains('@')) {
-                                return 'Veuillez entrer un email valide';
-                              }
-                              return null;
-                            },
                           ),
                         ],
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 24),
-                  const Text(
-                    'Heures de silence',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Définissez une plage horaire pendant laquelle vous ne recevrez pas de notifications SMS',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DropdownButtonFormField<int>(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Début',
-                                  ),
-                                  value: _preferences.quietHoursStart,
-                                  items: List.generate(24, (index) {
-                                    return DropdownMenuItem<int>(
-                                      value: index,
-                                      child: Text('${index}h00'),
-                                    );
-                                  }),
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _preferences = _preferences.copyWith(
-                                          quietHoursStart: value,
-                                        );
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: DropdownButtonFormField<int>(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Fin',
-                                  ),
-                                  value: _preferences.quietHoursEnd,
-                                  items: List.generate(24, (index) {
-                                    return DropdownMenuItem<int>(
-                                      value: index,
-                                      child: Text('${index}h00'),
-                                    );
-                                  }),
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _preferences = _preferences.copyWith(
-                                          quietHoursEnd: value,
-                                        );
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: _savePreferences,
                     child: const Text('Enregistrer les préférences'),
@@ -400,21 +238,4 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             ),
     );
   }
-  
-  Widget _buildNotificationTypeTile(String type, String title, String subtitle) {
-    return SwitchListTile(
-      title: Text(title),
-      subtitle: Text(subtitle),
-      value: _preferences.types[type] ?? true,
-      onChanged: (value) {
-        setState(() {
-          final updatedTypes = Map<String, bool>.from(_preferences.types);
-          updatedTypes[type] = value;
-          _preferences = _preferences.copyWith(
-            types: updatedTypes,
-          );
-        });
-      },
-    );
-  }
-} 
+}

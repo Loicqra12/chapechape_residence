@@ -3,71 +3,56 @@ const apiError = require('../utils/apiError');
 const User = require('../models/user.model');
 const logger = require('../utils/logger');
 
-// Protéger les routes
 exports.protect = async (req, res, next) => {
     try {
-        logger.info('Auth middleware appelé', { 
-            url: req.originalUrl, 
-            method: req.method,
-            hasAuth: !!req.headers.authorization 
-        });
-        
         let token;
 
-        // Vérifier si le token est dans les headers
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
-            logger.info('Token extrait du header Authorization');
         }
 
-        // Vérifier si le token existe
         if (!token) {
-            logger.error('Token manquant dans la requête');
+            logger.warn('AUTH_FAILURE', { reason: 'missing_token' });
             return next(
                 new apiError('Non autorisé - Token non fourni', 401)
             );
         }
 
         try {
-            // Vérifier le token avec le nouvel utilitaire
             const decoded = jwt.verifyToken(token, 'JWT_SECRET');
 
-            // Ajouter l'utilisateur à la requête
-            logger.info('Token décodé avec succès', { userId: decoded.id });
             const user = await User.findById(decoded.id);
-            
-            // Vérifier si l'utilisateur existe
+
             if (!user) {
-                logger.error('Utilisateur non trouvé pour le token', { userId: decoded.id });
+                logger.warn('AUTH_FAILURE', { reason: 'user_not_found', userId: decoded.id });
                 return next(
                     new apiError('L\'utilisateur associé à ce token n\'existe plus', 401)
                 );
             }
-            
-            logger.info('Utilisateur authentifié avec succès', { 
-                userId: user._id, 
-                email: user.email, 
-                role: user.role 
+
+            logger.debug('AUTH_SUCCESS', {
+                userId: user._id,
+                role: user.role,
             });
-            
-            // Invalider les tokens JWT émis avant un changement de mot de passe.
+
             if (typeof user.hasPasswordChangedAfter === 'function' && user.hasPasswordChangedAfter(decoded.iat)) {
+                logger.warn('AUTH_FAILURE', { reason: 'password_changed', userId: user._id });
                 return next(
                     new apiError('L\'utilisateur a récemment changé de mot de passe, veuillez vous reconnecter', 401)
                 );
             }
 
             if (user.isActive === false) {
+                logger.warn('AUTH_FAILURE', { reason: 'account_disabled', userId: user._id });
                 return next(
                     new apiError('Ce compte a été désactivé', 403)
                 );
             }
 
-            // Tout est OK, passer l'utilisateur dans la requête
             req.user = user;
             next();
         } catch (error) {
-            logger.error('Erreur d\'authentification:', error);
+            logger.warn('AUTH_FAILURE', { reason: 'invalid_token', message: error.message });
             return next(
                 new apiError('Erreur d\'authentification: ' + error.message, 401)
             );
@@ -80,8 +65,6 @@ exports.protect = async (req, res, next) => {
     }
 };
 
-// Autoriser certains rôles
-// superadmin = rôle le plus élevé : accès à toute route déjà restreinte par authorize(...)
 exports.authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
@@ -91,68 +74,62 @@ exports.authorize = (...roles) => {
         }
 
         const userRole = req.user.role;
-
-        if (userRole === 'superadmin') {
-            return next();
-        }
-
-        // Si la route autorise 'admin', accepter aussi 'superadmin' (déjà géré ci-dessus)
-        // et 'owner' si présent dans le modèle comme équivalent privilégié.
         const allowed = new Set(roles);
         if (allowed.has('admin')) {
             allowed.add('superadmin');
         }
+        if (allowed.has('partner')) {
+            allowed.add('partner_pending');
+        }
 
         if (!allowed.has(userRole)) {
+            logger.warn('FORBIDDEN_ACCESS', { reason: 'role_not_allowed', role: userRole });
             return next(
                 new apiError(`Le rôle ${userRole} n'est pas autorisé à accéder à cette route`, 403)
             );
         }
-        
+
         next();
     };
 };
 
-// Alias utilisé par les routes (partner-verification, etc.) : même logique qu'authorize
 exports.restrictTo = exports.authorize;
 
-// Vérifier la validité d'un refresh token
 exports.validateRefreshToken = async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
-        
+
         if (!refreshToken) {
             return next(
                 new apiError('Refresh token non fourni', 400)
             );
         }
-        
+
         try {
-            // Vérifier le refresh token
             const decoded = jwt.verifyToken(refreshToken, 'JWT_REFRESH_SECRET');
-            
-            // Trouver l'utilisateur associé
+
             const user = await User.findById(decoded.id);
-            
+
             if (!user) {
+                logger.warn('AUTH_FAILURE', { reason: 'user_not_found' });
                 return next(
                     new apiError('Utilisateur non trouvé', 401)
                 );
             }
 
             if (user.isActive === false) {
+                logger.warn('AUTH_FAILURE', { reason: 'account_disabled', userId: user._id });
                 return next(
                     new apiError('Ce compte a été désactivé', 403)
                 );
             }
-            
-            // Ajouter l'utilisateur à la requête
+
             req.user = user;
             req.refreshToken = refreshToken;
-            
+
             next();
         } catch (error) {
-            logger.error(`Erreur de validation du refresh token: ${error.message}`);
+            logger.warn('AUTH_FAILURE', { reason: 'invalid_refresh_token', message: error.message });
             return next(
                 new apiError('Refresh token invalide ou expiré', 401)
             );

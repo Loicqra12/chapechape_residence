@@ -22,21 +22,11 @@ const client = new OAuth2Client({
  */
 const verifyGoogleToken = async (idToken) => {
   try {
-    // 🔍 DEBUG: Inspecter le token reçu
-    console.log("🟢 ID Token reçu :", idToken?.substring(0, 50) + "...");
+    logger.debug('GOOGLE_TOKEN_VERIFY_START', {
+      hasToken: Boolean(idToken),
+      expectedAudienceConfigured: Boolean(GOOGLE_CLIENT_ID),
+    });
 
-    const headerBase64 = idToken.split('.')[0];
-    const header = JSON.parse(Buffer.from(headerBase64, 'base64').toString());
-    console.log("📋 Header JWT :", header);
-    console.log("🔑 Key ID (kid) :", header.kid);
-
-    // 🔍 DEBUG: Décoder le payload pour voir l'audience
-    const payloadBase64 = idToken.split('.')[1];
-    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
-    console.log("🎯 Audience dans le token :", payload.aud);
-    console.log("🎯 Client ID attendu :", GOOGLE_CLIENT_ID);
-
-    // Configuration avec gestion des certificats
     const ticket = await client.verifyIdToken({
       idToken: idToken,
       audience: GOOGLE_CLIENT_ID,
@@ -59,11 +49,11 @@ const verifyGoogleToken = async (idToken) => {
       picture: verifiedPayload.picture || ''
     };
   } catch (error) {
-    console.error('Erreur de vérification du token Google:', error);
+    logger.warn('GOOGLE_TOKEN_VERIFY_FAILED', { err: error.message });
 
     // Gestion spécifique de l'erreur PEM
     if (error.message && error.message.includes('No pem found')) {
-      console.log('Tentative de rechargement des certificats Google...');
+      logger.info('GOOGLE_CERT_RELOAD', { reason: 'no_pem_found' });
       // Forcer un nouveau client pour recharger les certificats
       const freshClient = new OAuth2Client({
         clientId: GOOGLE_CLIENT_ID,
@@ -85,7 +75,7 @@ const verifyGoogleToken = async (idToken) => {
           picture: retryPayload.picture || ''
         };
       } catch (retryError) {
-        console.error('Échec de la tentative de retry:', retryError);
+        logger.error('GOOGLE_TOKEN_RETRY_FAILED', { err: retryError.message });
         throw new apiError('Erreur de certificats Google - Veuillez réessayer', 401);
       }
     }
@@ -125,7 +115,7 @@ const authenticateWithGoogle = async (idToken) => {
       });
 
       // Envoyer l'email de bienvenue après la création du compte via Google
-      emailService.sendWelcome(user).catch(e => console.error("Erreur envoi bienvenue (Google Auth):", e?.message));
+      emailService.sendWelcome(user).catch(e => logger.error('GOOGLE_AUTH_WELCOME_EMAIL_FAILED', { err: e?.message }));
     } else if (!user.googleId) {
       // Si l'utilisateur existe mais n'a pas de googleId, le mettre à jour
       user.googleId = googleUserInfo.googleId;
@@ -160,7 +150,7 @@ const authenticateWithGoogle = async (idToken) => {
       refreshToken
     };
   } catch (error) {
-    console.error('Erreur d\'authentification Google:', error);
+    logger.error('GOOGLE_AUTH_FAILED', { err: error.message });
     throw new apiError('Erreur d\'authentification avec Google', 500);
   }
 };

@@ -27,9 +27,6 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
     throw new apiError('Numéro de téléphone requis', 400);
   }
   
-  // Vérifier si un utilisateur existe déjà avec ce numéro (utiliser le numéro normalisé)
-  const existingUser = await User.findOne({ phoneNumber: normalizedPhone });
-  
   // Générer un code à 6 chiffres
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -43,21 +40,9 @@ exports.requestVerificationCode = asyncHandler(async (req, res) => {
     codeId
   });
   
-  // Message personnalisé selon le canal et l'utilisateur
-  let messageBody;
-  if (channel === 'whatsapp') {
-    if (existingUser) {
-      messageBody = `🏠 *ChapeChape Résidence*\n\n🔐 *Code de vérification*\n\nVotre code de vérification est : *${code}*\n\n⏰ Ce code expirera dans 10 minutes.\n\n🔒 Ne partagez jamais ce code avec personne.`;
-    } else {
-      messageBody = `🏠 *ChapeChape Résidence*\n\n🎉 *Bienvenue !*\n\nVotre code de vérification est : *${code}*\n\n⏰ Ce code expirera dans 10 minutes.\n\n🔒 Ne partagez jamais ce code avec personne.`;
-    }
-  } else {
-    if (existingUser) {
-      messageBody = `ChapeChape: Votre code de vérification est ${code}. Ce code expirera dans 10 minutes.`;
-    } else {
-      messageBody = `ChapeChape: Bienvenue! Votre code de vérification est ${code}. Ce code expirera dans 10 minutes.`;
-    }
-  }
+  const messageBody = channel === 'whatsapp'
+    ? `🏠 *ChapeChape Résidence*\n\n🔐 *Code de vérification*\n\nVotre code de vérification est : *${code}*\n\n⏰ Ce code expirera dans 10 minutes.\n\n🔒 Ne partagez jamais ce code avec personne.`
+    : `ChapeChape: Votre code de vérification est ${code}. Ce code expirera dans 10 minutes.`;
   
   try {
     // Vérifier si Twilio est configuré
@@ -176,10 +161,13 @@ exports.verifyCode = asyncHandler(async (req, res) => {
     throw new apiError('Code de vérification invalide ou expiré', 400);
   }
   
-  // Vérifier si le code est expiré
+  if (verificationCode.isVerified) {
+    throw new apiError('Code de vérification invalide ou expiré', 400);
+  }
+
   if (verificationCode.expiresAt < new Date()) {
     await VerificationCode.deleteOne({ _id: verificationCode._id });
-    throw new apiError('Code de vérification expiré', 400);
+    throw new apiError('Code de vérification invalide ou expiré', 400);
   }
   
   // Vérifier si le code correspond
@@ -203,14 +191,24 @@ exports.verifyCode = asyncHandler(async (req, res) => {
 
   // Mettre à jour le statut de vérification du téléphone côté utilisateur
   try {
-    const user = await User.findOne({ phoneNumber: normalizedPhone });
+  const user = await User.findOne({ phoneNumber: normalizedPhone });
     if (user) {
       let updates = { isPhoneVerified: true };
-      // Promotion automatique si l'utilisateur est en attente d'activation partenaire
       if (user.role === 'partner_pending') {
         updates.role = 'partner';
       }
       await User.updateOne({ _id: user._id }, { $set: updates });
+      const fresh = await User.findById(user._id);
+      const { publicAuthView } = require('../../security/partner-capabilities');
+      return res.status(200).json({
+        success: true,
+        message: 'Numéro de téléphone vérifié avec succès',
+        data: {
+          phoneNumber: normalizedPhone,
+          verified: true,
+          ...publicAuthView(fresh),
+        }
+      });
     }
   } catch (e) {
     logger.error(`Erreur lors de la mise à jour de l'utilisateur après vérification: ${e.message}`);

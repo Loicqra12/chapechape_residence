@@ -1,5 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logging/logging.dart';
+import '../models/stay_credential_preview.dart';
+
+String _safeDiagnostic(Object? value) =>
+    redactStayCredentials(value.toString());
 
 /// Observateur de Bloc personnalisé pour surveiller les événements, 
 /// transitions et erreurs dans tous les blocs de l'application partenaire
@@ -15,30 +19,34 @@ class AppBlocObserver extends BlocObserver {
   @override
   void onEvent(Bloc bloc, Object? event) {
     super.onEvent(bloc, event);
-    _logger.info('📩 onEvent -- ${bloc.runtimeType}, event: $event');
+    _logger.info('📩 onEvent -- ${bloc.runtimeType}, event: ${_safeDiagnostic(event)}');
   }
 
   @override
   void onChange(BlocBase bloc, Change change) {
     super.onChange(bloc, change);
-    _logger.fine('🔄 onChange -- ${bloc.runtimeType}, change: $change');
+    _logger.fine('🔄 onChange -- ${bloc.runtimeType}, change: ${_safeDiagnostic(change)}');
   }
 
   @override
   void onTransition(Bloc bloc, Transition transition) {
     super.onTransition(bloc, transition);
-    _logger.info('⏩ onTransition -- ${bloc.runtimeType}, transition: $transition');
+    _logger.info(
+      '⏩ onTransition -- ${bloc.runtimeType}, transition: ${_safeDiagnostic(transition)}',
+    );
   }
 
   @override
   void onError(BlocBase bloc, Object error, StackTrace stackTrace) {
     _logger.severe('❌ onError -- ${bloc.runtimeType}', error, stackTrace);
     
-    // La propriété error.toString() est toujours disponible
-    final errorMessage = error.toString();
+    final errorMessage = _safeDiagnostic(error);
     
-    // Journalisation de l'erreur avec son message
-    _logger.severe('❌ Erreur dans bloc ${bloc.runtimeType}: $errorMessage', error, stackTrace);
+    _logger.severe(
+      '❌ Erreur dans bloc ${bloc.runtimeType}: $errorMessage',
+      error,
+      stackTrace,
+    );
     
     super.onError(bloc, error, stackTrace);
   }

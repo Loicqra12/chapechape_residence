@@ -11,6 +11,61 @@ const ANDROID_CHANNELS = {
   system: 'chapechape_system',
 };
 
+const INVALID_SUBSCRIPTION_ERROR_KEYS = [
+  'invalid_subscription_ids',
+  'invalid_player_ids',
+];
+
+function maskSubscriptionId(id) {
+  if (!id || typeof id !== 'string') return 'unknown';
+  if (id.length <= 8) return '***';
+  return `...${id.slice(-8)}`;
+}
+
+function parseInvalidSubscriptionIds(responseData) {
+  const invalid = new Set();
+  const errors = responseData?.errors;
+  if (!errors || typeof errors !== 'object' || Array.isArray(errors)) {
+    return [];
+  }
+
+  for (const key of INVALID_SUBSCRIPTION_ERROR_KEYS) {
+    const list = errors[key];
+    if (!Array.isArray(list)) continue;
+    for (const id of list) {
+      if (typeof id === 'string' && id.length >= 32) {
+        invalid.add(id);
+      }
+    }
+  }
+
+  return [...invalid];
+}
+
+function classifyProviderFailure(error) {
+  const status = error.response?.status;
+  if (!status) {
+    return { kind: 'network', retryable: true };
+  }
+  if (status === 429) {
+    return { kind: 'rate_limit', retryable: true };
+  }
+  if (status >= 500) {
+    return { kind: 'provider_5xx', retryable: true };
+  }
+  if (status === 401 || status === 403) {
+    return { kind: 'auth_failure', retryable: false };
+  }
+  if (status === 400) {
+    const invalidSubscriptionIds = parseInvalidSubscriptionIds(error.response?.data);
+    if (invalidSubscriptionIds.length > 0) {
+      return { kind: 'invalid_token', retryable: false, invalidSubscriptionIds };
+    }
+    return { kind: 'bad_request', retryable: false };
+  }
+  return { kind: 'unknown', retryable: false };
+}
+
 function isHttpsUrl(url) {
   return typeof url === 'string' && /^https:\/\/\S+/i.test(url.trim());
 }
@@ -112,6 +167,9 @@ class OneSignalService {
             const hasPlayerTargets = Array.isArray(notification.include_subscription_ids);
             const hasSegmentTargets = Array.isArray(notification.included_segments);
             const targetCount = hasPlayerTargets ? notification.include_subscription_ids.length : 0;
+            const maskedTargets = hasPlayerTargets
+                ? notification.include_subscription_ids.map(maskSubscriptionId)
+                : [];
             const segments = hasSegmentTargets ? notification.included_segments : [];
             const dataKeys = notification.data && typeof notification.data === 'object'
                 ? Object.keys(notification.data)
@@ -120,6 +178,7 @@ class OneSignalService {
             logger.info('Envoi notification OneSignal', {
                 targetMode: hasPlayerTargets ? 'subscription_ids' : (hasSegmentTargets ? 'segments' : 'unknown'),
                 targetCount,
+                maskedTargets,
                 segments,
                 hasData: dataKeys.length > 0,
                 dataKeys,
@@ -141,16 +200,24 @@ class OneSignalService {
                 data: notification
             });
 
+            const invalidSubscriptionIds = parseInvalidSubscriptionIds(response.data);
             const result = {
                 success: true,
                 status: 'sent',
                 providerId: response.data?.id || null,
                 recipients: response.data?.recipients ?? 0,
+                invalidSubscriptionIds,
                 raw: response.data,
             };
 
             if (!result.providerId || result.recipients <= 0) {
-                logger.warn('OneSignal a répondu sans destinataire utile', result);
+                logger.warn('OneSignal a répondu sans destinataire utile', {
+                    status: 'skipped',
+                    reason: 'no_recipients',
+                    providerId: result.providerId,
+                    recipients: result.recipients,
+                    targetCount,
+                });
                 return {
                     ...result,
                     success: false,
@@ -159,18 +226,50 @@ class OneSignalService {
                 };
             }
 
+            if (invalidSubscriptionIds.length > 0) {
+                logger.warn('OneSignal push partiel — subscriptions invalides', {
+                    providerId: result.providerId,
+                    recipients: result.recipients,
+                    invalidCount: invalidSubscriptionIds.length,
+                    maskedInvalid: invalidSubscriptionIds.map(maskSubscriptionId),
+                });
+            }
+
             logger.info('Réponse OneSignal reçue', {
                 notificationId: result.providerId,
                 recipients: result.recipients,
             });
             return result;
         } catch (error) {
-            logger.error('Erreur lors de l\'envoi de la notification OneSignal:', {
+            const classification = classifyProviderFailure(error);
+            logger.warn('Échec envoi OneSignal', {
                 message: error.message,
                 status: error.response?.status,
-                errorCode: error.response?.data?.errors?.[0] || error.response?.data?.error
+                kind: classification.kind,
+                retryable: classification.retryable,
+                invalidCount: classification.invalidSubscriptionIds?.length || 0,
             });
-            throw error;
+
+            if (classification.kind === 'invalid_token') {
+                return {
+                    success: false,
+                    status: 'invalid_token',
+                    reason: classification.kind,
+                    invalidSubscriptionIds: classification.invalidSubscriptionIds,
+                    recipients: 0,
+                };
+            }
+
+            if (classification.retryable) {
+                throw error;
+            }
+
+            return {
+                success: false,
+                status: classification.kind,
+                reason: error.response?.data?.errors?.[0] || error.message,
+                recipients: 0,
+            };
         }
     }
 
@@ -241,3 +340,6 @@ class OneSignalService {
 }
 
 module.exports = new OneSignalService();
+module.exports.parseInvalidSubscriptionIds = parseInvalidSubscriptionIds;
+module.exports.maskSubscriptionId = maskSubscriptionId;
+module.exports.classifyProviderFailure = classifyProviderFailure;

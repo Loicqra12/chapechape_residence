@@ -1,7 +1,78 @@
 const asyncHandler = require('../middlewares/async.middleware');
 const ErrorResponse = require('../utils/errorResponse');
 const User = require('../models/user.model');
+const mongoose = require('mongoose');
 const logger = require('../utils/logger');
+
+const REGISTER_MAX_ATTEMPTS = 8;
+
+function isDeviceRegistrationRetryable(error) {
+    if (!error) return false;
+    if (error.code === 112 || error.codeName === 'WriteConflict') return true;
+    if (Array.isArray(error.errorLabels) && (
+        error.errorLabels.includes('TransientTransactionError')
+        || error.errorLabels.includes('UnknownTransactionCommitResult')
+    )) {
+        return true;
+    }
+    if (error.code === 11000) {
+        const dup = `${error.message || ''} ${error.errmsg || ''}`;
+        return /deviceTokens/i.test(dup);
+    }
+    const msg = `${error.message || ''} ${error.errmsg || ''}`;
+    return /WriteConflict|TransientTransactionError|Unable to read from a snapshot/i.test(msg);
+}
+
+async function registerDeviceTokenOnce(userId, deviceToken) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        await User.updateMany(
+            { deviceTokens: deviceToken },
+            { $pull: { deviceTokens: deviceToken } },
+            { session }
+        );
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            {
+                $addToSet: { deviceTokens: deviceToken },
+                $set: { lastAppActivity: new Date() },
+            },
+            { new: true, session }
+        );
+
+        if (!user) {
+            await session.abortTransaction();
+            return null;
+        }
+
+        await session.commitTransaction();
+        return user;
+    } catch (error) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+        throw error;
+    } finally {
+        session.endSession();
+    }
+}
+
+async function registerDeviceTokenAtomic(userId, deviceToken) {
+    for (let attempt = 1; attempt <= REGISTER_MAX_ATTEMPTS; attempt += 1) {
+        try {
+            return await registerDeviceTokenOnce(userId, deviceToken);
+        } catch (error) {
+            if (attempt < REGISTER_MAX_ATTEMPTS && isDeviceRegistrationRetryable(error)) {
+                await new Promise((resolve) => setTimeout(resolve, 15 * attempt));
+                continue;
+            }
+            throw error;
+        }
+    }
+    return null;
+}
 
 /**
  * @desc      Enregistrer un nouveau token d'appareil pour un utilisateur
@@ -16,29 +87,7 @@ exports.registerDevice = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse('Token d\'appareil requis', 400));
     }
 
-    // Exclusivité : une subscription OneSignal ne doit appartenir qu'à un compte
-    // (évite qu'un téléphone partagé reçoive les notifs de l'ancien user)
-    const pullResult = await User.updateMany(
-        { _id: { $ne: userId }, deviceTokens: deviceToken },
-        { $pull: { deviceTokens: deviceToken } }
-    );
-
-    if (pullResult.modifiedCount > 0) {
-        logger.info('Subscription retirée d\'autres comptes avant rattachement', {
-            userId: userId.toString(),
-            modifiedCount: pullResult.modifiedCount,
-            appKind: appKind || 'unknown',
-        });
-    }
-
-    const user = await User.findByIdAndUpdate(
-        userId,
-        {
-            $addToSet: { deviceTokens: deviceToken },
-            $set: { lastAppActivity: new Date() },
-        },
-        { new: true }
-    );
+    const user = await registerDeviceTokenAtomic(userId, deviceToken);
 
     if (!user) {
         return next(new ErrorResponse('Utilisateur non trouvé', 404));
@@ -50,7 +99,6 @@ exports.registerDevice = asyncHandler(async (req, res, next) => {
         role: user.role,
         tokenCount: user.deviceTokens?.length || 0,
     });
-    
     res.status(200).json({
         success: true,
         message: 'Token d\'appareil enregistré avec succès',
@@ -73,7 +121,6 @@ exports.unregisterDevice = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse('Token d\'appareil requis', 400));
     }
 
-    // Mettre à jour l'utilisateur en retirant le token de la liste
     const user = await User.findByIdAndUpdate(
         userId,
         { $pull: { deviceTokens: deviceToken } },
@@ -85,7 +132,7 @@ exports.unregisterDevice = asyncHandler(async (req, res, next) => {
     }
 
     logger.info(`Token d'appareil supprimé pour l'utilisateur ${userId}`);
-    
+
     res.status(200).json({
         success: true,
         message: 'Token d\'appareil supprimé avec succès',
@@ -104,7 +151,6 @@ exports.updateNotificationPreferences = asyncHandler(async (req, res, next) => {
     const userId = req.user.id;
     const { pushEnabled, emailEnabled, categories } = req.body;
 
-    // Construire l'objet de mise à jour avec uniquement les champs fournis
     const updateData = {};
     if (pushEnabled !== undefined) {
         updateData['notificationSettings.pushEnabled'] = pushEnabled;
@@ -145,7 +191,7 @@ exports.updateNotificationPreferences = asyncHandler(async (req, res, next) => {
     }
 
     logger.info(`Préférences de notification mises à jour pour l'utilisateur ${userId}`);
-    
+
     res.status(200).json({
         success: true,
         message: 'Préférences de notification mises à jour avec succès',
@@ -162,9 +208,9 @@ exports.updateNotificationPreferences = asyncHandler(async (req, res, next) => {
  */
 exports.getNotificationPreferences = asyncHandler(async (req, res, next) => {
     const userId = req.user.id;
-    
+
     const user = await User.findById(userId);
-    
+
     if (!user) {
         return next(new ErrorResponse('Utilisateur non trouvé', 404));
     }
@@ -187,3 +233,5 @@ exports.getNotificationPreferences = asyncHandler(async (req, res, next) => {
         }
     });
 });
+
+module.exports.registerDeviceTokenAtomic = registerDeviceTokenAtomic;

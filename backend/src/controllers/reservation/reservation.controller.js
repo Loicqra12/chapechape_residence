@@ -70,10 +70,9 @@ exports.getUserReservations = asyncHandler(async (req, res) => {
             
         case 'admin':
         case 'superadmin':
-        case 'owner':
-            // Admins voient toutes les réservations
+            // Staff : toutes les réservations. `owner` n'est pas un joker.
             filter = {};
-            console.log('INFO: Filtrage ADMIN/SUPERADMIN/OWNER - aucune restriction');
+            console.log('INFO: Filtrage ADMIN/SUPERADMIN - aucune restriction');
             break;
             
         default:
@@ -207,7 +206,7 @@ exports.getReservationById = asyncHandler(async (req, res) => {
         reservationUserId = reservationClientId;
     }
 
-    const isPrivileged = ['admin', 'superadmin', 'owner'].includes(userRole);
+    const isPrivileged = ['admin', 'superadmin'].includes(userRole);
     const isOwnerOfReservation = currentUserId === reservationUserId || currentUserId === reservationClientId;
     const isPartnerOfReservation = currentUserId === reservationPartnerId;
 
@@ -280,7 +279,24 @@ exports.modifyReservation = asyncHandler(async (req, res) => {
  * @route PATCH /api/reservations/:id/status
  */
 exports.updateReservationStatus = asyncHandler(async (req, res) => {
-    const { status } = req.body;
+    const {
+        normalizeReservationStatusInput,
+        isCanonicalReservationStatus,
+    } = require('../../constants/reservation-status');
+    // Guard sur le statut CANONIQUE (après normalize) — couvre in_progress/checked_in/etc.
+    const status = normalizeReservationStatusInput(req.body.status);
+    if (!isCanonicalReservationStatus(status)) {
+        throw new ApiError('Statut de réservation invalide', 400);
+    }
+
+    if (status === 'in_stay' || status === 'completed') {
+        throw new ApiError(
+            'Le check-in et le check-out doivent utiliser les endpoints dédiés /checkin et /checkout',
+            400,
+            require('../../utils/errorCodes').RESERVATION.STAY_ACTION_REQUIRED
+        );
+    }
+
     const ReservationStateService = require('../../services/reservation-state.service');
     
     const reservation = await Reservation.findById(req.params.id);
@@ -476,23 +492,16 @@ exports.approveReservation = asyncHandler(async (req, res) => {
     }
 
     // Vérifier que la réservation est en attente d'approbation
-    if (reservation.status !== 'awaiting_approval') {
+    if (reservation.status !== 'awaiting_approval' && reservation.status !== 'expired') {
         throw new ApiError('Cette réservation ne peut pas être approuvée dans son état actuel', 400);
     }
 
-    // C1 fix : ne PAS passer en confirmed+pending (hook pre-save refuse).
-    // Intention métier = payment_pending + timer (client doit payer après approbation).
+    const hostApprovalService = require('../../services/host-approval.service');
     const oldStatus = reservation.status;
-    const paymentTTL = reservation.ttlSnapshot?.paymentTTLMinutes || 30;
 
     let updatedReservation;
     try {
-        await paymentTimerService.startPaymentTimer(reservation._id, paymentTTL);
-
-        updatedReservation = await Reservation.findById(reservation._id)
-            .populate('user', 'phoneNumber firstName lastName')
-            .populate('residence', 'title')
-            .populate('partner', 'phoneNumber firstName lastName');
+        updatedReservation = await hostApprovalService.approveHostRequest(reservation._id, req.user._id);
 
         await agendaService.notifyReservationStatusChange(
             reservation._id,
@@ -508,6 +517,9 @@ exports.approveReservation = asyncHandler(async (req, res) => {
             );
         }
     } catch (timerError) {
+        if (timerError instanceof ApiError) {
+            throw timerError;
+        }
         logger.error('Erreur activation timers après approbation:', timerError);
         throw new ApiError(
             'Approbation impossible : échec du démarrage du délai de paiement',
@@ -633,6 +645,13 @@ exports.confirmPayment = asyncHandler(async (req, res) => {
         throw new ApiError('Accès non autorisé pour confirmer le paiement', 403);
     }
 
+    if (reservation.status === 'awaiting_approval') {
+        throw new ApiError(
+            'Cette réservation doit d\'abord être approuvée par le partenaire',
+            403
+        );
+    }
+
     // Accepter pending (classique) ou réservation déjà en payment_pending
     const needsPayment =
         reservation.paymentStatus === 'pending' ||
@@ -696,10 +715,15 @@ exports.confirmPayment = asyncHandler(async (req, res) => {
 });
 
 /**
- * Effectuer le check-in d'une réservation
+ * Effectuer le check-in d'une réservation (Partner — chemin canonique)
  * @route PATCH /api/reservations/:id/checkin
+ * Body.credential optionnel (P2-05C2) — si présent, consommation atomique.
  */
 exports.performCheckin = asyncHandler(async (req, res) => {
+    const ReservationStateService = require('../../services/reservation-state.service');
+    const stayCredentialService = require('../../services/stay-credential.service');
+    const errorCodes = require('../../utils/errorCodes');
+
     const reservation = await Reservation.findById(req.params.id)
         .populate('residence')
         .populate('user');
@@ -708,7 +732,6 @@ exports.performCheckin = asyncHandler(async (req, res) => {
         throw new ApiError('Réservation non trouvée', 404);
     }
 
-    // Vérifier l'ownership
     const getIdValue = (input) => {
         if (typeof input === 'string') return input;
         return input?._id?.toString() || input?.toString();
@@ -716,47 +739,100 @@ exports.performCheckin = asyncHandler(async (req, res) => {
 
     const currentPartnerId = getIdValue(req.user._id);
     const reservationPartnerId = getIdValue(reservation.partner);
-    const residencePartnerId = getIdValue(reservation.residence.partner);
+    const residencePartnerId = getIdValue(reservation.residence?.partner);
 
     if (currentPartnerId !== reservationPartnerId && currentPartnerId !== residencePartnerId) {
         throw new ApiError('Accès non autorisé à cette réservation', 403);
     }
 
-    // Vérifier que la réservation peut être check-in
-    if (reservation.status !== 'confirmed' || reservation.paymentStatus !== 'paid') {
-        throw new ApiError('Cette réservation ne peut pas être check-in (statut ou paiement incorrect)', 400);
+    const credential = req.body?.credential;
+    let updatedReservation;
+    let alreadyApplied = false;
+
+    if (credential) {
+        // Credential path: eligibility soft — idempotent retry if already applied
+        if (reservation.status === 'confirmed') {
+            if (reservation.paymentStatus !== 'paid') {
+                throw new ApiError(
+                    'Cette réservation ne peut pas être check-in (statut ou paiement incorrect)',
+                    400,
+                    errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+                );
+            }
+            const now = new Date();
+            const checkInTime = new Date(reservation.checkIn);
+            const twoHoursBefore = new Date(checkInTime.getTime() - 2 * 60 * 60 * 1000);
+            if (now < twoHoursBefore) {
+                throw new ApiError(
+                    'Le check-in ne peut être effectué que 2 heures avant l\'heure prévue',
+                    400,
+                    errorCodes.RESERVATION.CHECKIN_TOO_EARLY
+                );
+            }
+        }
+
+        const result = await stayCredentialService.commitWithCredential(
+            req.params.id,
+            'checkin',
+            credential,
+            req.user,
+            { reason: 'partner_checkin_credential' }
+        );
+        updatedReservation = result.reservation;
+        alreadyApplied = result.alreadyApplied;
+    } else {
+        if (reservation.status !== 'confirmed' || reservation.paymentStatus !== 'paid') {
+            throw new ApiError(
+                'Cette réservation ne peut pas être check-in (statut ou paiement incorrect)',
+                400,
+                errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+            );
+        }
+
+        const now = new Date();
+        const checkInTime = new Date(reservation.checkIn);
+        const twoHoursBefore = new Date(checkInTime.getTime() - 2 * 60 * 60 * 1000);
+
+        if (now < twoHoursBefore) {
+            throw new ApiError(
+                'Le check-in ne peut être effectué que 2 heures avant l\'heure prévue',
+                400,
+                errorCodes.RESERVATION.CHECKIN_TOO_EARLY
+            );
+        }
+
+        updatedReservation = await ReservationStateService.updateStatus(
+            req.params.id,
+            'in_stay',
+            req.user._id,
+            { reason: 'partner_checkin', fromStatuses: ['confirmed'] }
+        );
     }
 
-    // Vérifier que c'est le bon moment pour check-in (tolérance de 2h avant)
-    const now = new Date();
-    const checkInTime = new Date(reservation.checkIn);
-    const twoHoursBefore = new Date(checkInTime.getTime() - 2 * 60 * 60 * 1000);
-
-    if (now < twoHoursBefore) {
-        throw new ApiError('Le check-in ne peut être effectué que 2 heures avant l\'heure prévue', 400);
+    if (!alreadyApplied) {
+        await SocketService.notifyReservationStatusUpdate(updatedReservation);
     }
-
-    // Effectuer le check-in
-    // Statut après check-in réel (phase 1 : séjour en cours)
-    reservation.status = 'in_stay';
-    reservation.actualCheckIn = now;
-    await reservation.save();
-
-    // Notifier via websocket
-    await SocketService.notifyReservationStatusUpdate(reservation);
 
     res.status(200).json({
         success: true,
-        message: 'Check-in effectué avec succès',
-        data: reservation
+        message: alreadyApplied
+            ? 'Check-in déjà appliqué'
+            : 'Check-in effectué avec succès',
+        alreadyApplied,
+        data: updatedReservation,
     });
 });
 
 /**
- * Effectuer le check-out d'une réservation
+ * Effectuer le check-out d'une réservation (Partner — chemin canonique)
  * @route PATCH /api/reservations/:id/checkout
+ * Body.credential optionnel (P2-05C2).
  */
 exports.performCheckout = asyncHandler(async (req, res) => {
+    const ReservationStateService = require('../../services/reservation-state.service');
+    const stayCredentialService = require('../../services/stay-credential.service');
+    const errorCodes = require('../../utils/errorCodes');
+
     const reservation = await Reservation.findById(req.params.id)
         .populate('residence')
         .populate('user');
@@ -765,7 +841,6 @@ exports.performCheckout = asyncHandler(async (req, res) => {
         throw new ApiError('Réservation non trouvée', 404);
     }
 
-    // Vérifier l'ownership
     const getIdValue = (input) => {
         if (typeof input === 'string') return input;
         return input?._id?.toString() || input?.toString();
@@ -773,37 +848,96 @@ exports.performCheckout = asyncHandler(async (req, res) => {
 
     const currentPartnerId = getIdValue(req.user._id);
     const reservationPartnerId = getIdValue(reservation.partner);
-    const residencePartnerId = getIdValue(reservation.residence.partner);
+    const residencePartnerId = getIdValue(reservation.residence?.partner);
 
     if (currentPartnerId !== reservationPartnerId && currentPartnerId !== residencePartnerId) {
         throw new ApiError('Accès non autorisé à cette réservation', 403);
     }
 
-    // Vérifier que la réservation peut être check-out
-    if (!['confirmed', 'in_stay'].includes(reservation.status) || !reservation.actualCheckIn) {
-        throw new ApiError('Cette réservation ne peut pas être check-out (doit être confirmée avec check-in effectué)', 400);
+    const credential = req.body?.credential;
+    let updatedReservation;
+    let alreadyApplied = false;
+
+    if (credential) {
+        if (reservation.status === 'in_stay' && !reservation.actualCheckIn) {
+            throw new ApiError(
+                'Cette réservation ne peut pas être check-out (check-in requis, statut in_stay)',
+                400,
+                errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+            );
+        }
+
+        const result = await stayCredentialService.commitWithCredential(
+            req.params.id,
+            'checkout',
+            credential,
+            req.user,
+            { reason: 'partner_checkout_credential' }
+        );
+        updatedReservation = result.reservation;
+        alreadyApplied = result.alreadyApplied;
+    } else {
+        if (reservation.status !== 'in_stay' || !reservation.actualCheckIn) {
+            throw new ApiError(
+                'Cette réservation ne peut pas être check-out (check-in requis, statut in_stay)',
+                400,
+                errorCodes.RESERVATION.INVALID_STATE_TRANSITION
+            );
+        }
+
+        updatedReservation = await ReservationStateService.updateStatus(
+            req.params.id,
+            'completed',
+            req.user._id,
+            { reason: 'partner_checkout', fromStatuses: ['in_stay'] }
+        );
     }
 
-    // Effectuer le check-out
-    reservation.status = 'completed';
-    reservation.actualCheckOut = new Date();
-    await reservation.save();
-
-    // Phase 3 — demande d'avis +24 h
-    try {
-        const { scheduleReviewReminder } = require('../../services/agenda.service');
-        await scheduleReviewReminder(reservation._id, 24);
-    } catch (reviewErr) {
-        logger.warn('Programmation review reminder échouée:', reviewErr?.message);
+    if (!alreadyApplied) {
+        await SocketService.notifyReservationStatusUpdate(updatedReservation);
     }
-
-    // Notifier via websocket
-    await SocketService.notifyReservationStatusUpdate(reservation);
 
     res.status(200).json({
         success: true,
-        message: 'Check-out effectué avec succès',
-        data: reservation
+        message: alreadyApplied
+            ? 'Check-out déjà appliqué'
+            : 'Check-out effectué avec succès',
+        alreadyApplied,
+        data: updatedReservation,
+    });
+});
+
+/**
+ * Émettre / régénérer un stay credential (Client owner)
+ * @route POST /api/reservations/:id/stay-credentials
+ */
+exports.issueStayCredential = asyncHandler(async (req, res) => {
+    const stayCredentialService = require('../../services/stay-credential.service');
+    const result = await stayCredentialService.issueCredential(
+        req.params.id,
+        req.body.purpose,
+        req.user
+    );
+    res.status(200).json({
+        success: true,
+        data: result,
+    });
+});
+
+/**
+ * Resolve / preview Partner — non-mutating
+ * @route POST /api/reservations/stay-credentials/resolve
+ */
+exports.resolveStayCredential = asyncHandler(async (req, res) => {
+    const stayCredentialService = require('../../services/stay-credential.service');
+    const preview = await stayCredentialService.resolveCredential(
+        req.body.credential,
+        req.body.purpose,
+        req.user
+    );
+    res.status(200).json({
+        success: true,
+        data: preview,
     });
 });
 

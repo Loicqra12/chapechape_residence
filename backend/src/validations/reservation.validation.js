@@ -1,4 +1,8 @@
 const Joi = require('joi');
+const {
+    normalizeReservationStatusInput,
+    isCanonicalReservationStatus,
+} = require('../constants/reservation-status');
 
 const createReservationSchema = {
     body: Joi.object().keys({
@@ -83,7 +87,13 @@ const updateStatusSchema = {
     body: Joi.object().keys({
         status: Joi.string()
             .required()
-            .valid('pending', 'awaiting_approval', 'payment_pending', 'confirmed', 'in_stay', 'cancelled', 'completed', 'expired', 'refunded') // ✅ ALIGNÉ - statuts réservation complets
+            .custom((value, helpers) => {
+                const normalized = normalizeReservationStatusInput(value);
+                if (!isCanonicalReservationStatus(normalized)) {
+                    return helpers.error('any.only');
+                }
+                return normalized;
+            })
             .messages({
                 'any.only': 'Statut invalide',
                 'string.base': 'Statut doit être une chaîne de caractères'
@@ -181,6 +191,37 @@ const addNoteSchema = {
     }),
 };
 
+const issueStayCredentialSchema = {
+    params: Joi.object().keys({
+        id: Joi.string()
+            .required()
+            .regex(/^[0-9a-fA-F]{24}$/),
+    }),
+    body: Joi.object().keys({
+        purpose: Joi.string().valid('checkin', 'checkout').required(),
+    }),
+};
+
+const resolveStayCredentialSchema = {
+    body: Joi.object().keys({
+        credential: Joi.string().required().trim().min(10).max(200),
+        purpose: Joi.string().valid('checkin', 'checkout').required(),
+    }),
+};
+
+const stayActionCredentialSchema = {
+    params: Joi.object().keys({
+        id: Joi.string()
+            .required()
+            .regex(/^[0-9a-fA-F]{24}$/),
+    }),
+    body: Joi.object()
+        .keys({
+            credential: Joi.string().trim().min(10).max(200).optional(),
+        })
+        .unknown(true),
+};
+
 module.exports = {
     createReservationSchema,
     modifyReservationSchema,
@@ -189,4 +230,7 @@ module.exports = {
     checkAvailabilitySchema,
     calculatePriceSchema,
     addNoteSchema,
+    issueStayCredentialSchema,
+    resolveStayCredentialSchema,
+    stayActionCredentialSchema,
 };

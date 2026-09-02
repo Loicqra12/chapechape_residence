@@ -25,6 +25,28 @@ class LoadReservationDetails extends ReservationEvent {
   LoadReservationDetails(this.reservationId);
 }
 
+class PerformPartnerCheckin extends ReservationEvent {
+  final String reservationId;
+  final String? credential;
+
+  PerformPartnerCheckin(this.reservationId, {this.credential});
+
+  @override
+  String toString() =>
+      'PerformPartnerCheckin($reservationId, credential: ${credential != null ? '[REDACTED]' : 'null'})';
+}
+
+class PerformPartnerCheckout extends ReservationEvent {
+  final String reservationId;
+  final String? credential;
+
+  PerformPartnerCheckout(this.reservationId, {this.credential});
+
+  @override
+  String toString() =>
+      'PerformPartnerCheckout($reservationId, credential: ${credential != null ? '[REDACTED]' : 'null'})';
+}
+
 class UpdateReservationStatus extends ReservationEvent {
   final String reservationId;
   final ReservationStatus newStatus;
@@ -117,6 +139,8 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     on<LoadPartnerReservations>(_onLoadPartnerReservations);
     on<LoadResidenceReservations>(_onLoadResidenceReservations);
     on<UpdateReservationStatus>(_onUpdateReservationStatus);
+    on<PerformPartnerCheckin>(_onPerformPartnerCheckin);
+    on<PerformPartnerCheckout>(_onPerformPartnerCheckout);
     on<CancelReservation>(_onCancelReservation);
     // Nouveaux gestionnaires d'événements
     on<LoadReservationDetails>(_onLoadReservationDetails);
@@ -195,6 +219,13 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
     Emitter<ReservationState> emit,
   ) async {
     try {
+      if (event.newStatus == ReservationStatus.inStay ||
+          event.newStatus == ReservationStatus.completed) {
+        throw Exception(
+          'Utilisez les actions CHECK-IN / CHECK-OUT dédiées pour ce séjour',
+        );
+      }
+
       await _reservationService.updateReservationStatus(
         event.reservationId,
         event.newStatus,
@@ -229,6 +260,73 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       
       emit(ReservationError(errorMessage));
     }
+  }
+
+  Future<void> _reloadAfterStayAction(
+    String reservationId,
+    Emitter<ReservationState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is ReservationDetailsLoaded) {
+      add(LoadReservationDetails(reservationId));
+    } else {
+      add(LoadPartnerReservations());
+    }
+  }
+
+  Future<void> _onPerformPartnerCheckin(
+    PerformPartnerCheckin event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      final updated = await _reservationService.performCheckin(
+        event.reservationId,
+        credential: event.credential,
+      );
+      if (updated == null) {
+        throw Exception('Check-in refusé par le serveur');
+      }
+      await _reloadAfterStayAction(event.reservationId, emit);
+    } catch (e) {
+      emit(ReservationError(_stayActionErrorMessage(e)));
+    }
+  }
+
+  Future<void> _onPerformPartnerCheckout(
+    PerformPartnerCheckout event,
+    Emitter<ReservationState> emit,
+  ) async {
+    try {
+      final updated = await _reservationService.performCheckout(
+        event.reservationId,
+        credential: event.credential,
+      );
+      if (updated == null) {
+        throw Exception('Check-out refusé par le serveur');
+      }
+      await _reloadAfterStayAction(event.reservationId, emit);
+    } catch (e) {
+      emit(ReservationError(_stayActionErrorMessage(e)));
+    }
+  }
+
+  String _stayActionErrorMessage(Object e) {
+    var errorMessage = e.toString();
+    if (errorMessage.startsWith('Exception: ')) {
+      errorMessage = errorMessage.substring(11);
+    }
+    if (errorMessage.contains('RESERVATION_STAY_ACTION_REQUIRED') ||
+        errorMessage.contains('endpoints dédiés')) {
+      return 'Utilisez les boutons CHECK-IN / CHECK-OUT pour cette action';
+    }
+    if (errorMessage.contains('RESERVATION_CHECKIN_TOO_EARLY') ||
+        errorMessage.contains('2 heures')) {
+      return 'Check-in trop tôt — autorisé 2 h avant l\'heure prévue';
+    }
+    if (errorMessage.contains('paiement') || errorMessage.contains('PAYMENT')) {
+      return 'Paiement requis avant le check-in';
+    }
+    return errorMessage;
   }
 
   Future<void> _onCancelReservation(
@@ -307,10 +405,7 @@ class ReservationBloc extends Bloc<ReservationEvent, ReservationState> {
       List<Reservation> filteredReservations = allReservations;
       
       if (event.status != null && event.status != 'all') {
-        final status = ReservationStatus.values.firstWhere(
-          (s) => s.name == event.status,
-          orElse: () => ReservationStatus.pending,
-        );
+        final status = ReservationStatus.fromBackendFormat(event.status ?? '');
         filteredReservations = filteredReservations
             .where((r) => r.status == status)
             .toList();

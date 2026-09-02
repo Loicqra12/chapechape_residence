@@ -10,6 +10,7 @@ import 'package:chapechape_client/presentation/widgets/modification_history_widg
 import 'package:chapechape_client/presentation/widgets/booking_cancellation_dialog.dart';
 import 'package:chapechape_client/presentation/widgets/reservation_timer_widget.dart';
 import 'package:chapechape_client/core/utils/booking_helpers.dart';
+import 'package:chapechape_client/core/models/reservation_status.dart';
 import 'package:chapechape_client/core/theme/app_theme.dart';
 import 'package:chapechape_client/core/theme/spacing.dart';
 import 'package:intl/intl.dart';
@@ -327,6 +328,26 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
                     AppSpacing.verticalLg,
 
+                    if (ReservationStatusCanon.isQrEligible(
+                      ReservationStatusCanon.fromApi(booking.status),
+                    )) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () =>
+                              context.push('/booking-qr/${booking.id}'),
+                          icon: const Icon(Icons.qr_code),
+                          label: Text(
+                            ReservationStatusCanon.fromApi(booking.status) ==
+                                    ReservationStatusCanon.inStay
+                                ? 'QR de départ'
+                                : 'QR d\'arrivée',
+                          ),
+                        ),
+                      ),
+                      AppSpacing.verticalLg,
+                    ],
+
                     // Politique d'annulation
                     if (policy != null)
                       CancellationPolicyDetailsWidget(
@@ -418,22 +439,22 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return 'En attente';
       case 'awaiting_approval':
         return 'En attente d\'approbation';
-      case 'pending_payment':
+      case 'payment_pending':
         return 'En attente de paiement';
       case 'confirmed':
         return 'Confirmée';
+      case 'in_stay':
+        return 'Séjour en cours';
       case 'cancelled':
         return 'Annulée';
       case 'completed':
         return 'Terminée';
       case 'refunded':
         return 'Remboursée';
-      case 'rejected':
-        return 'Refusée';
       case 'expired':
         return 'Expirée';
       default:
-        return status;
+        return 'Statut inconnu';
     }
   }
 
@@ -443,18 +464,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return Colors.orange;
       case 'awaiting_approval':
         return const Color(0xFFD69E2E); // Orange/Ambre pour SLA hôte
-      case 'pending_payment':
+      case 'payment_pending':
         return const Color(0xFFE53E3E); // Rouge pour paiement
       case 'confirmed':
         return AppTheme.primaryColor;
+      case 'in_stay':
+        return Colors.teal;
       case 'cancelled':
         return Colors.red;
       case 'completed':
         return Colors.green;
       case 'refunded':
         return Colors.blue;
-      case 'rejected':
-        return Colors.red[700]!;
       case 'expired':
         return Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
       default:

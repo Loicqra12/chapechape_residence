@@ -1,7 +1,6 @@
 const asyncHandler = require('../middlewares/async.middleware');
 const notificationService = require('../services/notification.service');
 const twilioService = require('../services/twilio.service');
-const { NOTIFICATION_TYPES } = require('../utils/constants');
 const Reservation = require('../models/reservation.model'); // ✅ MIGRÉ - était Booking
 const apiError = require('../utils/apiError');
 

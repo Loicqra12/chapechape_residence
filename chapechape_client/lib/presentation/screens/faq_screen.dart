@@ -32,7 +32,7 @@ class _FaqScreenState extends State<FaqScreen> {
         },
         {
           'question': 'Comment utiliser mon QR code de check-in ?',
-          'answer': 'Le QR code est disponible dans les détails de votre réservation. Présentez-le au partenaire à votre arrivée pour valider votre check-in. Un second QR code est disponible pour le check-out.'
+          'answer': 'Le QR d\'arrivée est disponible dans les détails de votre réservation confirmée, à partir de 2 h avant l\'heure prévue. Présentez-le au partenaire qui le scannera pour valider votre check-in. Un QR de départ est disponible pendant votre séjour. Une connexion internet est requise des deux côtés.'
         },
       ]
     },

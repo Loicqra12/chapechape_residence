@@ -11,6 +11,7 @@ const {
     applyPaymentPaid,
 } = require('../../services/payment-confirmation.service');
 const { getWavePaymentWebhookSecret } = require('../../utils/wave-webhook-signature.util');
+const { canAccessPayment } = require('../../security/resource-access');
 
 /**
  * Clé d'idempotence stable par événement Wave (type + session), pas seulement par session.
@@ -77,10 +78,10 @@ exports.createPaymentIntent = async (req, res) => {
         let normalizedPaymentMethod = paymentMethod;
         if (paymentMethod === 'om') {
             normalizedPaymentMethod = 'orange_money';
-            console.log('⚠️ DEPRECATED: "om" alias utilisé, normalisé vers "orange_money"');
+            logger.debug('⚠️ DEPRECATED: "om" alias utilisé, normalisé vers "orange_money"');
         } else if (paymentMethod === 'momo') {
             normalizedPaymentMethod = 'mtn_money';
-            console.log('⚠️ DEPRECATED: "momo" alias utilisé, normalisé vers "mtn_money"');
+            logger.debug('⚠️ DEPRECATED: "momo" alias utilisé, normalisé vers "mtn_money"');
         }
 
         let paymentProvider;
@@ -106,7 +107,7 @@ exports.createPaymentIntent = async (req, res) => {
         }).sort({ createdAt: -1 });
 
         if (existingPayment) {
-            console.log(`🔄 Paiement actif existant trouvé: ${existingPayment.transactionId}`);
+            logger.debug(`🔄 Paiement actif existant trouvé: ${existingPayment.transactionId}`);
 
             const amountMatches =
                 Number(existingPayment.amount) === Number(reservation.totalPrice);
@@ -130,7 +131,7 @@ exports.createPaymentIntent = async (req, res) => {
             // Montant divergé ou trop vieux → invalider et recréer
             existingPayment.status = 'expired';
             await existingPayment.save();
-            console.log(
+            logger.debug(
                 amountMatches
                     ? `⏰ Paiement expiré marqué: ${existingPayment.transactionId}`
                     : `💱 Montant divergé (${existingPayment.amount} ≠ ${reservation.totalPrice}) — intent invalidé: ${existingPayment.transactionId}`
@@ -302,9 +303,10 @@ async function updateReservationStatus(reservationId) {
     const refundedPayments = payments.filter(p => p.status === 'refunded');
 
     if (completedPayments.length === 1 && refundedPayments.length > 0) {
-        // Un seul paiement complété et des remboursements
-        reservation.status = 'confirmed';
-        reservation.paymentStatus = 'paid';
+        // Ne jamais promouvoir vers confirmed ici (bypass approval / inventaire).
+        if (reservation.paymentStatus !== 'paid') {
+            reservation.paymentStatus = 'paid';
+        }
     } else if (completedPayments.length === 0 && refundedPayments.length === payments.length) {
         // Tous les paiements sont remboursés
         reservation.status = 'refunded';
@@ -673,7 +675,7 @@ exports.handleWaveWebhook = async (req, res) => {
                 });
             }
         } catch (parseError) {
-            console.error('Erreur parsing webhook Wave:', parseError);
+            logger.error('Erreur parsing webhook Wave:', parseError);
             return res.status(400).json({
                 success: false,
                 message: 'Corps de requête JSON invalide'
@@ -724,7 +726,7 @@ exports.handleWaveWebhook = async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Erreur webhook Wave:', error);
+        logger.error('Erreur webhook Wave:', error);
         res.status(400).json({
             success: false,
             message: error.message
@@ -738,111 +740,96 @@ exports.verifyCinetPayPayment = async (req, res) => {
         const { transactionId } = req.params;
         const cinetPayService = require('../../services/cinetpay.service');
 
-        console.log(`🔍 Vérification CinetPay pour transaction: ${transactionId}`);
-
-        // Vérifier directement avec l'API CinetPay
-        const cinetPayStatus = await cinetPayService.checkPaymentStatus(transactionId);
-
-        if (cinetPayStatus.success) {
-            // Rechercher le paiement local
-            const Payment = require('../../models/payment.model');
-            let payment = await Payment.findOne({ transactionId }).populate('reservation');
-
-            if (payment) {
-                // Mettre à jour le statut local si différent
-                if (payment.status !== cinetPayStatus.status) {
-                    if (cinetPayStatus.status === 'paid') {
-                        await applyPaymentPaid(payment, {
-                            providerResponse: cinetPayStatus.data,
-                            triggerPayout: true,
-                            allowExpired: true,
-                        });
-                    } else {
-                        payment.status = cinetPayStatus.status;
-                        payment.paymentDetails = payment.paymentDetails || {};
-                        payment.paymentDetails.providerResponse = cinetPayStatus.data;
-                        await payment.save();
-                    }
-                    payment = await Payment.findById(payment._id).populate('reservation');
-                }
-
-                // Ajouter des informations contextuelles selon le statut
-                const responsePayment = {
-                    _id: payment._id,
-                    transactionId: payment.transactionId,
-                    status: payment.status,
-                    amount: payment.amount,
-                    paymentMethod: payment.paymentMethod,
-                    paymentProvider: payment.paymentProvider,
-                    createdAt: payment.createdAt,
-                    updatedAt: payment.updatedAt,
-                    reservation: payment.reservation
-                };
-
-                // Ajouter des informations contextuelles
-                const response = {
-                    success: true,
-                    payment: responsePayment,
-                    cinetpayData: cinetPayStatus.data
-                };
-
-                // Informations spécifiques selon le statut
-                if (payment.status === 'pending') {
-                    response.statusInfo = {
-                        message: 'Paiement en cours de traitement',
-                        nextCheck: 'Recommandé dans 5-10 secondes',
-                        maxWaitTime: '5 minutes',
-                        canRetry: true
-                    };
-                } else if (payment.status === 'paid') {
-                    response.statusInfo = {
-                        message: 'Paiement confirmé avec succès',
-                        finalStatus: true
-                    };
-                } else if (payment.status === 'failed') {
-                    response.statusInfo = {
-                        message: 'Paiement échoué',
-                        finalStatus: true,
-                        canRetry: true
-                    };
-                }
-
-                res.json(response);
-            } else {
-                res.status(404).json({
-                    success: false,
-                    error: 'Paiement introuvable',
-                    code: 'PAYMENT_NOT_FOUND',
-                    message: 'Aucun paiement trouvé avec cet ID de transaction',
-                    transactionId: transactionId,
-                    cinetpayStatus: cinetPayStatus.status,
-                    cinetpayData: cinetPayStatus.data,
-                    suggestions: [
-                        'Vérifiez que le paiement a été correctement initié',
-                        'Attendez quelques secondes et réessayez',
-                        'Contactez le support si le problème persiste'
-                    ]
-                });
-            }
-        } else {
-            res.status(400).json({
+        const payment = await Payment.findOne({ transactionId }).populate('reservation');
+        if (!payment || !payment.reservation) {
+            return res.status(404).json({
                 success: false,
-                error: 'Erreur de vérification CinetPay',
-                code: 'CINETPAY_VERIFICATION_ERROR',
-                message: 'Impossible de vérifier le statut du paiement auprès de CinetPay',
-                details: cinetPayStatus.error,
-                transactionId: transactionId,
-                canRetry: true,
-                retryAfter: '10 secondes'
+                error: 'Paiement introuvable',
+                code: 'PAYMENT_NOT_FOUND',
+                message: 'Aucun paiement trouvé avec cet ID de transaction',
             });
         }
 
+        if (!canAccessPayment(payment, payment.reservation, req.user)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Non autorisé',
+            });
+        }
+
+        const cinetPayStatus = await cinetPayService.checkPaymentStatus(transactionId);
+
+        if (cinetPayStatus.success) {
+            let nextPayment = payment;
+            if (payment.status !== cinetPayStatus.status) {
+                if (cinetPayStatus.status === 'paid') {
+                    await applyPaymentPaid(payment, {
+                        providerResponse: cinetPayStatus.data,
+                        triggerPayout: true,
+                        allowExpired: true,
+                    });
+                } else {
+                    payment.status = cinetPayStatus.status;
+                    payment.paymentDetails = payment.paymentDetails || {};
+                    payment.paymentDetails.providerResponse = cinetPayStatus.data;
+                    await payment.save();
+                }
+                nextPayment = await Payment.findById(payment._id).populate('reservation');
+            }
+
+            const responsePayment = {
+                _id: nextPayment._id,
+                transactionId: nextPayment.transactionId,
+                status: nextPayment.status,
+                amount: nextPayment.amount,
+                paymentMethod: nextPayment.paymentMethod,
+                paymentProvider: nextPayment.paymentProvider,
+                createdAt: nextPayment.createdAt,
+                updatedAt: nextPayment.updatedAt,
+            };
+
+            const response = {
+                success: true,
+                payment: responsePayment,
+            };
+
+            if (nextPayment.status === 'pending') {
+                response.statusInfo = {
+                    message: 'Paiement en cours de traitement',
+                    nextCheck: 'Recommandé dans 5-10 secondes',
+                    maxWaitTime: '5 minutes',
+                    canRetry: true
+                };
+            } else if (nextPayment.status === 'paid') {
+                response.statusInfo = {
+                    message: 'Paiement confirmé avec succès',
+                    finalStatus: true
+                };
+            } else if (nextPayment.status === 'failed') {
+                response.statusInfo = {
+                    message: 'Paiement échoué',
+                    finalStatus: true,
+                    canRetry: true
+                };
+            }
+
+            return res.json(response);
+        }
+
+        return res.status(400).json({
+            success: false,
+            error: 'Erreur de vérification CinetPay',
+            code: 'CINETPAY_VERIFICATION_ERROR',
+            message: 'Impossible de vérifier le statut du paiement auprès de CinetPay',
+            transactionId: transactionId,
+            canRetry: true,
+            retryAfter: '10 secondes'
+        });
     } catch (error) {
-        console.error('Erreur vérification CinetPay:', error);
+        logger.error('Erreur vérification CinetPay:', error);
         res.status(500).json({
             success: false,
             message: 'Erreur serveur lors de la vérification',
-            error: error.message
         });
     }
 };
@@ -877,10 +864,10 @@ exports.getPaymentStatus = async (req, res) => {
         // Vérifier que la réservation appartient à l'utilisateur connecté
         const Reservation = require('../../models/reservation.model');
         const reservation = await Reservation.findById(payment.reservation)
-            .select('user')
+            .select('user partner client')
             .lean();
 
-        if (!reservation || reservation.user.toString() !== req.user._id.toString()) {
+        if (!reservation || !canAccessPayment(payment, reservation, req.user)) {
             return res.status(403).json({ success: false, message: 'Non autorisé' });
         }
 

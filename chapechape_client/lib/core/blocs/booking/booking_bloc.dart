@@ -225,29 +225,20 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         add(LoadUserBookings());
       },
       onExpired: (data) {
-        // Gérer l'expiration d'une réservation
         final bookingId = (data['bookingId'] ?? data['reservationId'])?.toString();
         if (bookingId != null) {
-          add(LoadUserBookings());
-          // Dispatch event spécifique pour l'expiration
           add(BookingExpiredEvent(bookingId));
         }
       },
       onApproved: (data) {
-        // Gérer l'approbation d'une réservation
         final bookingId = (data['bookingId'] ?? data['reservationId'])?.toString();
         if (bookingId != null) {
-          add(LoadUserBookings());
-          // Dispatch event spécifique pour l'approbation
           add(BookingApprovedEvent(bookingId));
         }
       },
       onRejected: (data) {
-        // Gérer le rejet d'une réservation
         final bookingId = (data['bookingId'] ?? data['reservationId'])?.toString();
         if (bookingId != null) {
-          add(LoadUserBookings());
-          // Dispatch event spécifique pour le rejet
           add(BookingRejectedEvent(bookingId));
         }
       },

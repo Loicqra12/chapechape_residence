@@ -6,6 +6,37 @@ const logger = require('../utils/logger');
 const notificationTypes = require('../utils/notification-types');
 
 class NotificationService {
+    /**
+     * P2-06C — décision canonique push (global + catégorie).
+     * Les catégories UI contrôlent le push uniquement ; email reste sur emailEnabled.
+     */
+    isPushAllowed(user, notificationType) {
+        if (!user?.deviceTokens?.length) return false;
+        const settings = user.notificationSettings;
+        if (settings?.pushEnabled === false) return false;
+        const category = notificationTypes.getCategoryByNotificationType(notificationType);
+        const categories = settings?.categories;
+        if (categories && categories[category] === false) return false;
+        return true;
+    }
+
+    async purgeInvalidDeviceTokens(userId, tokenIds = []) {
+        if (!userId || !Array.isArray(tokenIds) || tokenIds.length === 0) return 0;
+        const unique = [...new Set(tokenIds.filter((t) => typeof t === 'string' && t.length >= 32))];
+        if (unique.length === 0) return 0;
+        const result = await User.updateOne(
+            { _id: userId },
+            { $pull: { deviceTokens: { $in: unique } } }
+        );
+        if (result.modifiedCount > 0) {
+            logger.info('Subscriptions invalides retirées du user', {
+                userId: String(userId),
+                removedCount: unique.length,
+            });
+        }
+        return result.modifiedCount;
+    }
+
     // Créer une notification
     async createNotification(userId, type, message, data = {}) {
         try {
@@ -38,9 +69,8 @@ class NotificationService {
                 }
             }
 
-            // Envoyer notification push via OneSignal si l'utilisateur a des tokens d'appareils
-            if (user.deviceTokens && user.deviceTokens.length &&
-                (!user.notificationSettings || user.notificationSettings.pushEnabled !== false)) {
+            // Push — filtré par pushEnabled + catégorie (P2-06C)
+            if (this.isPushAllowed(user, type)) {
                 try {
                     const pushType = notificationTypes.getPushTypeByNotificationType(type);
                     const category = notificationTypes.getCategoryByNotificationType(type);
@@ -71,6 +101,10 @@ class NotificationService {
                         }
                     );
 
+                    if (pushResult?.invalidSubscriptionIds?.length) {
+                        await this.purgeInvalidDeviceTokens(userId, pushResult.invalidSubscriptionIds);
+                    }
+
                     if (!pushResult || pushResult.success === false) {
                         logger.warn(`Push OneSignal non envoyé user=${userId}`, {
                             status: pushResult?.status || 'null',
@@ -88,6 +122,14 @@ class NotificationService {
                     logger.error(`Erreur lors de l'envoi de la notification push:`, pushError);
                     // On continue même si la notification push échoue
                 }
+            } else if (user.deviceTokens?.length) {
+                logger.info(`Push ignoré (préférences) user=${userId} type=${type}`, {
+                    pushEnabled: user.notificationSettings?.pushEnabled,
+                    category: notificationTypes.getCategoryByNotificationType(type),
+                    categoryEnabled: user.notificationSettings?.categories?.[
+                        notificationTypes.getCategoryByNotificationType(type)
+                    ],
+                });
             }
 
             return notification;
@@ -219,6 +261,9 @@ class NotificationService {
                 break;
             case notificationTypes.CLIENT.PAYMENT_EXPIRED:
                 message = `Le délai de paiement pour votre réservation${data.residenceName ? ` à "${data.residenceName}"` : ''} a expiré.`;
+                break;
+            case notificationTypes.CLIENT.RESERVATION_REQUEST_EXPIRED:
+                message = `La demande n'a pas été acceptée à temps. Les dates ont été libérées.`;
                 break;
             case notificationTypes.CLIENT.CHECKIN_READY:
                 message = `Vous pouvez maintenant effectuer votre check-in${data.residenceName ? ` à "${data.residenceName}"` : ''}.`;
@@ -784,6 +829,46 @@ class NotificationService {
         }
     }
 
+    async sendHostApprovalExpiredNotification(reservation) {
+        try {
+            if (!reservation || !reservation.user) {
+                logger.warn('Données insuffisantes pour notification expiration demande hôte');
+                return null;
+            }
+
+            const clientMessage = `La demande n'a pas été acceptée à temps. Les dates ont été libérées.`;
+            const clientNotification = await this.createNotification(
+                reservation.user._id || reservation.user,
+                notificationTypes.CLIENT.RESERVATION_REQUEST_EXPIRED,
+                clientMessage,
+                {
+                    reservationId: reservation._id.toString(),
+                    expirationReason: 'host_approval_timeout',
+                    expiredAt: new Date().toISOString(),
+                }
+            );
+
+            if (reservation.partner) {
+                const partnerId = reservation.partner._id || reservation.partner;
+                await this.createNotification(
+                    partnerId,
+                    notificationTypes.PARTNER.BOOKING_EXPIRED,
+                    `Une demande de réservation a expiré faute de réponse dans les délais.`,
+                    {
+                        reservationId: reservation._id.toString(),
+                        expirationReason: 'host_approval_timeout',
+                        expiredAt: new Date().toISOString(),
+                    }
+                );
+            }
+
+            return clientNotification;
+        } catch (error) {
+            logger.error('Erreur notification expiration demande hôte:', error);
+            throw error;
+        }
+    }
+
     // ===============================
     // ✅ NOUVELLES MÉTHODES PAYOUT
     // ===============================
@@ -1037,136 +1122,7 @@ class NotificationService {
         }
     }
 
-    // ----- NOUVELLES MÉTHODES UTILITAIRES POUR LES NOTIFICATIONS MANQUANTES -----
-
-    /**
-     * Notifier un changement de numéro de téléphone
-     * @param {string} userId - ID de l'utilisateur
-     * @param {string} userRole - Rôle de l'utilisateur ('client' ou 'partner')
-     * @param {string} oldPhone - Ancien numéro
-     * @param {string} newPhone - Nouveau numéro
-     */
-    async notifyPhoneChange(userId, userRole, oldPhone, newPhone) {
-        try {
-            const type = userRole === 'partner'
-                ? notificationTypes.PARTNER.PHONE_CHANGED
-                : notificationTypes.CLIENT.PHONE_CHANGED;
-
-            await this.createNotification(userId, type, '', {
-                oldPhone,
-                newPhone,
-                changedAt: new Date().toISOString()
-            });
-
-            logger.info(`Notification changement numéro envoyée à ${userRole} ${userId}`);
-        } catch (error) {
-            logger.error('Erreur notification changement numéro:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Notifier l'envoi d'un code de vérification
-     * @param {string} userId - ID de l'utilisateur
-     * @param {string} userRole - Rôle de l'utilisateur
-     * @param {string} phoneNumber - Numéro de téléphone
-     * @param {string} channel - Canal utilisé (sms, whatsapp)
-     */
-    async notifyVerificationSent(userId, userRole, phoneNumber, channel) {
-        try {
-            const type = userRole === 'partner'
-                ? notificationTypes.PARTNER.VERIFICATION_SENT
-                : notificationTypes.CLIENT.VERIFICATION_SENT;
-
-            await this.createNotification(userId, type, '', {
-                phoneNumber,
-                channel,
-                sentAt: new Date().toISOString()
-            });
-
-            logger.info(`Notification code envoyé envoyée à ${userRole} ${userId}`);
-        } catch (error) {
-            logger.error('Erreur notification code envoyé:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Notifier le succès d'une vérification
-     * @param {string} userId - ID de l'utilisateur
-     * @param {string} userRole - Rôle de l'utilisateur
-     * @param {string} phoneNumber - Numéro vérifié
-     */
-    async notifyVerificationSuccess(userId, userRole, phoneNumber) {
-        try {
-            const type = userRole === 'partner'
-                ? notificationTypes.PARTNER.VERIFICATION_SUCCESS
-                : notificationTypes.CLIENT.VERIFICATION_SUCCESS;
-
-            await this.createNotification(userId, type, '', {
-                phoneNumber,
-                verifiedAt: new Date().toISOString()
-            });
-
-            logger.info(`Notification vérification réussie envoyée à ${userRole} ${userId}`);
-        } catch (error) {
-            logger.error('Erreur notification vérification réussie:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Notifier l'échec d'une vérification
-     * @param {string} userId - ID de l'utilisateur
-     * @param {string} userRole - Rôle de l'utilisateur
-     * @param {string} phoneNumber - Numéro concerné
-     * @param {string} reason - Raison de l'échec
-     */
-    async notifyVerificationFailed(userId, userRole, phoneNumber, reason) {
-        try {
-            const type = userRole === 'partner'
-                ? notificationTypes.PARTNER.VERIFICATION_FAILED
-                : notificationTypes.CLIENT.VERIFICATION_FAILED;
-
-            await this.createNotification(userId, type, '', {
-                phoneNumber,
-                reason,
-                failedAt: new Date().toISOString()
-            });
-
-            logger.info(`Notification vérification échouée envoyée à ${userRole} ${userId}`);
-        } catch (error) {
-            logger.error('Erreur notification vérification échouée:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Notifier une nouvelle connexion
-     * @param {string} userId - ID de l'utilisateur
-     * @param {string} userRole - Rôle de l'utilisateur
-     * @param {Object} loginData - Données de connexion
-     */
-    async notifyNewLogin(userId, userRole, loginData) {
-        try {
-            const type = userRole === 'partner'
-                ? notificationTypes.PARTNER.LOGIN_ALERT
-                : notificationTypes.CLIENT.LOGIN_ALERT;
-
-            await this.createNotification(userId, type, '', {
-                location: loginData.location,
-                device: loginData.device,
-                ipAddress: loginData.ipAddress,
-                userAgent: loginData.userAgent,
-                loginAt: new Date().toISOString()
-            });
-
-            logger.info(`Notification nouvelle connexion envoyée à ${userRole} ${userId}`);
-        } catch (error) {
-            logger.error('Erreur notification nouvelle connexion:', error);
-            throw error;
-        }
-    }
+    // ----- MÉTHODES UTILITAIRES NOTIFICATIONS -----
 
     /**
      * Notifier une alerte de sécurité

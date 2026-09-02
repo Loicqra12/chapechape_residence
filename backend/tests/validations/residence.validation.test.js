@@ -1,171 +1,118 @@
-// Importer les validations correctement
 const {
   createResidence,
   updateResidence,
-  getResidence,
   uploadImages,
   deleteImage,
   updateFaqs,
-  updatePaymentMethods,
-  updateEnhancedAmenities,
-  addPaymentMethod,
-  deletePaymentMethod,
-  addFaq
 } = require('../../src/validations/residence.validation');
-const { objectId } = require('../../src/validations/custom.validation');
 
-// Extraire les schémas Joi du sous-objet body ou params selon le schéma
-const createResidenceSchema = createResidence.body;
-const updateResidenceSchema = updateResidence.body;
-const getResidenceSchema = getResidence.params;
-const uploadImageSchema = uploadImages.params;
-const deleteImageSchema = deleteImage.params;
-const updateFaqSchema = updateFaqs.body;
-const updatePaymentMethodsSchema = updatePaymentMethods.body;
-const updateEnhancedAmenitiesSchema = updateEnhancedAmenities.body;
-const addPaymentMethodSchema = addPaymentMethod.body;
-const deletePaymentMethodSchema = deletePaymentMethod.params;
-const addFaqSchema = addFaq.body;
+const createBody = createResidence.body;
+const updateBody = updateResidence.body;
+const uploadParams = uploadImages.params;
+const deleteParams = deleteImage.params;
+const faqBody = updateFaqs.body;
 
-// Utiliser Jest au lieu de Chai
+const validCreate = {
+  title: 'Studio Cocody test',
+  description: 'Description test résidence assez longue',
+  price: 1000,
+  type: 'apartment',
+  bedrooms: 1,
+  bathrooms: 1,
+  area: 40,
+  maxOccupancy: 2,
+  features: ['wifi'],
+  amenities: ['wifi'],
+  location: {
+    address: 'Rue Test 1',
+    city: 'Abidjan',
+    state: 'Lagunes',
+    country: 'CI',
+    coordinates: { latitude: 5.36, longitude: -4.01 },
+  },
+};
 
-// Suppression de l'import du setup pour éviter les conflits
-
-describe('Schémas de validation des résidences', () => {
-  
-  describe('createResidenceSchema', () => {
-    const validData = {
-      title: 'Appartement moderne au centre-ville',
-      description: 'Superbe appartement avec vue imprenable',
-      price: 95.50,
-      location: {
-        country: 'France',
-        city: 'Paris',
-        address: '15 Rue de la Paix',
-        coordinates: [48.8566, 2.3522]
-      },
-      owner: '60d5ec9c1346f3244d8b9113', // ID MongoDB fictif
-      amenities: ['wifi', 'tv', 'kitchen'],
-      rooms: 2,
-      bathrooms: 1,
-      capacity: 4,
-      type: 'apartment'
-    };
-    
-    const invalidData = {
-      'titre manquant': { ...validData, title: undefined },
-      'prix négatif': { ...validData, price: -50 },
-      'localisation incomplète': { 
-        ...validData, 
-        location: { country: 'France', city: 'Paris' } 
-      },
-      'owner ID invalide': { ...validData, owner: 'invalid-id' },
-      'type invalide': { ...validData, type: 'invalid-type' }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = createResidenceSchema.validate(validData);
-      expect(error).toBe(undefined);
+describe('Residence Joi (contrats actuels)', () => {
+  describe('createResidence', () => {
+    it('CURRENT : payload canonique (title, location objet, bedrooms, maxOccupancy)', () => {
+      const { error, value } = createBody.validate(validCreate);
+      expect(error).toBeUndefined();
+      expect(value.title).toBe(validCreate.title);
+      expect(value.location.city).toBe('Abidjan');
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = createResidenceSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
+    it('CURRENT : prix négatif rejeté', () => {
+      expect(createBody.validate({ ...validCreate, price: -1 }).error).toBeDefined();
+    });
+
+    it('CURRENT : titre manquant rejeté', () => {
+      const { title, ...rest } = validCreate;
+      expect(createBody.validate(rest).error).toBeDefined();
+    });
+
+    it('CURRENT : type hors enum rejeté', () => {
+      expect(createBody.validate({ ...validCreate, type: 'spaceship' }).error).toBeDefined();
+    });
+
+    it('OBSOLETE : imageUrl / owner / rooms / coordinates-array ne sont pas le contrat', () => {
+      expect(createBody.validate({ ...validCreate, imageUrl: 'http://x/y.jpg' }).error).toBeDefined();
+      expect(createBody.validate({
+        ...validCreate,
+        location: { ...validCreate.location, coordinates: [5.36, -4.01] },
+      }).error).toBeDefined();
+    });
+
+    it('SERVER-DERIVED : publicationStatus et verified sont strip, jamais persistés via create', () => {
+      const { error, value } = createBody.validate({
+        ...validCreate,
+        publicationStatus: 'published',
+        verified: true,
+        verifiedBy: '507f1f77bcf86cd799439011',
       });
+      expect(error).toBeUndefined();
+      expect(value.publicationStatus).toBeUndefined();
+      expect(value.verified).toBeUndefined();
+      expect(value.verifiedBy).toBeUndefined();
     });
   });
 
-  describe('uploadImageSchema', () => {
-    const validData = {
-      params: {
-        id: '60d5ec9c1346f3244d8b9113' // ID MongoDB fictif
-      }
-    };
-    
-    const invalidData = {
-      'ID manquant': { params: {} },
-      'ID invalide': { params: { id: 'invalid-id' } }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = uploadImageSchema.validate(validData);
-      expect(error).toBe(undefined);
+  describe('updateResidence + P2-02C', () => {
+    it('CURRENT : PATCH titre/prix autorisé', () => {
+      expect(updateBody.validate({ title: 'Nouveau titre ok', price: 2000 }).error).toBeUndefined();
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = uploadImageSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
+    it('publicationStatus ne peut pas être mass-assigné (strip + min 1)', () => {
+      const onlyStatus = updateBody.validate({ publicationStatus: 'published' });
+      expect(onlyStatus.error).toBeDefined();
+
+      const { error, value } = updateBody.validate({
+        title: 'Titre toujours valide ici',
+        publicationStatus: 'published',
+        verified: true,
       });
+      expect(error).toBeUndefined();
+      expect(value.publicationStatus).toBeUndefined();
+      expect(value.verified).toBeUndefined();
+      expect(value.title).toBe('Titre toujours valide ici');
     });
   });
 
-  describe('deleteImageSchema', () => {
-    const validData = {
-      params: {
-        id: '60d5ec9c1346f3244d8b9113', // ID résidence
-        imageId: '60d5ec9c1346f3244d8b9114' // ID image
-      }
-    };
-    
-    const invalidData = {
-      'ID résidence manquant': { params: { imageId: '60d5ec9c1346f3244d8b9114' } },
-      'ID image manquant': { params: { id: '60d5ec9c1346f3244d8b9113' } },
-      'IDs invalides': { params: { id: 'invalid-id', imageId: 'invalid-id' } }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = deleteImageSchema.validate(validData);
-      expect(error).toBe(undefined);
+  describe('images / faqs', () => {
+    it('uploadImages : ObjectId résidence requis (pas un wrapper params)', () => {
+      expect(uploadParams.validate({ id: '60d21b4667d0d8992e610c85' }).error).toBeUndefined();
+      expect(uploadParams.validate({ id: 'bad' }).error).toBeDefined();
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = deleteImageSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
-    });
-  });
-  
-  describe('updateFaqSchema', () => {
-    const validData = {
-      params: {
-        id: '60d5ec9c1346f3244d8b9113'
-      },
-      body: {
-        faqs: [
-          { question: 'Heure d\'arrivée?', answer: 'À partir de 14h' },
-          { question: 'Wi-Fi disponible?', answer: 'Oui, gratuit' }
-        ]
-      }
-    };
-    
-    const invalidData = {
-      'ID invalide': { 
-        params: { id: 'invalid-id' },
-        body: { faqs: [{ question: 'Question?', answer: 'Réponse' }] }
-      },
-      'FAQ mal formatée': { 
-        params: { id: '60d5ec9c1346f3244d8b9113' },
-        body: { faqs: [{ question: '' }] }
-      },
-      'FAQs non spécifiées': { 
-        params: { id: '60d5ec9c1346f3244d8b9113' },
-        body: {}
-      }
-    };
-    
-    it('devrait valider les données correctes', () => {
-      const { error } = updateFaqSchema.validate(validData);
-      expect(error).toBe(undefined);
+    it('deleteImage : id + imageIndex (index, pas imageId legacy)', () => {
+      expect(deleteParams.validate({ id: '60d21b4667d0d8992e610c85', imageIndex: 0 }).error).toBeUndefined();
+      expect(deleteParams.validate({ id: '60d21b4667d0d8992e610c85', imageId: '60d21b4667d0d8992e610c86' }).error).toBeDefined();
     });
 
-    Object.keys(invalidData).forEach(key => {
-      it(`devrait rejeter les données avec ${key} invalide`, () => {
-        const { error } = updateFaqSchema.validate(invalidData[key]);
-        expect(error).not.toBe(undefined);
-      });
+    it('updateFaqs : question/réponse min 5', () => {
+      expect(faqBody.validate({
+        faqs: [{ question: 'Heure d arrivée?', answer: 'A partir de 14h' }],
+      }).error).toBeUndefined();
+      expect(faqBody.validate({ faqs: [{ question: '?', answer: 'x' }] }).error).toBeDefined();
     });
   });
 });

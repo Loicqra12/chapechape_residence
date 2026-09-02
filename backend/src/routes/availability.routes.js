@@ -33,6 +33,12 @@ router.get(
 router.use(protect);
 router.use(authorize('partner', 'admin'));
 
+router.get(
+  '/calendar/partner',
+  validate(availabilityValidation.getAvailabilityCalendar),
+  availabilityController.getPartnerCalendar
+);
+
 router.put(
   '/block',
   validate(availabilityValidation.blockDates),
@@ -43,6 +49,60 @@ router.put(
   '/unblock',
   validate(availabilityValidation.unblockDates),
   availabilityController.unblockDates
+);
+
+router.post(
+  '/blocks',
+  validate(availabilityValidation.createBlock),
+  availabilityController.createBlock
+);
+
+router.get(
+  '/blocks',
+  validate(availabilityValidation.listBlocks),
+  availabilityController.listBlocks
+);
+
+router.delete(
+  '/blocks/:id',
+  validate(availabilityValidation.deleteBlock),
+  availabilityController.deleteBlock
+);
+
+router.post(
+  '/external',
+  validate(availabilityValidation.createExternal),
+  availabilityController.createExternal
+);
+
+router.get(
+  '/external',
+  validate(availabilityValidation.listExternal),
+  availabilityController.listExternal
+);
+
+router.get(
+  '/external/:id',
+  validate(availabilityValidation.getExternal),
+  availabilityController.getExternal
+);
+
+router.patch(
+  '/external/:id',
+  validate(availabilityValidation.updateExternal),
+  availabilityController.updateExternal
+);
+
+router.delete(
+  '/external/:id',
+  validate(availabilityValidation.deleteExternal),
+  availabilityController.deleteExternal
+);
+
+router.post(
+  '/external/:id/complete',
+  validate(availabilityValidation.completeExternal),
+  availabilityController.completeExternal
 );
 
 router.put(

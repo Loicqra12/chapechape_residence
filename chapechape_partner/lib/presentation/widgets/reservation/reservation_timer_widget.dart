@@ -67,10 +67,10 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget> {
   void _updateTimerDisplay() {
     final now = DateTime.now();
     
-    // Timer SLA d'approbation hôte (awaiting_approval)
+    // Timer SLA d'approbation hôte (awaiting_approval) — deadline Backend
     if (widget.reservation.status == ReservationStatus.awaitingApproval) {
-      // Calculer deadline basé sur createdAt + 24h (par défaut)
-      final deadline = widget.reservation.createdAt.add(const Duration(hours: 24));
+      final deadline = widget.reservation.hostApprovalDeadline ??
+          widget.reservation.createdAt.add(const Duration(hours: 8));
       
       if (now.isBefore(deadline)) {
         setState(() {
@@ -297,7 +297,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget> {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: widget.onReject,
+            onPressed: _isExpired ? null : widget.onReject,
             icon: const Icon(Icons.close, color: Colors.red),
             label: const Text(
               'Rejeter',
@@ -311,7 +311,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: widget.onApprove,
+            onPressed: _isExpired ? null : widget.onApprove,
             icon: const Icon(Icons.check, color: Colors.white),
             label: const Text('Approuver'),
             style: ElevatedButton.styleFrom(
@@ -351,7 +351,7 @@ class _ReservationTimerWidgetState extends State<ReservationTimerWidget> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Cette réservation a été automatiquement rejetée',
+            'Cette demande a expiré. Les dates ont été libérées.',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey,

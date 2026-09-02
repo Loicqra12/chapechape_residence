@@ -2,7 +2,7 @@ const asyncHandler = require('../middlewares/async.middleware');
 const twilioService = require('../services/twilio.service');
 const Reservation = require('../models/reservation.model'); // ✅ MIGRÉ - était Booking
 const notificationService = require('../services/notification.service');
-const { NOTIFICATION_TYPES } = require('../utils/constants');
+const { LEGACY } = require('../utils/notification-types');
 const apiError = require('../utils/apiError');
 
 const getPartnerId = (partner) => {
@@ -69,7 +69,7 @@ exports.sendBookingNotification = asyncHandler(async (req, res) => {
   if (reservation.user && reservation.user._id) {
     await notificationService.createNotification(
       reservation.user._id,
-      NOTIFICATION_TYPES.BOOKING_UPDATE,
+      LEGACY.BOOKING_UPDATE,
       `Votre réservation pour "${reservation.residence.title}" a été mise à jour.`,
       {
         bookingId: reservation._id,
@@ -127,7 +127,7 @@ exports.sendPaymentInstructions = asyncHandler(async (req, res) => {
   if (reservation.user && reservation.user._id) {
     await notificationService.createNotification(
       reservation.user._id,
-      NOTIFICATION_TYPES.PAYMENT_REQUIRED,
+      LEGACY.PAYMENT_REQUIRED,
       `Veuillez finaliser le paiement pour votre réservation à "${reservation.residence.title}".`,
       {
         bookingId: reservation._id,

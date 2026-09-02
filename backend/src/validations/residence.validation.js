@@ -79,7 +79,13 @@ const createResidence = {
             halfDay: Joi.number().min(0),
             fullDay: Joi.number().min(0),
             weekend: Joi.number().min(0)
-        })
+        }),
+        // Mass assignment : ignorés (le contrôleur force draft)
+        publicationStatus: Joi.any().strip(),
+        verified: Joi.any().strip(),
+        verifiedAt: Joi.any().strip(),
+        verifiedBy: Joi.any().strip(),
+        publicationRequestedAt: Joi.any().strip(),
     })
 };
 
@@ -140,7 +146,12 @@ const updateResidence = {
             halfDay: Joi.number().min(0),
             fullDay: Joi.number().min(0),
             weekend: Joi.number().min(0)
-        })
+        }),
+        publicationStatus: Joi.any().strip(),
+        verified: Joi.any().strip(),
+        verifiedAt: Joi.any().strip(),
+        verifiedBy: Joi.any().strip(),
+        publicationRequestedAt: Joi.any().strip(),
     }).min(1)
 };
 
@@ -196,18 +207,9 @@ const deleteImage = {
         id: Joi.string().required().custom(objectId).messages({
             'any.required': "L'identifiant de la résidence est obligatoire",
             'string.empty': "L'identifiant de la résidence ne peut pas être vide"
-        })
-    }),
-    body: Joi.object().keys({
-        imageId: Joi.string().required().messages({
-            'any.required': "L'identifiant de l'image est obligatoire",
-            'string.empty': "L'identifiant de l'image ne peut pas être vide"
         }),
-        cloudinaryId: Joi.string().required().messages({
-            'any.required': "L'identifiant Cloudinary est obligatoire pour supprimer l'image",
-            'string.empty': "L'identifiant Cloudinary ne peut pas être vide"
-        })
-    })
+        imageIndex: Joi.number().integer().min(0).required(),
+    }),
 };
 
 // Validation pour la mise à jour des FAQs

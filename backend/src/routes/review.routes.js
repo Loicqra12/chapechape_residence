@@ -8,7 +8,7 @@ const {
     updateReview,
     deleteReview
 } = require('../controllers/review.controller');
-const { protect } = require('../middlewares/auth.middleware');
+const { protect, authorize } = require('../middlewares/auth.middleware');
 
 /**
  * @swagger
@@ -60,7 +60,7 @@ const { protect } = require('../middlewares/auth.middleware');
  *       200:
  *         description: List of all reviews
  */
-router.get('/', getAllReviews);
+router.get('/', protect, authorize('admin', 'superadmin'), getAllReviews);
 
 /**
  * @swagger

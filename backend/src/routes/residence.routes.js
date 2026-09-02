@@ -55,10 +55,10 @@ router.get('/partner/:partnerId', async (req, res) => {
     if (!partnerId.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ success: false, message: 'ID partenaire invalide' });
     }
-    const residences = await Residence.find({
+    const publication = require('../services/residence-publication.service');
+    const residences = await Residence.find(publication.applyPublicCatalogFilter({
       partner: partnerId,
-      deleted: { $ne: true }
-    }).lean();
+    })).lean();
     // Liste vide = succès (compte neuf) — pas 404 (évite fallbacks inutiles côté apps)
     return res.json({
       success: true,
@@ -130,11 +130,13 @@ router.get('/:id', require('../middlewares/optional-auth.middleware').optionalPr
 // Toutes les routes définies après ce bloc héritent de protect et authorize.
 // -----------------------------------------------------------------------------
 router.use(protect);
+router.put('/:id/ratings', authorize('client'), residenceController.updateRatings);
 router.use(authorize('partner', 'admin', 'superadmin'));
 
 // Création et modification (validation Joi incluse)
 router.post('/', validate(residenceValidation.createResidence), createResidence);
 router.put('/:id', validate(residenceValidation.updateResidence), updateResidence);
+router.post('/:id/publish', residenceController.requestPublication);
 router.delete('/:id', deleteResidence);
 
 // Gestion des images
@@ -159,9 +161,6 @@ router.put('/:id/enhanced-amenities', validate(residenceValidation.updateEnhance
 
 // Étoiles (admin seulement — protect + authorize('admin') inline pour surcharger le authorize global)
 router.put('/:id/stars', authorize('admin', 'superadmin'), residenceController.updateStars);
-
-// Notations (clients authentifiés — accessible via protect global)
-router.put('/:id/ratings', residenceController.updateRatings);
 
 // ---------------------------------------------------------------------------
 // Vidéos résidence (MVP — 1 vidéo max, modération admin requise)

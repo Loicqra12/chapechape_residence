@@ -1,85 +1,87 @@
 const request = require('supertest');
-const app = require('../src/app.test');
+const app = require('../src/app');
 const User = require('../src/models/user.model');
-const mongoose = require('mongoose');
 
 describe('Auth Routes', () => {
-    beforeEach(async () => {
-        await User.deleteMany({});
-    });
+  const password = 'Password123!';
 
-    // Données de test
-    const userPayload = {
-        email: 'test@example.com',
-        password: 'password123',
+  it('POST /api/auth/register → 201 + token (rôle forcé client)', async () => {
+    const email = `reg-${Date.now()}@test.com`;
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email,
+        password,
         firstName: 'Test',
         lastName: 'User',
-        role: 'client'
-    };
+        phoneNumber: '+2250700000101',
+      });
 
-    const userCredentials = {
-        email: 'test@example.com',
-        password: 'password123'
-    };
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body).toHaveProperty('token');
+    expect(res.body.user.email).toBe(email);
+    expect(res.body.user.role).toBe('client');
+  });
 
-    describe('POST /api/auth/register', () => {
-        it('should register a new user successfully', async () => {
-            const res = await request(app)
-                .post('/api/auth/register')
-                .set('X-CSRF-Token', global.csrfToken)
-                .send(userPayload);
-
-            expect(res.status).toBe(201);
-            expect(res.body.success).toBe(true);
-            expect(res.body.data).toHaveProperty('token');
-            expect(res.body.data.user.email).toBe(userPayload.email);
-        });
-
-        it('should not register user with existing email', async () => {
-            await User.create(userPayload);
-
-            const res = await request(app)
-                .post('/api/auth/register')
-                .set('X-CSRF-Token', global.csrfToken)
-                .send(userPayload);
-
-            expect(res.status).toBe(400);
-            expect(res.body.success).toBe(false);
-        });
+  it('POST /api/auth/register email déjà pris → 400', async () => {
+    const email = `dup-${Date.now()}@test.com`;
+    await User.create({
+      email,
+      password,
+      firstName: 'A',
+      lastName: 'B',
+      role: 'client',
     });
 
-    describe('POST /api/auth/login', () => {
-        beforeEach(async () => {
-            await User.create({
-                ...userCredentials,
-                firstName: 'Test',
-                lastName: 'User',
-                role: 'client'
-            });
-        });
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email,
+        password,
+        firstName: 'Test',
+        lastName: 'User',
+        phoneNumber: '+2250700000102',
+      });
 
-        it('should login successfully with correct credentials', async () => {
-            const res = await request(app)
-                .post('/api/auth/login')
-                .set('X-CSRF-Token', global.csrfToken)
-                .send(userCredentials);
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
 
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body.data).toHaveProperty('token');
-        });
-
-        it('should not login with incorrect password', async () => {
-            const res = await request(app)
-                .post('/api/auth/login')
-                .set('X-CSRF-Token', global.csrfToken)
-                .send({
-                    email: userCredentials.email,
-                    password: 'wrongpassword'
-                });
-
-            expect(res.status).toBe(401);
-            expect(res.body.success).toBe(false);
-        });
+  it('POST /api/auth/login identifiants valides → 200 + token', async () => {
+    const email = `login-${Date.now()}@test.com`;
+    await User.create({
+      email,
+      password,
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'client',
     });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body).toHaveProperty('token');
+  });
+
+  it('POST /api/auth/login mot de passe incorrect → 401', async () => {
+    const email = `bad-${Date.now()}@test.com`;
+    await User.create({
+      email,
+      password,
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'client',
+    });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'WrongPass1!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
 });

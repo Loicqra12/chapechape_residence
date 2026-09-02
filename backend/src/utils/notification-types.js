@@ -11,6 +11,26 @@ const COMMON = {
   GENERAL: 'general',
 };
 
+/**
+ * Valeurs legacy persistées (pré-canonical) — conservées pour compat Mongo / clients.
+ * Source unique pour Notification.type (avec COMMON, PARTNER, CLIENT).
+ */
+const LEGACY = {
+  FAVORITE_ADDED: 'favorite_added',
+  FAVORITE_PRICE_CHANGED: 'favorite_price_changed',
+  FAVORITE_STATUS_CHANGED: 'favorite_status_changed',
+  BOOKING_CONFIRMED: 'booking_confirmed',
+  BOOKING_CANCELLED: 'booking_cancelled',
+  BOOKING_REMINDER: 'booking_reminder',
+  BOOKING_UPDATE: 'booking_update',
+  PAYMENT_RECEIVED: 'payment_received',
+  PAYMENT_FAILED: 'payment_failed',
+  PAYMENT_REFUNDED: 'payment_refunded',
+  PAYMENT_REQUIRED: 'payment_required',
+  SYSTEM_MAINTENANCE: 'system_maintenance',
+  ACCOUNT_UPDATE: 'account_update',
+};
+
 // Types pour les partenaires
 const PARTNER = {
   NEW_BOOKING: 'partner_new_booking',           // 🏠 Nouvelle réservation
@@ -57,6 +77,7 @@ const CLIENT = {
   BOOKING_APPROVED: 'client_booking_approved',     // ✅ Réservation approuvée par l'hôte
   BOOKING_REJECTED: 'client_booking_rejected',     // ❌ Réservation refusée par l'hôte
   PAYMENT_EXPIRED: 'client_payment_expired',       // ⏰ Délai de paiement expiré
+  RESERVATION_REQUEST_EXPIRED: 'reservation_request_expired', // ⏳ Demande hôte expirée
   CHECKIN_READY: 'client_checkin_ready',           // 🏠 Prêt pour le check-in
   CHECKOUT_REMINDER: 'client_checkout_reminder',   // 🚪 Rappel de check-out
   
@@ -72,7 +93,15 @@ const CLIENT = {
   REENGAGE: 'client_reengage',                     // 👋 Relance inactivité 7j
   REVIEW_REQUEST: 'client_review_request',         // ⭐ Demande d'avis post-séjour
   ABANDONED_SEARCH: 'client_abandoned_search',     // 👀 Résidence vue sans réservation
+  PAYMENT_REFUND: 'client_payment_refund',         // 💸 Remboursement déclenché / confirmé
 };
+
+const ALLOWED_NOTIFICATION_TYPES = [
+  ...Object.values(COMMON),
+  ...Object.values(PARTNER),
+  ...Object.values(CLIENT),
+  ...Object.values(LEGACY),
+];
 
 const getTitleByType = (type) => {
     const titleMap = {
@@ -115,6 +144,7 @@ const getTitleByType = (type) => {
       [CLIENT.BOOKING_APPROVED]: '✅ Réservation approuvée',
       [CLIENT.BOOKING_REJECTED]: '❌ Réservation refusée',
       [CLIENT.PAYMENT_EXPIRED]: '⏰ Délai de paiement expiré',
+      [CLIENT.RESERVATION_REQUEST_EXPIRED]: '⏳ Demande expirée',
       [CLIENT.CHECKIN_READY]: '🏠 Prêt pour le check-in',
       [CLIENT.CHECKOUT_REMINDER]: '🚪 Rappel de check-out',
       
@@ -128,11 +158,27 @@ const getTitleByType = (type) => {
       [CLIENT.REENGAGE]: '👋 On vous a manqué',
       [CLIENT.REVIEW_REQUEST]: '⭐ Comment s\'est passé votre séjour ?',
       [CLIENT.ABANDONED_SEARCH]: '👀 Toujours intéressé ?',
+      [CLIENT.PAYMENT_REFUND]: '💸 Remboursement de votre paiement',
       
       // Titres communs
       [COMMON.NEW_MESSAGE]: '💬 Nouveau message',
       [COMMON.SYSTEM]: 'Information ChapeChape',
       [COMMON.GENERAL]: 'ChapeChape Residence',
+
+      // Titres legacy (compat Mongo / REST)
+      [LEGACY.FAVORITE_ADDED]: '⭐ Favori ajouté',
+      [LEGACY.FAVORITE_PRICE_CHANGED]: '💰 Prix favori modifié',
+      [LEGACY.FAVORITE_STATUS_CHANGED]: '⭐ Favori mis à jour',
+      [LEGACY.BOOKING_CONFIRMED]: '✅ Réservation confirmée',
+      [LEGACY.BOOKING_CANCELLED]: '⚠️ Réservation annulée',
+      [LEGACY.BOOKING_REMINDER]: '🕓 Rappel de réservation',
+      [LEGACY.BOOKING_UPDATE]: '⚠️ Réservation mise à jour',
+      [LEGACY.PAYMENT_RECEIVED]: '💵 Paiement reçu',
+      [LEGACY.PAYMENT_FAILED]: '❌ Paiement échoué',
+      [LEGACY.PAYMENT_REFUNDED]: '💸 Paiement remboursé',
+      [LEGACY.PAYMENT_REQUIRED]: '💳 Paiement requis',
+      [LEGACY.SYSTEM_MAINTENANCE]: '🔧 Maintenance système',
+      [LEGACY.ACCOUNT_UPDATE]: '👤 Compte mis à jour',
     };
     
     return titleMap[type] || 'ChapeChape Notification';
@@ -151,7 +197,9 @@ const getPushTypeByNotificationType = (type) => {
     type.includes('departure') ||
     type.includes('checkin') ||
     type.includes('checkout') ||
-    type.includes('approval')
+    type.includes('approval') ||
+    type.includes('expired') ||
+    type.includes('reservation')
   ) {
     return 'booking_update';
   }
@@ -274,8 +322,10 @@ module.exports = {
   COMMON,
   PARTNER,
   CLIENT,
+  LEGACY,
+  ALLOWED_NOTIFICATION_TYPES,
   getTitleByType,
   getPushTypeByNotificationType,
   getCategoryByNotificationType,
-  getDeepLinkByNotificationType
+  getDeepLinkByNotificationType,
 };

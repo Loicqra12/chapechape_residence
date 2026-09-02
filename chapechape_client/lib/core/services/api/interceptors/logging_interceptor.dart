@@ -2,6 +2,19 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
+/// Redacte les credentials stay des logs réseau (DEV).
+String redactStayCredentials(String text) {
+  var redacted = text.replaceAllMapped(
+    RegExp(r'CCSTAY1\.[A-Za-z0-9_-]+'),
+    (_) => 'CCSTAY1.[REDACTED]',
+  );
+  redacted = redacted.replaceAllMapped(
+    RegExp(r'"credential"\s*:\s*"[^"]*"'),
+    (_) => '"credential": "[REDACTED]"',
+  );
+  return redacted;
+}
+
 /// Intercepteur pour gérer la journalisation des requêtes et réponses HTTP
 /// Utilise PrettyDioLogger en développement pour une sortie formatée
 class LoggingInterceptor {
@@ -12,7 +25,7 @@ class LoggingInterceptor {
     if (isProduction) {
       return _MinimalLoggingInterceptor();
     }
-    
+
     // En développement, utiliser PrettyDioLogger pour une sortie détaillée et formatée
     return PrettyDioLogger(
       requestHeader: true,
@@ -21,6 +34,7 @@ class LoggingInterceptor {
       responseHeader: true,
       error: true,
       compact: true,
+      logPrint: (obj) => debugPrint(redactStayCredentials(obj.toString())),
     );
   }
 }

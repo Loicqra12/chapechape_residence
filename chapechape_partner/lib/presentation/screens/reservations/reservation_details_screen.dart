@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/adapters/booking_adapter.dart';
 import '../../../core/blocs/reservation/reservation_bloc.dart';
 import '../../../core/models/reservation/reservation.dart';
+import '../qr/qr_scanner_screen.dart';
 import '../../../core/services/api/reservation_service.dart';
 import '../../widgets/booking/booking_sms_widget.dart';
 import '../../widgets/common/empty_state.dart';
@@ -41,6 +42,47 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
 
   void _loadReservationDetails() {
     _reservationBloc.add(LoadReservationDetails(widget.reservationId));
+  }
+
+  void _openQrScanner(QRScanType scanType) async {
+    final success = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => QRScannerScreen(scanType: scanType),
+      ),
+    );
+    if (success == true && mounted) {
+      _loadReservationDetails();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            scanType == QRScanType.checkIn
+                ? 'Check-in effectué'
+                : 'Check-out effectué',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _performPartnerCheckin() {
+    _reservationBloc.add(PerformPartnerCheckin(widget.reservationId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Check-in en cours…'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _performPartnerCheckout() {
+    _reservationBloc.add(PerformPartnerCheckout(widget.reservationId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Check-out en cours…'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _updateReservationStatus(ReservationStatus newStatus) {
@@ -486,23 +528,70 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
           
           const SizedBox(height: 32),
           
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: reservation.status == ReservationStatus.pending
-                      ? () => _updateReservationStatus(ReservationStatus.confirmed)
-                      : null,
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text('CONFIRMER'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    disabledBackgroundColor: Colors.grey.shade300,
+          // Actions stay (manual P2-05B + QR optionnel P2-05D)
+          if (reservation.status == ReservationStatus.confirmed) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _performPartnerCheckin,
+                    icon: const Icon(Icons.login),
+                    label: const Text('CHECK-IN'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.green),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openQrScanner(QRScanType.checkIn),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scanner QR d\'arrivée'),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (reservation.status == ReservationStatus.inStay) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _performPartnerCheckout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('CHECK-OUT'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openQrScanner(QRScanType.checkOut),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scanner QR de départ'),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.login),
+                    label: const Text('CHECK-IN'),
+                    style: FilledButton.styleFrom(
+                      disabledBackgroundColor: Colors.grey.shade300,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: reservation.status != ReservationStatus.cancelled
@@ -517,11 +606,11 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Bouton pour changer le statut
-          if (reservation.status != ReservationStatus.cancelled)
+          if (ReservationStatusPolicy.partnerTransitionsFrom(reservation.status).isNotEmpty)
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -532,8 +621,7 @@ class _ReservationDetailsScreenState extends State<ReservationDetailsScreen> {
                       title: const Text('Changer le statut'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: ReservationStatus.values
-                            .where((s) => s != reservation.status)
+                        children: ReservationStatusPolicy.partnerTransitionsFrom(reservation.status)
                             .map((status) {
                           return ListTile(
                             title: Text(status.displayName),

@@ -183,7 +183,7 @@ class _ReservationsViewState extends State<_ReservationsView> with SingleTickerP
         title: const Text('Filtrer par statut'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ReservationStatus.values.map((status) {
+          children: ReservationStatusPolicy.filterableStatuses().map((status) {
             return ListTile(
               title: Text(status.displayName),
               leading: Icon(
@@ -343,6 +343,8 @@ IconData _reservationStatusIcon(ReservationStatus status) {
       return Icons.event_busy_rounded;
     case ReservationStatus.refunded:
       return Icons.currency_exchange_rounded;
+    case ReservationStatus.unknown:
+      return Icons.help_outline_rounded;
   }
 }
 
@@ -357,10 +359,7 @@ Future<void> _openReservationActionsSheet(
   required VoidCallback onCancel,
 }) {
   final theme = Theme.of(context);
-  final others = ReservationStatus.values
-      .where((s) => s != reservation.status)
-      .toList()
-    ..sort((a, b) => a.displayName.compareTo(b.displayName));
+  final others = ReservationStatusPolicy.partnerTransitionsFrom(reservation.status);
 
   return showModalBottomSheet<void>(
     context: context,

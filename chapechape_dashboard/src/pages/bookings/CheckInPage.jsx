@@ -23,6 +23,7 @@ import {
   Person as PersonIcon
 } from '@mui/icons-material';
 import { bookingService } from '../../services/bookingService';
+import { visibleOpsActions } from '../../ops/reservationActions';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -230,7 +231,7 @@ const CheckInPage = () => {
 
                     <Grid item xs={12} sm={3}>
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                        {booking.status === 'confirmed' && (
+                        {visibleOpsActions(booking.allowedActions).canCheckin && (
                           <Button
                             variant="contained"
                             color="success"
@@ -252,7 +253,7 @@ const CheckInPage = () => {
                             Check-in
                           </Button>
                         )}
-                        {booking.status === 'in_stay' && (
+                        {visibleOpsActions(booking.allowedActions).canCheckout && (
                           <Button
                             variant="contained"
                             color="primary"
@@ -274,6 +275,7 @@ const CheckInPage = () => {
                             Terminer
                           </Button>
                         )}
+                        {visibleOpsActions(booking.allowedActions).canCancel && (
                         <IconButton
                           color="error"
                           onClick={() => handleCancel(booking._id, booking.client?.name || 'Client')}
@@ -294,6 +296,7 @@ const CheckInPage = () => {
                             <CancelIcon />
                           )}
                         </IconButton>
+                        )}
                       </Box>
                     </Grid>
                   </Grid>

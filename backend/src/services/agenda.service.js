@@ -6,25 +6,86 @@ const Reservation = require('../models/reservation.model');
 const Payout = require('../models/payout.model');
 const User = require('../models/user.model');
 const SMSMetrics = require('../models/sms_metrics.model');
-const notificationTypes = require('../utils/notification-types');
+const { isPrimaryScheduler, workerLabel, saveUniqueScheduledJob, FINANCIAL_JOB_OPTIONS } = require('../runtime/agenda-cluster');
+const readiness = require('../runtime/readiness');
+const { attachAgendaEnvelope } = require('../observability/agenda-envelope');
 
-// Initialiser Agenda avec la même connexion MongoDB que l'application
-const agenda = new Agenda({
-  mongo: mongoose.connection,
-  processEvery: '1 minute',
-  defaultConcurrency: 5,
-  maxConcurrency: 20
+function createNoopAgenda() {
+  const noop = async () => undefined;
+  const fakeJob = {
+    unique() { return this; },
+    schedule() { return this; },
+    save: noop,
+  };
+  const instance = {
+    define() {},
+    start: noop,
+    stop: noop,
+    schedule: noop,
+    now: noop,
+    every: noop,
+    cancel: async () => 0,
+    create() { return fakeJob; },
+    __isNoopAgenda: true,
+  };
+  return instance;
+}
+
+let agendaInstance;
+
+function shouldUseNoopAgenda() {
+  return process.env.NODE_ENV === 'test' && mongoose.connection.readyState !== 1;
+}
+
+function getAgenda() {
+  if (agendaInstance) {
+    if (!shouldUseNoopAgenda() && agendaInstance.__isNoopAgenda) {
+      agendaInstance = null;
+    } else {
+      return agendaInstance;
+    }
+  }
+  if (shouldUseNoopAgenda()) {
+    agendaInstance = createNoopAgenda();
+    return agendaInstance;
+  }
+  agendaInstance = new Agenda({
+    mongo: mongoose.connection,
+    processEvery: '30 seconds',
+    defaultConcurrency: 5,
+    maxConcurrency: 20,
+    defaultLockLifetime: 10 * 60 * 1000,
+  });
+  return agendaInstance;
+}
+
+/** Proxy : `const { agenda } = require(...)` n'instancie Mongo qu'au premier appel réel. */
+const agenda = new Proxy({}, {
+  get(_target, prop) {
+    if (prop === 'then') return undefined;
+    const real = getAgenda();
+    const val = real[prop];
+    return typeof val === 'function' ? val.bind(real) : val;
+  },
 });
 
 // Démarrer le service Agenda
 const startAgenda = async () => {
   try {
+    const realAgenda = getAgenda();
+    attachAgendaEnvelope(realAgenda);
     await agenda.start();
+    readiness.markAgendaStarted(true);
 
-    // ✅ Démarrer les jobs périodiques payout
-    startPayoutPeriodicJobs();
-    // ✅ Phase 2 engagement (digest Partner)
-    startEngagementPeriodicJobs();
+    if (isPrimaryScheduler()) {
+      startPayoutPeriodicJobs();
+      startEngagementPeriodicJobs();
+      startRefundPeriodicJobs();
+      startHostApprovalPeriodicJobs();
+      logger.info('Service Agenda: scheduler primaire (every jobs)', { worker: workerLabel() });
+    } else {
+      logger.info('Service Agenda: worker secondaire (exécution only, pas de every)', { worker: workerLabel() });
+    }
 
     logger.info('Service Agenda démarré avec succès pour les notifications automatiques et payouts');
     return agenda;
@@ -160,7 +221,9 @@ agenda.define('notifyPartnerReservationChange', async (job) => {
     let message = '';
     let partnerPushType = null;
 
-    if (newStatus === 'confirmed' && (oldStatus === 'pending_payment' || oldStatus === 'payment_pending' || oldStatus === 'pending')) {
+    const { normalizeReservationStatusInput } = require('../constants/reservation-status');
+    const previousStatus = normalizeReservationStatusInput(oldStatus);
+    if (newStatus === 'confirmed' && (previousStatus === 'payment_pending' || previousStatus === 'pending')) {
       messageType = 'payment_confirmed';
       message = `✅ Paiement confirmé ! Réservation de ${reservation.user.firstName} pour ${reservation.residence.title}`;
       // Push paiement déjà géré par applyPaymentPaid (idempotent) — SMS seulement ici
@@ -224,7 +287,15 @@ const scheduleReservationReminder = async (reservationId, checkInDate) => {
       return null;
     }
 
-    const job = await agenda.schedule(reminderDate, 'sendReservationReminder', { reservationId });
+    const rid = String(reservationId);
+
+    const job = await saveUniqueScheduledJob(
+      agenda,
+      'sendReservationReminder',
+      reminderDate,
+      { reservationId: rid },
+      'reservationId'
+    );
     logger.info(`Rappel de réservation programmé pour ${reservationId} à ${reminderDate}`);
     return job;
   } catch (error) {
@@ -270,7 +341,7 @@ const notifyReservationStatusChange = async (reservationId, oldStatus, newStatus
 /**
  * Job pour expirer automatiquement une réservation après délai de paiement
  */
-agenda.define('expire reservation', async (job) => {
+agenda.define('expire reservation', FINANCIAL_JOB_OPTIONS, async (job) => {
   try {
     const { reservationId } = job.attrs.data;
 
@@ -295,7 +366,13 @@ agenda.define('expire reservation', async (job) => {
     if (reservation.paymentDeadline && now < reservation.paymentDeadline) {
       logger.info(`Délai non expiré pour réservation ${reservationId}, reprogrammation...`);
       // Reprogrammer à la vraie deadline
-      await agenda.schedule(reservation.paymentDeadline, 'expire reservation', { reservationId });
+      await saveUniqueScheduledJob(
+        agenda,
+        'expire reservation',
+        reservation.paymentDeadline,
+        { reservationId: String(reservationId) },
+        'reservationId'
+      );
       return;
     }
 
@@ -316,6 +393,28 @@ agenda.define('expire reservation', async (job) => {
   }
 });
 
+agenda.define('expire host approval', FINANCIAL_JOB_OPTIONS, async (job) => {
+  try {
+    const { reservationId } = job.attrs.data || {};
+    if (!reservationId) return;
+    const hostApprovalService = require('./host-approval.service');
+    await hostApprovalService.expireHostApproval(reservationId);
+  } catch (error) {
+    logger.error(`Erreur job expire host approval ${job.attrs.data?.reservationId}:`, error);
+    throw error;
+  }
+});
+
+agenda.define('sweep host approval expirations', async () => {
+  const hostApprovalService = require('./host-approval.service');
+  await hostApprovalService.sweepExpiredHostApprovals();
+});
+
+function startHostApprovalPeriodicJobs() {
+  agenda.every('1 minute', 'sweep host approval expirations');
+  logger.info('Job sweep host approval expirations démarré (toutes les 1 min)');
+}
+
 /**
  * Programmer l'expiration automatique d'une réservation
  * @param {string} reservationId ID de la réservation
@@ -325,9 +424,13 @@ async function scheduleReservationExpiration(reservationId, deadline) {
   try {
     // Annuler les jobs d'expiration existants pour cette réservation
     await agenda.cancel({ name: 'expire reservation', 'data.reservationId': reservationId });
-
-    // Programmer le nouveau job
-    const job = await agenda.schedule(deadline, 'expire reservation', { reservationId });
+    const job = await saveUniqueScheduledJob(
+      agenda,
+      'expire reservation',
+      deadline,
+      { reservationId: String(reservationId) },
+      'reservationId'
+    );
 
     logger.info(`Expiration programmée pour réservation ${reservationId} à ${deadline.toISOString()}`);
     return job;
@@ -460,11 +563,9 @@ async function schedulePaymentReminders(reservationId, deadline, durationMinutes
 /**
  * Job pour exécuter un payout spécifique
  */
-agenda.define('process payout', async (job) => {
+agenda.define('process payout', FINANCIAL_JOB_OPTIONS, async (job) => {
   try {
     const { payoutId } = job.attrs.data;
-
-    logger.info(`Exécution job payout: ${payoutId}`);
 
     const payout = await Payout.findById(payoutId);
 
@@ -488,9 +589,15 @@ agenda.define('process payout', async (job) => {
   } catch (error) {
     logger.error(`Erreur job payout ${job.attrs.data.payoutId}:`, error);
 
-    // Reprogrammer le job en cas d'erreur (retry automatique)
+    // Reprogrammer le job en cas d'erreur (retry automatique) — unique par payoutId
     const retryDelay = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-    await agenda.schedule(retryDelay, 'process payout', job.attrs.data);
+    await saveUniqueScheduledJob(
+      agenda,
+      'process payout',
+      retryDelay,
+      { payoutId: String(job.attrs.data?.payoutId || '') },
+      'payoutId'
+    );
 
     throw error; // Marquer le job comme échoué
   }
@@ -499,7 +606,7 @@ agenda.define('process payout', async (job) => {
 /**
  * Job périodique pour traiter tous les payouts programmés
  */
-agenda.define('process scheduled payouts', async (job) => {
+agenda.define('process scheduled payouts', FINANCIAL_JOB_OPTIONS, async (job) => {
   try {
     logger.info('Traitement périodique des payouts programmés');
 
@@ -619,9 +726,13 @@ agenda.define('cleanup old payouts', async (job) => {
 function schedulePayoutExecution(payoutId, executeAt = null) {
   const scheduledDate = executeAt || new Date(Date.now() + 60 * 60 * 1000); // 1h par défaut
 
-  return agenda.schedule(scheduledDate, 'process payout', {
-    payoutId: payoutId
-  });
+  return saveUniqueScheduledJob(
+    agenda,
+    'process payout',
+    scheduledDate,
+    { payoutId: String(payoutId) },
+    'payoutId'
+  );
 }
 
 /**
@@ -1093,6 +1204,23 @@ function startEngagementPeriodicJobs() {
   logger.info('Jobs engagement Phase 2+3 démarrés (digest 09:00, reengage 10:00)');
 }
 
+function startRefundPeriodicJobs() {
+  agenda.every('5 minutes', 'sweep payment refunds');
+  logger.info('Job sweep payment refunds démarré (toutes les 5 min)');
+}
+
+agenda.define('process payment refund', FINANCIAL_JOB_OPTIONS, async (job) => {
+  const { paymentId } = job.attrs.data || {};
+  if (!paymentId) return;
+  const refundService = require('./refund.service');
+  await refundService.processPaymentRefund(paymentId);
+});
+
+agenda.define('sweep payment refunds', FINANCIAL_JOB_OPTIONS, async () => {
+  const refundService = require('./refund.service');
+  await refundService.sweepDueRefunds();
+});
+
 module.exports = {
   agenda,
   startAgenda,
@@ -1112,4 +1240,7 @@ module.exports = {
   scheduleAutoPayoutCreation,
   startPayoutPeriodicJobs,
   startEngagementPeriodicJobs,
+  startRefundPeriodicJobs,
+  startHostApprovalPeriodicJobs,
+  saveUniqueScheduledJob,
 };

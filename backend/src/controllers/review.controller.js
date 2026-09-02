@@ -4,16 +4,67 @@ const Reservation = require('../models/reservation.model');
 const { cacheService } = require('../services/cache.service');
 const redisClient = require('../config/redis');
 
+const { isPartnerAccount } = require('../security/roles');
+
+async function assertEligibleStayReview(user, residenceId, reservationId) {
+    if (!reservationId) {
+        const err = new Error('reservationId requis');
+        err.statusCode = 400;
+        throw err;
+    }
+    const residence = await Residence.findById(residenceId).select('partner');
+    if (!residence) {
+        const err = new Error('Résidence introuvable');
+        err.statusCode = 404;
+        throw err;
+    }
+    if (isPartnerAccount(user.role) && String(residence.partner) === String(user._id || user.id)) {
+        const err = new Error('Un partenaire ne peut pas noter sa propre résidence');
+        err.statusCode = 403;
+        throw err;
+    }
+    const reservation = await Reservation.findById(reservationId).select('user partner residence status');
+    if (!reservation) {
+        const err = new Error('Réservation introuvable');
+        err.statusCode = 404;
+        throw err;
+    }
+    if (String(reservation.user) !== String(user._id || user.id)) {
+        const err = new Error('Cette réservation ne vous appartient pas');
+        err.statusCode = 403;
+        throw err;
+    }
+    if (String(reservation.residence) !== String(residenceId)) {
+        const err = new Error('La réservation ne correspond pas à cette résidence');
+        err.statusCode = 403;
+        throw err;
+    }
+    if (reservation.status !== 'completed') {
+        const err = new Error('Vous ne pouvez noter qu’un séjour terminé');
+        err.statusCode = 403;
+        throw err;
+    }
+    return reservation;
+}
+
 // Créer un avis
 const createReview = async (req, res) => {
     try {
         const { residenceId, reservationId, rating, comment, photos } = req.body;
 
-        // Validation des champs requis
         if (!residenceId || rating === undefined || rating === null) {
             return res.status(400).json({
                 success: false,
                 message: "Veuillez fournir l'identifiant de la résidence et une note"
+            });
+        }
+
+        try {
+            await assertEligibleStayReview(req.user, residenceId, reservationId);
+        } catch (authErr) {
+            return res.status(authErr.statusCode || 403).json({
+                success: false,
+                message: authErr.message,
             });
         }
 
@@ -24,63 +75,9 @@ const createReview = async (req, res) => {
         });
 
         if (existingReview) {
-            // Mettre à jour l'avis existant au lieu de créer un nouveau
-            let ratingObject;
-            if (typeof rating === 'number') {
-                ratingObject = {
-                    overall: rating,
-                    cleanliness: existingReview.rating.cleanliness || 0,
-                    comfort: existingReview.rating.comfort || 0,
-                    facilities: existingReview.rating.facilities || 0,
-                    value: existingReview.rating.value || 0,
-                    location: existingReview.rating.location || 0
-                };
-            } else if (typeof rating === 'object') {
-                ratingObject = {
-                    overall: rating.overall || existingReview.rating.overall,
-                    cleanliness: rating.cleanliness || existingReview.rating.cleanliness,
-                    comfort: rating.comfort || existingReview.rating.comfort,
-                    facilities: rating.facilities || existingReview.rating.facilities,
-                    value: rating.value || existingReview.rating.value,
-                    location: rating.location || existingReview.rating.location
-                };
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    message: "Format de notation invalide"
-                });
-            }
-
-            // Mettre à jour l'avis existant
-            existingReview.rating = ratingObject;
-            existingReview.comment = comment || existingReview.comment;
-            if (photos && Array.isArray(photos)) {
-                existingReview.photos = photos;
-            }
-            if (reservationId) {
-                existingReview.reservation = reservationId;
-            }
-
-            await existingReview.save();
-            await existingReview.populate('user', 'firstName lastName avatar');
-
-            // Invalider le cache Redis ET Node-cache
-            const cachePattern = `api:/api/reviews/residence/${residenceId}*`;
-
-            // Invalider Redis cache (utilisé par le middleware)
-            const keys = await redisClient.keys(cachePattern);
-            if (keys.length > 0) {
-                await redisClient.del(keys);
-                console.log(`Redis cache invalidated for keys: ${keys.join(', ')}`);
-            }
-
-            // Invalider Node cache (pour compatibilité)
-            await cacheService.invalidatePattern(`*api/reviews/residence/${residenceId}*`);
-
-            return res.status(200).json({
-                success: true,
-                data: existingReview,
-                message: "Votre avis a été mis à jour avec succès"
+            return res.status(409).json({
+                success: false,
+                message: 'Un avis existe déjà pour cette résidence / ce séjour',
             });
         }
 
@@ -129,10 +126,13 @@ const createReview = async (req, res) => {
         const cachePattern = `api:/api/reviews/residence/${residenceId}*`;
 
         // Invalider Redis cache (utilisé par le middleware)
+        try {
         const keys = await redisClient.keys(cachePattern);
         if (keys.length > 0) {
             await redisClient.del(keys);
-            console.log(`Redis cache invalidated for keys: ${keys.join(', ')}`);
+        }
+        } catch (_cacheErr) {
+            // Cache Redis optionnel.
         }
 
         // Invalider Node cache (pour compatibilité)
