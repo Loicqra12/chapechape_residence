@@ -2,8 +2,6 @@ const mongoose = require('mongoose');
 const healthService = require('../services/health.service');
 const logger = require('../utils/logger');
 const readiness = require('../runtime/readiness');
-const { fingerprintFromUri } = require('../utils/mongo-fingerprint');
-const { EXPECTED_PROD_MONGO_FINGERPRINT } = require('../runtime/prod-constants');
 const { workerLabel } = require('../runtime/agenda-cluster');
 
 let cachedTransactions = null;
@@ -24,16 +22,7 @@ async function transactionsStatus() {
     return cachedTransactions;
 }
 
-function mongoFingerprintSafe() {
-    try {
-        return fingerprintFromUri(process.env.MONGODB_URI);
-    } catch (err) {
-        return null;
-    }
-}
-
 function runtimePublic() {
-    const fp = mongoFingerprintSafe();
     return {
         node: process.version,
         env: process.env.NODE_ENV || 'development',
@@ -41,9 +30,6 @@ function runtimePublic() {
         gitCommit: process.env.GIT_COMMIT || null,
         worker: workerLabel(),
         uptimeSec: Math.round(process.uptime()),
-        mongoFingerprint: fp ? fp.fingerprint : null,
-        mongoFingerprintExpected: EXPECTED_PROD_MONGO_FINGERPRINT,
-        mongoFingerprintMatch: fp ? fp.fingerprint === EXPECTED_PROD_MONGO_FINGERPRINT : false,
     };
 }
 
@@ -93,7 +79,6 @@ exports.getReadiness = async (req, res) => {
 exports.getGeneralHealth = async (req, res) => {
     try {
         const connected = mongoose.connection.readyState === 1;
-        const fp = mongoFingerprintSafe();
         res.status(200).json({
             success: true,
             message: 'Server is running',
@@ -101,7 +86,6 @@ exports.getGeneralHealth = async (req, res) => {
             database: connected ? 'connected' : 'disconnected',
             transactions: await transactionsStatus(),
             environment: process.env.NODE_ENV || 'development',
-            mongoFingerprint: fp ? fp.fingerprint : null,
             gitCommit: process.env.GIT_COMMIT || null,
             worker: workerLabel(),
             uptimeSec: Math.round(process.uptime()),

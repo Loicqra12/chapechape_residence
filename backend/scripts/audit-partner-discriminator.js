@@ -13,8 +13,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const { fingerprintFromUri } = require('../src/utils/mongo-fingerprint');
-
-const EXPECTED_FINGERPRINT = 'efebb871c934cf3c';
+const { EXPECTED_PROD_MONGO_FINGERPRINT } = require('../src/runtime/prod-constants');
 
 async function main() {
   const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -28,7 +27,7 @@ async function main() {
 
   const parsed = fingerprintFromUri(uri);
   const fp = parsed?.fingerprint || null;
-  console.error(`mongo fingerprint: ${fp} (attendu prod ${EXPECTED_FINGERPRINT})`);
+  console.error(`mongo fingerprint: ${fp} (attendu prod ${EXPECTED_PROD_MONGO_FINGERPRINT})`);
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
   const db = mongoose.connection.db;
@@ -59,7 +58,7 @@ async function main() {
   console.log(JSON.stringify({
     generatedAt: new Date().toISOString(),
     fingerprint: fp,
-    productionFingerprintMatch: fp === EXPECTED_FINGERPRINT,
+    productionFingerprintMatch: fp === EXPECTED_PROD_MONGO_FINGERPRINT,
     totalRolePartner: partners.length,
     classes,
     recommendation:

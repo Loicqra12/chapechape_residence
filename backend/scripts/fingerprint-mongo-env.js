@@ -5,7 +5,7 @@
  * Sur le droplet (env du process PM2) :
  *   node scripts/fingerprint-mongo-env.js
  *
- * exit 0 = match efebb871c934cf3c → ensuite verify-inventory-indexes.js (read-only)
+ * exit 0 = match EXPECTED_PROD_MONGO_FINGERPRINT → ensuite verify-inventory-indexes.js (read-only)
  * exit 2 = P0_PROD_ENVIRONMENT_MISMATCH → aucun index auto, plan de migration
  */
 require('dotenv').config();

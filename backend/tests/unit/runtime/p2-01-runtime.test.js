@@ -8,8 +8,8 @@ describe('P2-01 runtime invariants', () => {
   afterEach(() => {
     readiness.resetForTests();
   });
-  it('empreinte attendue est le hash 16 hex figé P0', () => {
-    expect(EXPECTED_PROD_MONGO_FINGERPRINT).toBe('efebb871c934cf3c');
+  it('empreinte attendue est le hash 16 hex figé prod DigitalOcean (P2-09B1A)', () => {
+    expect(EXPECTED_PROD_MONGO_FINGERPRINT).toBe('4f095ad783737882');
     expect(EXPECTED_PROD_MONGO_FINGERPRINT).toMatch(/^[a-f0-9]{16}$/);
   });
 

@@ -5,7 +5,7 @@
  *   cd backend
  *   node scripts/prod-runtime-baseline.js
  *
- * Comparer mongo fingerprint à efebb871c934cf3c
+ * Comparer mongo fingerprint à EXPECTED_PROD_MONGO_FINGERPRINT (prod-constants.js)
  * Si différent : NE PAS créer d'indexes. Audits read-only uniquement.
  */
 require('dotenv').config();

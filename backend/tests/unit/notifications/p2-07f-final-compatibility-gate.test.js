@@ -23,31 +23,45 @@ function loadHeadFile(relativePath) {
   return out;
 }
 
+function evalHeadModule(relativePath) {
+  const full = relativePath.replace(/\\/g, '/');
+  const src = loadHeadFile(full);
+  const absPath = path.join(BACKEND_ROOT, full.replace(/^backend\//, ''));
+  const dir = path.dirname(absPath);
+  const mod = { exports: {} };
+  const localRequire = (id) => {
+    if (id.startsWith('.')) {
+      return require(path.resolve(dir, id));
+    }
+    return require(id);
+  };
+  // eslint-disable-next-line no-new-func
+  const fn = new Function('exports', 'require', 'module', '__filename', '__dirname', src);
+  fn(mod.exports, localRequire, mod, absPath, dir);
+  return mod.exports;
+}
+
 function evalHeadConstants() {
-  const src = loadHeadFile('backend/src/utils/constants.js');
-  const sandbox = { exports: {} };
-  // eslint-disable-next-line no-eval
-  eval(src.replace(/^exports\./gm, 'sandbox.exports.'));
-  return sandbox.exports;
+  return evalHeadModule('backend/src/utils/constants.js');
 }
 
 function evalHeadNotificationTypes() {
-  const src = loadHeadFile('backend/src/utils/notification-types.js');
-  const sandbox = { module: { exports: {} } };
-  // eslint-disable-next-line no-new-func
-  new Function('module', 'exports', src)(sandbox.module, sandbox.module.exports);
-  return sandbox.module.exports;
+  return evalHeadModule('backend/src/utils/notification-types.js');
 }
 
+/** BEFORE write-set P2-07F : ALLOWED sans les 4 types legacy SMS convergés en écriture. */
+const P2_07F_NEWLY_ACCEPTED = Object.freeze([
+  'booking_update',
+  'client_payment_refund',
+  'payment_required',
+  'reservation_request_expired',
+]);
+
 function buildBeforeAllowedEnum() {
-  const constants = evalHeadConstants();
   const headTypes = evalHeadNotificationTypes();
-  return [
-    ...Object.values(constants.NOTIFICATION_TYPES),
-    ...Object.values(headTypes.COMMON),
-    ...Object.values(headTypes.PARTNER),
-    ...Object.values(headTypes.CLIENT),
-  ];
+  const allowed = headTypes.ALLOWED_NOTIFICATION_TYPES || [];
+  const exclude = new Set(P2_07F_NEWLY_ACCEPTED);
+  return allowed.filter((type) => !exclude.has(type));
 }
 
 function buildBeforeSchema() {
@@ -115,12 +129,7 @@ describe('P2-07F FINAL compatibility gate', () => {
 
       expect(before.length).toBe(59);
       expect(after.length).toBe(63);
-      expect(newlyAccepted.sort()).toEqual([
-        'booking_update',
-        'client_payment_refund',
-        'payment_required',
-        'reservation_request_expired',
-      ]);
+      expect(newlyAccepted.sort()).toEqual([...P2_07F_NEWLY_ACCEPTED].sort());
       expect(removed).toEqual([]);
     });
   });
@@ -161,8 +170,9 @@ describe('P2-07F FINAL compatibility gate', () => {
 
     it('undefined type rejected before and after (SMS bug characterization)', async () => {
       const headConstants = evalHeadConstants();
-      expect(headConstants.NOTIFICATION_TYPES.BOOKING_UPDATE).toBeUndefined();
-      expect(headConstants.NOTIFICATION_TYPES.PAYMENT_REQUIRED).toBeUndefined();
+      // HEAD constants.js n'exporte plus NOTIFICATION_TYPES (migré vers notification-types.js).
+      expect(headConstants.NOTIFICATION_TYPES?.BOOKING_UPDATE).toBeUndefined();
+      expect(headConstants.NOTIFICATION_TYPES?.PAYMENT_REQUIRED).toBeUndefined();
 
       const beforeUndefined = await validateTypeAgainstSchema(beforeSchema, undefined, userId);
       expect(beforeUndefined.accepted).toBe(false);
