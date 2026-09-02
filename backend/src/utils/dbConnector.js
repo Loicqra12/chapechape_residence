@@ -106,18 +106,6 @@ const setupEventListeners = () => {
     isConnected = true;
     logger.info('🔄 MongoDB reconnecté');
   });
-
-  // Gestion de l'arrêt propre
-  process.on('SIGINT', async () => {
-    try {
-      await mongoose.connection.close();
-      logger.info('🛑 Connexion MongoDB fermée suite à l\'arrêt de l\'application');
-      process.exit(0);
-    } catch (error) {
-      logger.error(`❌ Erreur lors de la fermeture de la connexion: ${error.message}`);
-      process.exit(1);
-    }
-  });
 };
 
 /**
